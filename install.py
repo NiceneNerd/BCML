@@ -57,16 +57,17 @@ def is_overriden(file, priority) -> bool:
 def main():
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')
     parser.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
-    parser.add_argument('-p', '--priority', help = 'Mod load priority, starting at 100', default = '100', type = int)
     parser.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_false")
-    parser.add_argument('-d', '--delete', help = 'Delete RSTB entries for file sizes which cannot be calculated', action="store_false")
+    parser.add_argument('-r', '--remove', help = 'Remove RSTB entries for file sizes which cannot be calculated', action="store_false")
+    parser.add_argument('-p', '--priority', help = 'Mod load priority, starting at 100', default = '100', type = int)
+    parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder\nAssumes by default relative path from BCML install directory', default = '../graphicPacks')
     args = parser.parse_args()
 
     try:
         print("Loading RSTB data...")
         table : rstb.ResourceSizeTable = None
-        if not os.path.exists('./data/master.srsizetable.bak'):
-            shutil.copyfile('./data/master.srsizetable', './data/master.srsizetable.bak')
+        if not os.path.exists('./data/master.srsizetable'):
+            shutil.copyfile('./data/clean.srsizetable', './data/master.srsizetable')
         with open('./data/master.srsizetable', 'rb') as file:
             buf = wszst_yaz0.decompress(file.read())
             table = rstb.ResourceSizeTable(buf, True)
@@ -171,7 +172,7 @@ def main():
         print('Processing modded file sizes...')
         iUp = 0
         iDel = 0
-        delAll = args.delete
+        delAll = args.remove
         redAll = False
         redNone = args.shrink
         changes = []
