@@ -2,3 +2,4 @@
 /mods
 /.vscode
 data/master.srsizetable
+/helpers/__pycache__
