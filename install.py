@@ -50,21 +50,24 @@ def find_modded_files(dir, verbose = False) -> {}:
 def find_modded_sarc_files(s, verbose = False) -> {}:
     modfiles = {}
     for file in s.list_files():
-        if file in hashnames:
-            rfile = file.replace('.s','.')
-            fname, fext = os.path.splitext(file)
-            fdata = s.get_file_data(file).tobytes()
-            if '.s' in file:
-                fdata = wszst_yaz0.decompress(fdata)
-            if rfile in hashnames:
-                if hashes[hashnames.index(rfile)] == xxhash.xxh32(fdata).hexdigest():
-                    if verbose: print(f'File {rfile} unmodified, ignoring...')
-                else:
-                    rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(fdata, True, fext)
-                    modfiles[rfile] = { 'path': '', 'rstb': rstbsize if rstbsize > 0 else 'del' }
-                    if verbose: print(f'Added modified file {rfile}')
-                    if rfile.endswith('pack') or rfile.endswith('sarc'):
-                        modfiles.update(find_modded_sarc_files(sarc.SARC(fdata)))
+        rfile = file.replace('.s','.')
+        if 'Msg_' in file:
+            modfiles[rfile] = { 'path': '', 'rstb': 'del' }
+            if verbose: print(f'Added modified file {rfile}')
+            continue
+        fname, fext = os.path.splitext(file)
+        fdata = s.get_file_data(file).tobytes()
+        if '.s' in file:
+            fdata = wszst_yaz0.decompress(fdata)
+        if rfile in hashnames:
+            if hashes[hashnames.index(rfile)] == xxhash.xxh32(fdata).hexdigest():
+                if verbose: print(f'File {rfile} unmodified, ignoring...')
+            else:
+                rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(fdata, True, fext)
+                modfiles[rfile] = { 'path': '', 'rstb': rstbsize if rstbsize > 0 else 'del' }
+                if verbose: print(f'Added modified file {rfile}')
+                if rfile.endswith('pack') or rfile.endswith('sarc'):
+                    modfiles.update(find_modded_sarc_files(sarc.SARC(fdata)))
     return modfiles
 
 
@@ -160,7 +163,7 @@ def main():
             p = args.priority if args.priority > 100 else modid
             rules.write(f'\nfsPriority = {p}')
 
-        mmdir = os.path.join(args.directory,'!!!BreathOfTheWild_RSTB')
+        mmdir = os.path.join(args.directory,'BotwMod_mod999_RSTB')
         if not os.path.exists(mmdir):
             os.makedirs(f'{mmdir}/content/System/Resource/')
             rules = open(f'{mmdir}/rules.txt','a')
@@ -169,7 +172,7 @@ def main():
                         'name = Master RSTB Fix\n'
                         'path = "The Legend of Zelda: Breath of the Wild/Mods/RSTB"\n'
                         'description = Auto-generated pack which merges RSTB changes for other mods\n'
-                        'version = 3\n'
+                        'version = 4\n'
                         'fsPriority = 999')
             rules.close()
         mergerstb.main(args.directory, "shr" if args.shrink else "noshr", "del" if args.remove else "nodel", "verb" if args.verbose else "quiet")

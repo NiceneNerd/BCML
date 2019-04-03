@@ -55,10 +55,10 @@ def main(path, shrink, remove, verbose):
 
     print('Writing new RSTB...')
     util.write_rstb(table, './data/master.srsizetable', True)
-    mmdir = os.path.join(path, '!!!BreathOfTheWild_RSTB')
+    mmdir = os.path.join(path, 'BotwMod_mod999_RSTB')
     if not os.path.exists(mmdir):
         os.makedirs(f'{mmdir}/content/System/Resource/')
-    shutil.copy('./data/master.srsizetable', f'{mmdir}/content/System/Resource/ResourceSizeTable.srsizetable')
+    shutil.copy('./data/master.srsizetable', f'{mmdir}/content/System/Resource/ResourceSizeTable.product.srsizetable')
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
