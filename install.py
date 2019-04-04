@@ -15,10 +15,9 @@ import wszst_yaz0
 import xxhash
 from rstb import util
 from helpers import mergerstb
+from helpers import mergepacks
 
-hashnames=[]
-hashes=[]
-priorities={}
+hashtable = {}
 args = None
 
 def get_canon_name(file) -> str:
@@ -37,7 +36,7 @@ def find_modded_files(dir, verbose = False) -> {}:
                 os.remove(pathname)
                 continue
             cname = get_canon_name(pathname)
-            if cname in hashnames:
+            if cname in hashtable:
                 if not is_file_modded(pathname, cname):
                     if verbose: print(f'File {cname} unmodified, ignoring...')
                     continue
@@ -59,8 +58,8 @@ def find_modded_sarc_files(s, verbose = False) -> {}:
         fdata = s.get_file_data(file).tobytes()
         if '.s' in file:
             fdata = wszst_yaz0.decompress(fdata)
-        if rfile in hashnames:
-            if hashes[hashnames.index(rfile)] == xxhash.xxh32(fdata).hexdigest():
+        if rfile in hashtable:
+            if hashtable[rfile] == xxhash.xxh32(fdata).hexdigest():
                 if verbose: print(f'File {rfile} unmodified, ignoring...')
             else:
                 rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(fdata, True, fext)
@@ -76,7 +75,7 @@ def is_file_modded(path, name) -> bool:
     with open(path, 'rb') as f:
         fdata = f.read()
     fhash = xxhash.xxh32(fdata).hexdigest()
-    return not (fhash == hashes[hashnames.index(name)])
+    return not (fhash == hashtable[name])
 
 def get_mod_id(moddir) -> int:
     i = args.priority
@@ -91,14 +90,7 @@ def main():
         with open('./data/hashtable.csv','r') as hashCsv:
             csvLoop = csv.reader(hashCsv)
             for row in csvLoop:
-                hashnames.append(row[0])
-                hashes.append(row[1])
-
-        if os.path.exists('./data/priorities.csv'):
-            with open('./data/priorities.csv', 'r') as pCsv:
-                csvLoop = csv.reader(pCsv)
-                for row in csvLoop:
-                    priorities[row[0]] = row[1]
+                hashtable[row[0]] = row[1]
 
         print("Extracting mod files...")
         modzip = ''
@@ -154,10 +146,16 @@ def main():
         moddir = os.path.join(args.directory,f'BotwMod_mod{modid:03}')
         print(f'Moving mod to {moddir}')
         shutil.move('./tmp', moddir)
-        with open(moddir + '/rstb.log','w') as log:
-            log.write('name,rstb\n')
+        with open(moddir + '/rstb.log','w') as rlog:
+            rlog.write('name,rstb\n')
             for file in modfiles.keys():
-                log.write(f'{file},{modfiles[file]["rstb"]}\n')
+                rlog.write(f'{file},{modfiles[file]["rstb"]}\n')
+
+        if not args.nomerge: with open(moddir + '/packs.log','w') as plog:
+            plog.write('name,path\n')
+            for pack in modfiles.keys():
+                if pack.endswith('pack'):
+                    plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
 
         with open(moddir + '/rules.txt', 'a') as rules:
             p = args.priority if args.priority > 100 else modid
@@ -175,7 +173,8 @@ def main():
                         'version = 4\n'
                         'fsPriority = 999')
             rules.close()
-        mergerstb.main(args.directory, "shr" if args.shrink else "noshr", "del" if args.remove else "nodel", "verb" if args.verbose else "quiet")
+        mergerstb.main(args.directory, "shr" if args.shrink else "noshr", "nodel" if args.leave else "del", "verb" if args.verbose else "quiet")
+        if not args.nomerge: mergepacks.main(args.directory, args.verbose)
     except SystemExit as e:
         os.chdir('../')
         shutil.rmtree('./tmp')
@@ -190,9 +189,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')
     parser.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
     parser.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_true")
-    parser.add_argument('-r', '--remove', help = 'Remove RSTB entries for file sizes which cannot be calculated', action="store_false")
+    parser.add_argument('-l', '--leave', help = 'Do not remove RSTB entries for file sizes which cannot be calculated', action="store_true")
     parser.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
+    parser.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     args = parser.parse_args()
     main()
