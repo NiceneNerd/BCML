@@ -6,8 +6,8 @@ import sys
 
 import rstb
 import sarc
-import xxhash
 import wszst_yaz0
+import xxhash
 
 
 def main(path, verbose):

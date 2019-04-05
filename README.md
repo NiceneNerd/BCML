@@ -22,10 +22,11 @@ Until I figure out how to make a `pip` package, either:
 
 You *can* put BCML elsewhere if you want. You'll just need to specify the `graphicPacks` directory when you run it.
 
+**Notice:** While it is certainly possible to use BCML for some mods and install others manually, no compatibility is guaranteed. It is recommended to uninstall all Cemu mods before using BCML, and then to reinstall them through BCML.
+
 ## Supported Mods
 
-- Mods must be packed as ZIP and RAR archives
-- *7z is **not** currently supported.* This may change in a future release. If necessary, you can manually extract a 7z mod and then make a new ZIP.
+- Mods must be packed as ZIP, 7z, or  RAR archives.
 - Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
 
 ## Usage
@@ -35,7 +36,7 @@ Run all commands from within the BCML folder wherever you extracted it.
 ### Install a Mod
 
 ```
-python .\install SuperCoolMod.zip
+python install.py SuperCoolMod.zip
 ```
 
 That's the gist of it. More detailed usage information:
@@ -68,3 +69,61 @@ optional arguments:
   * `--directory`: By default, BCML assumes that its installation folder is inside the Cemu folder, and looks for the `graphicPacks` folder from its parent. This option allows specifying the location of the `graphicPacks` folder.
   * `--nomerge`: By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.
   * `--verbose`: Obviously, this option provides very detailed information about neartly every step of the mod installation process.
+
+### Uninstall a Mod
+
+```
+python uninstall.py
+```
+
+Dead simple. Run this script and you will be presented with a list of installed mods like so:
+
+```
+1. Modified Beedle Shop — Priority: 100
+2. Double Durability — Priority: 101
+3. "Disable_Fast_Travel" — Priority: 102
+4. Upgraded Hylian Shield — Priority: 103
+5. Hyrule Rebalance v4.0 — Priority: 175
+6. "Lantern" — Priority: 150
+7. First Person Quest Dialogs — Priority: 200
+
+Enter the number of the mod you would like to uninstall:
+```
+
+Pick one and it will be uninstalled. The RSTB will be regenerated, and any merged packs will be reprocessed. This script has only a couple arguments:
+
+```
+usage: uninstall.py [-h] [-d DIRECTORY] [-v]
+Uninstaller for BCML-managed mods
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
+  -v, --verbose         Verbose output covering every file processed
+```
+
+## Update Mod Configuration
+
+```
+python update.py
+```
+
+If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made. This script has only a couple arguments.
+
+```
+usage: update.py [-h] [-d DIRECTORY] [-v]
+
+Refreshes RSTB and merged packs for BCML-managed mods
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
+  -v, --verbose         Verbose output covering every file processed
+```
+
+## License
+This software is licensed under the terms of the GNU General Public License, version 3 or later.
+
+This software includes the 7-Zip console application `7za.exe`, which is licensed under the GNU Lesser General Public License. The source code for this application is available for free at [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html).

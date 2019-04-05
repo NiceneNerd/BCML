@@ -3,14 +3,15 @@ import configparser
 import glob
 import os
 import shutil
-from helpers import mergepacks
-from helpers import mergerstb
+
+from helpers import mergepacks, mergerstb
 
 args = None
 
 def main():
     i = 0
     mods = {}
+    print('Mods currently installed:')
     for rulef in glob.iglob(os.path.join(args.directory, 'BotwMod*/rules.txt')):
         rules = configparser.ConfigParser()
         rules.read(rulef)
@@ -23,6 +24,7 @@ def main():
         print(f'{i + 1}. {mods[i]["name"]} — Priority: {mods[i]["priority"]}')
         i += 1
     
+    print()
     target = '9999'
     while int(target) - 1 not in mods:
         target = input('Enter the number of the mod you would like to uninstall: ')

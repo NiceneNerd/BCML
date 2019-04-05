@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import csv
+import glob
 import os
 import shutil
 import signal
@@ -93,24 +94,32 @@ def main():
                 hashtable[row[0]] = row[1]
 
         print("Extracting mod files...")
-        modzip = ''
         try:
+            if os.path.exists('./tmp'):
+                shutil.rmtree('./tmp')
             if args.mod.endswith('.zip'):
                 modzip = zipfile.ZipFile(args.mod, 'r')
+                os.mkdir('./tmp')
+                modzip.extractall('./tmp')
+                modzip.close()
             elif args.mod.endswith('.rar'):
                 modzip = rarfile.RarFile(args.mod, 'r')
+                os.mkdir('./tmp')
+                modzip.extractall('./tmp')
+                modzip.close()
+            elif args.mod.endswith('.7z'):
+                os.system(f'.\\helpers\\7za.exe x -otmp "{args.mod}"')
             else:
                 raise Exception
         except:
             print("Mod could not be extracted. Either it is in an unsupported format or the archive is invalid.")
             sys.exit(1)
 
-        if os.path.exists('./tmp'):
-            shutil.rmtree('./tmp')
-        os.mkdir('./tmp')
-        modzip.extractall('./tmp')
-        modzip.close()
-        os.chdir('./tmp')
+        mdir = ''
+        for subdir in glob.iglob('tmp/*', recursive=True):
+            if os.path.exists(os.path.join(subdir, 'rules.txt')):
+                mdir = subdir
+        os.chdir(mdir)
 
         modfiles = {}
         if os.path.exists('./content'):
@@ -145,7 +154,7 @@ def main():
         modid = get_mod_id(args.directory)
         moddir = os.path.join(args.directory,f'BotwMod_mod{modid:03}')
         print(f'Moving mod to {moddir}')
-        shutil.move('./tmp', moddir)
+        shutil.move(mdir, moddir)
         with open(moddir + '/rstb.log','w') as rlog:
             rlog.write('name,rstb\n')
             for file in modfiles.keys():
