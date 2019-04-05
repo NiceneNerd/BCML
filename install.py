@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import csv
 import os
 import shutil
@@ -85,7 +86,6 @@ def get_mod_id(moddir) -> int:
 
 def main():
     try:
-
         print("Loading hash table...")
         with open('./data/hashtable.csv','r') as hashCsv:
             csvLoop = csv.reader(hashCsv)
@@ -151,15 +151,23 @@ def main():
             for file in modfiles.keys():
                 rlog.write(f'{file},{modfiles[file]["rstb"]}\n')
 
-        if not args.nomerge: with open(moddir + '/packs.log','w') as plog:
-            plog.write('name,path\n')
-            for pack in modfiles.keys():
-                if pack.endswith('pack'):
-                    plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
+        if not args.nomerge: 
+            with open(os.path.join(moddir,'packs.log'),'w') as plog:
+                plog.write('name,path\n')
+                for pack in modfiles.keys():
+                    if pack.endswith('pack'):
+                        plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
 
-        with open(moddir + '/rules.txt', 'a') as rules:
-            p = args.priority if args.priority > 100 else modid
-            rules.write(f'\nfsPriority = {p}')
+        
+        p = args.priority if args.priority > 100 else modid
+        rules = configparser.ConfigParser()
+        rules.read(os.path.join(moddir,'rules.txt'))
+        rules['Definition']['fsPriority'] = str(p)
+        with open(os.path.join(moddir,'rules.txt'), 'w') as rulef:
+            rules.write(rulef)
+
+        if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
+        if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
 
         mmdir = os.path.join(args.directory,'BotwMod_mod999_RSTB')
         if not os.path.exists(mmdir):
@@ -167,20 +175,23 @@ def main():
             rules = open(f'{mmdir}/rules.txt','a')
             rules.write('[Definition]\n'
                         'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
-                        'name = Master RSTB Fix\n'
+                        'name = BCML\n'
                         'path = "The Legend of Zelda: Breath of the Wild/Mods/RSTB"\n'
                         'description = Auto-generated pack which merges RSTB changes for other mods\n'
                         'version = 4\n'
                         'fsPriority = 999')
             rules.close()
-        mergerstb.main(args.directory, "shr" if args.shrink else "noshr", "nodel" if args.leave else "del", "verb" if args.verbose else "quiet")
+        mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
     except SystemExit as e:
         os.chdir('../')
         shutil.rmtree('./tmp')
         sys.exit(e)
     except:
-        print(traceback.format_exc())
+        print(f'There was an error installing {args.mod}')
+        print('Check error.log for details')
+        with open('error.log','w') as elog:
+            elog.write(traceback.format_exc())
     finally:
         if os.path.exists("./tmp"):
             shutil.rmtree('./tmp')

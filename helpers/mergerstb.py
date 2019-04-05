@@ -8,7 +8,7 @@ import zlib
 import rstb
 from rstb import util
 
-def main(path, shrink, remove, verbose):
+def main(path, verbose):
     print('Loading clean RSTB data...')
     table : rstb.ResourceSizeTable = None
     if not os.path.exists('./data/master.srsizetable'):
@@ -18,17 +18,25 @@ def main(path, shrink, remove, verbose):
     rstbchanges = {}
     print('Processing RSTB modifications..')
     for file in glob.iglob(os.path.join(path, 'BotwMod*/rstb.log'), recursive=False):
+        shrink = False
+        leave = False
+        if os.path.exists( os.path.join( os.path.dirname(file), '.leave' ) ): leave = True
+        if os.path.exists( os.path.join( os.path.dirname(file), '.shrink' ) ): shrink = True
         with open(file, 'r') as log:
             logLoop = csv.reader(log)
             for row in logLoop:
-                rstbchanges[row[0]] = row[1]
+                rstbchanges[row[0]] = {
+                    'size' : row[1],
+                    'leave' : leave,
+                    'shrink': shrink
+                }
     for change in rstbchanges:
         if zlib.crc32(str.encode(change)) in table.crc32_map:
             newsize = 0
             try:
-                newsize = int(rstbchanges[change])
+                newsize = int(rstbchanges[change]['size'])
             except ValueError:
-                if remove == 'del' :
+                if not rstbchanges[change]['leave'] :
                     if change.endswith('.bas') or change.endswith('.baslist'):
                         print(f'WARNING: Cannot calculate or safely remove RSTB size for {change}'
                             'This may need to be corrected manually, or the game could become unstable')
@@ -42,7 +50,7 @@ def main(path, shrink, remove, verbose):
                     continue
             oldsize = table.get_size(change)
             if newsize <= oldsize:
-                if shrink == 'shr':
+                if rstbchanges[change]['shrink']:
                     table.set_size(change, newsize)
                     if verbose == 'verb': print(f'Updated RSTB entry for {change} from {oldsize} to {newsize}')
                     continue
@@ -61,4 +69,4 @@ def main(path, shrink, remove, verbose):
     shutil.copy('./data/master.srsizetable', f'{mmdir}/content/System/Resource/ResourceSizeTable.product.srsizetable')
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2])
