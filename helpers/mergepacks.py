@@ -66,7 +66,7 @@ def main(path, verbose):
                                     ofile.write(fdata)
                             if verbose: print(f'Updated {file} in {pack} with changes from {packs[pack][i]}')
         packpath = basepack[basepack.find('.\\content'):]
-        newpath = os.path.join(path, 'BotwMod_mod999_RSTB', packpath)
+        newpath = os.path.join(path, 'BotwMod_mod999_BCML', packpath)
         os.makedirs(os.path.dirname(newpath), exist_ok=True)
         shutil.copy(basepack, newpath)
         os.system(f'sarc update {tmpdir} {newpath}')

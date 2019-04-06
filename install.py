@@ -87,6 +87,7 @@ def get_mod_id(moddir) -> int:
 
 def main():
     try:
+        exdir = os.getcwd()
         print("Loading hash table...")
         with open('./data/hashtable.csv','r') as hashCsv:
             csvLoop = csv.reader(hashCsv)
@@ -119,7 +120,10 @@ def main():
         for subdir in glob.iglob('tmp/*', recursive=True):
             if os.path.exists(os.path.join(subdir, 'rules.txt')):
                 mdir = subdir
-        os.chdir(mdir)
+        try:
+            os.chdir(mdir)
+        except Exception as e:
+            pass
 
         modfiles = {}
         if os.path.exists('./content'):
@@ -144,13 +148,11 @@ def main():
 
         if len(modfiles) == 0:
             print()
-            print('No content or aoc folders found. This mod may be in a non-standard format. To')
-            print('correct this, unzip the mod archive and zip it back with the content and/or aoc')
-            print('folders in the root of the zip.')
+            print('No modified files were found. That\'s very unusual. Are you sure this is a mod?')
             print()
-            sys.exit(1)
+            sys.exit(0)
 
-        os.chdir('../')
+        os.chdir(exdir)
         modid = get_mod_id(args.directory)
         moddir = os.path.join(args.directory,f'BotwMod_mod{modid:03}')
         print(f'Moving mod to {moddir}')
@@ -167,10 +169,11 @@ def main():
                     if pack.endswith('pack'):
                         plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
 
-        
         p = args.priority if args.priority > 100 else modid
         rules = configparser.ConfigParser()
         rules.read(os.path.join(moddir,'rules.txt'))
+        rulepath = os.path.basename(rules['Definition']['path']).replace('"','')
+        rules['Definition']['path'] = f'The Legend of Zelda: Breath of the Wild/BCML Mods/{rulepath}'
         rules['Definition']['fsPriority'] = str(p)
         with open(os.path.join(moddir,'rules.txt'), 'w') as rulef:
             rules.write(rulef)
@@ -178,32 +181,28 @@ def main():
         if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
 
-        mmdir = os.path.join(args.directory,'BotwMod_mod999_RSTB')
+        mmdir = os.path.join(args.directory,'BotwMod_mod999_BCML')
         if not os.path.exists(mmdir):
             os.makedirs(f'{mmdir}/content/System/Resource/')
             rules = open(f'{mmdir}/rules.txt','a')
             rules.write('[Definition]\n'
                         'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                         'name = BCML\n'
-                        'path = "The Legend of Zelda: Breath of the Wild/Mods/RSTB"\n'
-                        'description = Auto-generated pack which merges RSTB changes for other mods\n'
+                        'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Master BCML\n'
+                        'description = Auto-generated pack which merges RSTB changes and packs for other mods\n'
                         'version = 4\n'
                         'fsPriority = 999')
             rules.close()
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
-    except SystemExit as e:
-        os.chdir('../')
-        shutil.rmtree('./tmp')
-        sys.exit(e)
     except:
         print(f'There was an error installing {args.mod}')
         print('Check error.log for details')
         with open('error.log','w') as elog:
             elog.write(traceback.format_exc())
-    finally:
-        if os.path.exists("./tmp"):
-            shutil.rmtree('./tmp')
+        os.chdir(exdir)
+        if os.path.exists('tmp'):
+            shutil.rmtree('tmp')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')
