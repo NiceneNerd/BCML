@@ -181,7 +181,7 @@ def main():
             for file in modfiles.keys():
                 rlog.write(f'{file},{modfiles[file]["rstb"]}\n')
 
-        if not args.nomerge: 
+        if not args.nomerge and len(sarcmods) > 0: 
             with open(os.path.join(moddir,'packs.log'),'w') as plog:
                 plog.write('name,path\n')
                 for pack in modfiles.keys():
