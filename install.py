@@ -133,11 +133,8 @@ def main():
             print("Mod could not be extracted. Either it is in an unsupported format or the archive is invalid.")
             sys.exit(1)
 
-        mdir = ''
-        for subdir in glob.iglob('tmp', recursive=True):
-            if os.path.exists(os.path.join(subdir, 'rules.txt')):
-                mdir = subdir
-        if mdir == '':
+        mdir = 'tmp'
+        if not os.path.exists(os.path.join(mdir, 'rules.txt')):
             for subdir in glob.iglob('tmp/*', recursive=True):
                 if os.path.exists(os.path.join(subdir, 'rules.txt')):
                     mdir = subdir
@@ -145,8 +142,8 @@ def main():
             os.chdir(mdir)
         except Exception as e:
             print(f'No rules.txt was found. Is this a mod in Cemu graphics pack format?')
-            sys.exit(e)
-
+            sys.exit()
+            
         modfiles = {}
         if os.path.exists('./content'):
             print("Scanning modded content files...")
@@ -221,6 +218,8 @@ def main():
         os.chdir(exdir)
         if os.path.exists('tmp'): shutil.rmtree('tmp')
         print('Mod installed successfully!')
+    except SystemExit as e:
+        print('Exiting...')
     except:
         print(f'There was an error installing {args.mod}')
         print('Check error.log for details')
