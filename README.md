@@ -19,8 +19,8 @@ First, make sure you have all the dependencies. If you don't, install them.
 
 Next, until I get around to making a `pip` package, either:
 
-* Clone the repository to your root CEMU folder, e.g. `C:\Cemu\BCML`, or
-* Download the release ZIP and unzip to your root CEMU folder, e.g. `C:\Cemu\BCML`
+* Clone the repository to your root Cemu folder, e.g. `C:\Cemu\BCML`, or
+* Download the release ZIP and unzip to your root Cemu folder, e.g. `C:\Cemu\BCML`
 
 You *can* put BCML elsewhere if you want. You'll just need to specify the `graphicPacks` directory when you run it.
 
@@ -70,7 +70,7 @@ optional arguments:
   * `--priority`: This specifies the load priority of the mod. By default, mods start with a priority of 100 and go up by 1 for each installation. Higher priority mods will overwrite conflicting changes from lower priority ones.
   * `--directory`: By default, BCML assumes that its installation folder is inside the Cemu folder, and looks for the `graphicPacks` folder from its parent. This option allows specifying the location of the `graphicPacks` folder.
   * `--nomerge`: By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.
-  * `--verbose`: Obviously, this option provides very detailed information about neartly every step of the mod installation process.
+  * `--verbose`: Obviously, this option provides very detailed information about nearly every step of the mod installation process.
 
 ### Uninstall a Mod
 
@@ -124,6 +124,10 @@ optional arguments:
                         Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
   -v, --verbose         Verbose output covering every file processed
 ```
+
+## Known Bugs
+
+* At present, this probably only works completely with the US version of the game. I don't yet have hashes or complete RSTB info for non-US versions. If you would like to help with that, open an issue.
 
 ## License
 
