@@ -105,7 +105,7 @@ optional arguments:
   -v, --verbose         Verbose output covering every file processed
 ```
 
-## Update Mod Configuration
+### Update Mod Configuration
 
 ```
 python update.py
