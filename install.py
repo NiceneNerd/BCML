@@ -137,6 +137,10 @@ def main():
         for subdir in glob.iglob('tmp', recursive=True):
             if os.path.exists(os.path.join(subdir, 'rules.txt')):
                 mdir = subdir
+        if mdir == '':
+            for subdir in glob.iglob('tmp/*', recursive=True):
+                if os.path.exists(os.path.join(subdir, 'rules.txt')):
+                    mdir = subdir
         try:
             os.chdir(mdir)
         except Exception as e:
