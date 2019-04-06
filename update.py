@@ -1,6 +1,9 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
+
 import argparse
-from helpers import mergerstb
-from helpers import mergepacks
+
+from helpers import mergepacks, mergerstb
 
 args = None
 

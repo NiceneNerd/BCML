@@ -15,7 +15,9 @@ The following `pip` packages
 
 ## Setup
 
-Until I figure out how to make a `pip` package, either:
+First, make sure you have all the dependencies. If you don't, install them.
+
+Next, until I get around to making a `pip` package, either:
 
 * Clone the repository to your root CEMU folder, e.g. `C:\Cemu\BCML`, or
 * Download the release ZIP and unzip to your root CEMU folder, e.g. `C:\Cemu\BCML`
@@ -124,6 +126,7 @@ optional arguments:
 ```
 
 ## License
+
 This software is licensed under the terms of the GNU General Public License, version 3 or later.
 
 This software includes the 7-Zip console application `7za.exe`, which is licensed under the GNU Lesser General Public License. The source code for this application is available for free at [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html).

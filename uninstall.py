@@ -1,3 +1,6 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
+
 import argparse
 import configparser
 import glob
@@ -9,6 +12,13 @@ from helpers import mergepacks, mergerstb
 args = None
 
 def main():
+    print('##############################################')
+    print('##    Breath of the Wild Cemu Mod Loader    ##')
+    print('##              Mod Installer               ##')
+    print('##------------------------------------------##')
+    print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
+    print('##############################################')
+    print()
     i = 0
     mods = {}
     print('Mods currently installed:')

@@ -1,3 +1,6 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
+
 import argparse
 import configparser
 import csv
@@ -16,8 +19,8 @@ import sarc
 import wszst_yaz0
 import xxhash
 from rstb import util
-from helpers import mergerstb
-from helpers import mergepacks
+
+from helpers import mergepacks, mergerstb
 
 hashtable = {}
 args = None
@@ -86,6 +89,16 @@ def get_mod_id(moddir) -> int:
     return i
 
 def main():
+    print('##############################################')
+    print('##    Breath of the Wild Cemu Mod Loader    ##')
+    print('##              Mod Installer               ##')
+    print('##------------------------------------------##')
+    print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
+    print('## 7za.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
+    print('##############################################')
+    print()
+    print(f'Attemping to install {args.mod}...')
+    print()
     try:
         exdir = os.getcwd()
         print("Loading hash table...")
@@ -109,7 +122,7 @@ def main():
                 modzip.extractall('./tmp')
                 modzip.close()
             elif args.mod.endswith('.7z'):
-                os.system(f'.\\helpers\\7za.exe x -otmp "{args.mod}"')
+                os.system(f'.\\helpers\\7za.exe x -otmp "{args.mod}" >nul 2>&1')
             else:
                 raise Exception
         except:
@@ -123,7 +136,8 @@ def main():
         try:
             os.chdir(mdir)
         except Exception as e:
-            pass
+            print('No rules.txt was found. Is this a mod in Cemu graphics pack format?')
+            sys.exit(e)
 
         modfiles = {}
         if os.path.exists('./content'):
@@ -195,6 +209,10 @@ def main():
             rules.close()
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
+
+        os.chdir(exdir)
+        if os.path.exists('tmp'): shutil.rmtree('tmp')
+        print('Mod installed successfully!')
     except:
         print(f'There was an error installing {args.mod}')
         print('Check error.log for details')
@@ -207,11 +225,11 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')
     parser.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
+    parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
+    parser.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
+    parser.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
     parser.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_true")
     parser.add_argument('-l', '--leave', help = 'Do not remove RSTB entries for file sizes which cannot be calculated', action="store_true")
-    parser.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
-    parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
-    parser.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     args = parser.parse_args()
     main()
