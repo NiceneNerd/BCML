@@ -49,6 +49,10 @@ def find_modded_files(dir, verbose = False) -> {}:
                     rstbsize = rstb.SizeCalculator().calculate_file_size(file_name = pathname, wiiu = True, force = False)
                     modfiles[cname] = { 'path': pathname, 'rstb': rstbsize if rstbsize > 0 else 'del' }
                     if verbose: print(f'Added modified file {cname}')
+                    continue
+            else:
+                if verbose: print(f'{cname} not found in hashtable')
+
     return modfiles
 
 def find_modded_sarc_files(s, verbose = False) -> {}:
@@ -130,13 +134,13 @@ def main():
             sys.exit(1)
 
         mdir = ''
-        for subdir in glob.iglob('tmp/*', recursive=True):
+        for subdir in glob.iglob('tmp', recursive=True):
             if os.path.exists(os.path.join(subdir, 'rules.txt')):
                 mdir = subdir
         try:
             os.chdir(mdir)
         except Exception as e:
-            print('No rules.txt was found. Is this a mod in Cemu graphics pack format?')
+            print(f'No rules.txt was found. Is this a mod in Cemu graphics pack format?')
             sys.exit(e)
 
         modfiles = {}
