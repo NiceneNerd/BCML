@@ -4,7 +4,7 @@ A mod installer and manager for BoTW mods on Cemu
 ## Dependencies
 
 * Cemu (duh)
-* Python 3.7 (64-bit)
+* Python 3.7 (64-bit, installed to system PATH)
 
 The following `pip` packages
 * [`sarc`](https://pypi.org/project/sarc/)
