@@ -12,6 +12,7 @@ import sys
 import traceback
 import zipfile
 import zlib
+from xml.dom import minidom
 
 import rarfile
 import rstb
@@ -19,7 +20,6 @@ import sarc
 import wszst_yaz0
 import xxhash
 from rstb import util
-from xml.dom import minidom
 
 from helpers import mergepacks, mergerstb
 
@@ -198,18 +198,35 @@ def main():
         with open(os.path.join(moddir,'rules.txt'), 'w') as rulef:
             rules.write(rulef)
 
-        settings = os.path.join(args.directory, '../', 'settings.xml')
-        setxml = minidom.parse(settings)
-        gpack = setxml.getElementsByTagName('GraphicPack')[0]
-        modentry = setxml.createElement('Entry')
-        entryfile = setxml.createElement('filename')
-        entryfile.appendChild(setxml.createTextNode(f'graphicPacks\\BotwMod_mod{modid:03}\\rules.txt'))
-        entrypreset = setxml.createElement('preset')
-        entrypreset.appendChild(setxml.createTextNode(''))
+        setpath = os.path.join(args.directory, '../', 'settings.xml')
+        setread = ''
+        with open(setpath, 'r') as setfile:
+            for line in setfile.readlines():
+                setread += line
+        settings = minidom.parseString(setread.replace('\n','').replace('\r','').rstrip('\r\n').replace('  ',''))
+        gpack = settings.getElementsByTagName('GraphicPack')[0]
+        hasbcml = False
+        for entry in gpack.getElementsByTagName('Entry'):
+            if 'BotwMod_mod999_BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+                hasbcml = True
+        if not hasbcml:
+            bcmlentry = settings.createElement('Entry')
+            entryfile = settings.createElement('filename')
+            entryfile.appendChild(settings.createTextNode(f'graphicPacks\\BotwMod_mod{modid:03}\\rules.txt'))
+            entrypreset = settings.createElement('preset')
+            entrypreset.appendChild(settings.createTextNode(''))
+            bcmlentry.appendChild(entryfile)
+            bcmlentry.appendChild(entrypreset)
+            gpack.appendChild(bcmlentry)
+        modentry = settings.createElement('Entry')
+        entryfile = settings.createElement('filename')
+        entryfile.appendChild(settings.createTextNode(f'graphicPacks\\BotwMod_mod{modid:03}\\rules.txt'))
+        entrypreset = settings.createElement('preset')
+        entrypreset.appendChild(settings.createTextNode(''))
         modentry.appendChild(entryfile)
         modentry.appendChild(entrypreset)
         gpack.appendChild(modentry)
-        setxml.writexml(open(settings, 'w'))
+        settings.writexml(open(setpath, 'w'),indent="        ",addindent="    ",newl='\n')
 
         if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
