@@ -212,7 +212,7 @@ def main():
         if not hasbcml:
             bcmlentry = settings.createElement('Entry')
             entryfile = settings.createElement('filename')
-            entryfile.appendChild(settings.createTextNode(f'graphicPacks\\BotwMod_mod{modid:03}\\rules.txt'))
+            entryfile.appendChild(settings.createTextNode(f'graphicPacks\\BotwMod_mod999_BCML\\rules.txt'))
             entrypreset = settings.createElement('preset')
             entrypreset.appendChild(settings.createTextNode(''))
             bcmlentry.appendChild(entryfile)
