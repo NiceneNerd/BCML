@@ -226,7 +226,7 @@ def main():
         modentry.appendChild(entryfile)
         modentry.appendChild(entrypreset)
         gpack.appendChild(modentry)
-        settings.writexml(open(setpath, 'w'),indent="        ",addindent="    ",newl='\n')
+        settings.writexml(open(setpath, 'w'),indent='',addindent='    ',newl='\n')
 
         if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
