@@ -19,6 +19,7 @@ import sarc
 import wszst_yaz0
 import xxhash
 from rstb import util
+from xml.dom import minidom
 
 from helpers import mergepacks, mergerstb
 
@@ -196,6 +197,19 @@ def main():
         rules['Definition']['fsPriority'] = str(p)
         with open(os.path.join(moddir,'rules.txt'), 'w') as rulef:
             rules.write(rulef)
+
+        settings = os.path.join(args.directory, '../', 'settings.xml')
+        setxml = minidom.parse(settings)
+        gpack = setxml.getElementsByTagName('GraphicPack')[0]
+        modentry = setxml.createElement('Entry')
+        entryfile = setxml.createElement('filename')
+        entryfile.appendChild(setxml.createTextNode(f'graphicPacks\\BotwMod_mod{modid:03}\\rules.txt'))
+        entrypreset = setxml.createElement('preset')
+        entrypreset.appendChild(setxml.createTextNode(''))
+        modentry.appendChild(entryfile)
+        modentry.appendChild(entrypreset)
+        gpack.appendChild(modentry)
+        setxml.writexml(open(settings, 'w'))
 
         if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
