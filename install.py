@@ -186,7 +186,7 @@ def main():
             with open(os.path.join(moddir,'packs.log'),'w') as plog:
                 plog.write('name,path\n')
                 for pack in modfiles.keys():
-                    if pack.endswith('pack'):
+                    if (pack.endswith('pack') or pack.endswith('sarc')) and packs[pack]['path'] != '':
                         plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
 
         p = args.priority if args.priority > 100 else modid

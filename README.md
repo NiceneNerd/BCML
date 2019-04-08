@@ -125,6 +125,40 @@ optional arguments:
   -v, --verbose         Verbose output covering every file processed
 ```
 
+### Export Mod Configuration
+
+```
+python export.py LotsOfCoolMods.zip
+```
+
+This script exports all of your installed mods, including the BCML merges, into a single modpack. By default, it exports in graphicPack format, but it also supports SDCafiine and the MLC folder in Cemu (or on the Wii U). Usage info:
+
+```
+usage: export.py [-h] [-d DIRECTORY] [-o] [-s | -m] [-t TITLE] output
+
+Exports BCML-managed files as a standalone mod
+
+positional arguments:
+  output                Path to the mod ZIP that BCML should create
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
+  -o, --onlymerges      Only include the merged RSTB and packs, not all installed content
+  -s, --sdcafiine       Export in SDCafiine format instead of graphicPack
+  -m, --mlc             Export in the MLC content format instead of graphicPack
+  -t TITLE, --title TITLE
+                        The TitleID to use for SDCafiine or mlc export, default 00050000101C9400 (US version)
+```
+
+More details on each argument (except `--directory`, because it's been covered):
+
+* `--onlymerges`: By default, BCML will create a zip with the whole contents of all your active mod files. This option exports *only* the RSTB and any packs which BCML has merged. I'm not entirely sure why you might need this, but it's here in case you do.
+* `--sdcafiine`: By default, BCML exports to Cemu's graphicPack format. This option exports to a format which can be easily used with SDCafiine on your Wii U instead.
+* `--mlc`: By default, BCML exports to Cemu's graphicPack format. This option exports to a format that can be extracted directly into the MLC directory for Cemu or on your Wii U using FTPiiU.
+* `--title`: By default, BCML assumes you are using the US version of BOTW. Use this option with SDCafiine or MLC exports to specify the TitleID for another region.
+
 ## Known Bugs
 
 * At present, this probably only works completely with the US version of the game. I don't yet have hashes or complete RSTB info for non-US versions. If you would like to help with that, open an issue.

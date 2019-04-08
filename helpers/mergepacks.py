@@ -69,7 +69,7 @@ def main(path, verbose):
         newpath = os.path.join(path, 'BotwMod_mod999_BCML', packpath)
         os.makedirs(os.path.dirname(newpath), exist_ok=True)
         shutil.copy(basepack, newpath)
-        os.system(f'sarc update {tmpdir} {newpath}')
+        os.system('sarc update {} {}{}'.format(tmpdir, newpath, ' >nul 2>&1' if not verbose else ''))
         shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
