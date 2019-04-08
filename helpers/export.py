@@ -3,9 +3,7 @@ import glob
 import os
 import zipfile
 
-args = None
-
-def main():
+def main(args):
     sdir = os.getcwd()
 
     files = {}
@@ -75,4 +73,4 @@ if __name__ == "__main__":
     formats.add_argument('-m', '--mlc', help = 'Export in the MLC content format instead of graphicPack', action = 'store_true')
     parser.add_argument('-t', '--title', help = 'The TitleID to use for SDCafiine or mlc export, default 00050000101C9400 (US version)', default = '00050000101C9400', type = str)
     args = parser.parse_args()
-    main()
+    main(args)

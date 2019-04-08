@@ -5,9 +5,7 @@ import argparse
 
 from helpers import mergepacks, mergerstb
 
-args = None
-
-def main():
+def main(args):
     try:
         print('Updating RSTB configuration...')
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
@@ -25,4 +23,4 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     args = parser.parse_args()
-    main()
+    main(args)
