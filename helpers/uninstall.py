@@ -10,13 +10,6 @@ import shutil
 from helpers import mergepacks, mergerstb
 
 def main(args):
-    print('##############################################')
-    print('##    Breath of the Wild Cemu Mod Loader    ##')
-    print('##              Mod Installer               ##')
-    print('##------------------------------------------##')
-    print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
-    print('##############################################')
-    print()
     i = 0
     mods = {}
     print('Mods currently installed:')

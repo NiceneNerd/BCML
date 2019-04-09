@@ -94,14 +94,6 @@ def get_mod_id(moddir, priority) -> int:
     return i
 
 def main(args):
-    print('##############################################')
-    print('##    Breath of the Wild Cemu Mod Loader    ##')
-    print('##              Mod Installer               ##')
-    print('##------------------------------------------##')
-    print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
-    print('## 7za.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
-    print('##############################################')
-    print()
     print(f'Attemping to install {args.mod}...')
     print()
     try:
