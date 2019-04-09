@@ -110,25 +110,21 @@ bcml export LotsOfCoolMods.zip
 This script exports all of your installed mods, including the BCML merges, into a single modpack. By default, it exports in graphicPack format, but it also supports SDCafiine and the MLC folder in Cemu (or on the Wii U). Usage info:
 
 ```
-usage: export.py [-h] [-d DIRECTORY] [-o] [-s | -m] [-t TITLE] output
-
-Exports BCML-managed files as a standalone mod
+usage: bcml export [-h] [-o] [-s | -m] [-t TITLE] output
 
 positional arguments:
   output                Path to the mod ZIP that BCML should create
 
 optional arguments:
   -h, --help            show this help message and exit
-  -d DIRECTORY, --directory DIRECTORY
-                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
   -o, --onlymerges      Only include the merged RSTB and packs, not all installed content
   -s, --sdcafiine       Export in SDCafiine format instead of graphicPack
-  -m, --mlc             Export in the MLC content format instead of graphicPack
+  -m, --mlc             Export in the mlc content format instead of graphicPack
   -t TITLE, --title TITLE
                         The TitleID to use for SDCafiine or mlc export, default 00050000101C9400 (US version)
 ```
 
-More details on each argument (except `--directory`, because it's been covered):
+More details on each argument:
 
 * `--onlymerges`: By default, BCML will create a zip with the whole contents of all your active mod files. This option exports *only* the RSTB and any packs which BCML has merged. I'm not entirely sure why you might need this, but it's here in case you do.
 * `--sdcafiine`: By default, BCML exports to Cemu's graphicPack format. This option exports to a format which can be easily used with SDCafiine on your Wii U instead.
