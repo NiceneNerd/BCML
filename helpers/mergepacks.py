@@ -18,6 +18,10 @@ def main(path, verbose):
         for row in csvLoop:
             hashtable[row[0]] = row[1]
 
+    print('Clearing old merges...')
+    for dir in glob.iglob(os.path.join(path, 'BotwMod_mod999_BCML', 'content', '*'), recursive=True):
+        if not dir.endswith('System'): shutil.rmtree(dir)
+
     packs = {}
     print('Finding modified packs...')
     for file in glob.iglob(os.path.join(path, 'BotwMod*/packs.log')):

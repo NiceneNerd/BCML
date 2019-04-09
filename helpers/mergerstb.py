@@ -64,7 +64,7 @@ def main(path, verbose):
     print('Writing new RSTB...')
     util.write_rstb(table, './data/master.srsizetable', True)
     mmdir = os.path.join(path, 'BotwMod_mod999_BCML')
-    if not os.path.exists(mmdir):
+    if not os.path.exists(f'{mmdir}/content/System/Resource/'):
         os.makedirs(f'{mmdir}/content/System/Resource/')
     shutil.copy('./data/master.srsizetable', f'{mmdir}/content/System/Resource/ResourceSizeTable.product.srsizetable')
 

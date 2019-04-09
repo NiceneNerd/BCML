@@ -9,9 +9,11 @@ def main(args):
     try:
         print('Updating RSTB configuration...')
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
+        print()
         print('Updating merged packs...')
         mergepacks.main(args.directory, args.verbose)
-        print('Mod uninstalled successfully')
+        print()
+        print('Mod configuration updated successfully')
     except Exception as e:
         print(f'There was an error updating your mod configuration')
         print('Check error.log for details')
