@@ -5,3 +5,7 @@ data/master.srsizetable
 /helpers/__pycache__
 /tmp
 error.log
+.cdir
+/build
+/dist
+/bcml.egg-info
