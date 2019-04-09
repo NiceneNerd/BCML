@@ -6,7 +6,7 @@ A mod installer and manager for BoTW mods on Cemu
 * Cemu (duh)
 * Python 3.7 (64-bit, installed to system PATH)
 
-The following `pip` packages
+The following `pip` packages, which will be automatically installed:
 * [`sarc`](https://pypi.org/project/sarc/)
 * [`rarfile`](https://pypi.org/project/rarfile/)
 * [`rstbtool`](https://pypi.org/project/rstb/)
@@ -15,14 +15,13 @@ The following `pip` packages
 
 ## Setup
 
-First, make sure you have all the dependencies. If you don't, install them.
+First, make sure you have Python 3.7 64-bit installed and in your system PATH.
 
-Next, until I get around to making a `pip` package, either:
+BCML is available through Python's `pip` installer, so just run: `pip install bcml`
 
-* Clone the repository to your root Cemu folder, e.g. `C:\Cemu\BCML`, or
-* Download the release ZIP and unzip to your root Cemu folder, e.g. `C:\Cemu\BCML`
+Alternatively, you can clone the repository, and then run `python setup.py install` from the BCML root folder.
 
-You *can* put BCML elsewhere if you want. You'll just need to specify the `graphicPacks` directory when you run it.
+On first use, you will have to specify the directory to which Cemu is installed.
 
 **Notice:** While it is certainly possible to use BCML for some mods and install others manually, no compatibility is guaranteed. It is recommended to uninstall all Cemu mods before using BCML, and then to reinstall them through BCML.
 
@@ -33,49 +32,49 @@ You *can* put BCML elsewhere if you want. You'll just need to specify the `graph
 
 ## Usage
 
-Run all commands from within the BCML folder wherever you extracted it.
+All BCML commands take the following arguments:
+
+```
+  -h, --help            show this help message and exit
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify path to Cemu graphicPacks folder, if different from saved
+  -v, --verbose         Verbose output covering every file processed
+```
 
 ### Install a Mod
 
 ```
-python install.py SuperCoolMod.zip
+bcml install SuperCoolMod.zip
 ```
 
 That's the gist of it. More detailed usage information:
 
 ```
-usage: install.py [-h] [-s] [-r] [-p PRIORITY] [-d DIRECTORY] [--nomerge] [-v] mod
-
-A tool to install and manage mods for Breath of the Wild in CEMU
+usage: bcml install [-h] [-p PRIORITY] [--nomerge] [-s] [-l] mod
 
 positional arguments:
   mod                   Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format
 
 optional arguments:
   -h, --help            show this help message and exit
+  -p PRIORITY, --priority PRIORITY
+                        Mod load priority, default 100
+  --nomerge             Do not automatically merge pack files
   -s, --shrink          Update RSTB entries for files which haven't grown
   -l, --leave           Do not remove RSTB entries for file sizes which cannot be calculated
-  -p PRIORITY, --priority PRIORITY
-                        Mod load priority, default starts at 100 for first mod
-  -d DIRECTORY, --directory DIRECTORY
-                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
-  --nomerge             Do not automatically merge pack files
-  -v, --verbose         Verbose output covering every file processed
   ```
 
   More details on each argument:
 
+  * `--priority`: This specifies the load priority of the mod. By default, mods start with a priority of 100 and go up by 1 for each installation. Higher priority mods will overwrite conflicting changes from lower priority ones.
+  * `--nomerge`: By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.
   * `--shrink`: By default, BCML will ignore files with equal or smaller sizes to what was originally in the RSTB. This option forces it to update anyway. I can't think of any reason to use this except as a last ditch effort to stop blood moon spam on a heavily modded setup.
   * `--leave`: By default, BCML will delete RSTB entries when the RSTB size of a file cannot be calculated. This option leaves them alone. *Be warned: This can cause instability.*
-  * `--priority`: This specifies the load priority of the mod. By default, mods start with a priority of 100 and go up by 1 for each installation. Higher priority mods will overwrite conflicting changes from lower priority ones.
-  * `--directory`: By default, BCML assumes that its installation folder is inside the Cemu folder, and looks for the `graphicPacks` folder from its parent. This option allows specifying the location of the `graphicPacks` folder.
-  * `--nomerge`: By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.
-  * `--verbose`: Obviously, this option provides very detailed information about nearly every step of the mod installation process.
 
 ### Uninstall a Mod
 
 ```
-python uninstall.py
+bcml uninstall
 ```
 
 Dead simple. Run this script and you will be presented with a list of installed mods like so:
@@ -92,43 +91,20 @@ Dead simple. Run this script and you will be presented with a list of installed 
 Enter the number of the mod you would like to uninstall:
 ```
 
-Pick one and it will be uninstalled. The RSTB will be regenerated, and any merged packs will be reprocessed. This script has only a couple arguments:
-
-```
-usage: uninstall.py [-h] [-d DIRECTORY] [-v]
-Uninstaller for BCML-managed mods
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -d DIRECTORY, --directory DIRECTORY
-                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
-  -v, --verbose         Verbose output covering every file processed
-```
+Pick one and it will be uninstalled. The RSTB will be regenerated, and any merged packs will be reprocessed.
 
 ### Update Mod Configuration
 
 ```
-python update.py
+bcml update
 ```
 
-If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made. This script has only a couple arguments.
-
-```
-usage: update.py [-h] [-d DIRECTORY] [-v]
-
-Refreshes RSTB and merged packs for BCML-managed mods
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -d DIRECTORY, --directory DIRECTORY
-                        Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory
-  -v, --verbose         Verbose output covering every file processed
-```
+If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made.
 
 ### Export Mod Configuration
 
 ```
-python export.py LotsOfCoolMods.zip
+bcml export LotsOfCoolMods.zip
 ```
 
 This script exports all of your installed mods, including the BCML merges, into a single modpack. By default, it exports in graphicPack format, but it also supports SDCafiine and the MLC folder in Cemu (or on the Wii U). Usage info:
