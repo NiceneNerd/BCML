@@ -20,7 +20,7 @@ else:
 parser : argparse.ArgumentParser = argparse.ArgumentParser(prog='bcml')
 parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, if different from saved', default = os.path.join(cemudir, 'graphicPacks'), type = str)
 parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
-subparsers = parser.add_subparsers(dest='command', help='Command help')
+subparsers = parser.add_subparsers(dest='command', help='Command for BCML to perform')
 subparsers.required = True
 
 p_install = subparsers.add_parser('install')
