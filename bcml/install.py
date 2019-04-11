@@ -174,7 +174,7 @@ def main(args):
         os.chdir(ewd)
         modid = get_mod_id(args.directory, args.priority)
         moddir = os.path.join(args.directory,f'BotwMod_mod{modid:03}')
-        print(f'Moving mod to {moddir}')
+        print(f'Moving mod from {mdir} to {moddir}')
         shutil.move(mdir, moddir)
         with open(os.path.join(moddir, 'rstb.log'),'w') as rlog:
             rlog.write('name,rstb\n')
@@ -252,7 +252,7 @@ def main(args):
     except:
         print(f'There was an error installing {args.mod}')
         print('Check error.log for details')
-        with open('error.log','w') as elog:
+        with open(os.path.join(workdir, 'error.log'),'w') as elog:
             elog.write(traceback.format_exc())
         os.chdir(ewd)
 
