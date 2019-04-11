@@ -16,7 +16,8 @@ setup(
     packages=['bcml'],
     entry_points={
         'console_scripts': [
-            'bcml = bcml.__init__:main'
+            'bcml = bcml.__init__:main',
+            'bcml-gui = bcml.gui:main'
         ]
     },
     classifiers=[

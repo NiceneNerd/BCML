@@ -94,43 +94,48 @@ def get_mod_id(moddir, priority) -> int:
     return i
 
 def main(args):
+    ewd = os.getcwd()
     print(f'Attemping to install {args.mod}...')
     print()
     try:
-        exdir = os.getcwd()
+        workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
+        execdir = os.path.dirname(os.path.realpath(__file__))
+
         print("Loading hash table...")
-        with open('./data/hashtable.csv','r') as hashCsv:
+        with open(os.path.join(execdir, 'data', 'hashtable.csv'),'r') as hashCsv:
             csvLoop = csv.reader(hashCsv)
             for row in csvLoop:
                 hashtable[row[0]] = row[1]
 
         print("Extracting mod files...")
+        tmpdir = ''
         try:
-            if os.path.exists('./tmp'):
-                shutil.rmtree('./tmp')
+            tmpdir = os.path.join(workdir, 'tmp')
+            if os.path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
             if args.mod.endswith('.zip'):
                 modzip = zipfile.ZipFile(args.mod, 'r')
-                os.mkdir('./tmp')
-                modzip.extractall('./tmp')
+                os.mkdir(tmpdir)
+                modzip.extractall(tmpdir)
                 modzip.close()
             elif args.mod.endswith('.rar'):
                 modzip = rarfile.RarFile(args.mod, 'r')
-                os.mkdir('./tmp')
-                modzip.extractall('./tmp')
+                os.mkdir(tmpdir)
+                modzip.extractall(tmpdir)
                 modzip.close()
             elif args.mod.endswith('.7z'):
-                os.system(f'.\\helpers\\7za.exe x -otmp "{args.mod}" >nul 2>&1')
+                os.system(f'{os.path.join(execdir, "helpers", "7za.exe")} x -o"{tmpdir}" "{args.mod}" >nul 2>&1')
             else:
                 raise Exception
         except:
             print("Mod could not be extracted. Either it is in an unsupported format or the archive is invalid.")
             print('Check error.log for details')
-            with open('error.log','w') as elog:
+            with open(os.path.join(workdir, 'error.log'),'w') as elog:
                 elog.write(traceback.format_exc())
 
-        mdir = 'tmp'
+        mdir = tmpdir
         if not os.path.exists(os.path.join(mdir, 'rules.txt')):
-            for subdir in glob.iglob('tmp/*', recursive=True):
+            for subdir in glob.iglob(f'{tmpdir}/*', recursive=True):
                 if os.path.exists(os.path.join(subdir, 'rules.txt')):
                     mdir = subdir
         try:
@@ -166,12 +171,12 @@ def main(args):
             print()
             sys.exit(0)
 
-        os.chdir(exdir)
+        os.chdir(ewd)
         modid = get_mod_id(args.directory, args.priority)
         moddir = os.path.join(args.directory,f'BotwMod_mod{modid:03}')
         print(f'Moving mod to {moddir}')
         shutil.move(mdir, moddir)
-        with open(moddir + '/rstb.log','w') as rlog:
+        with open(os.path.join(moddir, 'rstb.log'),'w') as rlog:
             rlog.write('name,rstb\n')
             for file in modfiles.keys():
                 rlog.write(f'{file},{modfiles[file]["rstb"]}\n')
@@ -240,8 +245,7 @@ def main(args):
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
 
-        os.chdir(exdir)
-        if os.path.exists('tmp'): shutil.rmtree('tmp')
+        if os.path.exists(tmpdir): shutil.rmtree(tmpdir)
         print('Mod installed successfully!')
     except SystemExit as e:
         print('Exiting...')
@@ -250,9 +254,7 @@ def main(args):
         print('Check error.log for details')
         with open('error.log','w') as elog:
             elog.write(traceback.format_exc())
-        os.chdir(exdir)
-        if os.path.exists('tmp'):
-            shutil.rmtree('tmp')
+        os.chdir(ewd)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')

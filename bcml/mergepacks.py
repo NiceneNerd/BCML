@@ -11,9 +11,14 @@ import xxhash
 
 
 def main(path, verbose):
+    ewd = os.getcwd()
+    workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
+    execdir = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(workdir)
+
     hashtable = {}
     print("Loading hash table...")
-    with open('./data/hashtable.csv','r') as hashCsv:
+    with open(os.path.join(execdir, 'data', 'hashtable.csv'),'r') as hashCsv:
         csvLoop = csv.reader(hashCsv)
         for row in csvLoop:
             hashtable[row[0]] = row[1]
@@ -24,7 +29,7 @@ def main(path, verbose):
 
     packs = {}
     print('Finding modified packs...')
-    for file in glob.iglob(os.path.join(path, 'BotwMod*/packs.log')):
+    for file in glob.iglob(os.path.join(path, 'BotwMod*', 'packs.log')):
         with open(file, 'r') as rlog:
             csvLoop = csv.reader(rlog)
             for row in csvLoop:
@@ -75,6 +80,7 @@ def main(path, verbose):
         shutil.copy(basepack, newpath)
         os.system('sarc update {} {}{}'.format(tmpdir, newpath, ' >nul 2>&1' if not verbose else ''))
         shutil.rmtree(tmpdir)
+    os.chdir(ewd)
 
 if __name__ == "__main__":
     main(sys.argv[1], (sys.argv[2] == 'verb') )
