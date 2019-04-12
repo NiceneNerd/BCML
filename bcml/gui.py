@@ -46,6 +46,7 @@ class BcmlFrame(wx.Frame):
         self.button_uninstall.Bind(wx.EVT_BUTTON, self.OnUninstall)
         self.button_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.button_export.Bind(wx.EVT_BUTTON, self.OnExport)
+        self.button_explore.Bind(wx.EVT_BUTTON, self.OnExplore)
 
         self.Bind(EVT_BCMLDONE, self.OnBcmlDone)
 
@@ -60,6 +61,7 @@ class BcmlFrame(wx.Frame):
         # begin wxGlade: BcmlFrame.__set_properties
         self.SetTitle("BCML: BotW Cemu Mod Loader")
         self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWFRAME))
+        self.SetPosition((64, 32))
         self.list_mods.SetMinSize((-1, 200))
         self.button_install.SetToolTip("Install a new mod")
         self.button_uninstall.SetToolTip("Uninstall the selected mod")
@@ -77,7 +79,7 @@ class BcmlFrame(wx.Frame):
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_3 = wx.BoxSizer(wx.VERTICAL)
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
-        bitmap_1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap("C:\\Cemu\\BCML\\.vscode\\logo-smaller.png", wx.BITMAP_TYPE_ANY))
+        bitmap_1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data' , 'logo-smaller.png'), wx.BITMAP_TYPE_ANY))
         sizer_1.Add(bitmap_1, 0, 0, 0)
         label_list = wx.StaticText(self, wx.ID_ANY, "Mods currently installed:")
         sizer_4.Add(label_list, 0, wx.LEFT | wx.RIGHT | wx.TOP, 8)
@@ -192,6 +194,28 @@ class BcmlFrame(wx.Frame):
     def OnExport(self, event):
         exportDlg = ExportDialog(self)
         exportDlg.ShowModal()
+        if exportDlg.GetReturnCode() != wx.YES:
+            return
+        else:
+            args = argparse.Namespace()
+            args.__setattr__('output', exportDlg.export_options['file'])
+            args.__setattr__('directory', self.cemudir)
+            args.__setattr__('onlymerges', exportDlg.export_options['mergeonly'])
+            args.__setattr__('mlc', (exportDlg.export_options['format'] == 2))
+            args.__setattr__('sdcafiine', (exportDlg.export_options['format'] == 1))
+            args.__setattr__('title', exportDlg.export_options['titleid'].replace('-',''))
+            bcmlUpdate = BcmlThread(self, bcml.export.main, args)
+            print(f'Exporting mods to {args.output}...')
+            self.DisableButtons()
+            bcmlUpdate.start()
+
+    def OnExplore(self, event):
+        if self.list_mods.GetSelection() < 0:
+            dlg = wx.MessageDialog(self, 'No mod selected to explore', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            os.system(f'explorer {self.mods[self.list_mods.GetSelection()]["path"]}')
 
 myEVT_BCMLDONE = wx.NewEventType()
 EVT_BCMLDONE = wx.PyEventBinder(myEVT_BCMLDONE, 1)
@@ -295,6 +319,8 @@ class InstallDialog(wx.Dialog):
 # end of class InstallDialog
 
 class ExportDialog(wx.Dialog):
+    export_options = {}
+
     def __init__(self, *args, **kwds):
         # begin wxGlade: ExportDialog.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
@@ -302,6 +328,7 @@ class ExportDialog(wx.Dialog):
         self.SetSize((400, 285))
         self.choice_format = wx.Choice(self, wx.ID_ANY, choices=["Graphic Pack", "SDCafiine", "MLC"])
         self.checkbox_mergeonly = wx.CheckBox(self, wx.ID_ANY, "Only include BCML-generated RSTB and merged packs, not all\nmod files")
+        self.text_ctrl_titleid = wx.TextCtrl(self, wx.ID_ANY, "00050000101C9400")
         self.button_export = wx.Button(self, wx.ID_ANY, "Export")
         self.button_cancel = wx.Button(self, wx.ID_ANY, "Cancel")
 
@@ -309,10 +336,13 @@ class ExportDialog(wx.Dialog):
         self.__do_layout()
         # end wxGlade
 
+        self.button_cancel.Bind(wx.EVT_BUTTON, self.OnCancel)
+        self.button_export.Bind(wx.EVT_BUTTON, self.OnExport)
+
     def __set_properties(self):
         # begin wxGlade: ExportDialog.__set_properties
         self.SetTitle("Export Mod Configuration")
-        self.SetSize((400, 285))
+        self.SetSize((400, 350))
         self.choice_format.SetSelection(0)
         # end wxGlade
 
@@ -327,12 +357,31 @@ class ExportDialog(wx.Dialog):
         sizer_8.Add(label_4, 0, wx.LEFT | wx.RIGHT | wx.TOP, 8)
         sizer_8.Add(self.choice_format, 0, wx.ALL, 8)
         sizer_8.Add(self.checkbox_mergeonly, 0, wx.ALL, 8)
+        label_5 = wx.StaticText(self, wx.ID_ANY, "TitleID (only needed for SDCafiine and MLC):")
+        sizer_8.Add(label_5, 0, wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_8.Add(self.text_ctrl_titleid, 0, wx.ALL | wx.EXPAND, 8)
         sizer_9.Add(self.button_export, 0, 0, 0)
         sizer_9.Add(self.button_cancel, 0, 0, 0)
         sizer_8.Add(sizer_9, 1, wx.ALIGN_RIGHT | wx.ALL, 8)
         self.SetSizer(sizer_8)
         self.Layout()
         # end wxGlade
+
+    def OnCancel(self, event):
+        self.Close()
+
+    def OnExport(self, event):
+        fileDlg = wx.FileDialog(self, "Export Mod Zip", wildcard="ZIP files (*.zip)|*.zip",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        if fileDlg.ShowModal() == wx.ID_CANCEL:
+            return
+        self.export_options = {
+            'file': fileDlg.GetPath(),
+            'format': self.choice_format.GetSelection(),
+            'mergeonly': self.checkbox_mergeonly.IsChecked(),
+            'titleid': self.text_ctrl_titleid.GetValue()
+        }
+        self.EndModal(wx.YES)
 
 # end of class ExportDialog
 
@@ -345,6 +394,9 @@ class MyApp(wx.App):
 
 # end of class MyApp
 
-if __name__ == "__main__":
+def main():
     app = MyApp(0)
     app.MainLoop()
+
+if __name__ == "__main__":
+    main()

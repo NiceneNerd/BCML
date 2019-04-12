@@ -1,5 +1,7 @@
 import argparse
+import configparser
 import os
+import glob
 
 from bcml import install, uninstall, update, export
 
@@ -22,7 +24,7 @@ def main():
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, if different from saved', default = os.path.join(cemudir, 'graphicPacks'), type = str)
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     subparsers = parser.add_subparsers(dest='command', help='Command for BCML to perform')
-    subparsers.required = True
+    subparsers.required = False
 
     p_install = subparsers.add_parser('install')
     p_install.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
@@ -68,7 +70,19 @@ def main():
         update.main(args)
         os._exit(0)
     else:
-        print('Invalid command')
+        mods = {}
+        print('No command given, listing mods currently installed:')
+        print()
+        for i, rulef in enumerate(glob.iglob(os.path.join(args.directory, 'BotwMod*/rules.txt'))):
+            rules = configparser.ConfigParser()
+            rules.read(rulef)
+            mods[i] = {
+                'name' : rules['Definition']['name'],
+                'priority' : rules['Definition']['fsPriority'],
+                'path' : os.path.dirname(rulef)
+            }
+            if mods[i]['name'] == 'BCML': continue
+            print(f'{mods[i]["name"]} — Priority: {mods[i]["priority"]}')
 
 if __name__ == "__main__":
     main()
