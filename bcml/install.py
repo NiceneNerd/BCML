@@ -245,7 +245,11 @@ def main(args):
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
 
-        if os.path.exists(tmpdir): shutil.rmtree(tmpdir)
+        while os.path.exists(tmpdir):
+            try:
+                shutil.rmtree(tmpdir)
+            except PermissionError as e:
+                pass
         print('Mod installed successfully!')
     except SystemExit as e:
         print('Exiting...')
