@@ -49,7 +49,7 @@ def main():
 
     print('##############################################')
     print('##    Breath of the Wild Cemu Mod Loader    ##')
-    print('##             Version 0.992                ##')
+    print('##             Version 0.993                ##')
     print('##------------------------------------------##')
     print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
     print('## 7za.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
