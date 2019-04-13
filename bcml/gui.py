@@ -73,6 +73,10 @@ class BcmlFrame(wx.Frame):
         self.text_output.SetForegroundColour(wx.Colour(239, 239, 239))
         # end wxGlade
 
+        icon = wx.EmptyIcon()
+        icon.CopyFromBitmap(wx.Bitmap(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data' , 'bcml.ico'), wx.BITMAP_TYPE_ANY))
+        self.SetIcon(icon)
+
     def __do_layout(self):
         # begin wxGlade: BcmlFrame.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)

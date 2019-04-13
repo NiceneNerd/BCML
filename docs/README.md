@@ -1,3 +1,5 @@
+![BCML Logo](https://raw.githubusercontent.com/NiceneNerd/BCML/gui/bcml/data/logo.png)
+
 # Breath of the Wild Cemu Mod Loader
 A mod installer and manager for BoTW mods on Cemu
 
@@ -30,6 +32,20 @@ On first use, you will have to specify the directory to which Cemu is installed.
 - Mods must be packed as ZIP, 7z, or  RAR archives.
 - Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
 
+## GUI Usage
+
+As of version 0.98, BCML now includes a graphical user interface. Hopefully this is simpler for everyone. You can run the graphical BCML simply by:
+
+```
+bcml-gui
+```
+
+You can also create a shortcut on your desktop if you wish. The path to the executable is will be in the "Scripts" folder in your Python installation (e.g. `C:\Python37\Scripts\bcml-gui.exe`), and an icon is included in the data folder where the BCML package is installed (e.g. `C:\Python37\Lib\site-packages\bcml\data\bcml.ico`).
+
+The interface is previewed below and seems fairly self-explanatory. If you need more details, check the detailed reference for the CLI version below.
+
+![BCML](https://i.imgur.com/Qa3w4k7.png)
+
 ## Usage
 
 All BCML commands take the following arguments:
@@ -39,6 +55,19 @@ All BCML commands take the following arguments:
   -d DIRECTORY, --directory DIRECTORY
                         Specify path to Cemu graphicPacks folder, if different from saved
   -v, --verbose         Verbose output covering every file processed
+```
+
+Running `bcml` by itself with no arguments will list installed mods like so:
+
+```
+No command given, listing mods currently installed:
+
+Modified Beedle Shop — Priority: 100
+"Amiibo Chest Items Mod" — Priority: 101
+"Disable_Fast_Travel" — Priority: 102
+Unobtainable Chests Fix — Priority: 103
+Hyrule Rebalance v4.0 — Priority: 109
+Linkle Mod — Priority: 110
 ```
 
 ### Install a Mod
