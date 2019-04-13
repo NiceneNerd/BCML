@@ -243,7 +243,7 @@ def main(args):
                         'fsPriority = 999')
             rules.close()
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
-        if not args.nomerge: mergepacks.main(args.directory, args.verbose)
+        if not args.nomerge and len(sarcmods) > 0: mergepacks.main(args.directory, args.verbose)
 
         while os.path.exists(tmpdir):
             try:
