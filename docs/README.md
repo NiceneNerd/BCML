@@ -46,7 +46,7 @@ The interface is previewed below and seems fairly self-explanatory. If you need 
 
 ![BCML](https://i.imgur.com/Qa3w4k7.png)
 
-## Usage
+## CLI Usage
 
 All BCML commands take the following arguments:
 
