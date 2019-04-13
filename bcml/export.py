@@ -62,6 +62,7 @@ def main(args):
         os.remove('tmprules.txt')
 
     exzip.close()
+    print(f'Export to {args.output} successful')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Exports BCML-managed files as a standalone mod')

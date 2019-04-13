@@ -9,15 +9,19 @@ import rstb
 from rstb import util
 
 def main(path, verbose):
+    workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
+    execdir = os.path.dirname(os.path.realpath(__file__))
+
+    rstbpath = os.path.join(execdir, 'data', 'master.srsizetable')
+
     print('Loading clean RSTB data...')
     table : rstb.ResourceSizeTable = None
-    if not os.path.exists('./data/master.srsizetable'):
-        shutil.copyfile('./data/clean.srsizetable', './data/master.srsizetable')
-    table = rstb.util.read_rstb('./data/master.srsizetable', True)
+    if not os.path.exists(rstbpath): shutil.copyfile(os.path.join(execdir, 'data', 'clean.srsizetable'), rstbpath)
+    table = rstb.util.read_rstb(rstbpath, True)
 
     rstbchanges = {}
     print('Processing RSTB modifications..')
-    for file in glob.iglob(os.path.join(path, 'BotwMod*/rstb.log'), recursive=False):
+    for file in glob.iglob(os.path.join(path, 'BotwMod*', 'rstb.log'), recursive=False):
         shrink = False
         leave = False
         if os.path.exists( os.path.join( os.path.dirname(file), '.leave' ) ): leave = True
@@ -62,11 +66,11 @@ def main(path, verbose):
                 if verbose == 'verb': print(f'Updated RSTB entry for {change} from {oldsize} to {newsize}')
 
     print('Writing new RSTB...')
-    util.write_rstb(table, './data/master.srsizetable', True)
+    util.write_rstb(table, rstbpath, True)
     mmdir = os.path.join(path, 'BotwMod_mod999_BCML')
     if not os.path.exists(f'{mmdir}/content/System/Resource/'):
         os.makedirs(f'{mmdir}/content/System/Resource/')
-    shutil.copy('./data/master.srsizetable', f'{mmdir}/content/System/Resource/ResourceSizeTable.product.srsizetable')
+    shutil.copy(rstbpath, f'{mmdir}/content/System/Resource/ResourceSizeTable.product.srsizetable')
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])
