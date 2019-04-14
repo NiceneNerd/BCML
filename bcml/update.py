@@ -11,7 +11,7 @@ def main(args):
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         print()
         print('Updating merged packs...')
-        mergepacks.main(args.directory, args.verbose)
+        if not args.nomerge: mergepacks.main(args.directory, args.verbose)
         print()
         print('Mod configuration updated successfully')
     except Exception as e:
@@ -24,6 +24,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Refreshes RSTB and merged packs for BCML-managed mods')
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
-    parser.add_argument('--nomerge', 'Skip updating merged packs')
+    parser.add_argument('--nomerge', 'Skip updating merged packs', action='store_true')
     args = parser.parse_args()
     main(args)

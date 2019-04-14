@@ -14,7 +14,7 @@ import zipfile
 import zlib
 from xml.dom import minidom
 
-import rarfile
+import patoolib
 import rstb
 import sarc
 import wszst_yaz0
@@ -119,10 +119,7 @@ def main(args):
                 modzip.extractall(tmpdir)
                 modzip.close()
             elif args.mod.endswith('.rar'):
-                modzip = rarfile.RarFile(args.mod, 'r')
-                os.mkdir(tmpdir)
-                modzip.extractall(tmpdir)
-                modzip.close()
+                patoolib.extract_archive(args.mod, outdir=tmpdir)
             elif args.mod.endswith('.7z'):
                 os.system(f'{os.path.join(execdir, "helpers", "7za.exe")} x -o"{tmpdir}" "{args.mod}" >nul 2>&1')
             else:

@@ -3,7 +3,7 @@ import configparser
 import os
 import glob
 
-from bcml import install, uninstall, update, export
+from bcml import install, uninstall, update, export, reorder
 
 def main():
     datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
@@ -35,7 +35,10 @@ def main():
 
     p_uninstall = subparsers.add_parser('uninstall', description = 'Uninstaller for BCML-managed mods')
 
+    p_reorder = subparsers.add_parser('reorder', description = 'Change priority for BCML-managed mod')
+
     p_update = subparsers.add_parser('update', description = 'Refreshes RSTB and merged packs for BCML-managed mods')
+    p_update.add_argument('--nomerge', 'Skip updating merged packs', action='store_true')
 
     p_export = subparsers.add_parser('export')
     p_export.add_argument('output', help = 'Path to the mod ZIP that BCML should create')
@@ -69,6 +72,9 @@ def main():
         os._exit(0)
     elif args.command == 'update':
         update.main(args)
+        os._exit(0)
+    elif args.command == 'reorder':
+        reorder.main(args)
         os._exit(0)
     else:
         mods = {}
