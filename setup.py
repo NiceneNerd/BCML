@@ -32,7 +32,6 @@ setup(
     install_requires=[
         'sarc',
         'rstb',
-        'patool',
         'wszst_yaz0',
         'wxPython',
         'xxhash'

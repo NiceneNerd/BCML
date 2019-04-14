@@ -11,11 +11,9 @@ import shutil
 import signal
 import sys
 import traceback
-import zipfile
 import zlib
 from xml.dom import minidom
 
-import patoolib
 import rstb
 import sarc
 import wszst_yaz0
