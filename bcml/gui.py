@@ -149,12 +149,14 @@ class BcmlFrame(wx.Frame):
         self.button_uninstall.Disable()
         self.button_install.Disable()
         self.button_update.Disable()
+        self.button_change.Disable()
 
     def EnableButtons(self):
         self.button_export.Enable()
         self.button_uninstall.Enable()
         self.button_install.Enable()
         self.button_update.Enable()
+        self.button_change.Enable()
 
     def OnInstall(self, event):
         installDlg = InstallDialog(self)
