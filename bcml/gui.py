@@ -194,9 +194,9 @@ class BcmlFrame(wx.Frame):
         args.__setattr__('directory', self.cemudir)
         args.__setattr__('verbose', False)
         args.__setattr__('nomerge', nomerge)
-        bcmlUpdate = BcmlThread(self, bcml.update.main, args)
+        bcmlUninstall = BcmlThread(self, bcml.update.main, args)
         self.DisableButtons()
-        bcmlUpdate.start()
+        bcmlUninstall.start()
 
     def OnUpdate(self, event):
         args = argparse.Namespace()
