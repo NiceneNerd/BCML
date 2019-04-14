@@ -168,4 +168,4 @@ More details on each argument:
 
 This software is licensed under the terms of the GNU General Public License, version 3 or later.
 
-This software includes the 7-Zip console application `7za.exe`, which is licensed under the GNU Lesser General Public License. The source code for this application is available for free at [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html).
+This software includes the 7-Zip console application `7z.exe` and the library `7z.dll`, which are licensed under the GNU Lesser General Public License. The source code for this application is available for free at [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html).

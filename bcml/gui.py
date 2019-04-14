@@ -11,9 +11,11 @@ import threading
 import bcml
 import glob
 import os
+import platform
 import sys
 import shutil
 import time
+
 
 from bcml import mergepacks, mergerstb
 
@@ -60,6 +62,20 @@ class BcmlFrame(wx.Frame):
         redir = RedirectText(self.text_output)
         sys.stdout = redir
         sys.stderr = redir
+
+        ver = platform.python_version_tuple()
+        if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
+            dlg = wx.MessageDialog(self, 'BCML is only supported on Python 3.7 or higher. The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            os._exit(1)
+
+        is_64bits = sys.maxsize > 2**32
+        if not is_64bits:
+            dlg = wx.MessageDialog(self, 'BCML is only supported in 64-bit Python, but it looks like you\'re running 32-bit. The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            os._exit(1)
 
     def __set_properties(self):
         # begin wxGlade: BcmlFrame.__set_properties
