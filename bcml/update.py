@@ -2,6 +2,7 @@
 # Licensed under GPLv3+
 
 import argparse
+import os
 
 from bcml import mergepacks, mergerstb
 
@@ -15,10 +16,11 @@ def main(args):
         print()
         print('Mod configuration updated successfully')
     except Exception as e:
+        datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
         print(f'There was an error updating your mod configuration')
         print('Check error.log for details')
-        with open('error.log','w') as elog:
-            elog.write(e.text)
+        with open(os.path.join(datadir,'error.log'),'w') as elog:
+            elog.write(str(e))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Refreshes RSTB and merged packs for BCML-managed mods')

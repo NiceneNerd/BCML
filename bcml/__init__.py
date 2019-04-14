@@ -1,11 +1,23 @@
 import argparse
 import configparser
 import os
+import platform
+import sys
 import glob
 
 from bcml import install, uninstall, update, export, reorder
 
 def main():
+    ver = platform.python_version_tuple()
+    if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
+        print('BCML is only supported on Python 3.7 or higher')
+        os._exit(1)
+
+    is_64bits = sys.maxsize > 2**32
+    if not is_64bits:
+        print('BCML is only supported in 64-bit Python, but it looks like you\'re running 32-bit')
+        os._exit(1)
+
     datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
     os.makedirs(datadir, exist_ok=True)
 
@@ -38,7 +50,7 @@ def main():
     p_reorder = subparsers.add_parser('reorder', description = 'Change priority for BCML-managed mod')
 
     p_update = subparsers.add_parser('update', description = 'Refreshes RSTB and merged packs for BCML-managed mods')
-    p_update.add_argument('--nomerge', 'Skip updating merged packs', action='store_true')
+    p_update.add_argument('--nomerge', help = 'Skip updating merged packs', action='store_true')
 
     p_export = subparsers.add_parser('export')
     p_export.add_argument('output', help = 'Path to the mod ZIP that BCML should create')
@@ -55,7 +67,7 @@ def main():
     print('##             Version 0.993                ##')
     print('##------------------------------------------##')
     print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
-    print('## 7za.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
+    print('##  7z.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
     print('##############################################')
     print()
 

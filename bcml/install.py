@@ -6,6 +6,7 @@ import configparser
 import csv
 import glob
 import os
+import subprocess
 import shutil
 import signal
 import sys
@@ -111,17 +112,14 @@ def main(args):
         tmpdir = ''
         try:
             tmpdir = os.path.join(workdir, 'tmp')
+            formats = ['.rar', '.zip', '.7z']
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
-            if args.mod.endswith('.zip'):
-                modzip = zipfile.ZipFile(args.mod, 'r')
-                os.mkdir(tmpdir)
-                modzip.extractall(tmpdir)
-                modzip.close()
-            elif args.mod.endswith('.rar'):
-                patoolib.extract_archive(args.mod, outdir=tmpdir)
-            elif args.mod.endswith('.7z'):
-                os.system(f'{os.path.join(execdir, "helpers", "7za.exe")} x -o"{tmpdir}" "{args.mod}" >nul 2>&1')
+            if os.path.splitext(args.mod)[1] in formats:
+                CREATE_NO_WINDOW = 0x08000000
+                zargs = [os.path.join(execdir, 'helpers', '7z.exe'), 'x', args.mod, f'-o{tmpdir}']
+                unzip = subprocess.Popen(zargs, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+                print(unzip.communicate()[1])
             else:
                 raise Exception
         except:

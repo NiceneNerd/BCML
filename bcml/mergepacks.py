@@ -3,6 +3,7 @@ import glob
 import os
 import shutil
 import sys
+import subprocess
 
 import rstb
 import sarc
@@ -78,7 +79,9 @@ def main(path, verbose):
         newpath = os.path.join(path, 'BotwMod_mod999_BCML', packpath)
         os.makedirs(os.path.dirname(newpath), exist_ok=True)
         shutil.copy(basepack, newpath)
-        os.system('sarc update {} {}{}'.format(tmpdir, newpath, ' >nul 2>&1' if not verbose else ''))
+        CREATE_NO_WINDOW = 0x08000000
+        sarcup = subprocess.Popen(['sarc', 'update', tmpdir, newpath], stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+        if verbose: print(sarcup.communicate()[0])
         shutil.rmtree(tmpdir)
     os.chdir(ewd)
 
