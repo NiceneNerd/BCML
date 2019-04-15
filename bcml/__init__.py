@@ -18,11 +18,11 @@ def main():
         print('BCML is only supported in 64-bit Python, but it looks like you\'re running 32-bit')
         os._exit(1)
 
-    datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
-    os.makedirs(datadir, exist_ok=True)
+    workdir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
+    os.makedirs(workdir, exist_ok=True)
 
     cemudir = ''
-    cdirfile = os.path.join(datadir,'.cdir')
+    cdirfile = os.path.join(workdir,'.cdir')
     if not os.path.exists(cdirfile):
         while not os.path.exists(os.path.join(cemudir, 'Cemu.exe')):
             cemudir = input('For first time use, please specify the folder where Cemu is installed:\n> ')

@@ -37,10 +37,11 @@ def main(args):
         if remerge: mergepacks.main(args.directory, args.verbose)
         print('Mod uninstalled successfully')
     except Exception as e:
+        workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
         print(f'There was an error uninstalling {modtarget["name"]}')
         print('Check error.log for details')
-        with open('error.log','w') as elog:
-            elog.write(e.text)
+        with open(os.path.join(workdir, 'error.log'),'w') as elog:
+            elog.write(str(e))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Uninstaller for BCML-managed mods')

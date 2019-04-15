@@ -93,7 +93,7 @@ def get_mod_id(moddir, priority) -> int:
     return i
 
 def main(args):
-    ewd = os.getcwd()
+    ewd = os.path.abspath(os.getcwd())
     print(f'Attemping to install {args.mod}...')
     print()
     try:

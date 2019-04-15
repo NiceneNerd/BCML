@@ -16,10 +16,10 @@ def main(args):
         print()
         print('Mod configuration updated successfully')
     except Exception as e:
-        datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
+        workdir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
         print(f'There was an error updating your mod configuration')
         print('Check error.log for details')
-        with open(os.path.join(datadir,'error.log'),'w') as elog:
+        with open(os.path.join(workdir,'error.log'),'w') as elog:
             elog.write(str(e))
 
 if __name__ == "__main__":

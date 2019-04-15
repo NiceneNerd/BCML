@@ -12,7 +12,7 @@ import xxhash
 
 
 def main(path, verbose):
-    ewd = os.getcwd()
+    ewd = os.path.abspath(os.getcwd())
     workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
     execdir = os.path.dirname(os.path.realpath(__file__))
     os.chdir(workdir)

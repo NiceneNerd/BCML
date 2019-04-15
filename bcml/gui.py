@@ -65,7 +65,7 @@ class BcmlFrame(wx.Frame):
 
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            dlg = wx.MessageDialog(self, 'BCML is only supported on Python 3.7 or higher. The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg = wx.MessageDialog(self, f'BCML is only supported on Python 3.7 or higher. You are running {platform.python_version()} The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
             dlg.ShowModal()
             dlg.Destroy()
             os._exit(1)
@@ -82,6 +82,7 @@ class BcmlFrame(wx.Frame):
         self.SetTitle("BCML: BotW Cemu Mod Loader")
         self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWFRAME))
         self.SetPosition((64, 32))
+        self.SetMaxClientSize((512,-1))
         self.list_mods.SetMinSize((360, 200))
         self.button_install.SetToolTip("Install a new mod")
         self.button_uninstall.SetToolTip("Uninstall the selected mod")
@@ -125,10 +126,10 @@ class BcmlFrame(wx.Frame):
         # end wxGlade
 
     def GetCemuDir(self):
-        datadir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
-        os.makedirs(datadir, exist_ok=True)
+        workdir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
+        os.makedirs(workdir, exist_ok=True)
 
-        cdirfile = os.path.join(datadir,'.cdir')
+        cdirfile = os.path.join(workdir,'.cdir')
         if not os.path.exists(cdirfile):
             while not os.path.exists(os.path.join(self.cemudir, 'Cemu.exe')):
                 dlg = wx.DirDialog(self, "Choose the directory where Cemu is instal:", style=wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST)
@@ -199,6 +200,8 @@ class BcmlFrame(wx.Frame):
             dlg.Destroy()
             return
         selmod = self.mods[self.list_mods.GetSelection()]
+        if wx.MessageBox(f'Are you sure you want to uninstall {selmod["name"]}?','BCML Confirm',wx.YES_NO,parent=self) != wx.YES:
+            return
         print('Uninstalling...')
         nomerge = True
         try:
