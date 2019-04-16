@@ -1,4 +1,4 @@
-![BCML Logo](https://raw.githubusercontent.com/NiceneNerd/BCML/gui/bcml/data/logo.png)
+![BCML Logo](https://raw.githubusercontent.com/NiceneNerd/BCML/master/bcml/data/logo.png)
 
 # Breath of the Wild Cemu Mod Loader
 A mod installer and manager for BoTW mods on Cemu
