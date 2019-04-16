@@ -58,24 +58,11 @@ class BcmlFrame(wx.Frame):
 
         self.GetCemuDir()
         self.LoadMods()
+        self.CheckPython()
 
         redir = RedirectText(self.text_output)
         sys.stdout = redir
         sys.stderr = redir
-
-        ver = platform.python_version_tuple()
-        if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            dlg = wx.MessageDialog(self, f'BCML is only supported on Python 3.7 or higher. You are running {platform.python_version()} The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            os._exit(1)
-
-        is_64bits = sys.maxsize > 2**32
-        if not is_64bits:
-            dlg = wx.MessageDialog(self, 'BCML is only supported in 64-bit Python, but it looks like you\'re running 32-bit. The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            os._exit(1)
 
     def __set_properties(self):
         # begin wxGlade: BcmlFrame.__set_properties
@@ -125,16 +112,33 @@ class BcmlFrame(wx.Frame):
         self.Layout()
         # end wxGlade
 
+    def CheckPython(self):
+        ver = platform.python_version_tuple()
+        if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
+            dlg = wx.MessageDialog(self, f'BCML is only supported on Python 3.7 or higher. You are running {platform.python_version()} The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            os._exit(1)
+
+        is_64bits = sys.maxsize > 2**32
+        if not is_64bits:
+            dlg = wx.MessageDialog(self, 'BCML is only supported in 64-bit Python, but it looks like you\'re running 32-bit. The program will now close.', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            os._exit(1)
+
     def GetCemuDir(self):
         workdir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
         os.makedirs(workdir, exist_ok=True)
 
         cdirfile = os.path.join(workdir,'.cdir')
         if not os.path.exists(cdirfile):
-            while not os.path.exists(os.path.join(self.cemudir, 'Cemu.exe')):
-                dlg = wx.DirDialog(self, "Choose the directory where Cemu is instal:", style=wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST)
+            while not glob.glob(os.path.join(self.cemudir, '*emu*exe')):
+                dlg = wx.DirDialog(self, "Choose the directory where Cemu is installed:", style=wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST)
                 if dlg.ShowModal() == wx.ID_OK:
                     self.cemudir = dlg.GetPath()
+                else:
+                    os._exit(0)
                 dlg.Destroy()
             with open(cdirfile, 'w') as cdir:
                 cdir.write(os.path.abspath(self.cemudir))
