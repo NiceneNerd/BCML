@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import traceback
 
 from bcml import mergepacks, mergerstb
 
@@ -20,7 +21,7 @@ def main(args):
         print(f'There was an error updating your mod configuration')
         print('Check error.log for details')
         with open(os.path.join(workdir,'error.log'),'w') as elog:
-            elog.write(str(e))
+            elog.write(traceback.format_exc())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Refreshes RSTB and merged packs for BCML-managed mods')
