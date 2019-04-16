@@ -13,6 +13,7 @@ The following `pip` packages, which will be automatically installed:
 * [`rarfile`](https://pypi.org/project/rarfile/)
 * [`rstbtool`](https://pypi.org/project/rstb/)
 * [`wszst_yaz0`](https://pypi.org/project/wszst-yaz0/)
+* [`wxPython`](https://pypi.org/project/wxPython/)
 * [`xxhash`](https://pypi.org/project/xxhash/)
 
 ## Setup
@@ -44,7 +45,7 @@ You can also create a shortcut on your desktop if you wish. The path to the exec
 
 The interface is previewed below and seems fairly self-explanatory. If you need more details, check the detailed reference for the CLI version below.
 
-![BCML](https://i.imgur.com/Qa3w4k7.png)
+![BCML GUI Preview](https://imgur.com/UEbVyev)
 
 ## CLI Usage
 
