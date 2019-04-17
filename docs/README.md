@@ -131,7 +131,7 @@ bcml update
 
 If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made.
 
-## Change a Mod's Priority
+### Change a Mod's Priority
 
 ```
 bcml reorder
