@@ -10,7 +10,6 @@ A mod installer and manager for BoTW mods on Cemu
 
 The following `pip` packages, which will be automatically installed:
 * [`sarc`](https://pypi.org/project/sarc/)
-* [`rarfile`](https://pypi.org/project/rarfile/)
 * [`rstbtool`](https://pypi.org/project/rstb/)
 * [`wszst_yaz0`](https://pypi.org/project/wszst-yaz0/)
 * [`wxPython`](https://pypi.org/project/wxPython/)
