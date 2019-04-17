@@ -45,7 +45,7 @@ You can also create a shortcut on your desktop if you wish. The path to the exec
 
 The interface is previewed below and seems fairly self-explanatory. If you need more details, check the detailed reference for the CLI version below.
 
-![BCML GUI Preview](https://imgur.com/UEbVyev)
+![BCML GUI Preview](https://i.imgur.com/UEbVyev.png)
 
 ## CLI Usage
 
