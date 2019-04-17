@@ -131,6 +131,14 @@ bcml update
 
 If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made.
 
+## Change a Mod's Priority
+
+```
+bcml reorder
+```
+
+You can change a mod's load priority with this command. It will give you a list of mods, like the `uninstall` command, and then prompt you to pick one and enter its new priority value.A
+
 ### Export Mod Configuration
 
 ```
