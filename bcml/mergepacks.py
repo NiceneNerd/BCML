@@ -63,7 +63,7 @@ def merge_sarcs(sarc_list):
         return new_sarc
 
     for modded_file in modded_files.keys():
-        new_sarc.delete_file(modded_file)
+        if new_sarc._hash_file_name(modded_file) in new_sarc._files.keys(): new_sarc.delete_file(modded_file)
         p = filter(lambda msarc: msarc['priority'] == modded_files[modded_file], sarc_list).__next__()
         new_data = p['pack'].get_file_data(modded_file)
         new_sarc.add_file(modded_file, new_data)
