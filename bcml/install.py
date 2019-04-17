@@ -193,9 +193,9 @@ def main(args):
         setpath = os.path.join(args.directory, '../', 'settings.xml')
         setread = ''
         with open(setpath, 'r') as setfile:
-            for line in setfile.readlines():
-                setread += line
-        settings = minidom.parseString(setread.replace('\n','').replace('\r','').rstrip('\r\n').replace('  ',''))
+            for line in setfile:
+                setread += line.strip()
+        settings = minidom.parseString(setread)
         gpack = settings.getElementsByTagName('GraphicPack')[0]
         hasbcml = False
         for entry in gpack.getElementsByTagName('Entry'):
@@ -218,7 +218,7 @@ def main(args):
         modentry.appendChild(entryfile)
         modentry.appendChild(entrypreset)
         gpack.appendChild(modentry)
-        settings.writexml(open(setpath, 'w'),indent='',addindent='    ',newl='\n')
+        settings.writexml(open(setpath, 'w'),addindent='    ',newl='\n')
 
         if args.leave: open(os.path.join(moddir,'.leave'), 'w').close()
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
