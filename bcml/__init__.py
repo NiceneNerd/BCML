@@ -5,7 +5,7 @@ import platform
 import sys
 import glob
 
-from bcml import install, uninstall, update, export, reorder
+from bcml import install, uninstall, update, export, reorder, mergetext
 
 def main():
     ver = platform.python_version_tuple()
@@ -42,6 +42,7 @@ def main():
     p_install.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
     p_install.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
     p_install.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
+    p_install.add_argument('--notext', help = 'Do not automatically merge text modifications', action='store_true')
     p_install.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_true")
     p_install.add_argument('-l', '--leave', help = 'Do not remove RSTB entries for file sizes which cannot be calculated', action="store_true")
 
@@ -49,8 +50,9 @@ def main():
 
     p_reorder = subparsers.add_parser('reorder', description = 'Change priority for BCML-managed mod')
 
-    p_update = subparsers.add_parser('update', description = 'Refreshes RSTB and merged packs for BCML-managed mods')
+    p_update = subparsers.add_parser('update', description = 'Refreshes RSTB, merged packs, and merged text edits for BCML-managed mods')
     p_update.add_argument('--nomerge', help = 'Skip updating merged packs', action='store_true')
+    p_update.add_argument('--notext', help = 'Skip merging text modifications', action='store_true')
 
     p_export = subparsers.add_parser('export')
     p_export.add_argument('output', help = 'Path to the mod ZIP that BCML should create')
@@ -68,6 +70,7 @@ def main():
     print('##------------------------------------------##')
     print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
     print('##  7z.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
+    print('##  msyt.exe (c) 2018 Kyle Clemens - MIT    ##')
     print('##############################################')
     print()
 
@@ -84,6 +87,7 @@ def main():
         os._exit(0)
     elif args.command == 'update':
         update.main(args)
+        if not args.notext: mergetext.main(args.directory)
         os._exit(0)
     elif args.command == 'reorder':
         reorder.main(args)

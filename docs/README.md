@@ -9,6 +9,7 @@ A mod installer and manager for BoTW mods on Cemu
 * Python 3.7 (64-bit, installed to system PATH)
 
 The following `pip` packages, which will be automatically installed:
+* [`pyYaml`](https://pypi.org/project/PyYAML/)
 * [`sarc`](https://pypi.org/project/sarc/)
 * [`rstbtool`](https://pypi.org/project/rstb/)
 * [`wszst_yaz0`](https://pypi.org/project/wszst-yaz0/)
@@ -89,6 +90,7 @@ optional arguments:
   -p PRIORITY, --priority PRIORITY
                         Mod load priority, default 100
   --nomerge             Do not automatically merge pack files
+  --notext              Do not automatically merge text modifications
   -s, --shrink          Update RSTB entries for files which haven't grown
   -l, --leave           Do not remove RSTB entries for file sizes which cannot be calculated
   ```
@@ -97,6 +99,7 @@ optional arguments:
 
   * `--priority`: This specifies the load priority of the mod. By default, mods start with a priority of 100 and go up by 1 for each installation. Higher priority mods will overwrite conflicting changes from lower priority ones.
   * `--nomerge`: By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.
+  * `--notext`: By default, BCML will try to merge changes in game text files (like dialogue, item descriptions, etc.). This can be slow, and if you don't want to use it, this argument disables it.
   * `--shrink`: By default, BCML will ignore files with equal or smaller sizes to what was originally in the RSTB. This option forces it to update anyway. I can't think of any reason to use this except as a last ditch effort to stop blood moon spam on a heavily modded setup.
   * `--leave`: By default, BCML will delete RSTB entries when the RSTB size of a file cannot be calculated. This option leaves them alone. *Be warned: This can cause instability.*
 
@@ -128,7 +131,18 @@ Pick one and it will be uninstalled. The RSTB will be regenerated, and any merge
 bcml update
 ```
 
-If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB or to merged packs are made.
+If you make any manual changes to mods installed with BCML, run this script afterwards to make sure any necessary updates to the RSTB, merged packs, or merged text edits are made. Usage is simple:
+
+```
+usage: bcml update [-h] [--nomerge] [--notext]
+
+Refreshes RSTB, merged packs, and merge text edits for BCML-managed mods
+
+optional arguments:
+  -h, --help  show this help message and exit
+  --nomerge   Skip updating merged packs
+  --notext    Skip merging text modifications
+```
 
 ### Change a Mod's Priority
 
@@ -177,3 +191,5 @@ More details on each argument:
 This software is licensed under the terms of the GNU General Public License, version 3 or later.
 
 This software includes the 7-Zip console application `7z.exe` and the library `7z.dll`, which are licensed under the GNU Lesser General Public License. The source code for this application is available for free at [https://www.7-zip.org/download.html](https://www.7-zip.org/download.html).
+
+This software includes the console application `msyt.exe` by Kyle Clemens, copyrighted 2018 under the MIT License. The source code for this application is available for free at [https://gitlab.com/jkcclemens/msyt](https://gitlab.com/jkcclemens/msyt).

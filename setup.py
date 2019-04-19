@@ -30,6 +30,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
+        'pyYaml',
         'sarc',
         'rstb',
         'wszst_yaz0',

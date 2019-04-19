@@ -20,7 +20,7 @@ import wszst_yaz0
 import xxhash
 from rstb import util
 
-from bcml import mergepacks, mergerstb
+from bcml import mergepacks, mergerstb, mergetext
 
 hashtable = {}
 args = None
@@ -147,8 +147,11 @@ def main(args):
             modfiles.update(find_modded_files('./aoc', args.verbose))
 
         sarcmods = {}
+        is_text_mod = False
         for file in modfiles.keys():
             if file.endswith('pack') or file.endswith('sarc'):
+                if 'Bootup_' in file and 'Bootup_Graphic' not in file:
+                    is_text_mod = True
                 print(f'Scanning files in {file}...')
                 with open(modfiles[file]['path'], 'rb') as pack:
                     s : sarc.SARC = sarc.read_file_and_make_sarc(pack)
@@ -237,6 +240,7 @@ def main(args):
             rules.close()
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge and len(sarcmods) > 0: mergepacks.main(args.directory, args.verbose)
+        if not args.notext and is_text_mod: mergetext.main(args.directory)
 
         while os.path.exists(tmpdir):
             try:
@@ -259,6 +263,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
     parser.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
     parser.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
+    parser.add_argument('--notext', help = 'Do not automatically merge text modifications', action = 'store_true')
     parser.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_true")
     parser.add_argument('-l', '--leave', help = 'Do not remove RSTB entries for file sizes which cannot be calculated', action="store_true")
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')

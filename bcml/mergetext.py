@@ -1,20 +1,22 @@
 import copy
 import csv
 import glob
-import os
-import shutil
 import io
+import os
 import re
+import shutil
 import sys
 import traceback
 import unicodedata
 import zipfile
 from pathlib import Path
 
+import rstb
 import sarc
 import wszst_yaz0
 import xxhash
 import yaml
+from rstb import util
 
 def are_entries_diff(entry, ref_list, mod_list) -> bool:
     mod_entry = unicodedata.normalize('NFC', mod_list['entries'][entry].__str__())
@@ -37,8 +39,13 @@ def main(path : Path, lang = 'USen'):
         for row in csvLoop:
             hashtable[row[0]] = row[1]
 
-    #if tmpdir.exists():
-    #    shutil.rmtree(tmpdir, ignore_errors=True)
+    if tmpdir.exists():
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    merged_boot_path = Path(path / 'BotwMod_mod999_BCML' / 'content' / 'Pack' / f'Bootup_{lang}.pack')
+    if merged_boot_path.exists():
+        print('Removing old text merges...')
+        merged_boot_path.unlink()
 
     print('Loading reference texts...')
     refMsg = zipfile.ZipFile(Path(execdir / 'data' / 'msyt' / 'Msg_USen.product.zip').resolve())
@@ -47,7 +54,11 @@ def main(path : Path, lang = 'USen'):
 
     textmods = []
     print('Detecting mods with text changes...')
-    for i, file in enumerate(sorted(path.rglob(f'BotwMod_mod*/**/Bootup_{lang}.pack'))):
+    modded_boots = path.rglob(f'BotwMod_mod*/**/Bootup_{lang}.pack')
+    if len(modded_boots) == 0:
+        print('No text mods installed, skipping text merge')
+        return
+    for i, file in enumerate(sorted(modded_boots)):
         textmods.append([])
         with open(file, 'rb') as f_pack:
             s_bootup = sarc.read_file_and_make_sarc(f_pack)
@@ -67,13 +78,23 @@ def main(path : Path, lang = 'USen'):
     print()
     print('Generating MSYT files...')
     for msbt_file in sorted(tmpdir.rglob('**/*.msbt')):
-        #os.system(f'msyt export "{msbt_file}"')
+        os.system(f'{msyt_ex} export "{msbt_file}"')
         Path(msbt_file).unlink()
 
     merged_dir = tmpdir / 'merged'
-    print('Comparing modified text files...')
+    print('Merging modified text files...')
     for msyt in ref_dir.rglob('**/*.msyt'):
         rel_path = str(msyt.relative_to(ref_dir)).replace('\\','/')
+        should_bother = False
+        for textmod in textmods:
+            if rel_path in textmod:
+                should_bother = True
+        if not should_bother:
+            merged_path = merged_dir / rel_path
+            merged_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(msyt, merged_dir / rel_path)
+            continue
+
         with open(msyt,'r', encoding='utf-8') as f_ref:
             ref_text = yaml.load(f_ref)
             merged_lines = copy.deepcopy(ref_text)
@@ -91,10 +112,43 @@ def main(path : Path, lang = 'USen'):
         merged_path.parent.mkdir(parents=True, exist_ok=True)
         with open(merged_path, 'w', encoding='utf-8') as f_merged:
             yaml.dump(merged_lines, f_merged)
+    
+    print()
+    print('Generating new MSBTs...')
+    os.system(f'{msyt_ex} create -d {merged_dir} -p wiiu -o {merged_dir}')
+    for merged_msyt in merged_dir.rglob('**/*.msyt'):
+        merged_msyt.unlink()
+
+    new_boot_path = tmpdir / f'Bootup_{lang}.pack'
+    with open(new_boot_path, 'wb') as new_boot:
+        print(f'Creating new Msg_{lang}.product.ssarc...')
+        s_msg = sarc.SARCWriter(True)
+        for new_msbt in merged_dir.rglob('**/*.msbt'):
+            with open(new_msbt, 'rb') as f_new:
+                s_msg.add_file(str(new_msbt.relative_to(merged_dir)).replace('\\','/'), f_new.read())
+        new_msg_stream = io.BytesIO()
+        s_msg.write(new_msg_stream)
+        new_msg_bytes = wszst_yaz0.compress(new_msg_stream.getvalue())
+        print(f'Creating new Bootup_{lang}.pack...')
+        s_boot = sarc.SARCWriter(True)
+        s_boot.add_file(f'Message/Msg_{lang}.product.ssarc', new_msg_bytes)
+        s_boot.write(new_boot)
+    shutil.copy(new_boot_path, merged_boot_path)
+
+    print('Correcting RSTB if necessary...')
+    rstb_path = path / 'BotwMod_mod999_BCML' / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.product.srsizetable'
+    table = rstb.util.read_rstb(str(rstb_path), True)
+    if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
+        table.delete_entry(f'Message/Msg_{lang}.product.sarc')
+        rstb.util.write_rstb(table, str(rstb_path), True)
+
+    print()
+    print('All text mods merged successfully!')
 
 if __name__ == "__main__":
     workdir = Path(os.getenv('LOCALAPPDATA')) / 'bcml'
     execdir = Path(__file__).parent.absolute()
     tmpdir = workdir / 'tmp'
+    msyt_ex = execdir / 'helpers' / 'msyt.exe'
     
     main(Path(sys.argv[1]))
