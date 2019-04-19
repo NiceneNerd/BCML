@@ -5,6 +5,7 @@ import io
 import os
 import re
 import shutil
+import subprocess
 import sys
 import traceback
 import unicodedata
@@ -31,8 +32,12 @@ def are_entries_diff(entry, ref_list, mod_list) -> bool:
     return False
 
 def main(path : Path, lang = 'USen'):
-    hashtable = {}
+    workdir = Path(os.getenv('LOCALAPPDATA')) / 'bcml'
+    execdir = Path(os.path.dirname(os.path.realpath(__file__)))
+    tmpdir = workdir / 'tmp'
+    msyt_ex = execdir / 'helpers' / 'msyt.exe'
 
+    hashtable = {}
     print("Loading hash table...\n")
     with open(execdir / 'data' / 'msyt' / 'msbthash.csv','r') as hashCsv:
         csvLoop = csv.reader(hashCsv)
@@ -42,7 +47,7 @@ def main(path : Path, lang = 'USen'):
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    merged_boot_path = Path(path / 'BotwMod_mod999_BCML' / 'content' / 'Pack' / f'Bootup_{lang}.pack')
+    merged_boot_path = path / 'BotwMod_mod999_BCML' / 'content' / 'Pack' / f'Bootup_{lang}.pack'
     if merged_boot_path.exists():
         print('Removing old text merges...')
         merged_boot_path.unlink()
@@ -54,7 +59,7 @@ def main(path : Path, lang = 'USen'):
 
     textmods = []
     print('Detecting mods with text changes...')
-    modded_boots = path.rglob(f'BotwMod_mod*/**/Bootup_{lang}.pack')
+    modded_boots = list(path.rglob(f'BotwMod_mod*/**/Bootup_{lang}.pack'))
     if len(modded_boots) == 0:
         print('No text mods installed, skipping text merge')
         return
@@ -78,7 +83,9 @@ def main(path : Path, lang = 'USen'):
     print()
     print('Generating MSYT files...')
     for msbt_file in sorted(tmpdir.rglob('**/*.msbt')):
-        os.system(f'{msyt_ex} export "{msbt_file}"')
+        CREATE_NO_WINDOW = 0x08000000
+        m_args = [str(msyt_ex), 'export', str(msbt_file)]
+        subprocess.run(m_args, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
         Path(msbt_file).unlink()
 
     merged_dir = tmpdir / 'merged'
@@ -115,7 +122,9 @@ def main(path : Path, lang = 'USen'):
     
     print()
     print('Generating new MSBTs...')
-    os.system(f'{msyt_ex} create -d {merged_dir} -p wiiu -o {merged_dir}')
+    CREATE_NO_WINDOW = 0x08000000
+    m_args = [str(msyt_ex), 'create', '-d', str(merged_dir), '-p', 'wiiu', '-o', str(merged_dir)]
+    subprocess.run(m_args, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
     for merged_msyt in merged_dir.rglob('**/*.msyt'):
         merged_msyt.unlink()
 
@@ -145,10 +154,5 @@ def main(path : Path, lang = 'USen'):
     print()
     print('All text mods merged successfully!')
 
-if __name__ == "__main__":
-    workdir = Path(os.getenv('LOCALAPPDATA')) / 'bcml'
-    execdir = Path(__file__).parent.absolute()
-    tmpdir = workdir / 'tmp'
-    msyt_ex = execdir / 'helpers' / 'msyt.exe'
-    
+if __name__ == "__main__":    
     main(Path(sys.argv[1]))
