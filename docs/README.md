@@ -11,7 +11,7 @@ A mod installer and manager for BoTW mods on Cemu
 The following `pip` packages, which will be automatically installed:
 * [`pyYaml`](https://pypi.org/project/PyYAML/)
 * [`sarc`](https://pypi.org/project/sarc/)
-* [`rstbtool`](https://pypi.org/project/rstb/)
+* [`rstb`](https://pypi.org/project/rstb/)
 * [`wszst_yaz0`](https://pypi.org/project/wszst-yaz0/)
 * [`wxPython`](https://pypi.org/project/wxPython/)
 * [`xxhash`](https://pypi.org/project/xxhash/)
