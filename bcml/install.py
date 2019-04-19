@@ -94,13 +94,13 @@ def get_mod_id(moddir, priority) -> int:
     return i
 
 def main(args):
+    workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
+    execdir = os.path.dirname(os.path.realpath(__file__))
+    tmpdir = os.path.join(workdir, f'tmp_{xxhash.xxh32(args.mod).hexdigest()}')
     ewd = os.path.abspath(os.getcwd())
     print(f'Attemping to install {args.mod}...')
     print()
     try:
-        workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
-        execdir = os.path.dirname(os.path.realpath(__file__))
-
         print("Loading hash table...")
         with open(os.path.join(execdir, 'data', 'hashtable.csv'),'r') as hashCsv:
             csvLoop = csv.reader(hashCsv)
@@ -108,9 +108,7 @@ def main(args):
                 hashtable[row[0]] = row[1]
 
         print("Extracting mod files...")
-        tmpdir = ''
         try:
-            tmpdir = os.path.join(workdir, 'tmp')
             formats = ['.rar', '.zip', '.7z']
             if os.path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
@@ -242,12 +240,7 @@ def main(args):
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if not args.nomerge and len(sarcmods) > 0: mergepacks.main(args.directory, args.verbose)
         if not args.notext and is_text_mod: mergetext.main(Path(args.directory))
-
-        while os.path.exists(tmpdir):
-            try:
-                shutil.rmtree(tmpdir)
-            except PermissionError as e:
-                pass
+            
         print('Mod installed successfully!')
     except SystemExit as e:
         print('Exiting...')
@@ -257,6 +250,16 @@ def main(args):
         with open(os.path.join(workdir, 'error.log'),'w') as elog:
             elog.write(traceback.format_exc())
         os.chdir(ewd)
+    finally:
+        try:
+            tmpdir
+        except:
+            return
+        while os.path.exists(tmpdir):
+            try:
+                shutil.rmtree(tmpdir)
+            except PermissionError as e:
+                pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')

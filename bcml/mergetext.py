@@ -34,7 +34,7 @@ def are_entries_diff(entry, ref_list, mod_list) -> bool:
 def main(path : Path, lang = 'USen'):
     workdir = Path(os.getenv('LOCALAPPDATA')) / 'bcml'
     execdir = Path(os.path.dirname(os.path.realpath(__file__)))
-    tmpdir = workdir / 'tmp'
+    tmpdir = workdir / 'tmp_text'
     msyt_ex = execdir / 'helpers' / 'msyt.exe'
 
     hashtable = {}
@@ -153,6 +153,9 @@ def main(path : Path, lang = 'USen'):
 
     print()
     print('All text mods merged successfully!')
+
+    while tmpdir.exists():
+        shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":    
     main(Path(sys.argv[1]))
