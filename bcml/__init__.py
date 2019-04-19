@@ -87,7 +87,6 @@ def main():
         os._exit(0)
     elif args.command == 'update':
         update.main(args)
-        if not args.notext: mergetext.main(args.directory)
         os._exit(0)
     elif args.command == 'reorder':
         reorder.main(args)

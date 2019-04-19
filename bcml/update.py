@@ -4,8 +4,9 @@
 import argparse
 import os
 import traceback
+import pathlib
 
-from bcml import mergepacks, mergerstb
+from bcml import mergepacks, mergerstb, mergetext
 
 def main(args):
     try:
@@ -14,6 +15,9 @@ def main(args):
         print()
         print('Updating merged packs...')
         if not args.nomerge: mergepacks.main(args.directory, args.verbose)
+        print()
+        print('Updating merged text modifications...')
+        if not args.notext: mergetext.main(pathlib.Path(args.directory))
         print()
         print('Mod configuration updated successfully')
     except Exception as e:
@@ -28,5 +32,6 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     parser.add_argument('--nomerge', 'Skip updating merged packs', action='store_true')
+    parser.add_argument('--notext', help = 'Skip merging text modifications', action='store_true')
     args = parser.parse_args()
     main(args)

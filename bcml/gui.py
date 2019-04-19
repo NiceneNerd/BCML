@@ -210,8 +210,10 @@ class BcmlFrame(wx.Frame):
             return
         print('Uninstalling...')
         nomerge = True
+        notext = True
         try:
             if os.path.exists(os.path.join(selmod['path'], 'packs.log')): nomerge = False
+            if os.path.exists(os.path.join(selmod['path'], 'content', 'Pack', 'Bootup_USen.pack')): notext = False
             shutil.rmtree(selmod['path'])
         except Exception as e:
             print(f'There was an error uninstalling {selmod["name"]}')
@@ -221,6 +223,7 @@ class BcmlFrame(wx.Frame):
         args.__setattr__('directory', self.cemudir)
         args.__setattr__('verbose', False)
         args.__setattr__('nomerge', nomerge)
+        args.__setattr__('notext', notext)
         bcmlUninstall = BcmlThread(self, bcml.update.main, args)
         self.DisableButtons()
         bcmlUninstall.start()
@@ -230,6 +233,7 @@ class BcmlFrame(wx.Frame):
         args.__setattr__('directory', self.cemudir)
         args.__setattr__('verbose', False)
         args.__setattr__('nomerge', False)
+        args.__setattr__('notext', False)
         bcmlUpdate = BcmlThread(self, bcml.update.main, args)
         self.DisableButtons()
         bcmlUpdate.start()

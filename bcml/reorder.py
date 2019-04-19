@@ -6,8 +6,9 @@ import configparser
 import glob
 import os
 import shutil
+import pathlib
 
-from bcml import mergepacks, mergerstb
+from bcml import mergepacks, mergerstb, mergetext
 
 def main(args):
     workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
@@ -33,6 +34,7 @@ def main(args):
         target = input('Enter the number of the mod you would like to modify: ')
     modtarget = mods[int(target) - 1]
     remerge = os.path.exists(os.path.join(modtarget['path'], 'packs.log'))
+    retext = os.path.exists(os.path.join(modtarget['path'], 'content', 'Pack', 'Bootup_USen.pack'))
 
     priority = -1
     while priority < 0:
@@ -63,6 +65,9 @@ def main(args):
         if remerge: 
             print('Updating merged packs...')
             mergepacks.main(args.directory, args.verbose)
+        if retext: 
+            print('Updating merged text modifications...')
+            mergetext.main(pathlib.Path(args.directory))
         print()
         print('Mod configuration updated successfully')
     except Exception as e:
