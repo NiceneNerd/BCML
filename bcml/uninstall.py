@@ -6,8 +6,9 @@ import configparser
 import glob
 import os
 import shutil
+from pathlib import Path
 
-from bcml import mergepacks, mergerstb
+from bcml import mergepacks, mergerstb, mergetext
 
 def main(args):
     i = 0
@@ -31,10 +32,12 @@ def main(args):
         target = input('Enter the number of the mod you would like to uninstall: ')
     modtarget = mods[int(target) - 1]
     remerge = os.path.exists(os.path.join(modtarget['path'], 'packs.log'))
+    retext = os.path.exists(os.path.join(modtarget['path'], 'content', 'Pack', 'Bootup_USen.pack'))
     try:
         shutil.rmtree(modtarget['path'])
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")
         if remerge: mergepacks.main(args.directory, args.verbose)
+        if retext: mergetext.main(Path(args.directory))
         print('Mod uninstalled successfully')
     except Exception as e:
         workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')

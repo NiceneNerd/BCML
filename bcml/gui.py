@@ -12,6 +12,7 @@ import bcml
 import glob
 import os
 import platform
+from pathlib import Path
 import sys
 import shutil
 import time
@@ -189,6 +190,7 @@ class BcmlFrame(wx.Frame):
             args.__setattr__('shrink',installDlg.install_opts['shrink'])
             args.__setattr__('leave', installDlg.install_opts['leave'])
             args.__setattr__('nomerge',installDlg.install_opts['nomerge'])
+            args.__setattr__('notext',installDlg.install_opts['notext'])
             args.__setattr__('priority', installDlg.install_opts['priority'])
             args.__setattr__('verbose', False)
             bcmlInstall = BcmlThread(self, bcml.install.main, args)
@@ -354,6 +356,7 @@ class InstallDialog(wx.Dialog):
         self.checkbox_shrink = wx.CheckBox(self, wx.ID_ANY, "Update RSTB entries for files which have not grown")
         self.checkbox_leave = wx.CheckBox(self, wx.ID_ANY, "Do not remove RSTB entries for files with sizes that cannot be calculated")
         self.checkbox_nomerge = wx.CheckBox(self, wx.ID_ANY, "Disable pack merging for this mod")
+        self.checkbox_notext = wx.CheckBox(self, wx.ID_ANY, "Disable text edit merging for this mod")
         self.button_yinstall = wx.Button(self, wx.ID_ANY, "Install")
         self.button_ninstall = wx.Button(self, wx.ID_ANY, "Cancel")
 
@@ -371,6 +374,7 @@ class InstallDialog(wx.Dialog):
         self.checkbox_shrink.SetToolTip("By default, BCML will ignore files with equal or smaller sizes to what was originally in the RSTB. This option forces it to update anyway. I can't think of any reason to use this except as a last ditch effort to stop blood moon spam on a heavily modded setup.")
         self.checkbox_leave.SetToolTip("By default, BCML will delete RSTB entries when the RSTB size of a file cannot be calculated. This option leaves them alone. Be warned: This can cause instability.")
         self.checkbox_nomerge.SetToolTip("By default, BCML will try to merge changes when multiple mods modify the same pack files. Sometimes this will break things when mods have completely incompatible changes. This option disables pack merging on the current mod. Any packs with conflicting changes will either give way to or trump the whole pack depending on load priority.")
+        self.checkbox_notext.SetToolTip("By default, BCML will try to merge changes in game text files (like dialogue, item descriptions, etc.). This can be slow, and if you don't want to use it, this option disables it.")
         # end wxGlade
 
     def __do_layout(self):
@@ -388,6 +392,7 @@ class InstallDialog(wx.Dialog):
         sizer_5.Add(self.checkbox_shrink, 0, wx.ALL, 8)
         sizer_5.Add(self.checkbox_leave, 0, wx.ALL, 8)
         sizer_5.Add(self.checkbox_nomerge, 0, wx.ALL, 8)
+        sizer_5.Add(self.checkbox_notext, 0, wx.ALL, 8)
         sizer_7.Add(self.button_yinstall, 0, 0, 0)
         sizer_7.Add(self.button_ninstall, 0, wx.RIGHT, 0)
         sizer_5.Add(sizer_7, 1, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.TOP, 8)
@@ -405,6 +410,7 @@ class InstallDialog(wx.Dialog):
             'shrink': self.checkbox_shrink.IsChecked(),
             'leave': self.checkbox_leave.IsChecked(),
             'nomerge': self.checkbox_nomerge.IsChecked(),
+            'notext': self.checkbox_notext.IsChecked(),
             'priority': self.spin_ctrl_priority.GetValue()
         }
         if self.install_opts['file'] == '':
