@@ -69,7 +69,7 @@ def main(path : Path, lang = 'USen'):
             s_bootup = sarc.read_file_and_make_sarc(f_pack)
         data_msg = wszst_yaz0.decompress(s_bootup.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
         s_msg = sarc.SARC(data_msg)
-        tmp_path = workdir / 'tmp' / f'{i}'
+        tmp_path = workdir / 'tmp_text' / f'{i}'
         for msbt in s_msg.list_files():
             m_data = s_msg.get_file_data(msbt)
             m_hash = xxhash.xxh32(m_data).hexdigest()
@@ -82,10 +82,10 @@ def main(path : Path, lang = 'USen'):
 
     print()
     print('Generating MSYT files...')
-    for msbt_file in sorted(tmpdir.rglob('**/*.msbt')):
-        CREATE_NO_WINDOW = 0x08000000
-        m_args = [str(msyt_ex), 'export', str(msbt_file)]
-        subprocess.run(m_args, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+    CREATE_NO_WINDOW = 0x08000000
+    m_args = [str(msyt_ex), 'export', '-d', str(tmpdir)]
+    subprocess.run(m_args, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+    for msbt_file in tmpdir.rglob('**/*.msbt'):
         Path(msbt_file).unlink()
 
     merged_dir = tmpdir / 'merged'
@@ -114,7 +114,6 @@ def main(path : Path, lang = 'USen'):
                     for entry in mod_text['entries']:
                         if are_entries_diff(entry, ref_text, mod_text):
                             merged_lines['entries'][entry] = copy.deepcopy(mod_text['entries'][entry])
-                            print(f'Updated {entry} text in {rel_path}')
         merged_path = merged_dir / rel_path
         merged_path.parent.mkdir(parents=True, exist_ok=True)
         with open(merged_path, 'w', encoding='utf-8') as f_merged:
@@ -142,6 +141,7 @@ def main(path : Path, lang = 'USen'):
         s_boot = sarc.SARCWriter(True)
         s_boot.add_file(f'Message/Msg_{lang}.product.ssarc', new_msg_bytes)
         s_boot.write(new_boot)
+    merged_boot_path.parent.mkdir(parents = True, exist_ok=True)
     shutil.copy(new_boot_path, merged_boot_path)
 
     print('Correcting RSTB if necessary...')
