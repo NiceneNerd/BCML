@@ -60,8 +60,8 @@ def main(path : Path, lang = 'USen'):
     textmods = []
     print('Detecting mods with text changes...')
     modded_boots = list(path.rglob(f'BotwMod_mod*/**/Bootup_{lang}.pack'))
-    if len(modded_boots) == 0:
-        print('No text mods installed, skipping text merge')
+    if len(modded_boots) < 2:
+        print('No text mods need merging, skipping')
         return
     for i, file in enumerate(sorted(modded_boots)):
         textmods.append([])
@@ -103,13 +103,13 @@ def main(path : Path, lang = 'USen'):
             continue
 
         with open(msyt,'r', encoding='utf-8') as f_ref:
-            ref_text = yaml.load(f_ref)
+            ref_text = yaml.safe_load(f_ref)
             merged_lines = copy.deepcopy(ref_text)
 
         for i, textmod in enumerate(textmods):
             if rel_path in textmod:
                 with open(tmpdir / f'{i}' / rel_path, 'r', encoding='utf-8') as f_mod:
-                    mod_text = yaml.load(f_mod)
+                    mod_text = yaml.safe_load(f_mod)
                     if mod_text['entries'] == ref_text['entries']: continue
                     for entry in mod_text['entries']:
                         if are_entries_diff(entry, ref_text, mod_text):
