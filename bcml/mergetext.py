@@ -69,7 +69,7 @@ def main(path : Path, lang = 'USen'):
             s_bootup = sarc.read_file_and_make_sarc(f_pack)
         data_msg = wszst_yaz0.decompress(s_bootup.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
         s_msg = sarc.SARC(data_msg)
-        tmp_path = workdir / 'tmp' / f'{i}'
+        tmp_path = tmpdir / f'{i}'
         for msbt in s_msg.list_files():
             m_data = s_msg.get_file_data(msbt)
             m_hash = xxhash.xxh32(m_data).hexdigest()
