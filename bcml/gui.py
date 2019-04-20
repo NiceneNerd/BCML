@@ -30,24 +30,32 @@ from bcml import mergepacks, mergerstb
 class BcmlFrame(wx.Frame):
     mods = {}
     cemudir = ''
+    enable_controls = True
 
     def __init__(self, *args, **kwds):
         # begin wxGlade: BcmlFrame.__init__
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
+        kwds["style"] = kwds.get("style", 0) | wx.CAPTION | wx.MINIMIZE_BOX | wx.CLOSE_BOX ^ wx.RESIZE_BORDER
         wx.Frame.__init__(self, *args, **kwds)
         self.list_mods = wx.ListBox(self, wx.ID_ANY, choices=["<No mods installed>"])
-        self.button_install = wx.Button(self, wx.ID_ANY, "Install...")
-        self.button_uninstall = wx.Button(self, wx.ID_ANY, "Uninstall")
-        self.button_change = wx.Button(self, wx.ID_ANY, "Change Priority...")
-        self.button_update = wx.Button(self, wx.ID_ANY, "Update")
-        self.button_export = wx.Button(self, wx.ID_ANY, "Export...")
-        self.button_explore = wx.Button(self, wx.ID_ANY, "Explore...")
+        self.button_install_container = wx.Panel(self)
+        self.button_uninstall_container = wx.Panel(self)
+        self.button_change_container = wx.Panel(self)
+        self.button_update_container = wx.Panel(self)
+        self.button_export_container = wx.Panel(self)
+        self.button_explore_container = wx.Panel(self)
+        self.button_install = wx.Button(self.button_install_container, wx.ID_ANY, "Install...")
+        self.button_uninstall = wx.Button(self.button_uninstall_container, wx.ID_ANY, "Uninstall")
+        self.button_change = wx.Button(self.button_change_container, wx.ID_ANY, "Change Priority...")
+        self.button_update = wx.Button(self.button_update_container, wx.ID_ANY, "Update")
+        self.button_export = wx.Button(self.button_export_container, wx.ID_ANY, "Export...")
+        self.button_explore = wx.Button(self.button_explore_container, wx.ID_ANY, "Explore...")
         self.text_output = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY|wx.TE_MULTILINE)
 
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
 
+        self.list_mods.Bind(wx.EVT_LISTBOX, self.OnModSelect)
         self.button_install.Bind(wx.EVT_BUTTON, self.OnInstall)
         self.button_uninstall.Bind(wx.EVT_BUTTON, self.OnUninstall)
         self.button_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
@@ -55,6 +63,7 @@ class BcmlFrame(wx.Frame):
         self.button_explore.Bind(wx.EVT_BUTTON, self.OnExplore)
         self.button_change.Bind(wx.EVT_BUTTON, self.OnChangePriority)
 
+        self.Bind(EVT_BCMLSTART, self.OnBcmlStart)
         self.Bind(EVT_BCMLDONE, self.OnBcmlDone)
 
         self.GetCemuDir()
@@ -72,12 +81,7 @@ class BcmlFrame(wx.Frame):
         self.SetPosition((64, 32))
         self.SetMaxClientSize((512,-1))
         self.list_mods.SetMinSize((360, 200))
-        self.button_install.SetToolTip("Install a new mod")
-        self.button_uninstall.SetToolTip("Uninstall the selected mod")
-        self.button_change.SetToolTip("Allows you to change the load priority of the selected mod")
-        self.button_update.SetToolTip("Manually trigger a refresh of the RSTB and remerge packs")
-        self.button_export.SetToolTip("Exports all installed mods as a single modpack ZIP")
-        self.button_explore.SetToolTip("Opens the selected mod's folder in Windows Explorer")
+        self.UpdateControls()
         self.text_output.SetMinSize((-1, 120))
         self.text_output.SetBackgroundColour(wx.Colour(33, 33, 33))
         self.text_output.SetForegroundColour(wx.Colour(239, 239, 239))
@@ -99,19 +103,64 @@ class BcmlFrame(wx.Frame):
         sizer_4.Add(label_list, 0, wx.LEFT | wx.RIGHT | wx.TOP, 8)
         sizer_4.Add(self.list_mods, 0, wx.ALL, 8)
         sizer_2.Add(sizer_4, 1, 0, 0)
-        sizer_3.Add(self.button_install, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        sizer_3.Add(self.button_uninstall, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        sizer_3.Add(self.button_change, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        sizer_3.Add(self.button_update, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        sizer_3.Add(self.button_export, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
-        sizer_3.Add(self.button_explore, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_install_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_uninstall_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_change_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_update_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_export_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer_3.Add(self.button_explore_container, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
         sizer_2.Add(sizer_3, 0, wx.EXPAND, 0)
         sizer_1.Add(sizer_2, 1, wx.ALL | wx.EXPAND, 8)
         sizer_1.Add(self.text_output, 0, wx.ALL | wx.EXPAND, 16)
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
+        self.button_install.SetSize(self.button_install_container.GetSize())
+        self.button_uninstall.SetSize(self.button_change_container.GetSize())
+        self.button_update.SetSize(self.button_update_container.GetSize())
+        self.button_export.SetSize(self.button_export_container.GetSize())
+        self.button_explore.SetSize(self.button_explore_container.GetSize())
         self.Layout()
         # end wxGlade
+
+    def UpdateControls(self):
+        try:
+            self.selmod = self.mods[self.list_mods.GetSelection()]
+        except:
+            self.selmod = None
+
+        waitTip = "BCML is currently performing a task"
+        noSelTip = "Select a mod to use this task"
+        installTip = "Install a new mod" if self.enable_controls else waitTip
+        uninstallTip = noSelTip if not self.selmod and self.enable_controls else "Uninstall " + self.selmod['name'] if self.enable_controls else waitTip
+        changeTip = noSelTip if not self.selmod and self.enable_controls else "Change the load priority of " + self.selmod['name'] if self.enable_controls else waitTip
+        updateTip = "Manually trigger a refresh of the RSTB and remerge packs" if self.enable_controls else waitTip
+        exportTip = "Exports all installed mods as a single modpack ZIP" if self.enable_controls else waitTip
+        exploreTip = noSelTip if not self.selmod and self.enable_controls else "Open the location of " + self.selmod['name'] + " in Windows Explorer" if self.enable_controls else waitTip
+        self.button_install_container.SetToolTip(installTip)
+        self.button_install.SetToolTip(installTip)
+        self.button_uninstall_container.SetToolTip(uninstallTip)
+        self.button_uninstall.SetToolTip(uninstallTip)
+        self.button_change_container.SetToolTip(changeTip)
+        self.button_change.SetToolTip(changeTip)
+        self.button_update_container.SetToolTip(updateTip)
+        self.button_update.SetToolTip(updateTip)
+        self.button_export_container.SetToolTip(exportTip)
+        self.button_export.SetToolTip(exportTip)
+        self.button_explore_container.SetToolTip(exploreTip)
+        self.button_explore.SetToolTip(exploreTip)
+
+        self.list_mods.Enable(self.enable_controls)
+        self.button_export.Enable(self.enable_controls)
+        self.button_install.Enable(self.enable_controls)
+        self.button_update.Enable(self.enable_controls)
+        if self.list_mods.GetSelection() < 0:
+            self.button_change.Disable()
+            self.button_explore.Disable()
+            self.button_uninstall.Disable()
+        else:
+            self.button_change.Enable(self.enable_controls)
+            self.button_explore.Enable(self.enable_controls)
+            self.button_uninstall.Enable(self.enable_controls)
 
     def CheckPython(self):
         ver = platform.python_version_tuple()
@@ -162,23 +211,17 @@ class BcmlFrame(wx.Frame):
             if self.mods[i]['name'] == 'BCML': continue
             self.list_mods.Append(f'{self.mods[i]["priority"]}. {self.mods[i]["name"]}')
 
+    def OnBcmlStart(self, event):
+        self.enable_controls = False
+        self.UpdateControls()
+
     def OnBcmlDone(self, event):
-        self.EnableButtons()
         self.LoadMods()
+        self.enable_controls = True
+        self.UpdateControls()
 
-    def DisableButtons(self):
-        self.button_export.Disable()
-        self.button_uninstall.Disable()
-        self.button_install.Disable()
-        self.button_update.Disable()
-        self.button_change.Disable()
-
-    def EnableButtons(self):
-        self.button_export.Enable()
-        self.button_uninstall.Enable()
-        self.button_install.Enable()
-        self.button_update.Enable()
-        self.button_change.Enable()
+    def OnModSelect(self, event):
+        self.UpdateControls()
 
     def OnInstall(self, event):
         installDlg = InstallDialog(self)
@@ -194,29 +237,22 @@ class BcmlFrame(wx.Frame):
             args.__setattr__('priority', installDlg.install_opts['priority'])
             args.__setattr__('verbose', False)
             bcmlInstall = BcmlThread(self, bcml.install.main, args)
-            self.DisableButtons()
             bcmlInstall.start()
         else:
             pass
 
     def OnUninstall(self, event):
-        if self.list_mods.GetSelection() < 0:
-            dlg = wx.MessageDialog(self, 'No mod selected to uninstall', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-        selmod = self.mods[self.list_mods.GetSelection()]
-        if wx.MessageBox(f'Are you sure you want to uninstall {selmod["name"]}?','BCML Confirm',wx.YES_NO,parent=self) != wx.YES:
+        if wx.MessageBox(f'Are you sure you want to uninstall {self.selmod["name"]}?','BCML Confirm',wx.YES_NO,parent=self) != wx.YES:
             return
         print('Uninstalling...')
         nomerge = True
         notext = True
         try:
-            if os.path.exists(os.path.join(selmod['path'], 'packs.log')): nomerge = False
-            if os.path.exists(os.path.join(selmod['path'], 'content', 'Pack', 'Bootup_USen.pack')): notext = False
-            shutil.rmtree(selmod['path'])
+            if os.path.exists(os.path.join(self.selmod['path'], 'packs.log')): nomerge = False
+            if os.path.exists(os.path.join(self.selmod['path'], 'content', 'Pack', 'Bootup_USen.pack')): notext = False
+            shutil.rmtree(self.selmod['path'])
         except Exception as e:
-            print(f'There was an error uninstalling {selmod["name"]}')
+            print(f'There was an error uninstalling {self.selmod["name"]}')
             print(e)
             return
         args = argparse.Namespace()
@@ -225,7 +261,6 @@ class BcmlFrame(wx.Frame):
         args.__setattr__('nomerge', nomerge)
         args.__setattr__('notext', notext)
         bcmlUninstall = BcmlThread(self, bcml.update.main, args)
-        self.DisableButtons()
         bcmlUninstall.start()
 
     def OnUpdate(self, event):
@@ -235,7 +270,6 @@ class BcmlFrame(wx.Frame):
         args.__setattr__('nomerge', False)
         args.__setattr__('notext', False)
         bcmlUpdate = BcmlThread(self, bcml.update.main, args)
-        self.DisableButtons()
         bcmlUpdate.start()
 
     def OnExport(self, event):
@@ -253,26 +287,13 @@ class BcmlFrame(wx.Frame):
             args.__setattr__('title', exportDlg.export_options['titleid'].replace('-',''))
             bcmlUpdate = BcmlThread(self, bcml.export.main, args)
             print(f'Exporting mods to {args.output}...')
-            self.DisableButtons()
             bcmlUpdate.start()
 
     def OnExplore(self, event):
-        if self.list_mods.GetSelection() < 0:
-            dlg = wx.MessageDialog(self, 'No mod selected to explore', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-        else:
-            os.system(f'explorer {self.mods[self.list_mods.GetSelection()]["path"]}')
+        os.system(f'explorer {self.mods[self.list_mods.GetSelection()]["path"]}')
 
     def OnChangePriority(self, event):
-        if self.list_mods.GetSelection() < 0:
-            dlg = wx.MessageDialog(self, 'No mod selected to change priority', 'BCML Error', wx.OK | wx.ICON_EXCLAMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-        selmod = self.mods[self.list_mods.GetSelection()]
-
-        dlgPriority = wx.TextEntryDialog(self, f'Enter the new priority for {selmod["name"]}','Change Mod Priority')
+        dlgPriority = wx.TextEntryDialog(self, f'Enter the new priority for {self.selmod["name"]}','Change Mod Priority')
         if dlgPriority.ShowModal() != wx.ID_OK: return
         p = dlgPriority.GetValue()
         dlgPriority.Destroy()
@@ -290,40 +311,29 @@ class BcmlFrame(wx.Frame):
                 dlg.Destroy()
                 return
             else:
-                self.DisableButtons()
                 moddir = os.path.join(self.cemudir, f'BotwMod_mod{p:03}')
-                remerge = os.path.exists(os.path.join(selmod['path'], 'packs.log'))
+                remerge = os.path.exists(os.path.join(self.selmod['path'], 'packs.log'))
 
                 try:
-                    shutil.move(selmod['path'], moddir)
-
-                    rules = configparser.ConfigParser()
-                    rules.read(os.path.join(moddir,'rules.txt'))
-                    rules['Definition']['fsPriority'] = str(p)
-                    with open(os.path.join(moddir,'rules.txt'), 'w') as rulef:
-                        rules.write(rulef)
-
-                    print('Updating RSTB configuration...')
-                    mergerstb.main(self.cemudir, "quiet")
-                    print()
-                    if remerge: 
-                        print('Updating merged packs...')
-                        mergepacks.main(self.cemudir, False)
-                    print()
-                    print('Mod configuration updated successfully')
+                    args = argparse.Namespace()
+                    args.__setattr__('directory', self.cemudir)
+                    args.__setattr__('target', self.selmod['priority'])
+                    args.__setattr__('priority', p)
+                    args.__setattr__('verbose', False)
+                    bcmlReorder = BcmlThread(self, bcml.reorder.main, args)
+                    bcmlReorder.start()
                 except Exception as e:
-                    print(f'There was an error changing the priority of {selmod["name"]}')
+                    print(f'There was an error changing the priority of {self.selmod["name"]}')
                     print('Check error.log for details')
                     workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
                     with open(os.path.join(workdir,'error.log'),'w') as elog:
                         elog.write(str(e))
-                finally:
-                    self.EnableButtons()
-                    self.LoadMods()
 
+myEVT_BCMLSTART = wx.NewEventType()
 myEVT_BCMLDONE = wx.NewEventType()
 EVT_BCMLDONE = wx.PyEventBinder(myEVT_BCMLDONE, 1)
-class BcmlDoneEvent(wx.PyCommandEvent):
+EVT_BCMLSTART = wx.PyEventBinder(myEVT_BCMLSTART, 1)
+class BcmlEvent(wx.PyCommandEvent):
     def __init__(self, etype, eid):
         wx.PyCommandEvent.__init__(self, etype, eid)
 
@@ -333,10 +343,12 @@ class BcmlThread(threading.Thread):
         self._parent = parent
         self._target = target
         self._args = args
+        evt = BcmlEvent(myEVT_BCMLSTART, -1)
+        wx.PostEvent(self._parent, evt)
 
     def run(self):
         self._target(*self._args)
-        evt = BcmlDoneEvent(myEVT_BCMLDONE, -1)
+        evt = BcmlEvent(myEVT_BCMLDONE, -1)
         wx.PostEvent(self._parent, evt)
 
 class RedirectText:
