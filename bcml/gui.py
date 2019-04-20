@@ -133,7 +133,7 @@ class BcmlFrame(wx.Frame):
         installTip = "Install a new mod" if self.enable_controls else waitTip
         uninstallTip = noSelTip if not self.selmod and self.enable_controls else "Uninstall " + self.selmod['name'] if self.enable_controls else waitTip
         changeTip = noSelTip if not self.selmod and self.enable_controls else "Change the load priority of " + self.selmod['name'] if self.enable_controls else waitTip
-        updateTip = "Manually trigger a refresh of the RSTB and remerge packs" if self.enable_controls else waitTip
+        updateTip = "Manually trigger a refresh of the RSTB and remerge packs and text edits" if self.enable_controls else waitTip
         exportTip = "Exports all installed mods as a single modpack ZIP" if self.enable_controls else waitTip
         exploreTip = noSelTip if not self.selmod and self.enable_controls else "Open the location of " + self.selmod['name'] + " in Windows Explorer" if self.enable_controls else waitTip
         self.button_install_container.SetToolTip(installTip)
