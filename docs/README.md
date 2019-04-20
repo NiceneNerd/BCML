@@ -150,7 +150,20 @@ optional arguments:
 bcml reorder
 ```
 
-You can change a mod's load priority with this command. It will give you a list of mods, like the `uninstall` command, and then prompt you to pick one and enter its new priority value.A
+You can change a mod's load priority with this command. It will give you a list of mods, like the `uninstall` command, and then prompt you to pick one and enter its new priority value. Usage:
+
+```
+usage: bcml reorder [-h] [-t TARGET] [-p PRIORITY]
+Change priority for BCML-managed mod
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t TARGET, --target TARGET
+                        Specify the priority of the mod to target for re-
+                        ordering
+  -p PRIORITY, --priority PRIORITY
+                        Specify new load priority for mod
+```
 
 ### Export Mod Configuration
 

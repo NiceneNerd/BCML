@@ -49,6 +49,8 @@ def main():
     p_uninstall = subparsers.add_parser('uninstall', description = 'Uninstaller for BCML-managed mods')
 
     p_reorder = subparsers.add_parser('reorder', description = 'Change priority for BCML-managed mod')
+    p_reorder.add_argument('-t', '--target', help = 'Specify the priority of the mod to target for re-ordering', type = int)
+    p_reorder.add_argument('-p', '--priority', help = 'Specify new load priority for mod', type = int)
 
     p_update = subparsers.add_parser('update', description = 'Refreshes RSTB, merged packs, and merged text edits for BCML-managed mods')
     p_update.add_argument('--nomerge', help = 'Skip updating merged packs', action='store_true')
