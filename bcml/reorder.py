@@ -15,7 +15,18 @@ def main(args):
 
     i = 0
     mods = {}
-    print('Mods currently installed:')
+
+    try:
+        target = args.target
+    except:
+        target = None
+    try:
+        priority = args.priority
+    except:
+        priority = None
+
+    if not target:
+        print('Mods currently installed:')
     for rulef in glob.iglob(os.path.join(args.directory, 'BotwMod*/rules.txt')):
         rules = configparser.ConfigParser()
         rules.read(rulef)
@@ -25,18 +36,22 @@ def main(args):
             'path' : os.path.dirname(rulef)
         }
         if mods[i]['name'] == 'BCML': continue
-        print(f'{i + 1}. {mods[i]["name"]} — Priority: {mods[i]["priority"]}')
+        if mods[i]['priority'] == target:
+            target = i + 1
+        if not target:
+            print(f'{i + 1}. {mods[i]["name"]} — Priority: {mods[i]["priority"]}')
         i += 1
 
-    print()
-    target = '9999'
+    target = '9999' if not target else target
     while int(target) - 1 not in mods:
+        print()
         target = input('Enter the number of the mod you would like to modify: ')
     modtarget = mods[int(target) - 1]
     remerge = os.path.exists(os.path.join(modtarget['path'], 'packs.log'))
     retext = os.path.exists(os.path.join(modtarget['path'], 'content', 'Pack', 'Bootup_USen.pack'))
 
-    priority = -1
+    if not priority:
+        priority = -1
     while priority < 0:
         try:
             priority = int(input(f'Enter the new priority for {modtarget["name"]}: '))
@@ -79,6 +94,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Refreshes RSTB and merged packs for BCML-managed mods')
     parser.add_argument('-d', '--directory', help = 'Specify path to Cemu graphicPacks folder, default assumes relative path from BCML install directory', default = '../graphicPacks', type = str)
+    parser.add_argument('-t', '--target', help = 'Specify the priority of the mod to target for re-ordering', type = int)
+    parser.add_argument('-p', '--priority', help = 'Specify new load priority for mod', type = int)
     parser.add_argument('-v', '--verbose', help = 'Verbose output covering every file processed', action='store_true')
     args = parser.parse_args()
     main(args)
