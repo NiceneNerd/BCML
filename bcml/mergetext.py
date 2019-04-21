@@ -96,6 +96,7 @@ def main(path : Path, lang = 'USen'):
         for textmod in textmods:
             if rel_path in textmod:
                 should_bother = True
+                merge_count = 0
         if not should_bother:
             merged_path = merged_dir / rel_path
             merged_path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,11 +114,18 @@ def main(path : Path, lang = 'USen'):
                     if mod_text['entries'] == ref_text['entries']: continue
                     for entry in mod_text['entries']:
                         if are_entries_diff(entry, ref_text, mod_text):
+                            diff_found = True
                             merged_lines['entries'][entry] = copy.deepcopy(mod_text['entries'][entry])
+                if diff_found:
+                    merge_count += 1
         merged_path = merged_dir / rel_path
         merged_path.parent.mkdir(parents=True, exist_ok=True)
         with open(merged_path, 'w', encoding='utf-8') as f_merged:
             yaml.dump(merged_lines, f_merged)
+        if merge_count > 0:
+            print(f'Merging {merge_count} versions of {rel_path}...')
+        else:
+            print(f'No merges necessary in {rel_path}...')
     
     print()
     print('Generating new MSBTs...')
