@@ -116,7 +116,7 @@ def main(args):
                 CREATE_NO_WINDOW = 0x08000000
                 zargs = [os.path.join(execdir, 'helpers', '7z.exe'), 'x', args.mod, f'-o{tmpdir}']
                 unzip = subprocess.Popen(zargs, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
-                print(unzip.communicate()[1])
+                unzip.communicate()[1]
             else:
                 raise Exception
         except:
