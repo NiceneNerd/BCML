@@ -124,8 +124,6 @@ def main(path : Path, lang = 'USen'):
             yaml.dump(merged_lines, f_merged)
         if merge_count > 0:
             print(f'Merging {merge_count} versions of {rel_path}...')
-        else:
-            print(f'No merges necessary in {rel_path}...')
     
     print()
     print('Generating new MSBTs...')
