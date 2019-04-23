@@ -32,7 +32,7 @@ def main(args):
         target = input('Enter the number of the mod you would like to uninstall: ')
     modtarget = mods[int(target) - 1]
     remerge = os.path.exists(os.path.join(modtarget['path'], 'packs.log'))
-    retext = os.path.exists(os.path.join(modtarget['path'], 'content', 'Pack', 'Bootup_USen.pack'))
+    retext = os.path.exists(os.path.join(modtarget['path'], 'texts.yml'))
     try:
         shutil.rmtree(modtarget['path'])
         mergerstb.main(args.directory, "verb" if args.verbose else "quiet")

@@ -3,25 +3,27 @@
 
 import argparse
 import configparser
+import copy
 import csv
 import glob
 import os
-import subprocess
-from pathlib import Path
 import shutil
 import signal
+import subprocess
 import sys
 import traceback
 import zlib
+import zipfile
+from pathlib import Path
 from xml.dom import minidom
 
 import rstb
 import sarc
 import wszst_yaz0
 import xxhash
-from rstb import util
-
+import yaml
 from bcml import mergepacks, mergerstb, mergetext
+from rstb import util
 
 hashtable = {}
 args = None
@@ -76,7 +78,14 @@ def find_modded_sarc_files(s, verbose = False) -> {}:
                 modfiles[rfile] = { 'path': '', 'rstb': rstbsize if rstbsize > 0 else 'del' }
                 if verbose: print(f'Added modified file {rfile}')
                 if rfile.endswith('pack') or rfile.endswith('sarc'):
-                    modfiles.update(find_modded_sarc_files(sarc.SARC(fdata)))
+                    try:
+                        nest_sarc = sarc.SARC(fdata)
+                    except ValueError:
+                        try:
+                            nest_sarc = sarc.SARC(wszst_yaz0.decompress(fdata))
+                        except ValueError:
+                            continue
+                    modfiles.update(find_modded_sarc_files(nest_sarc))
     return modfiles
 
 
@@ -150,10 +159,12 @@ def main(args):
 
         sarcmods = {}
         is_text_mod = False
+        bootup_pack = ''
         for file in modfiles.keys():
             if file.endswith('pack') or file.endswith('sarc'):
                 if 'Bootup_' in file and 'Bootup_Graphic' not in file:
                     is_text_mod = True
+                    bootup_pack = modfiles[file]['path']
                 print(f'Scanning files in {file}...')
                 with open(modfiles[file]['path'], 'rb') as pack:
                     s : sarc.SARC = sarc.read_file_and_make_sarc(pack)
@@ -168,6 +179,65 @@ def main(args):
             print('No modified files were found. That\'s very unusual. Are you sure this is a mod?')
             print()
             sys.exit(0)
+
+        text_edits = {}
+        if is_text_mod and not args.notext:
+            print()
+            print('Scanning for text modifications...')
+
+            tmptext = Path(workdir) / 'tmp_text'
+            msyt_ex = Path(execdir) / 'helpers' / 'msyt.exe'
+            texthash = {}
+            print('Loading text references...')
+            with open(Path(execdir) / 'data' / 'msyt' / 'msbthash.csv','r') as hashCsv:
+                csvLoop = csv.reader(hashCsv)
+                for row in csvLoop:
+                    texthash[row[0]] = row[1]
+            if tmptext.exists():
+                shutil.rmtree(tmptext, ignore_errors=True)
+            
+            refMsg = zipfile.ZipFile((Path(execdir) / 'data' / 'msyt' / 'Msg_USen.product.zip').resolve())
+            ref_dir = tmptext / 'ref'
+            refMsg.extractall(ref_dir)
+
+            print('Finding changed MSBTs...')
+            with open(bootup_pack, 'rb') as bf:
+                bs = sarc.read_file_and_make_sarc(bf)
+            ms = sarc.SARC(wszst_yaz0.decompress(bs.get_file_data('Message/Msg_USen.product.ssarc')))
+            modded_msyts = []
+            for msbt in ms.list_files():
+                m_data = ms.get_file_data(msbt)
+                m_hash = xxhash.xxh32(m_data).hexdigest()
+                if m_hash != texthash[msbt]:
+                    msbt_path = tmptext / msbt
+                    msbt_path.parent.mkdir(parents=True, exist_ok=True)
+                    with msbt_path.open(mode='wb') as f_msbt:
+                        f_msbt.write(m_data)
+                    modded_msyts.append(msbt.replace('.msbt','.msyt'))
+                    if args.verbose: print(f'{msbt} has been changed')
+
+            CREATE_NO_WINDOW = 0x08000000
+            m_args = [str(msyt_ex), 'export', '-d', str(tmptext)]
+            subprocess.run(m_args, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+            for msbt_file in tmptext.rglob('**/*.msbt'):
+                Path(msbt_file).unlink()
+
+            print('Identifying changed text entries...')
+            for msyt in ref_dir.rglob('**/*.msyt'):
+                rel_path = str(msyt.relative_to(ref_dir)).replace('\\','/')
+                if rel_path in modded_msyts:
+                    with open(ref_dir / rel_path, 'r', encoding='utf-8') as ref_file:
+                        ref_text = yaml.safe_load(ref_file)
+                    with open(tmptext / rel_path, 'r', encoding='utf-8') as mod_file:
+                        mod_text = yaml.safe_load(mod_file)
+                    text_edits[rel_path] = {}
+                    text_edits[rel_path]['entries'] = {}
+                    for entry in mod_text['entries']:
+                        if mergetext.are_entries_diff(entry, ref_text, mod_text):
+                            text_edits[rel_path]['entries'][entry] = copy.deepcopy(mod_text['entries'][entry])
+                            if args.verbose: print(f'Found changed entry {entry} in {rel_path}')
+
+            shutil.rmtree(tmptext)
 
         os.chdir(ewd)
         modid = get_mod_id(args.directory, args.priority)
@@ -185,6 +255,10 @@ def main(args):
                 for pack in modfiles.keys():
                     if (pack.endswith('pack') or pack.endswith('sarc')) and modfiles[pack]['path'] != '':
                         plog.write('{},{}\n'.format(pack, modfiles[pack]['path'].replace('/','\\')))
+
+        if is_text_mod and not args.notext:
+            with open(Path(moddir) / 'texts.yml', 'w', encoding='utf-8') as ytext:
+                yaml.dump(text_edits, ytext)
 
         p = args.priority if args.priority > 100 else modid
         rules = configparser.ConfigParser()
@@ -229,7 +303,7 @@ def main(args):
         if args.shrink: open(os.path.join(moddir,'.shrink'), 'w').close()
 
         mmdir = os.path.join(args.directory,'BotwMod_mod999_BCML')
-        if not os.path.exists(mmdir):
+        if not os.path.exists(os.path.join(mmdir, 'rules.txt')):
             os.makedirs(f'{mmdir}/content/System/Resource/')
             rules = open(f'{mmdir}/rules.txt','a')
             rules.write('[Definition]\n'

@@ -249,7 +249,7 @@ class BcmlFrame(wx.Frame):
         notext = True
         try:
             if os.path.exists(os.path.join(self.selmod['path'], 'packs.log')): nomerge = False
-            if os.path.exists(os.path.join(self.selmod['path'], 'content', 'Pack', 'Bootup_USen.pack')): notext = False
+            if os.path.exists(os.path.join(self.selmod['path'], 'texts.yml')): notext = False
             shutil.rmtree(self.selmod['path'])
         except Exception as e:
             print(f'There was an error uninstalling {self.selmod["name"]}')

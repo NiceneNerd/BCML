@@ -112,7 +112,14 @@ def main(path, verbose = False):
     for dir in glob.iglob(os.path.join(path, 'BotwMod_mod999_BCML', 'aoc', '*'), recursive=True):
         shutil.rmtree(dir)
     for dir in glob.iglob(os.path.join(path, 'BotwMod_mod999_BCML', 'content', '*'), recursive=True):
-        if not dir.endswith('System'): shutil.rmtree(dir)
+        if not dir.endswith('System') and not dir.endswith('Pack'):
+            shutil.rmtree(dir)
+        elif dir.endswith('System'):
+            pass
+        elif dir.endswith('Pack'):
+            for file in glob.iglob(os.path.join(dir, '**/*'), recursive=True):
+                if not 'Bootup_' in file:
+                    os.remove(file)
 
     packs = {}
     print('Finding modified packs...')
