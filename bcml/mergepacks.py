@@ -41,8 +41,16 @@ def merge_sarcs(sarc_list):
                 if is_file_modded(rfile, fdata):
                     ext = os.path.splitext(rfile)[1]
                     if ext.endswith('pack') or ext.endswith('sarc'):
+                        try:
+                            nest_pack = sarc.SARC(fdata)
+                        except ValueError:
+                            try:
+                                nest_pack = sarc.SARC(wszst_yaz0.decompress(fdata))
+                            except ValueError:
+                                modded_files[file] = priority
+                                continue
                         modded_sarc = {
-                                'pack': sarc.SARC(fdata),
+                                'pack': nest_pack,
                                 'priority': priority,
                                 'nest_level': sarc_list[-1]['nest_level'] + 1,
                                 'name': rfile
