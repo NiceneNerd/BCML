@@ -126,13 +126,16 @@ def main(args):
                 elog.write(traceback.format_exc())
 
         mdir = tmpdir
-        if not os.path.exists(os.path.join(mdir, 'rules.txt')):
+        found_rules = os.path.exists(os.path.join(mdir, 'rules.txt'))
+        if not found_rules:
             for subdir in glob.iglob(f'{tmpdir}/*', recursive=True):
                 if os.path.exists(os.path.join(subdir, 'rules.txt')):
                     mdir = subdir
-        try:
+                    found_rules = True
+        
+        if found_rules:
             os.chdir(mdir)
-        except Exception as e:
+        else:    
             print(f'No rules.txt was found. Is this a mod in Cemu graphics pack format?')
             sys.exit()
             
