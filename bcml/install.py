@@ -189,7 +189,7 @@ def main(args):
             msyt_ex = Path(execdir) / 'helpers' / 'msyt.exe'
             texthash = {}
             print('Loading text references...')
-            with open(Path(execdir) / 'data' / 'msyt' / 'msbthash.csv','r') as hashCsv:
+            with open(Path(execdir) / 'data' / 'msyt' / 'Msg_USen_hashes.csv','r') as hashCsv:
                 csvLoop = csv.reader(hashCsv)
                 for row in csvLoop:
                     texthash[row[0]] = row[1]

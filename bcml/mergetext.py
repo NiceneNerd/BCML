@@ -9,7 +9,7 @@ import subprocess
 import sys
 import traceback
 import unicodedata
-import zipfile
+import tarfile
 from pathlib import Path
 
 import rstb
@@ -46,9 +46,9 @@ def main(path : Path, lang = 'USen'):
         merged_boot_path.unlink()
 
     print('Generating clean texts...')
-    refMsg = zipfile.ZipFile(Path(execdir / 'data' / 'msyt' / 'Msg_USen.product.zip').resolve())
-    merge_dir = tmpdir / 'merged'
-    refMsg.extractall(merge_dir)
+    with tarfile.open(Path(execdir / 'data' / 'msyt' / 'Msg_USen.product.tar.lzma').resolve(), 'r:xz') as refMsg:
+        merge_dir = tmpdir / 'merged'
+        refMsg.extractall(merge_dir)
 
     print('Detecting mods with text changes...')
     textmods = []
