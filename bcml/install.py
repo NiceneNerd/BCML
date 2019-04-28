@@ -236,6 +236,8 @@ def main(args):
                         if mergetext.are_entries_diff(entry, ref_text, mod_text):
                             text_edits[rel_path]['entries'][entry] = copy.deepcopy(mod_text['entries'][entry])
                             if args.verbose: print(f'Found changed entry {entry} in {rel_path}')
+                    if len(text_edits[rel_path]['entries']) == 0:
+                        del text_edits[rel_path]
 
             shutil.rmtree(tmptext)
 

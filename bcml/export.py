@@ -11,7 +11,7 @@ def main(args):
         if args.onlymerges and '999' not in mod: continue
         os.chdir(mod)
         for file in glob.iglob('**\\*', recursive=True):
-            if file.endswith('.log') or file.endswith('.md') or file == 'rules.txt': continue
+            if file.endswith('.log') or file.endswith('.md') or file == 'texts.yml' or file == 'rules.txt': continue
             files[file] = os.path.abspath(file)
         os.chdir(sdir)
 
