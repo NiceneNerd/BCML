@@ -45,7 +45,7 @@ You can also create a shortcut on your desktop if you wish. The path to the exec
 
 The interface is previewed below and seems fairly self-explanatory. If you need more details, check the detailed reference for the CLI version below.
 
-![BCML GUI Preview](https://i.imgur.com/UEbVyev.png)
+![BCML GUI Preview](https://i.imgur.com/FkTvqF2.png)
 
 ## CLI Usage
 
@@ -80,7 +80,7 @@ bcml install SuperCoolMod.zip
 That's the gist of it. More detailed usage information:
 
 ```
-usage: bcml install [-h] [-p PRIORITY] [--nomerge] [-s] [-l] mod
+usage: bcml install [-h] [-p PRIORITY] [--nomerge] [--notext] [-s] [-l] mod
 
 positional arguments:
   mod                   Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format

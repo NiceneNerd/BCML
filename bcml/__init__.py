@@ -38,7 +38,7 @@ def main():
     subparsers = parser.add_subparsers(dest='command', help='Command for BCML to perform')
     subparsers.required = False
 
-    p_install = subparsers.add_parser('install')
+    p_install = subparsers.add_parser('install', description = 'Install a mod')
     p_install.add_argument('mod', help = 'Path to a ZIP or RAR archive containing a BOTW mod in Cemu 1.15+ format')
     p_install.add_argument('-p', '--priority', help = 'Mod load priority, default 100', default = '100', type = int)
     p_install.add_argument('--nomerge', help = 'Do not automatically merge pack files', action = 'store_true')
@@ -46,17 +46,17 @@ def main():
     p_install.add_argument('-s', '--shrink', help = 'Update RSTB entries for files which haven\'t grown', action="store_true")
     p_install.add_argument('-l', '--leave', help = 'Do not remove RSTB entries for file sizes which cannot be calculated', action="store_true")
 
-    p_uninstall = subparsers.add_parser('uninstall', description = 'Uninstaller for BCML-managed mods')
+    p_uninstall = subparsers.add_parser('uninstall', description = 'Uninstall a mod')
 
-    p_reorder = subparsers.add_parser('reorder', description = 'Change priority for BCML-managed mod')
+    p_reorder = subparsers.add_parser('reorder', description = 'Change a mod\'s priority')
     p_reorder.add_argument('-t', '--target', help = 'Specify the priority of the mod to target for re-ordering', type = int)
     p_reorder.add_argument('-p', '--priority', help = 'Specify new load priority for mod', type = int)
 
-    p_update = subparsers.add_parser('update', description = 'Refreshes RSTB, merged packs, and merged text edits for BCML-managed mods')
+    p_update = subparsers.add_parser('update', description = 'Refresh RSTB, merged packs, and merged text edits')
     p_update.add_argument('--nomerge', help = 'Skip updating merged packs', action='store_true')
     p_update.add_argument('--notext', help = 'Skip merging text modifications', action='store_true')
 
-    p_export = subparsers.add_parser('export')
+    p_export = subparsers.add_parser('export', description = 'Export all BCML mods as single file')
     p_export.add_argument('output', help = 'Path to the mod ZIP that BCML should create')
     p_export.add_argument('-o', '--onlymerges', help = 'Only include the merged RSTB and packs, not all installed content', action = 'store_true')
     formats = p_export.add_mutually_exclusive_group()
@@ -68,7 +68,7 @@ def main():
 
     print('##############################################')
     print('##    Breath of the Wild Cemu Mod Loader    ##')
-    print('##             Version 0.999                ##')
+    print('##              Version 1.0                 ##')
     print('##------------------------------------------##')
     print('##     (c) 2019 Nicene Nerd - GPLv3+        ##')
     print('##  7z.exe (c) 2019 Ignor Pavolv - LGPLv3+  ##')
