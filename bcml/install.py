@@ -128,11 +128,15 @@ def main(args):
                 unzip.communicate()[1]
             else:
                 raise Exception
+            if not os.path.exists(tmpdir): raise Exception
         except:
-            print("Mod could not be extracted. Either it is in an unsupported format or the archive is invalid.")
-            print('Check error.log for details')
-            with open(os.path.join(workdir, 'error.log'),'w') as elog:
+            print('Mod could not be extracted. Perhaps it is broken, in an unsupported format, or currently in use.')
+            print('Check the error log for details at:')
+            elog_path = os.path.join(workdir, 'error.log')
+            print(f'  {elog_path}')
+            with open(elog_path,'w') as elog:
                 elog.write(traceback.format_exc())
+                sys.exit()
 
         mdir = tmpdir
         found_rules = os.path.exists(os.path.join(mdir, 'rules.txt'))
@@ -145,7 +149,10 @@ def main(args):
         if found_rules:
             os.chdir(mdir)
         else:    
-            print(f'No rules.txt was found. Is this a mod in Cemu graphics pack format?')
+            print('No rules.txt was found. Is this mod in Cemu graphics pack format?')
+            print('If it is an older mod, you can manually add a rules.txt file to the')
+            print('mod in the same location as the content folder. For more info, see:')
+            print('<https://gamebanana.com/tuts/12493>')
             sys.exit()
             
         modfiles = {}
@@ -323,10 +330,13 @@ def main(args):
         print('Mod installed successfully!')
     except SystemExit as e:
         print('Exiting...')
+        os._exit(0)
     except:
         print(f'There was an error installing {args.mod}')
-        print('Check error.log for details')
-        with open(os.path.join(workdir, 'error.log'),'w') as elog:
+        print('Check the error log for details at:')
+        elog_path = os.path.join(workdir, 'error.log')
+        print(f'  {elog_path}')
+        with open(elog_path,'w') as elog:
             elog.write(traceback.format_exc())
         os.chdir(ewd)
     finally:

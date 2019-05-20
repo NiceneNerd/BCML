@@ -23,8 +23,10 @@ def main(args):
     except Exception as e:
         workdir = os.path.join(os.getenv('LOCALAPPDATA'), 'bcml')
         print(f'There was an error updating your mod configuration')
-        print('Check error.log for details')
-        with open(os.path.join(workdir,'error.log'),'w') as elog:
+        print('Check the error log for details at:')
+        elog_path = os.path.join(workdir, 'error.log')
+        print(f'  {elog_path}')
+        with open(elog_path,'w') as elog:
             elog.write(traceback.format_exc())
 
 if __name__ == "__main__":

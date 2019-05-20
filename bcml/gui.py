@@ -324,9 +324,11 @@ class BcmlFrame(wx.Frame):
                     bcmlReorder.start()
                 except Exception as e:
                     print(f'There was an error changing the priority of {self.selmod["name"]}')
-                    print('Check error.log for details')
+                    print('Check the error log for details at:')
                     workdir = os.path.join(os.getenv('LOCALAPPDATA'),'bcml')
-                    with open(os.path.join(workdir,'error.log'),'w') as elog:
+                    elog_path = os.path.join(workdir, 'error.log')
+                    print(f'  {elog_path}')
+                    with open(elog_path,'w') as elog:
                         elog.write(str(e))
 
 myEVT_BCMLSTART = wx.NewEventType()
