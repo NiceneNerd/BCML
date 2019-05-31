@@ -29,7 +29,7 @@ from bcml import mergepacks, mergerstb
 
 class BcmlFrame(wx.Frame):
     mods = {}
-    cemudir = ''
+    cemudir = 'NULL'
     enable_controls = True
 
     def __init__(self, *args, **kwds):
