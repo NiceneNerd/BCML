@@ -215,12 +215,18 @@ def main(args):
             for msbt in ms.list_files():
                 m_data = ms.get_file_data(msbt)
                 m_hash = xxhash.xxh32(m_data).hexdigest()
-                if m_hash != texthash[msbt]:
+                if not msbt in texthash:
                     msbt_path = tmptext / msbt
                     msbt_path.parent.mkdir(parents=True, exist_ok=True)
                     with msbt_path.open(mode='wb') as f_msbt:
                         f_msbt.write(m_data)
-                    modded_msyts.append(msbt.replace('.msbt','.msyt'))
+                    if args.verbose: print(f'{msbt} has been added')
+                elif m_hash != texthash[msbt]:
+                    msbt_path = tmptext / msbt
+                    msbt_path.parent.mkdir(parents=True, exist_ok=True)
+                    with msbt_path.open(mode='wb') as f_msbt:
+                        f_msbt.write(m_data)
+                    if not msbt == 'StaticMsg/ErrorMessage.msbt': modded_msyts.append(msbt.replace('.msbt','.msyt'))
                     if args.verbose: print(f'{msbt} has been changed')
 
             CREATE_NO_WINDOW = 0x08000000
