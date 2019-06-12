@@ -319,7 +319,7 @@ def main(args):
 
         mmdir = os.path.join(args.directory,'BotwMod_mod999_BCML')
         if not os.path.exists(os.path.join(mmdir, 'rules.txt')):
-            os.makedirs(f'{mmdir}/content/System/Resource/')
+            os.makedirs(f'{mmdir}/content/System/Resource/', exist_ok=True)
             rules = open(f'{mmdir}/rules.txt','a')
             rules.write('[Definition]\n'
                         'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
