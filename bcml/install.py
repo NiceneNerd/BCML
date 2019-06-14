@@ -335,16 +335,17 @@ def main(args):
             
         print('Mod installed successfully!')
     except SystemExit as e:
-        print('Exiting...')
-        os._exit(0)
+        print('Goodbye!')
+        skip_err = True
     except:
-        print(f'There was an error installing {args.mod}')
-        print('Check the error log for details at:')
-        elog_path = os.path.join(workdir, 'error.log')
-        print(f'  {elog_path}')
-        with open(elog_path,'w') as elog:
-            elog.write(traceback.format_exc())
-        os.chdir(ewd)
+        if not skip_err:
+            print(f'There was an error installing {args.mod}')
+            print('Check the error log for details at:')
+            elog_path = os.path.join(workdir, 'error.log')
+            print(f'  {elog_path}')
+            with open(elog_path,'w') as elog:
+                elog.write(traceback.format_exc())
+            os.chdir(ewd)
     finally:
         try:
             tmpdir
