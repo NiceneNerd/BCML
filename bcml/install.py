@@ -127,8 +127,8 @@ def main(args):
                 unzip = subprocess.Popen(zargs, stdout = subprocess.PIPE, stderr = subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
                 unzip.communicate()[1]
             else:
-                raise Exception
-            if not os.path.exists(tmpdir): raise Exception
+                raise Exception('The mod provided was not a supported archive (ZIP, RAR, or 7z).')
+            if not os.path.exists(tmpdir): raise Exception('No files were extracted.')
         except:
             print('Mod could not be extracted. Perhaps it is broken, in an unsupported format, or currently in use.')
             print('Check the error log for details at:')
