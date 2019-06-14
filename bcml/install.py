@@ -345,7 +345,7 @@ def main(args):
             print(f'  {elog_path}')
             with open(elog_path,'w') as elog:
                 elog.write(traceback.format_exc())
-            os.chdir(ewd)
+        os.chdir(ewd)
     finally:
         try:
             tmpdir
