@@ -5,7 +5,7 @@ with open("docs/README.md", "r") as readme:
 
 setup(
     name='bcml',
-    version='1.2',
+    version='1.21',
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',

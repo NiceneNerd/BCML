@@ -64,6 +64,15 @@ def main(path, verbose):
             elif newsize > oldsize:
                 table.set_size(change, newsize)
                 if verbose == 'verb': print(f'Updated RSTB entry for {change} from {oldsize} to {newsize}')
+        else:
+            newsize = 0
+            try:
+                newsize = int(rstbchanges[change]['size'])
+            except ValueError:
+                if verbose == 'verb': print(f'Cannot calculate size for new entry {change}, skipping...')
+                continue
+            table.set_size(change, newsize)
+            print(f'Added RSTB entry for {change} with value {newsize}')
 
     print('Writing new RSTB...')
     util.write_rstb(table, rstbpath, True)

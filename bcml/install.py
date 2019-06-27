@@ -44,23 +44,32 @@ def find_modded_files(dir, verbose = False) -> {}:
                 os.remove(pathname)
                 continue
             cname = get_canon_name(pathname)
+            rstbsize = rstb.SizeCalculator().calculate_file_size(file_name = pathname, wiiu = True, force = False)
+            if filename.endswith('.pack'): rstbsize = 'del'
             if cname in hashtable:
                 if not is_file_modded(pathname, cname):
                     if verbose: print(f'File {cname} unmodified, ignoring...')
                     continue
                 else:
-                    rstbsize = rstb.SizeCalculator().calculate_file_size(file_name = pathname, wiiu = True, force = False)
-                    modfiles[cname] = { 'path': pathname, 'rstb': rstbsize if rstbsize > 0 else 'del' }
+                    modfiles[cname] = { 'path': pathname, 'rstb': rstbsize or 'del' }
+                    if cname.startswith('Map/MainField') and cname.endswith('mubin'):
+                        modfiles['Aoc/0010/' + cname] = { 'path': pathname, 'rstb': rstbsize or 'del' }
+                    if cname.startswith('Aoc/0010/Map/MainField') and cname.endswith('mubin'):
+                        modfiles[cname.replace('Aoc/0010/', '')] = { 'path': pathname, 'rstb': rstbsize or 'del' }
                     if verbose: print(f'Added modified file {cname}')
                     continue
             else:
                 if verbose: print(f'{cname} not found in hashtable')
+                modfiles[cname] = { 'path': pathname, 'rstb': rstbsize or 'del' }
+                if verbose: print(f'Added new game file {cname}')
+                continue
 
     return modfiles
 
 def find_modded_sarc_files(s, verbose = False, aoc = False) -> {}:
     modfiles = {}
     for file in s.list_files():
+        if 'bgdata' in file: continue
         rfile = file.replace('.s','.')
         if aoc: rfile = 'Aoc/0010/' + rfile
         if 'Msg_' in file:
@@ -71,12 +80,14 @@ def find_modded_sarc_files(s, verbose = False, aoc = False) -> {}:
         fdata = s.get_file_data(file).tobytes()
         if '.s' in file:
             fdata = wszst_yaz0.decompress(fdata)
+        rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(fdata, True, fext)
         if rfile in hashtable:
             if hashtable[rfile] == xxhash.xxh32(fdata).hexdigest():
                 if verbose: print(f'File {rfile} unmodified, ignoring...')
             else:
-                rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(fdata, True, fext)
-                modfiles[rfile] = { 'path': '', 'rstb': rstbsize if rstbsize > 0 else 'del' }
+                modfiles[rfile] = { 'path': '', 'rstb': rstbsize or 'del' }
+                if rfile.startswith('Aoc/0010/Map/MainField'):
+                    modfiles[rfile.replace('Aoc/0010/','')] = { 'path': '', 'rstb': rstbsize or 'del' }
                 if verbose: print(f'Added modified file {rfile}')
                 if rfile.endswith('pack') or rfile.endswith('sarc'):
                     try:
@@ -86,7 +97,9 @@ def find_modded_sarc_files(s, verbose = False, aoc = False) -> {}:
                             nest_sarc = sarc.SARC(wszst_yaz0.decompress(fdata))
                         except ValueError:
                             continue
-                    modfiles.update(find_modded_sarc_files(nest_sarc))
+                    modfiles.update(find_modded_sarc_files(nest_sarc, verbose, aoc))
+        else:
+            modfiles[rfile] = { 'path': '', 'rstb': rstbsize or 'del' }
     return modfiles
 
 
@@ -179,7 +192,7 @@ def main(args):
                     if not s:
                         print('Broken pack, skipping...')
                     else:
-                        sarcmods.update(find_modded_sarc_files(s, args.verbose))
+                        sarcmods.update(find_modded_sarc_files(s, args.verbose, 'aoc' in file.lower()))
         modfiles.update(sarcmods)
 
         if len(modfiles) == 0:
