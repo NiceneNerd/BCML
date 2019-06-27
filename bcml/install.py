@@ -13,7 +13,7 @@ import subprocess
 import sys
 import traceback
 import zlib
-import zipfile
+import tarfile
 from pathlib import Path
 from xml.dom import minidom
 
@@ -58,10 +58,11 @@ def find_modded_files(dir, verbose = False) -> {}:
 
     return modfiles
 
-def find_modded_sarc_files(s, verbose = False) -> {}:
+def find_modded_sarc_files(s, verbose = False, aoc = False) -> {}:
     modfiles = {}
     for file in s.list_files():
         rfile = file.replace('.s','.')
+        if aoc: rfile = 'Aoc/0010/' + rfile
         if 'Msg_' in file:
             modfiles[rfile] = { 'path': '', 'rstb': 'del' }
             if verbose: print(f'Added modified file {rfile}')
@@ -196,30 +197,30 @@ def main(args):
             msyt_ex = Path(execdir) / 'helpers' / 'msyt.exe'
             texthash = {}
             print('Loading text references...')
-            with open(Path(execdir) / 'data' / 'msyt' / 'Msg_USen_hashes.csv','r') as hashCsv:
+            hash_path = Path(execdir) / 'data' / 'msyt' / 'Msg_USen_hashes.csv'
+            with open(hash_path.resolve(),'r') as hashCsv:
                 csvLoop = csv.reader(hashCsv)
                 for row in csvLoop:
                     texthash[row[0]] = row[1]
             if tmptext.exists():
                 shutil.rmtree(tmptext, ignore_errors=True)
             
-            refMsg = zipfile.ZipFile((Path(execdir) / 'data' / 'msyt' / 'Msg_USen.product.zip').resolve())
-            ref_dir = tmptext / 'ref'
-            refMsg.extractall(ref_dir)
+            ref_path = Path(execdir) / 'data' / 'msyt' / 'Msg_USen.product.tar.lzma'
+            with tarfile.open(ref_path.resolve(), 'r:xz') as refMsg:
+                ref_dir = tmptext / 'ref'
+                refMsg.extractall(ref_dir)
 
             print('Finding changed MSBTs...')
             with open(bootup_pack, 'rb') as bf:
                 bs = sarc.read_file_and_make_sarc(bf)
             ms = sarc.SARC(wszst_yaz0.decompress(bs.get_file_data('Message/Msg_USen.product.ssarc')))
             modded_msyts = []
+            added_msbt_sarc = sarc.SARCWriter(True)
             for msbt in ms.list_files():
                 m_data = ms.get_file_data(msbt)
                 m_hash = xxhash.xxh32(m_data).hexdigest()
                 if not msbt in texthash:
-                    msbt_path = tmptext / msbt
-                    msbt_path.parent.mkdir(parents=True, exist_ok=True)
-                    with msbt_path.open(mode='wb') as f_msbt:
-                        f_msbt.write(m_data)
+                    added_msbt_sarc.add_file(msbt, m_data)
                     if args.verbose: print(f'{msbt} has been added')
                 elif m_hash != texthash[msbt]:
                     msbt_path = tmptext / msbt
@@ -274,6 +275,9 @@ def main(args):
         if is_text_mod and not args.notext:
             with open(Path(moddir) / 'texts.yml', 'w', encoding='utf-8') as ytext:
                 yaml.dump(text_edits, ytext)
+            if len(added_msbt_sarc._files) > 0:
+                with open(Path(moddir) / 'atexts.sarc', 'wb') as sf:
+                    added_msbt_sarc.write(sf)
 
         p = args.priority if args.priority > 100 else modid
         rules = configparser.ConfigParser()
@@ -338,7 +342,7 @@ def main(args):
         print('Goodbye!')
         skip_err = True
     except:
-        if not skip_err:
+        if 'skip_err' not in locals() and 'skip_err' not in globals():
             print(f'There was an error installing {args.mod}')
             print('Check the error log for details at:')
             elog_path = os.path.join(workdir, 'error.log')
@@ -351,11 +355,11 @@ def main(args):
             tmpdir
         except:
             return
-        while os.path.exists(tmpdir):
+        if os.path.exists(tmpdir):
             try:
                 shutil.rmtree(tmpdir)
             except PermissionError as e:
-                pass
+                print('Could not remove temp directory')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A tool to install and manage mods for Breath of the Wild in CEMU')

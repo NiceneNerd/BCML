@@ -93,6 +93,16 @@ def main(path : Path, lang = 'USen'):
     for merged_msyt in merge_dir.rglob('**/*.msyt'):
         merged_msyt.unlink()
 
+    added_msbt_packs = sorted(path.rglob('**/atexts.sarc'))
+    if len(added_msbt_packs) > 0:
+        print('Adding mod-original MSBTs...')
+        for added_msbt_pack in added_msbt_packs:
+            with open(added_msbt_pack, 'rb') as sf:
+                added_msbt_sarc = sarc.read_file_and_make_sarc(sf)
+            for msbt in added_msbt_sarc.list_files():
+                with open(Path(merge_dir / msbt), 'wb') as xf:
+                    xf.write(added_msbt_sarc.get_file_data(msbt))
+
     new_boot_path = tmpdir / f'Bootup_{lang}.pack'
     with open(new_boot_path, 'wb') as new_boot:
         print(f'Creating new Msg_{lang}.product.ssarc...')
