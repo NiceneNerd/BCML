@@ -16,7 +16,9 @@ def main(path, verbose):
 
     print('Loading clean RSTB data...')
     table : rstb.ResourceSizeTable = None
-    if not os.path.exists(rstbpath): shutil.copyfile(os.path.join(execdir, 'data', 'clean.srsizetable'), rstbpath)
+    if os.path.exists(rstbpath):
+        os.remove(rstbpath)
+    shutil.copyfile(os.path.join(execdir, 'data', 'clean.srsizetable'), rstbpath)
     table = rstb.util.read_rstb(rstbpath, True)
 
     rstbchanges = {}
