@@ -11,3 +11,5 @@ error.log
 /bcml.egg-info
 /bcml/data/master.srsizetable
 /bcml/__pycache__
+setup.spec
+__pycache__
