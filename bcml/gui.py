@@ -76,7 +76,7 @@ class BcmlFrame(wx.Frame):
 
     def __set_properties(self):
         # begin wxGlade: BcmlFrame.__set_properties
-        self.SetTitle("BCML: BotW Cemu Mod Loader")
+        self.SetTitle("BCML: BotW Cemu Mod Loader - v1.25")
         self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWFRAME))
         self.SetPosition((64, 32))
         self.SetMaxClientSize((512,-1))
