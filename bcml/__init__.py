@@ -73,7 +73,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def eventFilter(self, watched, event):
         if event.type() == QtCore.QEvent.ChildRemoved and not self.btnChange.isEnabled():
             self.btnChange.setEnabled(True)
-        return False
+        return super(MainWindow, self).eventFilter(watched, event)
 
     def SetupChecks(self):
         try:
