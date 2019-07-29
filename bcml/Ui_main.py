@@ -100,7 +100,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "BCML: BotW Cemu Mod Loader", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Installed mods:", None, -1))
-        self.listWidget.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Drap and drop to change mod load order. Mods at the bottom of the list override mods at the top.", None, -1))
+        self.listWidget.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Drag and drop to change mod load order. Mods at the bottom of the list override mods at the top.", None, -1))
         self.btnInstall.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Install a graphic pack mod", None, -1))
         self.btnInstall.setText(QtWidgets.QApplication.translate("MainWindow", "Install...", None, -1))
         self.btnRemerge.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Perform all merges again", None, -1))
