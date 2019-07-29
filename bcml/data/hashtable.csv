@@ -7028,6 +7028,7 @@ Actor/AS/Bokoblin_Red_HorseWait.bas,7a3c420a
 Actor/AS/Bokoblin_Red_JumpAttackStartQ.bas,273f7820
 Actor/AS/Bokoblin_AttackRotationWalk.bas,6e32e268
 Actor/AS/Bokoblin_HorseAttackEnd.bas,45c2a662
+Actor/AS/Bokoblin_Red_Sleep.bas,55262ece
 Actor/AS/Bokoblin_Red_SleepEnd.bas,32bfb738
 Actor/AS/Bokoblin_SquatCreate.bas,525d9c4a
 Actor/AS/Bokoblin_NpcDefeatSearch.bas,556eee72
@@ -61232,6 +61233,7 @@ Actor/ActorLink/SoundProxyDungeonRotateTag_FinalTrialRotateWall_Water.bxml,bdeb1
 Actor/ActorLink/SoundProxyDungeonRotateTag_FinalTrialRotateWall.bxml,0b87164e
 Actor/ActorLink/SoundProxyDungeonMoveTag_FinalTrialStartLift.bxml,571aae76
 Actor/ActorLink/TBox_Dungeon_Iron_FinalTrial.bxml,84b96488
+Aoc/0010/Pack/AocMainField.pack,516f412c
 Aoc/0010/Physics/StaticCompound/AocField/A-1-0.hksc,85d84e35
 Aoc/0010/Physics/StaticCompound/AocField/A-1-1.hksc,744bb7d1
 Aoc/0010/Physics/StaticCompound/AocField/A-1-2.hksc,746dfa89

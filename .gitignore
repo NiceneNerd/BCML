@@ -11,3 +11,9 @@ error.log
 /bcml.egg-info
 /bcml/data/master.srsizetable
 /bcml/__pycache__
+/venv
+/work_dir
+/bcml/work_dir
+/.idea
+bcml/tmp.py
+tmp.py

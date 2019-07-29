@@ -5,7 +5,7 @@ with open("docs/README.md", "r") as readme:
 
 setup(
     name='bcml',
-    version='1.14',
+    version='2.0',
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',
@@ -15,26 +15,26 @@ setup(
     include_package_data=True,
     packages=['bcml'],
     entry_points={
-        'console_scripts': [
-            'bcml = bcml.__init__:main'
-        ],
         'gui_scripts': [
-            'bcml-gui = bcml.gui:main'
+            'bcml = bcml.__init__:main'
         ]
     },
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python :: 3 :: Only'
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
+        'aamp',
+        'byml',
+        'diff-match-patch',
+        'PySide2',
         'pyYaml',
         'sarc',
         'rstb',
-        'wszst_yaz0',
-        'wxPython',
+        'wszst-yaz0',
         'xxhash'
     ]
 )
