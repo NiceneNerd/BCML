@@ -470,7 +470,7 @@ class ProgressThread(threading.Thread):
         self.signal = ThreadSignal()
 
     def run(self):
-        sys.stdout = self._out
+        sys.stdout = RedirectText(self._out)
         self._target(*self._args)
         self.signal.sig.emit('Done')
 
