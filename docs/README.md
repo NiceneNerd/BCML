@@ -9,7 +9,7 @@ A mod installer and manager for BoTW mods on Cemu
 * A dumped copy of *The Legend of Zelda: Breath of the Wild* for Wii U
 * Python 3.7 (64-bit, added to system PATH)
 
-The following `pip` packages, which will be automatically installed:
+The following `pip` packages, which will be *automatically installed*:
 * [`aamp`](https://pypi.org/project/aamp/)
 * [`byml`](https://pypi.org/project/byml/)
 * [`diff-match-patch`](https://pypi.org/project/diff-match-patch/)
@@ -17,37 +17,39 @@ The following `pip` packages, which will be automatically installed:
 * [`pyYaml`](https://pypi.org/project/PyYAML/)
 * [`rstb`](https://pypi.org/project/rstb/)
 * [`sarc`](https://pypi.org/project/sarc/)
-* [`wszst_yaz0`](https://pypi.org/project/wszst-yaz0/)
+* [`wszst-yaz0`](https://pypi.org/project/wszst-yaz0/)
 * [`xxhash`](https://pypi.org/project/xxhash/)
 
 ## Setup
 
-First, make sure you have Python 3.7 64 bit installed and in your system PATH. For more information about this, you can view this
+There are three primary options for installing BCML.
 
-BCML is available through Python's `pip` installer, so just run: `pip install bcml`
+**Option 1: Easy Installer**
+1. Download the latest Windows setup executable release.
+2. Double click and install it like a normal program.
 
-Alternatively, you can clone the repository, and then run `python setup.py install` from the BCML root folder.
+**Option 2: PIP** 
+1. Download and install Python. You **must** use the 64 bit version of Python 3.7 or later. The most recent download as of July 2019 is [here](https://www.python.org/ftp/python/3.7.4/python-3.7.4-amd64.exe). You also **must** choose the "Add to System PATH" option during installation.
+2. Open a command line and run: `pip install bcml`
+3. Run BCML using the command `bcml`
+4. (Optional) Create a shortcut to the BCML executable in Python's `Scripts` folder.
 
-On first use, you will have to specify the directory to which Cemu is installed.
+**Option 3: Install from Source**
+1. Download and install Python. You **must** use the 64 bit version of Python 3.7 or later. The most recent download as of July 2019 is [here](https://www.python.org/ftp/python/3.7.4/python-3.7.4-amd64.exe). You also **must** choose the "Add to System PATH" option during installation.
+2. Download the source code for the latest BCML release or clone the repo.
+3. In the directory where you extracted the BCML source, run `python setup.py install`
+4. Run BCML using the command `bcml`
+5. (Optional) Create a shortcut to the BCML executable in Python's `Scripts` folder.
 
-**Notice:** While it is certainly possible to use BCML for some mods and install others manually, no compatibility is guaranteed. It is recommended to uninstall all Cemu mods before using BCML, and then to reinstall them through BCML.
+On first use, you will have to specify the directory where Cemu is installed and the `content` directory of your BotW game dump.
 
 ## Supported Mods
 
 - Mods must be packed as ZIP, 7z, or  RAR archives.
 - Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
+- **Notice:** While it is certainly possible to use BCML for some mods and install others manually, no compatibility is guaranteed. It is recommended to uninstall all Cemu mods before using BCML, and then to reinstall them through BCML.
 
-## GUI Usage
-
-As of version 0.98, BCML now includes a graphical user interface. Hopefully this is simpler for everyone. You can run the graphical BCML simply by:
-
-```
-bcml-gui
-```
-
-You can also create a shortcut on your desktop if you wish. The path to the executable is will be in the "Scripts" folder in your Python installation (e.g. `C:\Python37\Scripts\bcml-gui.exe`), and an icon is included in the data folder where the BCML package is installed (e.g. `C:\Python37\Lib\site-packages\bcml\data\bcml.ico`).
-
-The interface is previewed below and seems fairly self-explanatory. If you need more details, check the detailed reference for the CLI version below.
+## How to Use
 
 ![BCML Preview](https://i.imgur.com/0ebIh5M.png)
 
