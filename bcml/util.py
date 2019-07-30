@@ -7,6 +7,7 @@ import traceback
 import unicodedata
 from collections import Mapping, namedtuple
 from configparser import ConfigParser
+from PySide2.QtGui import QIcon, QPixmap
 from pathlib import Path
 from typing import Union
 
@@ -55,48 +56,77 @@ def get_work_dir() -> Path:
     return work_dir
 
 
+def get_icon(name: str) -> QIcon:
+    """ Gets the specified BCML tool icon """
+    icon = QIcon()
+    icon.addPixmap(QPixmap(str(get_exec_dir() / 'data' / f'{name}')))
+    return icon
+
+
+def get_settings() -> {}:
+    """ Gets the BCML settings as a dict """
+    if not hasattr(get_settings, 'settings_file'):
+        settings = ConfigParser()
+        settings_path = get_work_dir() / 'settings.ini'
+        if not settings_path.exists():
+            settings['Settings'] = {
+                'cemu_dir': '',
+                'game_dir': '',
+                'mlc_dir': '',
+                'load_reverse': False
+            }
+            with settings_path.open('w') as sf:
+                settings.write(sf)
+        else:
+            settings.read(str(settings_path))
+        get_settings.settings_file = settings
+    return get_settings.settings_file['Settings']
+
+
+def get_settings_bool(setting: str) -> bool:
+    return get_settings()[setting] == 'True'
+
+
+def set_settings_bool(setting: str, value: bool):
+    get_settings()[setting] = str(value)
+    save_settings()
+
+
+def save_settings():
+    with (get_work_dir() / 'settings.ini').open('w') as sf:
+        get_settings.settings_file.write(sf)
+
+
 def get_cemu_dir() -> Path:
     """ Gets the saved Cemu installation directory """
-    if not hasattr(get_cemu_dir, 'cemu_dir'):
-        cdir = get_work_dir() / '.cdir'
-        if not cdir.exists():
-            raise FileNotFoundError(
-                'The Cemu directory has not been saved yet.')
-        with cdir.open('r') as cf:
-            get_cemu_dir.cemu_dir = Path(cf.read())
-    return get_cemu_dir.cemu_dir
+    cemu_dir = str(get_settings()['cemu_dir'])
+    if len(cemu_dir) < 1:
+        raise FileNotFoundError('The Cemu directory has not been saved yet.')
+    else:
+        return Path(cemu_dir)
 
 
 def set_cemu_dir(path: Path):
     """ Sets the saved Cemu installation directory """
-    cdir = get_work_dir() / '.cdir'
-    if cdir.exists():
-        cdir.unlink()
-    with cdir.open('w') as cf:
-        cf.write(str(path.resolve()))
-    get_cemu_dir.cemu_dir = path
+    settings = get_settings()
+    settings['cemu_dir'] = str(path.resolve())
+    save_settings()
 
 
 def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
-    if not hasattr(get_game_dir, 'game_dir'):
-        gdir = get_work_dir() / '.gdir'
-        if not gdir.exists():
-            raise FileNotFoundError(
-                'The game directory has not been saved yet.')
-        with gdir.open('r') as cf:
-            get_game_dir.game_dir = Path(cf.read())
-    return get_game_dir.game_dir
+    game_dir = str(get_settings()['game_dir'])
+    if len(game_dir) < 1:
+        raise FileNotFoundError('The BotW game directory has not been saved yet.')
+    else:
+        return Path(game_dir)
 
 
 def set_game_dir(path: Path):
     """ Sets the saved Breath of the Wild game directory """
-    gdir = get_work_dir() / '.gdir'
-    if gdir.exists():
-        gdir.unlink()
-    with gdir.open('w') as cf:
-        cf.write(str(path.resolve()))
-    get_game_dir.game_dir = path
+    settings = get_settings()
+    settings['game_dir'] = str(path.resolve())
+    save_settings()
     try:
         get_mlc_dir()
     except FileNotFoundError:
@@ -115,24 +145,18 @@ def set_game_dir(path: Path):
 
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
-    if not hasattr(get_mlc_dir, 'mlc_dir'):
-        mdir = get_work_dir() / '.mdir'
-        if not mdir.exists():
-            raise FileNotFoundError(
-                'The mlc directory has not been saved yet.')
-        with mdir.open('r') as cf:
-            get_mlc_dir.mlc_dir = Path(cf.read())
-    return get_mlc_dir.mlc_dir
+    mlc_dir = str(get_settings()['mlc_dir'])
+    if len(mlc_dir) < 1:
+        raise FileNotFoundError('The Cemu MLC directory has not been saved yet.')
+    else:
+        return Path(mlc_dir)
 
 
 def set_mlc_dir(path: Path):
     """ Sets the saved Cemu mlc directory """
-    mdir = get_work_dir() / '.mdir'
-    if mdir.exists():
-        mdir.unlink()
-    with mdir.open('w') as cf:
-        cf.write(str(path.resolve()))
-    get_mlc_dir.mlc_dir = path
+    settings = get_settings()
+    settings['mlc_dir'] = str(path.resolve())
+    save_settings()
 
 
 def get_update_dir() -> Path:

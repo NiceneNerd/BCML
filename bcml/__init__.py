@@ -27,22 +27,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__()
         self.setupUi(self)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(
-            str(util.get_exec_dir() / 'data' / 'bcml.ico')))
-        self.setWindowIcon(icon)
+        self.setWindowIcon(util.get_icon('bcml.ico'))
+        load_reverse = util.get_settings_bool('load_reverse')
 
         self.btnSettings = QtWidgets.QToolButton(self.statusBar())
-        settings_icon = QtGui.QIcon()
-        settings_icon.addPixmap(QtGui.QPixmap(
-            str(util.get_exec_dir() / 'data' / 'settings.png')))
-        self.btnSettings.setIcon(settings_icon)
+        self.btnSettings.setIcon(util.get_icon('settings.png'))
         self.btnSettings.setToolTip('Settings')
         self.btnAbout = QtWidgets.QToolButton(self.statusBar())
-        about_icon = QtGui.QIcon()
-        about_icon.addPixmap(QtGui.QPixmap(
-            str(util.get_exec_dir() / 'data' / 'about.png')))
-        self.btnAbout.setIcon(about_icon)
+        self.btnAbout.setIcon(util.get_icon('about.png'))
         self.btnAbout.setToolTip('About')
         self.statusBar().addPermanentWidget(
             QtWidgets.QLabel('Version ' + util.get_bcml_version()))
@@ -54,11 +46,23 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 104)
 
+        self._order_icons = {
+            False: util.get_icon('up.png'),
+            True: util.get_icon('down.png')
+        }
+        self.btnOrder.setIcon(self._order_icons[load_reverse])
+
+        higher = 'top' if not load_reverse else 'bottom'
+        lower = 'bottom' if not load_reverse else 'top'
+        self.listWidget.setToolTip(
+            f'Drag and drop to change mod load order. Mods at the {higher} of the list override mods at the {lower}.')
+
         # Bind events
         self.listWidget.setDragDropMode(
             QtWidgets.QAbstractItemView.InternalMove)
         self.listWidget.itemSelectionChanged.connect(self.SelectItem)
         self.listWidget.installEventFilter(self)
+        self.btnOrder.clicked.connect(self.OrderClicked)
         self.btnInstall.clicked.connect(self.InstallClicked)
         self.btnRemerge.clicked.connect(self.RemergeClicked)
         self.btnChange.clicked.connect(self.ChangeClicked)
@@ -66,9 +70,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnExplore.clicked.connect(self.ExploreClicked)
         self.btnSettings.clicked.connect(self.SettingsClicked)
         self.btnAbout.clicked.connect(self.AboutClicked)
-
-        self.SetupChecks()
-        self.LoadMods()
 
     def eventFilter(self, watched, event):
         if event.type() == QtCore.QEvent.ChildRemoved and not self.btnChange.isEnabled():
@@ -98,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 util.set_game_dir(Path(folder))
             else:
                 sys.exit(0)
-        
+
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
             QtWidgets.QMessageBox.warning(
@@ -111,10 +112,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 self, 'Error', 'BCML requires 64 bit Python, but it looks like you\'re running 32 bit.')
             sys.exit(0)
 
+        self.LoadMods()
+
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
         self.listWidget.clear()
-        mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority)
+        mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority,
+                      reverse=not util.get_settings_bool('load_reverse'))
         for mod in mods:
             mod_item = QtWidgets.QListWidgetItem()
             mod_item.setText(mod.name)
@@ -216,6 +220,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self, 'Complete', 'Operation finished!')
 
     # Button handlers
+
+    def OrderClicked(self):
+        load_reverse = not util.get_settings_bool('load_reverse')
+        util.set_settings_bool('load_reverse', load_reverse)
+        self.LoadMods()
+        self.btnOrder.setIcon(self._order_icons[load_reverse])
+
+        higher = 'top' if not load_reverse else 'bottom'
+        lower = 'bottom' if not load_reverse else 'top'
+        self.listWidget.setToolTip(
+            f'Drag and drop to change mod load order. Mods at the {higher} of the list override mods at the {lower}.')
 
     def InstallClicked(self):
         dialog = InstallDialog(self)
@@ -467,12 +482,15 @@ class RedirectText:
         if text != '\n':
             self.out.setText(text)
 
+    def flush(self):
+        pass
+
 
 class ThreadSignal(QtCore.QObject):
     sig = QtCore.Signal(str)
 
-# Main
 
+# Main
 
 InstallResult = namedtuple(
     'InstallResult', 'path leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo deep_merge wait_merge')
@@ -482,6 +500,7 @@ def main():
     app = QtWidgets.QApplication([])
     application = MainWindow()
     application.show()
+    application.SetupChecks()
     sys.exit(app.exec_())
 
 
