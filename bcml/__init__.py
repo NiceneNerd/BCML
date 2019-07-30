@@ -208,11 +208,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnRemerge.setEnabled(False)
         self.btnUninstall.setEnabled(False)
         self.btnExplore.setEnabled(False)
-        t = ProgressThread(self, func, *args)
+        self._progress = ProgressDialog(self)
+        self._progress.show()
+        t = ProgressThread(self._progress.lblProgress, func, *args)
         t.start()
         t.signal.sig.connect(self.OperationFinished)
 
     def OperationFinished(self):
+        self._progress.close()
+        del self._progress
         self.btnInstall.setEnabled(True)
         self.btnRemerge.setEnabled(True)
         self.LoadMods()
@@ -458,19 +462,16 @@ class ProgressDialog(QtWidgets.QDialog, Ui_dlgProgress):
 
 
 class ProgressThread(threading.Thread):
-    def __init__(self, parent, target, *args):
+    def __init__(self, output, target, *args):
         threading.Thread.__init__(self)
-        self._dialog = ProgressDialog(parent)
-        self._parent = parent
+        self._out = output
         self._target = target
         self._args = args
-        self._dialog.show()
         self.signal = ThreadSignal()
 
     def run(self):
-        sys.stdout = RedirectText(self._dialog.lblProgress)
+        sys.stdout = self._out
         self._target(*self._args)
-        self._dialog.close()
         self.signal.sig.emit('Done')
 
 
