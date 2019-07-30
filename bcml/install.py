@@ -353,25 +353,26 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             del modded_files[file]
             continue
     sarc_files = [file for file in modded_files if util.is_file_sarc(file)]
-    num_threads = min(len(sarc_files), cpu_count())
-    p = Pool(processes=num_threads)
-    thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
-                                 deep_merge=deep_merge, verbose=verbose)
-    results = p.map(thread_sarc_search, sarc_files)
-    p.close()
-    p.join()
-    for result in results:
-        modded_sarcs, sarc_changes, nested_diffs = result
-        if len(modded_sarcs) > 0:
-            modded_sarc_files.update(modded_sarcs)
-            if deep_merge:
-                diffs['aamp'].update(nested_diffs['aamp'])
-                diffs['byml'].update(nested_diffs['byml'])
-            if len(sarc_changes) > 0:
-                print('\n'.join(sarc_changes))
-    mod_sarc_count = len(modded_sarc_files)
-    print(
-        f'Found {mod_sarc_count} modded pack file{"s" if mod_sarc_count != 1 else ""}')
+    if len(sarc_files) > 0:
+        num_threads = min(len(sarc_files), cpu_count())
+        p = Pool(processes=num_threads)
+        thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
+                                     deep_merge=deep_merge, verbose=verbose)
+        results = p.map(thread_sarc_search, sarc_files)
+        p.close()
+        p.join()
+        for result in results:
+            modded_sarcs, sarc_changes, nested_diffs = result
+            if len(modded_sarcs) > 0:
+                modded_sarc_files.update(modded_sarcs)
+                if deep_merge:
+                    diffs['aamp'].update(nested_diffs['aamp'])
+                    diffs['byml'].update(nested_diffs['byml'])
+                if len(sarc_changes) > 0:
+                    print('\n'.join(sarc_changes))
+        mod_sarc_count = len(modded_sarc_files)
+        print(
+            f'Found {mod_sarc_count} modded pack file{"s" if mod_sarc_count != 1 else ""}')
 
     if len(modded_files) == 0:
         print('No modified files were found. Very unusual.')
