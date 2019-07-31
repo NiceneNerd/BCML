@@ -74,7 +74,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def eventFilter(self, watched, event):
         if event.type() == QtCore.QEvent.ChildRemoved and not self.btnChange.isEnabled():
-            mods = [self.listWidget.item(i).data(Qt.UserRole) for i in range(self.listWidget.count()]
+            mods = [self.listWidget.item(i).data(Qt.UserRole)
+                    for i in range(self.listWidget.count())]
             if mods != self._mods:
                 self.btnChange.setEnabled(True)
         return super(MainWindow, self).eventFilter(watched, event)
@@ -127,7 +128,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Loading mods...')
         self.listWidget.clear()
         self._mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority,
-                      reverse=not util.get_settings_bool('load_reverse'))
+                            reverse=not util.get_settings_bool('load_reverse'))
         for mod in self._mods:
             mod_item = QtWidgets.QListWidgetItem()
             mod_item.setText(mod.name)
@@ -149,7 +150,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             rules.read(str(mod.path / 'rules.txt'))
             font_metrics = QtGui.QFontMetrics(self.lblModInfo.font())
             path = str(mod.path)
-            while font_metrics.width(f'Path: {path}.....') >= self.lblModInfo.width():
+            while font_metrics.boundingRect(f'Path: {path}.....').width() >= self.lblModInfo.width():
                 path = path[:-1]
             changes = []
             if len(rstable.get_mod_rstb_values(mod)) > 0:
@@ -269,29 +270,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if result:
             self.PerformOperation(install_all, result)
 
-    def InstallFolderClicked(self):
-        dialog = InstallDialog(self)
-        dialog.folder = True
-        result = dialog.GetResult()
-        if result:
-            if result.path.exists():
-                self.PerformOperation(install.install_mod,
-                                      result.path,
-                                      False,
-                                      result.no_packs,
-                                      result.no_texts,
-                                      result.no_gamedata,
-                                      result.no_savedata,
-                                      result.no_actorinfo,
-                                      result.leave,
-                                      result.shrink,
-                                      result.wait_merge,
-                                      result.deep_merge
-                                      )
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self, 'Error', f'The file {str(result.path)} does not exist.')
-
     def RemergeClicked(self):
         self.PerformOperation(install.refresh_merges, ())
 
@@ -306,7 +284,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             mods_to_change = []
             for i in range(self.listWidget.count()):
                 mod = self.listWidget.item(i).data(QtCore.Qt.UserRole)
-                if mod.priority != i + 100:
+                target_priority = i + 100 if util.get_settings_bool(
+                    'load_reverse') else 100 + ((self.listWidget.count() - 1) - i)
+                if mod.priority != target_priority:
                     fix_packs = fix_packs or util.is_pack_mod(mod)
                     fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                     fix_savedata = fix_savedata or util.is_savedata_mod(mod)
@@ -315,7 +295,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     for lang in texts.get_modded_languages(mod.path):
                         if lang not in fix_texts:
                             fix_texts.append(lang)
-                    mods_to_change.append((mod, i + 100))
+                    mods_to_change.append((mod, target_priority))
             for mod in mods_to_change:
                 new_path = util.get_modpack_dir(
                 ) / util.get_mod_id(mod[0].name, mod[1])
@@ -564,7 +544,7 @@ def main():
         e = util.get_work_dir() / 'error.log'
         QtWidgets.QMessageBox.warning(
             None, 'Error', f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
-                f'{e}\n\nBCML will now close.')
+            f'{e}\n\nBCML will now close.')
         with e.open('w') as ef:
             ef.write(tb)
 
