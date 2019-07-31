@@ -74,7 +74,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def eventFilter(self, watched, event):
         if event.type() == QtCore.QEvent.ChildRemoved and not self.btnChange.isEnabled():
-            self.btnChange.setEnabled(True)
+            mods = [self.listWidget.item(i).data(Qt.UserRole) for i in range(self.listWidget.count()]
+            if mods != self._mods:
+                self.btnChange.setEnabled(True)
         return super(MainWindow, self).eventFilter(watched, event)
 
     def SetupChecks(self):
@@ -124,9 +126,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
         self.listWidget.clear()
-        mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority,
+        self._mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority,
                       reverse=not util.get_settings_bool('load_reverse'))
-        for mod in mods:
+        for mod in self._mods:
             mod_item = QtWidgets.QListWidgetItem()
             mod_item.setText(mod.name)
             mod_item.setData(QtCore.Qt.UserRole, mod)
@@ -135,7 +137,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lblModInfo.setText('No mod selected')
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 104)
-        self.statusBar().showMessage(f'{len(mods)} mods installed')
+        self.statusBar().showMessage(f'{len(self._mods)} mods installed')
 
     def SelectItem(self):
         if len(self.listWidget.selectedItems()) == 0:
