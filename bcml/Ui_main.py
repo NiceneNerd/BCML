@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\main.ui',
 # licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\main.ui' applies.
 #
-# Created: Tue Jul 30 06:25:24 2019
+# Created: Wed Jul 31 06:16:37 2019
 #      by: pyside2-uic  running on PySide2 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -99,6 +99,12 @@ class Ui_MainWindow(object):
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+        self.actionInstallFolder = QtWidgets.QAction(MainWindow)
+        self.actionInstallFolder.setIconVisibleInMenu(False)
+        self.actionInstallFolder.setObjectName("actionInstallFolder")
+        self.actionInstallMultiple = QtWidgets.QAction(MainWindow)
+        self.actionInstallMultiple.setIconVisibleInMenu(False)
+        self.actionInstallMultiple.setObjectName("actionInstallMultiple")
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -106,10 +112,9 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "BCML: BotW Cemu Mod Loader", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Installed Mods", None, -1))
-        self.btnOrder.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Toggle the order in which mods are displayed.\nDefault lists mods from highest priority to lowest priority, but can be reversed.", None, -1))
+        self.btnOrder.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Toggle the order in which mods are displayed.\\nDefault lists mods from highest priority to lowest priority, but can be reversed.", None, -1))
         self.btnOrder.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
         self.listWidget.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Drag and drop to change mod load order. Mods at the top of the list override mods at the bottom.", None, -1))
-        self.btnInstall.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Install a graphic pack mod", None, -1))
         self.btnInstall.setText(QtWidgets.QApplication.translate("MainWindow", "Install...", None, -1))
         self.btnRemerge.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Perform all merges again", None, -1))
         self.btnRemerge.setText(QtWidgets.QApplication.translate("MainWindow", "Remerge", None, -1))
@@ -123,4 +128,6 @@ class Ui_MainWindow(object):
         self.btnUninstall.setText(QtWidgets.QApplication.translate("MainWindow", "Uninstall", None, -1))
         self.btnExplore.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Open the selected mod in your default file manager", None, -1))
         self.btnExplore.setText(QtWidgets.QApplication.translate("MainWindow", "Explore...", None, -1))
+        self.actionInstallFolder.setText(QtWidgets.QApplication.translate("MainWindow", "Install from Folder", None, -1))
+        self.actionInstallMultiple.setText(QtWidgets.QApplication.translate("MainWindow", "Install Multiple", None, -1))
 

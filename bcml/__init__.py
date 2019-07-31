@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import traceback
 import urllib.error
 import urllib.request
 from collections import namedtuple
@@ -93,12 +94,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self, 'First Time', 'BCML needs to know the location of your game dump. Please select the "content" directory in your dumped copy of Breath of the Wild.')
-            folder = QtWidgets.QFileDialog.getExistingDirectory(
-                self, 'Select Game Dump Directory')
-            if folder:
-                util.set_game_dir(Path(folder))
-            else:
-                sys.exit(0)
+            folder = '/'
+            while not (Path(folder).parent / 'code' / 'app.xml').exists():
+                folder = QtWidgets.QFileDialog.getExistingDirectory(
+                    self, 'Select Game Dump Directory')
+                if folder:
+                    if not (Path(folder).parent / 'code' / 'app.xml').exists():
+                        QtWidgets.QMessageBox.warning(
+                            self, 'Error', 'The chosen directory does not appear to be a valid dump. Please select the "content" directory in your dumped copy of Breath of the Wild.')
+                    else:
+                        util.set_game_dir(Path(folder))
+                else:
+                    sys.exit(0)
 
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
@@ -237,7 +244,32 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             f'Drag and drop to change mod load order. Mods at the {higher} of the list override mods at the {lower}.')
 
     def InstallClicked(self):
+        def install_all(result: InstallResult):
+            for mod in result.paths:
+                install.install_mod(
+                    mod,
+                    verbose=False,
+                    no_packs=result.no_packs,
+                    no_texts=result.no_texts,
+                    no_gamedata=result.no_gamedata,
+                    no_savedata=result.no_savedata,
+                    no_actorinfo=result.no_actorinfo,
+                    leave_rstb=result.leave,
+                    shrink_rstb=result.shrink,
+                    wait_merge=True if len(result.paths) > 1 else False,
+                    deep_merge=result.deep_merge
+                )
+            if len(result.paths) > 1:
+                install.refresh_merges()
+
         dialog = InstallDialog(self)
+        result = dialog.GetResult()
+        if result:
+            self.PerformOperation(install_all, result)
+
+    def InstallFolderClicked(self):
+        dialog = InstallDialog(self)
+        dialog.folder = True
         result = dialog.GetResult()
         if result:
             if result.path.exists():
@@ -342,18 +374,37 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
         icon.addPixmap(QtGui.QPixmap(
             str(util.get_exec_dir() / 'data' / 'bcml.ico')))
         self.setWindowIcon(icon)
-        self.btnBrowse.clicked.connect(self.BrowseClicked)
+        self.btnAddFile.clicked.connect(self.AddFileClicked)
+        self.btnAddFolder.clicked.connect(self.AddFolderClicked)
 
-    def BrowseClicked(self):
+    def AddFileClicked(self):
         file_name = QtWidgets.QFileDialog.getOpenFileName(
             self, 'Select a Mod', '', 'Mod Archives (*.zip; *.rar; *.7z);;All Files (*)')[0]
         if file_name:
-            self.txtFile.setText(file_name)
+            path = Path(file_name)
+            if path.exists():
+                mod_item = QtWidgets.QListWidgetItem()
+                mod_item.setText(path.stem)
+                mod_item.setData(Qt.UserRole, path)
+                self.lstQueue.addItem(mod_item)
+
+    def AddFolderClicked(self):
+        folder = QtWidgets.QFileDialog.getExistingDirectory(
+            self, 'Select a Mod Folder')
+        if folder:
+            path = Path(folder)
+            if path.exists():
+                mod_item = QtWidgets.QListWidgetItem()
+                mod_item.setText(path.stem)
+                mod_item.setData(Qt.UserRole, path)
+                self.lstQueue.addItem(mod_item)
 
     def GetResult(self):
         if self.exec_() == QtWidgets.QDialog.Accepted:
+            paths = [self.lstQueue.item(i).data(Qt.UserRole)
+                     for i in range(self.lstQueue.count())]
             return InstallResult(
-                Path(self.txtFile.text()),
+                paths,
                 self.chkRstbLeave.isChecked(),
                 self.chkRstbShrink.isChecked(),
                 self.chkDisablePack.isChecked(),
@@ -361,8 +412,7 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisableGamedata.isChecked(),
                 self.chkDisableSavedata.isChecked(),
                 self.chkDisableActorInfo.isChecked(),
-                self.chkEnableDeepMerge.isChecked(),
-                self.chkDelayMerge.isChecked()
+                self.chkEnableDeepMerge.isChecked()
             )
         else:
             return None
@@ -481,7 +531,10 @@ class RedirectText:
 
     def write(self, text):
         if text != '\n':
-            self.out.setText(text)
+            try:
+                self.out.setText(text)
+            except RuntimeError:
+                pass
 
     def flush(self):
         pass
@@ -494,15 +547,24 @@ class ThreadSignal(QtCore.QObject):
 # Main
 
 InstallResult = namedtuple(
-    'InstallResult', 'path leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo deep_merge wait_merge')
+    'InstallResult', 'paths leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo deep_merge')
 
 
 def main():
     app = QtWidgets.QApplication([])
     application = MainWindow()
-    application.show()
-    application.SetupChecks()
-    sys.exit(app.exec_())
+    try:
+        application.show()
+        application.SetupChecks()
+        app.exec_()
+    except:
+        tb = traceback.format_exc()
+        e = util.get_work_dir() / 'error.log'
+        QtWidgets.QMessageBox.warning(
+            None, 'Error', f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
+                f'{e}\n\nBCML will now close.')
+        with e.open('w') as ef:
+            ef.write(tb)
 
 
 if __name__ == "__main__":

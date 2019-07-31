@@ -111,8 +111,8 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
             table.set_size(change, newsize)
             change_list.append((f'{d}Added new RSTB entry for {change} with value {newsize}', True))
             change_count['added'] += 1
-    change_list.append((f'RSTB merge complete:\n  updated {change_count["updated"]} entries\n'
-                       f'  deleted {change_count["deleted"]} entries\n  added {change_count["added"]} entries', False))
+    change_list.append((f'RSTB merge complete: updated {change_count["updated"]} entries,'
+                       f' deleted {change_count["deleted"]} entries, added {change_count["added"]} entries', False))
     return change_list
 
 

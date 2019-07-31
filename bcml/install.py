@@ -451,7 +451,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         modded_files.update(modded_sarc_files)
         for file in modded_files:
             ext = os.path.splitext(file)[1]
-            if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc'] and 'ActorInfo' not in file:
+            if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
+                    and 'ActorInfo' not in file:
                 rf.write('{},{},{}\n'
                          .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
                          )
