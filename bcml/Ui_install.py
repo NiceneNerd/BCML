@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui',
 # licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui' applies.
 #
-# Created: Wed Jul 31 06:15:15 2019
+# Created: Wed Jul 31 11:53:16 2019
 #      by: pyside2-uic  running on PySide2 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -31,22 +31,33 @@ class Ui_InstallDialog(object):
         self.lstQueue = QtWidgets.QListWidget(InstallDialog)
         self.lstQueue.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.lstQueue.setAlternatingRowColors(True)
+        self.lstQueue.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.lstQueue.setObjectName("lstQueue")
         self.verticalLayout_3.addWidget(self.lstQueue)
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.btnRemove = QtWidgets.QPushButton(InstallDialog)
+        self.btnRemove.setObjectName("btnRemove")
+        self.horizontalLayout_3.addWidget(self.btnRemove)
+        self.btnClear = QtWidgets.QPushButton(InstallDialog)
+        self.btnClear.setObjectName("btnClear")
+        self.horizontalLayout_3.addWidget(self.btnClear)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_3)
         self.horizontalLayout_2.addLayout(self.verticalLayout_3)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.btnAddFile = QtWidgets.QPushButton(InstallDialog)
-        self.btnAddFile.setStyleSheet("padding: 3px 8px;")
         self.btnAddFile.setObjectName("btnAddFile")
         self.horizontalLayout.addWidget(self.btnAddFile)
         self.btnAddFolder = QtWidgets.QPushButton(InstallDialog)
         self.btnAddFolder.setObjectName("btnAddFolder")
         self.horizontalLayout.addWidget(self.btnAddFolder)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.groupBox = QtWidgets.QGroupBox(InstallDialog)
         self.groupBox.setObjectName("groupBox")
@@ -98,6 +109,8 @@ class Ui_InstallDialog(object):
     def retranslateUi(self, InstallDialog):
         InstallDialog.setWindowTitle(QtWidgets.QApplication.translate("InstallDialog", "Mod Install", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("InstallDialog", "Mod(s) to install ", None, -1))
+        self.btnRemove.setText(QtWidgets.QApplication.translate("InstallDialog", "Remove Selected", None, -1))
+        self.btnClear.setText(QtWidgets.QApplication.translate("InstallDialog", "Clear All", None, -1))
         self.btnAddFile.setToolTip(QtWidgets.QApplication.translate("InstallDialog", "Browse for a mod", None, -1))
         self.btnAddFile.setText(QtWidgets.QApplication.translate("InstallDialog", "Add Mod File...", None, -1))
         self.btnAddFolder.setText(QtWidgets.QApplication.translate("InstallDialog", "Add Mod Folder...", None, -1))

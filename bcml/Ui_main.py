@@ -112,7 +112,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "BCML: BotW Cemu Mod Loader", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Installed Mods", None, -1))
-        self.btnOrder.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Toggle the order in which mods are displayed.\\nDefault lists mods from highest priority to lowest priority, but can be reversed.", None, -1))
+        self.btnOrder.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Toggle the order in which mods are displayed.\nDefault lists mods from highest priority to lowest priority, but can be reversed.", None, -1))
         self.btnOrder.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
         self.listWidget.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Drag and drop to change mod load order. Mods at the top of the list override mods at the bottom.", None, -1))
         self.btnInstall.setText(QtWidgets.QApplication.translate("MainWindow", "Install...", None, -1))

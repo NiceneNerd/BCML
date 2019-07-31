@@ -358,11 +358,14 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
         self.setWindowIcon(icon)
         self.btnAddFile.clicked.connect(self.AddFileClicked)
         self.btnAddFolder.clicked.connect(self.AddFolderClicked)
+        self.btnRemove.clicked.connect(self.RemoveClicked)
+        self.btnClear.clicked.connect(self.ClearClicked)
 
     def AddFileClicked(self):
-        file_name = QtWidgets.QFileDialog.getOpenFileName(
-            self, 'Select a Mod', '', 'Mod Archives (*.zip; *.rar; *.7z);;All Files (*)')[0]
-        if file_name:
+        file_names = QtWidgets.QFileDialog.getOpenFileNames(
+            self, 'Select a Mod', str(Path.home()), 'Mod Archives (*.zip; *.rar; *.7z);;All Files (*)')[0]
+        for file_name in file_names:
+            print(file_name)
             path = Path(file_name)
             if path.exists():
                 mod_item = QtWidgets.QListWidgetItem()
@@ -380,6 +383,13 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 mod_item.setText(path.stem)
                 mod_item.setData(Qt.UserRole, path)
                 self.lstQueue.addItem(mod_item)
+
+    def RemoveClicked(self):
+        for i in self.lstQueue.selectedIndexes():
+            self.lstQueue.takeItem(i.row())
+
+    def ClearClicked(self):
+        self.lstQueue.clear()
 
     def GetResult(self):
         if self.exec_() == QtWidgets.QDialog.Accepted:
