@@ -7,6 +7,7 @@ import threading
 import traceback
 import urllib.error
 import urllib.request
+import zipfile
 from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
@@ -67,6 +68,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnInstall.clicked.connect(self.InstallClicked)
         self.btnRemerge.clicked.connect(self.RemergeClicked)
         self.btnChange.clicked.connect(self.ChangeClicked)
+        self.btnExport.clicked.connect(self.ExportClicked)
         self.btnUninstall.clicked.connect(self.UninstallClicked)
         self.btnExplore.clicked.connect(self.ExploreClicked)
         self.btnSettings.clicked.connect(self.SettingsClicked)
@@ -139,6 +141,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 104)
         self.statusBar().showMessage(f'{len(self._mods)} mods installed')
+        if len(self._mods) > 0:
+            self.btnExport.setEnabled(True)
 
     def SelectItem(self):
         if len(self.listWidget.selectedItems()) == 0:
@@ -180,7 +184,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             if 'url' in rules['Definition']:
                 url = str(rules['Definition']['url'])
                 link = url
-                while font_metrics.width(f'Link: {link}.....') >= self.lblModInfo.width():
+                while font_metrics.boundingRect(f'Link: {link}.....').width() >= self.lblModInfo.width():
                     link = link[:-1]
                 mod_info.insert(3, f'<b>Link:</b> <a href="{url}">{link}</a>')
             if 'image' in rules['Definition']:
@@ -216,6 +220,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def PerformOperation(self, func, *args):
         self.btnInstall.setEnabled(False)
         self.btnRemerge.setEnabled(False)
+        self.btnExport.setEnabled(False)
         self.btnUninstall.setEnabled(False)
         self.btnExplore.setEnabled(False)
         self._progress = ProgressDialog(self)
@@ -229,6 +234,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         del self._progress
         self.btnInstall.setEnabled(True)
         self.btnRemerge.setEnabled(True)
+        self.btnExport.setEnabled(True)
         self.LoadMods()
         QtWidgets.QMessageBox.information(
             self, 'Complete', 'Operation finished!')
@@ -353,6 +359,46 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnChange.setEnabled(False)
         self.PerformOperation(resort_mods, (self))
 
+    def ExportClicked(self):
+        def export(self, output: Path):
+            print('Loading files...')
+            files = {}
+            mods = sorted([self.listWidget.item(i).data(Qt.UserRole) for i in range(
+                self.listWidget.count())], key=lambda mod: mod.priority)
+            for mod in mods:
+                for file in mod.path.rglob('**/*'):
+                    rel_path = file.relative_to(mod.path)
+                    if rel_path.parts[0] in ['aoc', 'content'] and file.is_file():
+                        files[rel_path.as_posix()] = file
+            for file in util.get_master_modpack_dir().rglob('**/*'):
+                rel_path = file.relative_to(util.get_master_modpack_dir())
+                if rel_path.parts[0] in ['aoc', 'content'] and file.is_file():
+                    files[rel_path.as_posix()] = file
+            print('Creating new ZIP...')
+            out = zipfile.ZipFile(str(output), mode='w',
+                                  compression=zipfile.ZIP_DEFLATED)
+            for file, path in files.items():
+                out.write(str(path), file)
+            print('Adding rules.txt...')
+            rules_path = util.get_work_dir() / 'tmprules.txt'
+            with rules_path.open('w') as rules:
+                rules.writelines([
+                    '[Definition]\n',
+                    'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
+                    'name = Exported BCML Mod\n',
+                    'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Exported BCML\n',
+                    f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
+                    'version = 4\n'
+                ])
+            out.write(str(rules_path), 'rules.txt')
+            rules_path.unlink()
+            out.close()
+
+        file_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Exported Mod', str(
+            Path.home()), 'Mod Archive (*.zip);;All Files (*)')[0]
+        if file_name:
+            self.PerformOperation(export, self, Path(file_name))
+
     def UninstallClicked(self):
         def uninstall(mods):
             fix_packs = False
@@ -388,7 +434,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 texts.merge_texts(lang)
 
         if len(self.listWidget.selectedItems()) > 0:
-            mods = [item.data(Qt.UserRole) for item in self.listWidget.selectedItems()]
+            mods = [item.data(Qt.UserRole)
+                    for item in self.listWidget.selectedItems()]
             self.PerformOperation(uninstall, (mods))
 
     def ExploreClicked(self):

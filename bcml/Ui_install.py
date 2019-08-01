@@ -31,7 +31,7 @@ class Ui_InstallDialog(object):
         self.lstQueue = QtWidgets.QListWidget(InstallDialog)
         self.lstQueue.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.lstQueue.setAlternatingRowColors(True)
-        self.lstQueue.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        self.lstQueue.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.lstQueue.setObjectName("lstQueue")
         self.verticalLayout_3.addWidget(self.lstQueue)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
