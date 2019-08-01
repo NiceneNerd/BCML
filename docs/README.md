@@ -103,6 +103,14 @@ To view the contents of an installed mod, you can select it and click "Explore,"
 
 If you make any manual changes to your installed mods, or if you run into other issues and need to clean up, click "Remerge," and BCML will process all of your mods from scratch.
 
+## Notes to Mod Makers
+
+One of the key goals of BCML is to maintain complete compatibility with normal graphic pack mods. Anything that can be installed by the plain Cemu graphic pack menu can be installed via BCML and vice versa. 
+
+However, in line with this rule, BCML offers some minor benefits for mod distribution. For example, you can install your own mod using BCML during testing to generate its RSTB, or you can use the export function to create compatibility patches.
+
+BCML also supports minor extensions to mod metadata in `rules.txt`. You can add two optional fields, `url` and `image`. The `url` field can provide a link to your mod's homepage, GitHub, or GameBanana listing, and `image` can provide a preview image of the mod either as a relative path to an image included in the mod (ideally, just the filename of an image in the same directory as `rules.txt`) or as a URL to an image online.
+
 ## Known Issues
 
 None yet, let me know!
