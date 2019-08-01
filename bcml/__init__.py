@@ -376,7 +376,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     files[rel_path.as_posix()] = file
             print('Creating new ZIP...')
             out = zipfile.ZipFile(str(output), mode='w',
-                                  compression=zipfile.ZIP_DEFLATED)
+                                  compression=zipfile.ZIP_DEFLATED, strict_timestamps=False)
             for file, path in files.items():
                 out.write(str(path), file)
             print('Adding rules.txt...')
@@ -622,6 +622,7 @@ class ProgressThread(threading.Thread):
 
     def run(self):
         sys.stdout = RedirectText(self._out)
+        sys.stderr = sys.stdout
         self._target(*self._args)
         self.signal.sig.emit('Done')
 
