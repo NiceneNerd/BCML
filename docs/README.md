@@ -81,11 +81,11 @@ Deep merge is an optional, experimental feature which attempts to merge changes 
 
 Once you have installed one or more mods, you will be able to manage them in the main BCML window.
 
-*Viewing Mod Info*
+**Viewing Mod Info**
 
 If you select a mod, the "Mod Info" panel will show its name, a brief description, its load priority, the path where it is installed, an optionally a link to its homepage and a preview image.
 
-*Managing Load Order*
+**Managing Load Order**
 
 When conflicts between mods cannot be fully resolved, one of them must take priority over the other. By default, BCML gives each new mod installed priority over the previous mods. You can, however, customize this load order.
 
@@ -93,11 +93,11 @@ The load order can be changed simply by dragging and dropping mods in the mod li
 
 If you change the load order, you will need to click the "Apply Sort" button for BCML to process and merge any relevant changes.
 
-*Uninstalling Mods*
+**Uninstalling Mods**
 
 You can uninstall mods by selecting one or more and clicking "Uninstall" in the "Mod Info" panel. 
 
-*Other Functions*
+**Other Functions**
 
 To view the contents of an installed mod, you can select it and click "Explore," which will open the folder in your default file browser.
 
