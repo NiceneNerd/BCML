@@ -339,6 +339,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 new_path = util.get_modpack_dir(
                 ) / util.get_mod_id(mod[0].name, mod[1])
                 shutil.move(str(mod[0].path), str(new_path))
+                install.add_mod_to_cemu(new_path)
                 rules = ConfigParser()
                 rules.read(str(new_path / 'rules.txt'))
                 rules['Definition']['fsPriority'] = str(mod[1])

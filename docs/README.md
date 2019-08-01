@@ -36,8 +36,8 @@ There are three primary options for installing BCML.
 
 **Option 3: Install from Source**
 1. Download and install Python. You **must** use the 64 bit version of Python 3.7 or later. The most recent download as of July 2019 is [here](https://www.python.org/ftp/python/3.7.4/python-3.7.4-amd64.exe). You also **must** choose the "Add to System PATH" option during installation.
-2. Download the source code for the latest BCML release or clone the repo.
-3. In the directory where you extracted the BCML source, run `python setup.py install`
+2. Download and extract the source code for the latest BCML release or clone the repo.
+3. In the directory where you extracted the BCML source, run `python setup.py install`. Note that on Linux you may need to either run it as root or specify `--user`.
 4. Run BCML using the command `bcml`
 5. (Optional) Create a shortcut to the BCML executable in Python's `Scripts` folder.
 
@@ -45,7 +45,7 @@ On first use, you will have to specify the directory where Cemu is installed and
 
 ## How to Use
 
-![BCML Preview](https://i.imgur.com/0ebIh5M.png)
+![BCML Preview](https://i.imgur.com/Xvuc53x.png)
 
 ### General Notes
 
@@ -81,9 +81,27 @@ Deep merge is an optional, experimental feature which attempts to merge changes 
 
 Once you have installed one or more mods, you will be able to manage them in the main BCML window.
 
+*Viewing Mod Info*
+
+If you select a mod, the "Mod Info" panel will show its name, a brief description, its load priority, the path where it is installed, an optionally a link to its homepage and a preview image.
+
 *Managing Load Order*
 
+When conflicts between mods cannot be fully resolved, one of them must take priority over the other. By default, BCML gives each new mod installed priority over the previous mods. You can, however, customize this load order.
 
+The load order can be changed simply by dragging and dropping mods in the mod list. By default, mods are sorted from *highest* to *lowest* priority, i.e. mods on the top of the list override mods beneath them. However, since some people prefer the reverse convention (used, for example, by Nexus Mod Manager), you can toggle the mod display order in BCML by clicking the arrow above the mod list.
+
+If you change the load order, you will need to click the "Apply Sort" button for BCML to process and merge any relevant changes.
+
+*Uninstalling Mods*
+
+You can uninstall mods by selecting one or more and clicking "Uninstall" in the "Mod Info" panel. 
+
+*Other Functions*
+
+To view the contents of an installed mod, you can select it and click "Explore," which will open the folder in your default file browser.
+
+If you make any manual changes to your installed mods, or if you run into other issues and need to clean up, click "Remerge," and BCML will process all of your mods from scratch.
 
 ## Known Issues
 
