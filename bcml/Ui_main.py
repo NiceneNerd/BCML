@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\main.ui',
 # licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\main.ui' applies.
 #
-# Created: Wed Jul 31 06:16:37 2019
+# Created: Wed Jul 31 20:26:06 2019
 #      by: pyside2-uic  running on PySide2 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -35,6 +35,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_4.addWidget(self.btnOrder)
         self.verticalLayout_2.addLayout(self.horizontalLayout_4)
         self.listWidget = QtWidgets.QListWidget(self.centralwidget)
+        self.listWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.listWidget.setObjectName("listWidget")
         self.verticalLayout_2.addWidget(self.listWidget)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()

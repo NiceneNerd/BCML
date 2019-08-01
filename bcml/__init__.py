@@ -248,8 +248,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def InstallClicked(self):
         def install_all(result: InstallResult):
+            mods = []
             for mod in result.paths:
-                install.install_mod(
+                mods.append(install.install_mod(
                     mod,
                     verbose=False,
                     no_packs=result.no_packs,
@@ -261,9 +262,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     shrink_rstb=result.shrink,
                     wait_merge=True if len(result.paths) > 1 else False,
                     deep_merge=result.deep_merge
-                )
-            if len(result.paths) > 1:
-                install.refresh_merges()
+                ))
+            if len(mods) > 1:
+                fix_packs = False
+                fix_gamedata = False
+                fix_savedata = False
+                fix_actorinfo = False
+                fix_deepmerge = False
+                fix_texts = []
+                for mod in mods:
+                    fix_packs = fix_packs or util.is_pack_mod(mod)
+                    fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
+                    fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                    fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                    fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
+                    for lang in texts.get_modded_languages(mod.path):
+                        if lang not in fix_texts:
+                            fix_texts.append(lang)
+                rstable.generate_master_rstb()
+                if fix_packs:
+                    pack.merge_installed_packs(
+                        no_injection=not (fix_gamedata or fix_savedata))
+                if fix_gamedata:
+                    data.merge_gamedata()
+                if fix_savedata:
+                    data.merge_savedata()
+                if fix_actorinfo:
+                    data.merge_actorinfo()
+                if fix_deepmerge:
+                    merge.deep_merge()
+                for lang in fix_texts:
+                    texts.merge_texts(lang)
 
         dialog = InstallDialog(self)
         result = dialog.GetResult()
@@ -325,8 +354,42 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.PerformOperation(resort_mods, (self))
 
     def UninstallClicked(self):
-        mod = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole)
-        self.PerformOperation(install.uninstall_mod, (mod.path))
+        def uninstall(mods):
+            fix_packs = False
+            fix_gamedata = False
+            fix_savedata = False
+            fix_actorinfo = False
+            fix_deepmerge = False
+            fix_texts = []
+            for mod in mods:
+                fix_packs = fix_packs or util.is_pack_mod(mod)
+                fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
+                fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
+                for lang in texts.get_modded_languages(mod.path):
+                    if lang not in fix_texts:
+                        fix_texts.append(lang)
+            for mod in mods:
+                shutil.rmtree(str(mod.path))
+            rstable.generate_master_rstb()
+            if fix_packs:
+                pack.merge_installed_packs(
+                    no_injection=not (fix_gamedata or fix_savedata))
+            if fix_gamedata:
+                data.merge_gamedata()
+            if fix_savedata:
+                data.merge_savedata()
+            if fix_actorinfo:
+                data.merge_actorinfo()
+            if fix_deepmerge:
+                merge.deep_merge()
+            for lang in fix_texts:
+                texts.merge_texts(lang)
+
+        if len(self.listWidget.selectedItems()) > 0:
+            mods = [item.data(Qt.UserRole) for item in self.listWidget.selectedItems()]
+            self.PerformOperation(uninstall, (mods))
 
     def ExploreClicked(self):
         path = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole).path
@@ -365,7 +428,6 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
         file_names = QtWidgets.QFileDialog.getOpenFileNames(
             self, 'Select a Mod', str(Path.home()), 'Mod Archives (*.zip; *.rar; *.7z);;All Files (*)')[0]
         for file_name in file_names:
-            print(file_name)
             path = Path(file_name)
             if path.exists():
                 mod_item = QtWidgets.QListWidgetItem()

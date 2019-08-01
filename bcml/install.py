@@ -529,6 +529,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             merge.deep_merge(verbose)
         print()
         print(f'{mod_name} installed successfully!')
+    return BcmlMod(mod_name, priority, mod_dir)
 
 
 def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verbose: bool = False):
