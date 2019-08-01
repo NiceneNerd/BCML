@@ -380,9 +380,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     files[rel_path.as_posix()] = file
             print('Creating new ZIP...')
             out = zipfile.ZipFile(str(output), mode='w',
-                                  compression=zipfile.ZIP_DEFLATED, strict_timestamps=False)
+                                  compression=zipfile.ZIP_DEFLATED)
             for file, path in files.items():
-                out.write(str(path), file)
+                try:
+                    out.write(str(path), file)
+                except ValueError:
+                    os.utime(str(path))
+                    out.write(str(path), file)
             print('Adding rules.txt...')
             rules_path = util.get_work_dir() / 'tmprules.txt'
             with rules_path.open('w') as rules:
