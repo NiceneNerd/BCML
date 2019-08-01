@@ -228,6 +228,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         t = ProgressThread(self._progress.lblProgress, func, *args)
         t.start()
         t.signal.sig.connect(self.OperationFinished)
+        self._last_errors = t.errors
 
     def OperationFinished(self):
         self._progress.close()
@@ -238,6 +239,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.LoadMods()
         QtWidgets.QMessageBox.information(
             self, 'Complete', 'Operation finished!')
+        if len(self._last_errors) > 0:
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'During the previous operation, the following errors occured:\n{}'.format("\n\n".join(self._last_errors)))
 
     # Button handlers
 
@@ -622,9 +626,10 @@ class ProgressThread(threading.Thread):
 
     def run(self):
         sys.stdout = RedirectText(self._out)
-        sys.stderr = sys.stdout
+        sys.stderr = RedirectErrors()
         self._target(*self._args)
         self.signal.sig.emit('Done')
+        self.errors = sys.stderr._errors
 
 
 class RedirectText:
@@ -637,6 +642,18 @@ class RedirectText:
                 self.out.setText(text)
             except RuntimeError:
                 pass
+
+    def flush(self):
+        pass
+
+
+class RedirectErrors:
+    def __init__(self):
+        self._errors = []
+
+    def write(self, text):
+        if text != '\n':
+            self._errors.append(text)
 
     def flush(self):
         pass
