@@ -43,15 +43,47 @@ There are three primary options for installing BCML.
 
 On first use, you will have to specify the directory where Cemu is installed and the `content` directory of your BotW game dump.
 
-## Supported Mods
-
-- Mods must be packed as ZIP, 7z, or  RAR archives.
-- Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
-- **Notice:** While it is certainly possible to use BCML for some mods and install others manually, no compatibility is guaranteed. It is recommended to uninstall all Cemu mods before using BCML, and then to reinstall them through BCML.
-
 ## How to Use
 
 ![BCML Preview](https://i.imgur.com/0ebIh5M.png)
+
+### General Notes
+
+- Mods can be installed from ZIP, RAR, or 7Z files, or from an unzipped graphic pack folder.
+- Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
+- While BCML tries to resolve as many conflicts as possible between mods, some mods simply will not work together. They may need to be merged manually or may be irreconcilable. For more information about resolving mod conflicts, see [the article on ZeldaMods.org](https://zeldamods.org/wiki/Help:Resolving_mod_conflicts).
+- **Important note:** While it is possible to use BCML for some mods and install others manually, no compatibility is guaranteed. Using BCML together with other install methods is *not* supported.
+
+### Installing Mods
+
+1. Click "Install" on the main BCML window.
+2. Queue mods to install by using "Add Mod File" or "Add Mod from Folder." You may also remove, rearrange, or clear the install queue. Mods will be installed in the order in which they are listed.
+3. (Optional) Select any advanced options you may need. Note that these will be applied to all mods in the install queue, so if you need different options for different mods you will need to install them separately.
+4. Click "Ok" to install the selected mods.
+
+#### Notes on Advanced Options
+
+Advanced options should not be necessary for most mods. However, there are a few possible uses.
+
+*RSTB Options*
+- "Shrink RSTB values where possible" - By default, BCML will not adjust RSTB entries if the new size would be smaller. You can use this option to instead shrink them if you have good reason to believe it will improve the stability of your installation.
+- "Don't remove complex RSTB entries" - By default, BCML will delete RSTB entries for complex file types (e.g. AAMP, BFRES), since the proper value cannot be calculated. You can use this option to disable this behavior, but know that it can cause instability.
+
+*Merge Options*
+
+By default, BCML will attempt to merge changes between mods for modified pack files, game texts, actor info, game data, and save data. All of these can be disabled if you know you don't need them for a particular mod or group of mods.
+
+*Deep Merge*
+
+Deep merge is an optional, experimental feature which attempts to merge changes made to individual files of certain kinds (BYML and AAMP). This can be a powerful tool to resolve conflicts but can in some cases cause unexpected bugs.
+
+### Managing Mods
+
+Once you have installed one or more mods, you will be able to manage them in the main BCML window.
+
+*Managing Load Order*
+
+
 
 ## Known Issues
 
