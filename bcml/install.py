@@ -170,8 +170,6 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
         'byml': {}
     }
     indent = '  ' * (nest_level + 1)
-    processes = []
-    queue = Queue()
     for file in mod_sarc.list_files():
         canon = file.replace('.s', '.')
         if aoc:
@@ -204,28 +202,15 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                 diffs['byml'].update(sub_mod_diffs['byml'])
                 log.extend(sub_mod_log)
             elif deep_merge and util.is_file_aamp(str(file)):
-                p = Process(target=threaded_aamp_diff, args=(queue, modded_files[canon]['path'],
-                                                             tmp_dir.as_posix() + '/' +
-                                                             modded_files[canon]['path'],
-                                                             tmp_dir))
-                processes.append(p)
-                p.start()
+                diffs['aamp'][file] = merge.get_aamp_diff(tmp_dir.as_posix() + '/' +
+                                                             modded_files[canon]['path'], tmp_dir)
             elif deep_merge and util.is_file_byml(str(file)):
-                p = Process(target=threaded_byml_diff, args=(queue, modded_files[canon]['path'],
-                                                             tmp_dir.as_posix() + '/' +
-                                                             modded_files[canon]['path'],
-                                                             tmp_dir))
-                processes.append(p)
-                p.start()
+                diffs['byml'][file] = merge.get_byml_diff(tmp_dir.as_posix() + '/' +
+                                                             modded_files[canon]['path'], tmp_dir)
         else:
             if verbose:
                 log.append(
                     f'{indent}Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
-    if len(processes) > 0:
-        for p in processes:
-            p.join()
-            file_type, file, diff = queue.get()
-            diffs[file_type][file] = diff
     return modded_files, log, diffs
 
 
