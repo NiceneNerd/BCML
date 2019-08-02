@@ -118,12 +118,12 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                 }
                 if verbose:
                     log.append(f'Found modded file {canon}')
-                if deep_merge and util.is_file_aamp(str(file)):
+                if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
                     p = Process(target=threaded_aamp_diff, args=(queue, file.relative_to(tmp_dir).as_posix(),
                                                                  file, tmp_dir))
                     processes.append(p)
                     p.start()
-                elif deep_merge and util.is_file_byml(str(file)):
+                elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
                     if 'ActorInfo' not in str(file):
                         p = Process(target=threaded_byml_diff, args=(queue, file.relative_to(tmp_dir).as_posix(),
                                                                      file, tmp_dir))
@@ -201,10 +201,10 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                 diffs['aamp'].update(sub_mod_diffs['aamp'])
                 diffs['byml'].update(sub_mod_diffs['byml'])
                 log.extend(sub_mod_log)
-            elif deep_merge and util.is_file_aamp(str(file)):
+            elif canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
                 diffs['aamp'][file] = merge.get_aamp_diff(tmp_dir.as_posix() + '/' +
                                                              modded_files[canon]['path'], tmp_dir)
-            elif deep_merge and util.is_file_byml(str(file)):
+            elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
                 diffs['byml'][file] = merge.get_byml_diff(tmp_dir.as_posix() + '/' +
                                                              modded_files[canon]['path'], tmp_dir)
         else:

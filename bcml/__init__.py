@@ -98,7 +98,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             util.get_game_dir()
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
-                self, 'First Time', 'BCML needs to know the location of your game dump. Please select the "content" directory in your dumped copy of Breath of the Wild.')
+                self, 'First Time', 'BCML needs to know the location of your game dump. '
+                'Please select the "content" directory in your dumped copy of Breath of the Wild.')
             folder = '/'
             while not (Path(folder).parent / 'code' / 'app.xml').exists():
                 folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -106,9 +107,24 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 if folder:
                     if not (Path(folder).parent / 'code' / 'app.xml').exists():
                         QtWidgets.QMessageBox.warning(
-                            self, 'Error', 'The chosen directory does not appear to be a valid dump. Please select the "content" directory in your dumped copy of Breath of the Wild.')
+                            self, 'Error', 'The chosen directory does not appear to be a valid dump. '
+                            'Please select the "content" directory in your dumped copy of Breath of the Wild.')
                     else:
-                        util.set_game_dir(Path(folder))
+                        try:
+                            util.set_game_dir(Path(folder))
+                        except FileNotFoundError as e:
+                            QtWidgets.QMessageBox.information(
+                                self, 'First Time', 'BCML could not guess the location of Cemu\'s MLC directory for your game. '
+                                'You will need to specify it manually. Make sure to select the title folder specifically for '
+                                'Breath of the Wild, not just the mlc01 folder itself. For example: \n'
+                                'C:\\Cemu\\mlc01\\title\\00050000\\101C9400')
+                            mlc_folder = QtWidgets.QFileDialog.getExistingDirectory(
+                                self, 'Select MLC Title Directory')
+                            if mlc_folder:
+                                util.set_mlc_dir(Path(mlc_folder))
+                                util.set_game_dir(Path(folder))
+                            else:
+                                sys.exit(0)
                 else:
                     sys.exit(0)
 

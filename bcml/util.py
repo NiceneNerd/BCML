@@ -140,7 +140,10 @@ def set_game_dir(path: Path):
                     break
         mlc_path = get_cemu_dir() / 'mlc01' / 'usr' / 'title' / \
             title_id[0:8] / title_id[8:]
-        set_mlc_dir(mlc_path)
+        if mlc_path.exists():
+            set_mlc_dir(mlc_path)
+        else:
+            raise FileNotFoundError('The MLC directory could not be automatically located.')
 
 
 def get_mlc_dir() -> Path:

@@ -482,9 +482,14 @@ def get_modded_actors(actorinfo: dict) -> dict:
     modded_actors = {}
     for actor in actorinfo['Actors']:
         actor_hash = zlib.crc32(actor['name'].encode())
-        if actor_hash not in stock_actors['Hashes'] \
-                or actor != stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]:
+        if actor_hash not in stock_actors['Hashes']:
             modded_actors[actor_hash] = actor
+        elif actor != stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]:
+            stock_actor = stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]
+            modded_actors[actor_hash] = {}
+            for key, value in actor.items():
+                if key not in stock_actor or value != stock_actor[key]:
+                    modded_actors[actor_hash][key] = value
     return modded_actors
 
 
@@ -510,7 +515,7 @@ def merge_actorinfo(verbose:bool = False):
     yaml_util.add_constructors(loader)
     for mod in mods:
         with (mod.path / 'logs' / 'actorinfo.yml').open('r', encoding='utf-8') as af:
-            modded_actors.update(yaml.load(af, Loader=loader))
+            util.dict_merge(modded_actors, yaml.load(af, Loader=loader))
             if verbose:
                 print(f'Loaded {len(af)} entries from {mod.name}')
     print('Loading unmodded actor info...')
@@ -520,7 +525,7 @@ def merge_actorinfo(verbose:bool = False):
     for actor_hash, actor_info in modded_actors.items():
         if actor_hash in actorinfo['Hashes']:
             idx = actorinfo['Hashes'].index(actor_hash)
-            actorinfo['Actors'][idx] = deepcopy(actor_info)
+            util.dict_merge(actorinfo['Actors'][idx], actor_info)
             if verbose:
                 print(f'  Updated entry for {actor_info["name"]}')
         else:
