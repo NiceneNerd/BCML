@@ -105,11 +105,34 @@ If you make any manual changes to your installed mods, or if you run into other 
 
 ## Notes to Mod Makers
 
-One of the key goals of BCML is to maintain complete compatibility with normal graphic pack mods. Anything that can be installed by the plain Cemu graphic pack menu can be installed via BCML and vice versa. 
+One of the key goals of BCML is to maintain complete compatibility with normal graphic pack mods. Anything that can be installed by the plain Cemu graphic pack menu can be installed via BCML and vice versa. However, in line with this rule, BCML does support some minor additional features that can enhance the experience with BCML without any side-effects for a regular graphic pack install.
 
-However, in line with this rule, BCML offers some minor benefits for mod distribution. For example, you can install your own mod using BCML during testing to generate its RSTB, or you can use the export function to create compatibility patches.
+### Extended `rules.txt`
 
-BCML also supports minor extensions to mod metadata in `rules.txt`. You can add two optional fields, `url` and `image`. The `url` field can provide a link to your mod's homepage, GitHub, or GameBanana listing, and `image` can provide a preview image of the mod either as a relative path to an image included in the mod (ideally, just the filename of an image in the same directory as `rules.txt`) or as a URL to an image online.
+BCML supports two extensions to mod metadata in `rules.txt`. You can add two optional fields, `url` and `image`. The `url` field can provide a link to your mod's homepage, GitHub, or GameBanana listing, and `image` can provide a preview image of the mod either as a relative path to an image included in the mod (ideally, just the filename of an image in the same directory as `rules.txt`) or as a URL to an image online. Example:
+
+```ini
+[Definition]
+titleids = 00050000101C9300,00050000101C9400,00050000101C9500
+name = Eventide Extreme
+path = The Legend of Zelda: Breath of the Wild/BCML Mods/Eventide Extreme
+description = Boosts the difficulty level of Eventide Island by adding enemies and making a few other cool changes.
+version = 3
+fspriority = 100
+image = https://files.gamebanana.com/img/ss/maps/530-90_5b5a11842b944.jpg
+url = https://gamebanana.com/maps/200936
+```
+
+### Quick Install
+
+When BCML installs a mod, it analyzes all of its contents to log changes which can be merged. This process can sometimes be time-consuming, so BCML also has a Quick Install feature. This allows a mod creator to run the analysis process once, and then the user can install much more quickly.
+
+To add Quick Install support to a mod:
+1. Create your mod as a standard graphic pack
+2. Install your mod using BCML
+3. Copy the `logs` folder from your installed mod into the mod archive you publish, beside (not inside) the `content` folder.
+
+By adding support for Quick Install, you can cut the time it takes to install your mod through BCML by about half, depending on its contents.
 
 ## Known Issues
 

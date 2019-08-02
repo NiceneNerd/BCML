@@ -335,103 +335,113 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     mod_name = str(rules['Definition']['name']).strip(' "\'')
     print(f'Identified mod: {mod_name}')
 
-    print()
-    print('Scanning for modified files...')
-    modded_files, rstb_changes, diffs = find_modded_files(
-        tmp_dir, verbose=verbose, deep_merge=deep_merge)
-    if len(rstb_changes) > 0:
-        print('\n'.join(rstb_changes))
+    logs = tmp_dir / 'logs'
+    if logs.exists():
+        print('This mod supports Quick Install! Loading changes...')
+        no_packs = no_packs or (not (logs / 'packs.log').exists())
+        no_gamedata = no_gamedata or (not (logs / 'gamedata.yml').exists())
+        no_savedata = no_savedata or (not (logs / 'savedata.yml').exists())
+        no_actorinfo = no_actorinfo or (not (logs / 'actorinfo.yml').exists())
+        if not no_texts:
+            text_mods = texts.get_modded_languages(tmp_dir)
+            is_text_mod = len(text_mods) > 0
+    else:
+        print()
+        print('Scanning for modified files...')
+        modded_files, rstb_changes, diffs = find_modded_files(
+            tmp_dir, verbose=verbose, deep_merge=deep_merge)
+        if len(rstb_changes) > 0:
+            print('\n'.join(rstb_changes))
 
-    modded_sarc_files = {}
-    is_text_mod = False
-    bootup_paths = []
-    print('Scanning modified pack files...')
-    for file in modded_files:
-        if fnmatch(file, '*Bootup_????.pack') and not no_texts:
-            is_text_mod = True
-            bootup_paths.append(modded_files[file]['path'])
-            del modded_files[file]
-            continue
-    sarc_files = [file for file in modded_files if util.is_file_sarc(file)]
-    if len(sarc_files) > 0:
-        num_threads = min(len(sarc_files), cpu_count())
-        p = Pool(processes=num_threads)
-        thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
-                                     deep_merge=deep_merge, verbose=verbose)
-        results = p.map(thread_sarc_search, sarc_files)
-        p.close()
-        p.join()
-        for result in results:
-            modded_sarcs, sarc_changes, nested_diffs = result
-            if len(modded_sarcs) > 0:
-                modded_sarc_files.update(modded_sarcs)
-                if deep_merge:
-                    diffs['aamp'].update(nested_diffs['aamp'])
-                    diffs['byml'].update(nested_diffs['byml'])
-                if len(sarc_changes) > 0:
-                    print('\n'.join(sarc_changes))
-        mod_sarc_count = len(modded_sarc_files)
-        print(
-            f'Found {mod_sarc_count} modded pack file{"s" if mod_sarc_count != 1 else ""}')
-
-    if len(modded_files) == 0:
-        print('No modified files were found. Very unusual.')
-        return
-    if len(modded_sarc_files) == 0:
-        no_packs = True
-
-    text_mods = {}
-    if is_text_mod:
-        print('Text modifications detected, analyzing...')
-        for bootup_path in bootup_paths:
-            try:
-                util.get_game_file(
-                    bootup_path.relative_to('content').as_posix())
-            except FileNotFoundError:
+        modded_sarc_files = {}
+        is_text_mod = False
+        bootup_paths = []
+        print('Scanning modified pack files...')
+        for file in modded_files:
+            if fnmatch(file, '*Bootup_????.pack') and not no_texts:
+                is_text_mod = True
+                bootup_paths.append(modded_files[file]['path'])
+                del modded_files[file]
                 continue
-            tmp_text = util.get_work_dir() / 'tmp_text'
-            modded_texts, added_text_store, lang = texts.get_text_mods_from_bootup(
-                str(tmp_dir / bootup_path), tmp_text, verbose)
-            text_mods[lang] = (modded_texts, added_text_store)
+        sarc_files = [file for file in modded_files if util.is_file_sarc(file)]
+        if len(sarc_files) > 0:
+            num_threads = min(len(sarc_files), cpu_count())
+            p = Pool(processes=num_threads)
+            thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
+                                        deep_merge=deep_merge, verbose=verbose)
+            results = p.map(thread_sarc_search, sarc_files)
+            p.close()
+            p.join()
+            for result in results:
+                modded_sarcs, sarc_changes, nested_diffs = result
+                if len(modded_sarcs) > 0:
+                    modded_sarc_files.update(modded_sarcs)
+                    if deep_merge:
+                        diffs['aamp'].update(nested_diffs['aamp'])
+                        diffs['byml'].update(nested_diffs['byml'])
+                    if len(sarc_changes) > 0:
+                        print('\n'.join(sarc_changes))
+            mod_sarc_count = len(modded_sarc_files)
+            print(
+                f'Found {mod_sarc_count} modded pack file{"s" if mod_sarc_count != 1 else ""}')
 
-    modded_actors = {}
-    if 'Actor/ActorInfo.product.byml' in modded_files and not no_actorinfo:
-        print('Actor info modified, analyzing...')
-        with (tmp_dir / 'content/Actor/ActorInfo.product.sbyml').open('rb') as af:
-            actorinfo = byml.Byml(wszst_yaz0.decompress(af.read())).parse()
-        modded_actors = data.get_modded_actors(actorinfo)
-    else:
-        no_actorinfo = True
+        if len(modded_files) == 0:
+            print('No modified files were found. Very unusual.')
+            return
+        no_packs = no_packs or len(modded_sarc_files) == 0
 
-    modded_bgentries = {}
-    if 'GameData/gamedata.sarc' in modded_sarc_files and not no_gamedata:
-        print('Game data modified, analyzing...')
-        with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as bf:
-            bootup = sarc.read_file_and_make_sarc(bf)
-        gamedata = sarc.SARC(wszst_yaz0.decompress(
-            bootup.get_file_data('GameData/gamedata.ssarc')))
-        del bootup
-        modded_bgdata = data.get_modded_bgdata(gamedata)
-        modded_bgentries = data.get_modded_gamedata_entries(modded_bgdata)
-    else:
-        no_gamedata = True
+        text_mods = {}
+        if is_text_mod:
+            print('Text modifications detected, analyzing...')
+            for bootup_path in bootup_paths:
+                try:
+                    util.get_game_file(
+                        bootup_path.relative_to('content').as_posix())
+                except FileNotFoundError:
+                    continue
+                tmp_text = util.get_work_dir() / 'tmp_text'
+                modded_texts, added_text_store, lang = texts.get_text_mods_from_bootup(
+                    str(tmp_dir / bootup_path), tmp_text, verbose)
+                text_mods[lang] = (modded_texts, added_text_store)
 
-    modded_bgsventries = []
-    if 'GameData/savedataformat.sarc' in modded_sarc_files and not no_savedata:
-        print('Save data modified, analyzing...')
-        with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as bf:
-            bootup = sarc.read_file_and_make_sarc(bf)
-        savedata = sarc.SARC(wszst_yaz0.decompress(
-            bootup.get_file_data('GameData/savedataformat.ssarc')))
-        del bootup
-        if data.is_savedata_modded(savedata):
-            modded_bgsventries.extend(
-                data.get_modded_savedata_entries(savedata))
-    else:
-        no_savedata = True
+        modded_actors = {}
+        if 'Actor/ActorInfo.product.byml' in modded_files and not no_actorinfo:
+            print('Actor info modified, analyzing...')
+            with (tmp_dir / 'content/Actor/ActorInfo.product.sbyml').open('rb') as af:
+                actorinfo = byml.Byml(wszst_yaz0.decompress(af.read())).parse()
+            modded_actors = data.get_modded_actors(actorinfo)
+        else:
+            no_actorinfo = True
 
-    if deep_merge:
-        deep_merge = len(diffs['aamp']) > 0 or len(diffs['byml']) > 0
+        modded_bgentries = {}
+        if 'GameData/gamedata.sarc' in modded_sarc_files and not no_gamedata:
+            print('Game data modified, analyzing...')
+            with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as bf:
+                bootup = sarc.read_file_and_make_sarc(bf)
+            gamedata = sarc.SARC(wszst_yaz0.decompress(
+                bootup.get_file_data('GameData/gamedata.ssarc')))
+            del bootup
+            modded_bgdata = data.get_modded_bgdata(gamedata)
+            modded_bgentries = data.get_modded_gamedata_entries(modded_bgdata)
+        else:
+            no_gamedata = True
+
+        modded_bgsventries = []
+        if 'GameData/savedataformat.sarc' in modded_sarc_files and not no_savedata:
+            print('Save data modified, analyzing...')
+            with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as bf:
+                bootup = sarc.read_file_and_make_sarc(bf)
+            savedata = sarc.SARC(wszst_yaz0.decompress(
+                bootup.get_file_data('GameData/savedataformat.ssarc')))
+            del bootup
+            if data.is_savedata_modded(savedata):
+                modded_bgsventries.extend(
+                    data.get_modded_savedata_entries(savedata))
+        else:
+            no_savedata = True
+
+        if deep_merge:
+            deep_merge = len(diffs['aamp']) > 0 or len(diffs['byml']) > 0
 
     priority = get_next_priority()
     mod_id = util.get_mod_id(mod_name, priority)
@@ -444,52 +454,53 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     elif mod.is_dir():
         shutil.copytree(str(tmp_dir), str(mod_dir))
 
-    print('Saving logs...')
-    (mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(mod_dir / 'logs' / 'rstb.log').open('w') as rf:
-        rf.write('name,rstb\n')
-        modded_files.update(modded_sarc_files)
-        for file in modded_files:
-            ext = os.path.splitext(file)[1]
-            if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
-                    and 'ActorInfo' not in file:
-                rf.write('{},{},{}\n'
-                         .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
-                         )
-
-    if not no_packs:
-        with Path(mod_dir / 'logs' / 'packs.log').open('w') as pf:
-            pf.write('name,path\n')
+    if not logs.exists():
+        print('Saving logs...')
+        (mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
+        with Path(mod_dir / 'logs' / 'rstb.log').open('w') as rf:
+            rf.write('name,rstb\n')
+            modded_files.update(modded_sarc_files)
             for file in modded_files:
-                if any(file.endswith(ext) for ext in ['pack', 'sarc']) and not modded_files[file]['nested']:
-                    pf.write(f'{file},{modded_files[file]["path"]}\n')
+                ext = os.path.splitext(file)[1]
+                if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
+                        and 'ActorInfo' not in file:
+                    rf.write('{},{},{}\n'
+                            .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
+                            )
 
-    if is_text_mod:
-        for lang in text_mods:
-            with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w') as tf:
-                yaml.dump(text_mods[lang][0], tf)
-            text_sarc = text_mods[lang][1]
-            if text_sarc is not None:
-                with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as sf:
-                    text_sarc.write(sf)
+        if not no_packs:
+            with Path(mod_dir / 'logs' / 'packs.log').open('w') as pf:
+                pf.write('name,path\n')
+                for file in modded_files:
+                    if any(file.endswith(ext) for ext in ['pack', 'sarc']) and not modded_files[file]['nested']:
+                        pf.write(f'{file},{modded_files[file]["path"]}\n')
 
-    dumper = yaml.CDumper
-    yaml_util.add_representers(dumper)
-    if not no_gamedata:
-        with (mod_dir / 'logs' / 'gamedata.yml').open('w') as gf:
-            yaml.dump(modded_bgentries, gf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-    if not no_savedata:
-        with (mod_dir / 'logs' / 'savedata.yml').open('w') as sf:
-            yaml.dump(modded_bgsventries, sf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-    if not no_actorinfo:
-        with (mod_dir / 'logs' / 'actorinfo.yml').open('w') as af:
-            yaml.dump(modded_actors, af, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-    if deep_merge:
-        with(mod_dir / 'logs' / 'deepmerge.yml').open('w') as df:
-            yaml.safe_dump(diffs, df, allow_unicode=True, encoding='utf-8')
+        if is_text_mod:
+            for lang in text_mods:
+                with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w') as tf:
+                    yaml.dump(text_mods[lang][0], tf)
+                text_sarc = text_mods[lang][1]
+                if text_sarc is not None:
+                    with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as sf:
+                        text_sarc.write(sf)
+
+        dumper = yaml.CDumper
+        yaml_util.add_representers(dumper)
+        if not no_gamedata:
+            with (mod_dir / 'logs' / 'gamedata.yml').open('w') as gf:
+                yaml.dump(modded_bgentries, gf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                        default_flow_style=None)
+        if not no_savedata:
+            with (mod_dir / 'logs' / 'savedata.yml').open('w') as sf:
+                yaml.dump(modded_bgsventries, sf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                        default_flow_style=None)
+        if not no_actorinfo:
+            with (mod_dir / 'logs' / 'actorinfo.yml').open('w') as af:
+                yaml.dump(modded_actors, af, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                        default_flow_style=None)
+        if deep_merge:
+            with(mod_dir / 'logs' / 'deepmerge.yml').open('w') as df:
+                yaml.safe_dump(diffs, df, allow_unicode=True, encoding='utf-8')
 
     rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
     rules['Definition'][
@@ -514,7 +525,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         print('Performing merges...')
         print()
         rstable.generate_master_rstb(verbose)
-        if not no_packs and len(modded_sarc_files) > 1:
+        if not no_packs:
             pack.merge_installed_packs(False, verbose=verbose)
         if is_text_mod:
             for lang in text_mods:
