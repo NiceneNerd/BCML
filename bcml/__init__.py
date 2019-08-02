@@ -628,13 +628,14 @@ class ProgressThread(threading.Thread):
         self._target = target
         self._args = args
         self.signal = ThreadSignal()
+        self.errors = []
 
     def run(self):
         sys.stdout = RedirectText(self._out)
         sys.stderr = RedirectErrors()
         self._target(*self._args)
         self.signal.sig.emit('Done')
-        self.errors = sys.stderr._errors
+        self.errors = sys.stderr._errors or []
 
 
 class RedirectText:
@@ -659,6 +660,7 @@ class RedirectErrors:
     def write(self, text):
         if text != '\n':
             self._errors.append(text)
+            sys.__stdout__.write(text)
 
     def flush(self):
         pass
@@ -675,6 +677,14 @@ InstallResult = namedtuple(
 
 
 def main():
+    for path in util.get_work_dir().glob('tmp*'):
+        try:
+            if path.is_dir():
+                shutil.rmtree(str(path))
+            elif path.is_file():
+                path.unlink()
+        except:
+            pass
     app = QtWidgets.QApplication([])
     application = MainWindow()
     try:

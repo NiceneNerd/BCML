@@ -361,9 +361,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             if fnmatch(file, '*Bootup_????.pack') and not no_texts:
                 is_text_mod = True
                 bootup_paths.append(modded_files[file]['path'])
-                del modded_files[file]
                 continue
-        sarc_files = [file for file in modded_files if util.is_file_sarc(file)]
+        sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(file, '*Bootup_????.pack')]
         if len(sarc_files) > 0:
             num_threads = min(len(sarc_files), cpu_count())
             p = Pool(processes=num_threads)
