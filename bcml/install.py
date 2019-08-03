@@ -202,11 +202,17 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                 diffs['byml'].update(sub_mod_diffs['byml'])
                 log.extend(sub_mod_log)
             elif canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                diffs['aamp'][file] = merge.get_aamp_diff(tmp_dir.as_posix() + '/' +
-                                                             modded_files[canon]['path'], tmp_dir)
+                path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
+                try:
+                    diffs['aamp'][modded_files[canon]['path']] = merge.get_aamp_diff(path, tmp_dir)
+                except (FileNotFoundError, KeyError, ValueError):
+                    pass
             elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
-                diffs['byml'][file] = merge.get_byml_diff(tmp_dir.as_posix() + '/' +
-                                                             modded_files[canon]['path'], tmp_dir)
+                path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
+                try:
+                    diffs['byml'][modded_files[canon]['path']] = merge.get_byml_diff(path, tmp_dir)
+                except (FileNotFoundError, KeyError, ValueError):
+                    pass
         else:
             if verbose:
                 log.append(
@@ -347,12 +353,13 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 is_text_mod = True
                 bootup_paths.append(modded_files[file]['path'])
                 continue
-        sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(file, '*Bootup_????.pack')]
+        sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(
+            file, '*Bootup_????.pack')]
         if len(sarc_files) > 0:
             num_threads = min(len(sarc_files), cpu_count())
             p = Pool(processes=num_threads)
             thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
-                                        deep_merge=deep_merge, verbose=verbose)
+                                         deep_merge=deep_merge, verbose=verbose)
             results = p.map(thread_sarc_search, sarc_files)
             p.close()
             p.join()
@@ -449,8 +456,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
                         and 'ActorInfo' not in file:
                     rf.write('{},{},{}\n'
-                            .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
-                            )
+                             .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
+                             )
 
         if not no_packs:
             with Path(mod_dir / 'logs' / 'packs.log').open('w') as pf:
@@ -473,15 +480,15 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         if not no_gamedata:
             with (mod_dir / 'logs' / 'gamedata.yml').open('w') as gf:
                 yaml.dump(modded_bgentries, gf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                        default_flow_style=None)
+                          default_flow_style=None)
         if not no_savedata:
             with (mod_dir / 'logs' / 'savedata.yml').open('w') as sf:
                 yaml.dump(modded_bgsventries, sf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                        default_flow_style=None)
+                          default_flow_style=None)
         if not no_actorinfo:
             with (mod_dir / 'logs' / 'actorinfo.yml').open('w') as af:
                 yaml.dump(modded_actors, af, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                        default_flow_style=None)
+                          default_flow_style=None)
         if deep_merge:
             with(mod_dir / 'logs' / 'deepmerge.yml').open('w') as df:
                 yaml.safe_dump(diffs, df, allow_unicode=True, encoding='utf-8')
@@ -628,7 +635,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
                 if lang not in remerge_texts:
                     remerge_texts.append(lang)
             new_mod_id = util.get_mod_id(mod[0], mod[1])
-            os.rename(mod[2], mod[2].parent / new_mod_id)
+            shutil.move(str(mod[2]), str(mod[2].parent / new_mod_id))
             rules = ConfigParser()
             rules.read(str(mod.path.parent / new_mod_id / 'rules.txt'))
             rules['Definition']['fsPriority'] = str(mod[1])

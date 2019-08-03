@@ -442,7 +442,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     if lang not in fix_texts:
                         fix_texts.append(lang)
             for mod in mods:
-                shutil.rmtree(str(mod.path))
+                install.uninstall_mod(mod, wait_merge=True)
             rstable.generate_master_rstb()
             if fix_packs:
                 pack.merge_installed_packs(
