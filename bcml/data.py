@@ -515,9 +515,11 @@ def merge_actorinfo(verbose:bool = False):
     yaml_util.add_constructors(loader)
     for mod in mods:
         with (mod.path / 'logs' / 'actorinfo.yml').open('r', encoding='utf-8') as af:
-            util.dict_merge(modded_actors, yaml.load(af, Loader=loader))
+            entries = yaml.load(af, Loader=loader)
+            util.dict_merge(modded_actors, entries)
             if verbose:
-                print(f'Loaded {len(af)} entries from {mod.name}')
+                print(f'Loaded {len(entries)} entries from {mod.name}')
+            del entries
     print('Loading unmodded actor info...')
     actorinfo = get_stock_actorinfo()
 
@@ -527,7 +529,7 @@ def merge_actorinfo(verbose:bool = False):
             idx = actorinfo['Hashes'].index(actor_hash)
             util.dict_merge(actorinfo['Actors'][idx], actor_info)
             if verbose:
-                print(f'  Updated entry for {actor_info["name"]}')
+                print(f'  Updated entry for {actorinfo["Actors"][idx]}')
         else:
             actorinfo['Hashes'].append(actor_hash)
             actorinfo['Actors'].append(actor_info)

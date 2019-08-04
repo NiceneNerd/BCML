@@ -399,6 +399,8 @@ def deep_merge(verbose: bool = False):
     mods = get_deepmerge_mods()
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'rstb.log').unlink()
+    if (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').exists():
+        (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').unlink()
     if len(mods) < 2:
         print('No deep merge necessary.')
         return

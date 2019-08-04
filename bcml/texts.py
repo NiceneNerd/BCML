@@ -374,6 +374,9 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     text_mods = get_modded_text_entries(lang)
     if len(text_mods) < 2:
         print('No text merging necessary.')
+        old_path = util.get_master_modpack_dir() / 'content' / 'Pack' / f'Bootup_{lang}.pack'
+        if old_path.exists():
+            old_path.unlink()
         return
     if verbose:
         print(f'  Found {len(text_mods)} text mods to be merged')

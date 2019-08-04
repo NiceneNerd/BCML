@@ -2,7 +2,8 @@ import csv
 import io
 import os
 import shutil
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pool, cpu_count
+from functools import partial
 from operator import itemgetter
 from pathlib import Path
 from typing import List
@@ -186,13 +187,14 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     return new_sarc, sarc_log
 
 
-def threaded_merge_sarcs(queue: Queue, output_path: Path, entry: tuple, verbose: bool = False):
-    versions = get_sarc_versions(entry[0], entry[1])
+def threaded_merge_sarcs(pack, modded_sarcs, verbose):
+    output_path = Path(util.get_master_modpack_dir() / modded_sarcs[pack][0]['rel_path'])
+    versions = get_sarc_versions(pack, modded_sarcs)
     new_sarc, log = merge_sarcs(versions, verbose)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as of:
         new_sarc.write(of)
-    queue.put(log)
+    return log
 
 
 def merge_installed_packs(no_injection: bool = False, only_these: List[str] = None, verbose: bool = False):
@@ -221,32 +223,18 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
-    folders_done = []
-    processes = []
-    queue = Queue()
-    for pack in modded_sarcs:
-        pack_folder = pack.split('/')[0]
-        if pack_folder not in folders_done:
-            folders_done.append(pack_folder)
-            print(f'Processing {", ".join(folders_done)} packs...')
-        if len(modded_sarcs[pack]) > 1:
-            p = Process(target=threaded_merge_sarcs, args=(queue, Path(util.get_master_modpack_dir() /
-                                                                       modded_sarcs[pack][0]['rel_path']),
-                                                           (pack, modded_sarcs), verbose))
-            p.name = pack
-            processes.append(p)
-            if verbose:
-                print(f'Starting merge process for {pack}...')
-            p.start()
-    for p in processes:
-        if verbose:
-            print(f'Joining merge process for {p.name}...')
-        p.join()
-        log = queue.get()
-        if len(log) > 0:
-            print('\n'.join(log))
-            if log[0] != "No merges necessary, skipping":
-                log_count += 1
+    print(f'Processing {len(modded_sarcs)} packs...')
+    sarcs_to_merge = [pack for pack in modded_sarcs if len(modded_sarcs[pack]) > 1]
+    partial_thread_merge = partial(threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
+    num_threads = min(cpu_count() // 2, len(modded_sarcs))
+    print(sarcs_to_merge)
+    p = Pool(processes=num_threads)
+    results = p.map(partial_thread_merge, sarcs_to_merge)
+    p.close()
+    p.join()
+    logs = [log for sublog in results for log in sublog]
+    print(results)
+    log_count = len([log for log in logs if log != 'No merges necessary, skipping'])
     print(f'Pack merging complete. Merged {log_count} packs.')
     if 'Pack/Bootup.pack' in modded_sarcs and not no_injection:
         if (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').exists():

@@ -71,12 +71,12 @@ def get_next_priority() -> int:
     return i
 
 
-def threaded_byml_diff(queue: Queue, store_path: str, file: Union[Path, str], tmp_dir: Path):
-    queue.put(('byml', store_path, merge.get_byml_diff(file, tmp_dir)))
+def threaded_byml_diffs(file_info: tuple, tmp_dir: Path):
+    return (file_info[0], merge.get_byml_diff(file_info[1], tmp_dir))
 
 
-def threaded_aamp_diff(queue: Queue, store_path: str, file: Union[Path, str], tmp_dir: Path):
-    queue.put(('aamp', store_path, merge.get_aamp_diff(file, tmp_dir)))
+def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
+    return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
 
 
 def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = False) -> (dict, list, dict):
@@ -99,8 +99,8 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
         'aamp': {},
         'byml': {}
     }
-    processes = []
-    queue = Queue()
+    aamps_to_diff = []
+    bymls_to_diff = []
     rstb_path: Path = tmp_dir / 'content' / 'System' / \
         'Resource' / 'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
@@ -122,25 +122,30 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                 if verbose:
                     log.append(f'Found modded file {canon}')
                 if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                    p = Process(target=threaded_aamp_diff, args=(queue, file.relative_to(tmp_dir).as_posix(),
-                                                                 file, tmp_dir))
-                    processes.append(p)
-                    p.start()
+                    aamps_to_diff.append((file.relative_to(tmp_dir).as_posix(), file))
                 elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
                     if 'ActorInfo' not in str(file):
-                        p = Process(target=threaded_byml_diff, args=(queue, file.relative_to(tmp_dir).as_posix(),
-                                                                     file, tmp_dir))
-                        processes.append(p)
-                        p.start()
+                        bymls_to_diff.append((file.relative_to(tmp_dir).as_posix(), file))
             else:
                 if verbose:
                     log.append(f'Ignored unmodded file {canon}')
                 continue
-    if len(processes) > 0:
-        for proc in processes:
-            proc.join()
-            file_type, file, diff = queue.get()
-            diffs[file_type][file] = diff
+    if len(aamps_to_diff) > 0:
+        p = Pool()
+        aamp_thread_partial = partial(threaded_aamp_diffs, tmp_dir=tmp_dir)
+        aamp_results = p.map(aamp_thread_partial, aamps_to_diff)
+        p.close()
+        p.join()
+        for file, diff in aamp_results:
+            diffs['aamp'][file] = diff
+    if len(bymls_to_diff) > 0:
+        p = Pool()
+        byml_thread_partial = partial(threaded_byml_diffs, tmp_dir=tmp_dir)
+        byml_results = p.map(byml_thread_partial, bymls_to_diff)
+        p.close()
+        p.join()
+        for file, diff in byml_results:
+            diffs['byml'][file] = diff
     total = len(modded_files)
     log.append(f'Found {total} modified file{"s" if total > 1 else ""}')
     return modded_files, log, diffs
@@ -519,7 +524,6 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     else:
         print('Performing merges...')
         print()
-        rstable.generate_master_rstb(verbose)
         if not no_packs:
             pack.merge_installed_packs(False, verbose=verbose)
         if is_text_mod:
@@ -533,6 +537,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             data.merge_actorinfo(verbose)
         if deep_merge:
             merge.deep_merge(verbose)
+        if not deep_merge:
+            rstable.generate_master_rstb(verbose)
         print()
         print(f'{mod_name} installed successfully!')
     return BcmlMod(mod_name, priority, mod_dir)

@@ -118,6 +118,8 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
 
 def generate_master_rstb(verbose: bool = False):
     print('Merging RSTB changes...')
+    if (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').exists():
+        (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').unlink()
     
     table = get_stock_rstb()
     rstb_values = {}

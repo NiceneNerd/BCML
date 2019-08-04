@@ -158,7 +158,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lblImage.setFixedSize(256, 104)
         self.statusBar().showMessage(f'{len(self._mods)} mods installed')
         if len(self._mods) > 0:
+            self.btnRemerge.setEnabled(True)
             self.btnExport.setEnabled(True)
+        else:
+            self.btnRemerge.setEnabled(False)
+            self.btnExport.setEnabled(False)
 
     def SelectItem(self):
         if len(self.listWidget.selectedItems()) == 0:
