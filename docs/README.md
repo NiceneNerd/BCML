@@ -136,7 +136,7 @@ By adding support for Quick Install, you can cut the time it takes to install yo
 
 ## Known Issues
 
-None yet, let me know!
+* Deep merge for BYML files is not very reliable and may break things.
 
 ## License
 

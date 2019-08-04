@@ -227,8 +227,8 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     for pack in modded_sarcs:
         pack_folder = pack.split('/')[0]
         if pack_folder not in folders_done:
-            print(f'Processing {pack_folder} packs...')
             folders_done.append(pack_folder)
+            print(f'Processing {", ".join(folders_done)} packs...')
         if len(modded_sarcs[pack]) > 1:
             p = Process(target=threaded_merge_sarcs, args=(queue, Path(util.get_master_modpack_dir() /
                                                                        modded_sarcs[pack][0]['rel_path']),

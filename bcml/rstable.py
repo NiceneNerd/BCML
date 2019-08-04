@@ -123,6 +123,8 @@ def generate_master_rstb(verbose: bool = False):
     rstb_values = {}
     for mod in util.get_installed_mods():
         rstb_values.update(get_mod_rstb_values(mod))
+    if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
+        rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir()))
 
     rstb_changes = merge_rstb(table, rstb_values, verbose)
     for change in rstb_changes:

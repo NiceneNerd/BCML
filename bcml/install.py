@@ -1,7 +1,9 @@
 import os
 import shutil
 import subprocess
+import sys
 import time
+import xml.dom
 from configparser import ConfigParser
 from fnmatch import fnmatch
 from functools import partial
@@ -11,6 +13,7 @@ from typing import Union
 from xml.dom import minidom
 
 import byml
+import aamp.yaml_util
 import rstb
 import sarc
 import wszst_yaz0
@@ -204,13 +207,15 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
             elif canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
                 path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
                 try:
-                    diffs['aamp'][modded_files[canon]['path']] = merge.get_aamp_diff(path, tmp_dir)
+                    diffs['aamp'][modded_files[canon]['path']
+                                  ] = merge.get_aamp_diff(path, tmp_dir)
                 except (FileNotFoundError, KeyError, ValueError):
                     pass
             elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
                 path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
                 try:
-                    diffs['byml'][modded_files[canon]['path']] = merge.get_byml_diff(path, tmp_dir)
+                    diffs['byml'][modded_files[canon]['path']
+                                  ] = merge.get_byml_diff(path, tmp_dir)
                 except (FileNotFoundError, KeyError, ValueError):
                     pass
         else:
@@ -232,13 +237,8 @@ def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path
                                   verbose=verbose, deep_merge=deep_merge)
 
 
-def add_mod_to_cemu(mod_dir):
-    """
-    Adds a mod to Cemu's enabled graphic packs
-
-    :param mod_dir: The name (not path) of the mod directory.
-    :type mod_dir: str
-    """
+def refresh_cemu_mods():
+    """ Updates Cemu's enabled graphic packs """
     setpath = util.get_cemu_dir() / 'settings.xml'
     if not setpath.exists():
         raise FileNotFoundError('The Cemu settings file could not be found.')
@@ -250,27 +250,27 @@ def add_mod_to_cemu(mod_dir):
     gpack = settings.getElementsByTagName('GraphicPack')[0]
     hasbcml = False
     for entry in gpack.getElementsByTagName('Entry'):
-        if '9999_BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-            hasbcml = True
-    if not hasbcml:
-        bcmlentry = settings.createElement('Entry')
-        entryfile = settings.createElement('filename')
-        entryfile.appendChild(settings.createTextNode(
-            f'graphicPacks\\BCML\\9999_BCML\\rules.txt'))
-        entrypreset = settings.createElement('preset')
-        entrypreset.appendChild(settings.createTextNode(''))
-        bcmlentry.appendChild(entryfile)
-        bcmlentry.appendChild(entrypreset)
-        gpack.appendChild(bcmlentry)
-    modentry = settings.createElement('Entry')
+        if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+            gpack.removeChild(entry)
+    bcmlentry = settings.createElement('Entry')
     entryfile = settings.createElement('filename')
     entryfile.appendChild(settings.createTextNode(
-        f'graphicPacks\\BCML\\{mod_dir}\\rules.txt'))
+        f'graphicPacks\\BCML\\9999_BCML\\rules.txt'))
     entrypreset = settings.createElement('preset')
     entrypreset.appendChild(settings.createTextNode(''))
-    modentry.appendChild(entryfile)
-    modentry.appendChild(entrypreset)
-    gpack.appendChild(modentry)
+    bcmlentry.appendChild(entryfile)
+    bcmlentry.appendChild(entrypreset)
+    gpack.appendChild(bcmlentry)
+    for mod in util.get_installed_mods():
+        modentry = settings.createElement('Entry')
+        entryfile = settings.createElement('filename')
+        entryfile.appendChild(settings.createTextNode(
+            f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'))
+        entrypreset = settings.createElement('preset')
+        entrypreset.appendChild(settings.createTextNode(''))
+        modentry.appendChild(entryfile)
+        modentry.appendChild(entrypreset)
+        gpack.appendChild(modentry)
     settings.writexml(setpath.open('w'), addindent='    ', newl='\n')
 
 
@@ -477,21 +477,25 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
         dumper = yaml.CDumper
         yaml_util.add_representers(dumper)
+        aamp.yaml_util.register_representers(dumper)
+        dumper.__aamp_reader = None
+        aamp.yaml_util._get_pstruct_name = lambda reader, idx, k, parent_crc32: k
         if not no_gamedata:
-            with (mod_dir / 'logs' / 'gamedata.yml').open('w') as gf:
+            with (mod_dir / 'logs' / 'gamedata.yml').open('w', encoding='utf-8') as gf:
                 yaml.dump(modded_bgentries, gf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
                           default_flow_style=None)
         if not no_savedata:
-            with (mod_dir / 'logs' / 'savedata.yml').open('w') as sf:
+            with (mod_dir / 'logs' / 'savedata.yml').open('w', encoding='utf-8') as sf:
                 yaml.dump(modded_bgsventries, sf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
                           default_flow_style=None)
         if not no_actorinfo:
-            with (mod_dir / 'logs' / 'actorinfo.yml').open('w') as af:
+            with (mod_dir / 'logs' / 'actorinfo.yml').open('w', encoding='utf-8') as af:
                 yaml.dump(modded_actors, af, Dumper=dumper, allow_unicode=True, encoding='utf-8',
                           default_flow_style=None)
         if deep_merge:
-            with(mod_dir / 'logs' / 'deepmerge.yml').open('w') as df:
-                yaml.safe_dump(diffs, df, allow_unicode=True, encoding='utf-8')
+            with (mod_dir / 'logs' / 'deepmerge.yml').open('w', encoding='utf-8') as df:
+                yaml.dump(diffs, df, Dumper=dumper, allow_unicode=True,
+                          encoding='utf-8', default_flow_style=None)
 
     rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
     rules['Definition'][
@@ -506,7 +510,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         Path(mod_dir / 'logs' / '.shrink').open('w').close()
 
     print(f'Enabling {mod_name} in Cemu...')
-    add_mod_to_cemu(mod_dir.stem)
+    refresh_cemu_mods()
 
     util.create_bcml_graphicpack_if_needed()
 
@@ -641,7 +645,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             rules['Definition']['fsPriority'] = str(mod[1])
             with (mod[2].parent / new_mod_id / 'rules.txt').open('w') as rf:
                 rules.write(rf)
-            add_mod_to_cemu(new_mod_id)
+            refresh_cemu_mods()
     if wait_merge:
         print('Mods resorted, will need to remerge RSTB later')
     else:

@@ -241,10 +241,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnExplore.setEnabled(False)
         self._progress = ProgressDialog(self)
         self._progress.show()
-        t = ProgressThread(self._progress.lblProgress, func, *args)
-        t.start()
-        t.signal.sig.connect(self.OperationFinished)
-        self._last_errors = t.errors
+        self._thread = ProgressThread(self._progress.lblProgress, func, *args)
+        self._thread.start()
+        self._thread.signal.sig.connect(self.OperationFinished)
+        self._thread.signal.err.connect(self.OperationError)
 
     def OperationFinished(self):
         self._progress.close()
@@ -255,9 +255,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.LoadMods()
         QtWidgets.QMessageBox.information(
             self, 'Complete', 'Operation finished!')
-        if len(self._last_errors) > 0:
-            QtWidgets.QMessageBox.warning(
-                self, 'Error', 'During the previous operation, the following errors occured:\n{}'.format("\n\n".join(self._last_errors)))
+        del self._thread
+
+    def OperationError(self):
+        self.btnInstall.setEnabled(True)
+        self.btnRemerge.setEnabled(True)
+        self.btnExport.setEnabled(True)
+        QtWidgets.QMessageBox.critical(
+            self, 'Error', f'BCML has encountered an error while performing an operation. Error details:\n\n{self._thread.error}')
+        self.LoadMods()
+        self._progress.close()
+        del self._progress
+        del self._thread
 
     # Button handlers
 
@@ -355,7 +364,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 new_path = util.get_modpack_dir(
                 ) / util.get_mod_id(mod[0].name, mod[1])
                 shutil.move(str(mod[0].path), str(new_path))
-                install.add_mod_to_cemu(new_path)
                 rules = ConfigParser()
                 rules.read(str(new_path / 'rules.txt'))
                 rules['Definition']['fsPriority'] = str(mod[1])
@@ -376,6 +384,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for lang in fix_texts:
                 texts.merge_texts(lang)
             self.LoadMods()
+            install.refresh_cemu_mods()
 
         self.btnChange.setEnabled(False)
         self.PerformOperation(resort_mods, (self))
@@ -457,6 +466,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 merge.deep_merge()
             for lang in fix_texts:
                 texts.merge_texts(lang)
+            install.refresh_cemu_mods()
 
         if len(self.listWidget.selectedItems()) > 0:
             mods = [item.data(Qt.UserRole)
@@ -644,14 +654,15 @@ class ProgressThread(threading.Thread):
         self._target = target
         self._args = args
         self.signal = ThreadSignal()
-        self.errors = []
 
     def run(self):
         sys.stdout = RedirectText(self._out)
-        sys.stderr = RedirectErrors()
-        self._target(*self._args)
-        self.signal.sig.emit('Done')
-        self.errors = sys.stderr._errors or []
+        try:
+            self._target(*self._args)
+            self.signal.sig.emit('Done')
+        except Exception as e:
+            self.error = traceback.format_exc()
+            self.signal.err.emit(e)
 
 
 class RedirectText:
@@ -669,21 +680,9 @@ class RedirectText:
         pass
 
 
-class RedirectErrors:
-    def __init__(self):
-        self._errors = []
-
-    def write(self, text):
-        if text != '\n':
-            self._errors.append(text)
-            sys.__stdout__.write(text)
-
-    def flush(self):
-        pass
-
-
 class ThreadSignal(QtCore.QObject):
     sig = QtCore.Signal(str)
+    err = QtCore.Signal(str)
 
 
 # Main
