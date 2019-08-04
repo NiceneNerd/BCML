@@ -1,5 +1,6 @@
 import csv
 import glob
+import struct
 import zlib
 from copy import deepcopy
 from pathlib import Path
@@ -27,7 +28,10 @@ def calculate_size(path: Path) -> int:
     :returns: The proper RSTB value for the file if it can be calculated, otherwise 0.
     :rtype: int
     """
-    return rstb.SizeCalculator().calculate_file_size(file_name=str(path), wiiu=True, force=False)
+    try:
+        return rstb.SizeCalculator().calculate_file_size(file_name=str(path), wiiu=True, force=False)
+    except struct.error:
+        return 0
 
 
 def get_mod_rstb_values(mod: Union[Path, str, BcmlMod]) -> {}:
