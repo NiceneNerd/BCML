@@ -225,16 +225,17 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     log_count = 0
     print(f'Processing {len(modded_sarcs)} packs...')
     sarcs_to_merge = [pack for pack in modded_sarcs if len(modded_sarcs[pack]) > 1]
-    partial_thread_merge = partial(threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
-    num_threads = min(cpu_count() // 2, len(modded_sarcs))
-    print(sarcs_to_merge)
-    p = Pool(processes=num_threads)
-    results = p.map(partial_thread_merge, sarcs_to_merge)
-    p.close()
-    p.join()
-    logs = [log for sublog in results for log in sublog]
-    print(results)
-    log_count = len([log for log in logs if log != 'No merges necessary, skipping'])
+    if len(sarcs_to_merge) > 0:
+        partial_thread_merge = partial(threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
+        num_threads = min(cpu_count() // 2, len(modded_sarcs))
+        p = Pool(processes=num_threads)
+        results = p.map(partial_thread_merge, sarcs_to_merge)
+        p.close()
+        p.join()
+        logs = [log for sublog in results for log in sublog]
+        log_count = len([log for log in logs if log != 'No merges necessary, skipping'])
+    else:
+        log_count = 0
     print(f'Pack merging complete. Merged {log_count} packs.')
     if 'Pack/Bootup.pack' in modded_sarcs and not no_injection:
         if (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').exists():
