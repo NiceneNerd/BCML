@@ -69,7 +69,7 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
             o_sarc = sarc.read_file_and_make_sarc(opened_pack)
             if o_sarc:
                 sarc_list.append({
-                    'pack': ,
+                    'pack': o_sarc,
                     'priority': pack['priority'],
                     'nest_level': 1,
                     'name': name,
