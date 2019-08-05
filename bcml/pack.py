@@ -66,13 +66,15 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
     sarc_list = []
     for pack in mod_list[name]:
         with open(pack['path'], 'rb') as opened_pack:
-            sarc_list.append({
-                'pack': sarc.read_file_and_make_sarc(opened_pack),
-                'priority': pack['priority'],
-                'nest_level': 1,
-                'name': name,
-                'base': False
-            })
+            o_sarc = sarc.read_file_and_make_sarc(opened_pack)
+            if o_sarc:
+                sarc_list.append({
+                    'pack': ,
+                    'priority': pack['priority'],
+                    'nest_level': 1,
+                    'name': name,
+                    'base': False
+                })
     if len(sarc_list) > 1:
         try:
             base_file = util.get_game_file(mod_list[name][0]['rel_path'])
