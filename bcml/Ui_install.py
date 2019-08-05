@@ -117,7 +117,7 @@ class Ui_InstallDialog(object):
         self.groupBox.setTitle(QtWidgets.QApplication.translate("InstallDialog", "Advanced Install Options", None, -1))
         self.chkRstbShrink.setText(QtWidgets.QApplication.translate("InstallDialog", "Shrink RSTB values where possible", None, -1))
         self.chkEnableDeepMerge.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge (experimental)", None, -1))
-        self.label_2.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge attempts to merge changes made to individual files of certain kinds. This can be a powerful tool to resolve conflicts but can also potentially cause unexpected bugs or issues. ", None, -1))
+        self.label_2.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might also potentially cause unexpected bugs or issues. ", None, -1))
         self.chkRstbLeave.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t remove complex RSTB entries", None, -1))
         self.chkDisablePack.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge pack files", None, -1))
         self.chkDisableTexts.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge game texts", None, -1))

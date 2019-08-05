@@ -361,26 +361,6 @@ def get_added_text_mods(lang: str = 'USen') -> List[sarc.SARC]:
     return textmods
 
 
-def set_message_rstb(table: rstb.ResourceSizeTable, lang: str = 'USen'):
-    """
-    Updates the RSTB entry for a given language's message pack
-
-    :param table: The RSTB to update.
-    :type table: :class:`rstb.ResourceSizeTable`
-    :param lang: The game language to use, defaults to USen.
-    :type lang: str, optional
-    """
-    if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
-        boot_path = util.get_modpack_dir() / '9999_BCML' / 'content' / \
-            'Pack' / f'Bootup_{lang}.pack'
-        with boot_path.open('rb') as bf:
-            bootup_sarc = sarc.read_file_and_make_sarc(bf)
-        msg_bytes = wszst_yaz0.decompress(
-            bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
-        msg_rstb = rstb.SizeCalculator().calculate_file_size_with_ext(msg_bytes, True, '.sarc')
-        table.set_size(f'Message/Msg_{lang}.product.sarc', msg_rstb)
-
-
 def threaded_merge_texts(msyt: Path, merge_dir: Path, text_mods: List[dict], verbose: bool) -> (int, str):
     rel_path = str(msyt.relative_to(merge_dir)).replace('\\', '/')
     should_bother = False
@@ -480,16 +460,11 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     merged_boot_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(str(tmp_boot_path), str(merged_boot_path))
 
-    print('Correcting RSTB if necessary...')
     rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
                                          'ResourceSizeTable.product.srsizetable'
     table: rstb.ResourceSizeTable = rstb.util.read_rstb(str(rstb_path), True)
     msg_path = f'Message/Msg_{lang}.product.sarc'
     if table.is_in_table(msg_path):
-        old_size = table.get_size(msg_path)
-        if msg_rstb > old_size:
-            table.set_size(msg_path, msg_rstb)
-            if verbose:
-                print(
-                    f'  Updated RSTB entry for "{msg_path}" from {old_size} bytes to {msg_rstb} bytes')
-        rstb.util.write_rstb(table, str(rstb_path), True)
+        print('Correcting RSTB...')
+        table.delete_entry(msg_path)
+    rstb.util.write_rstb(table, str(rstb_path), True)

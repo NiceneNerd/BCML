@@ -25,21 +25,6 @@ from byml import yaml_util
 from diff_match_patch import diff_match_patch
 
 
-def _byml_diff(base: dict, modded: dict) -> {}:
-    diff = {}
-    for key, value in modded.items():
-        if key not in base:
-            diff[key] = value
-        elif value != base[key]:
-            if isinstance(value, dict):
-                diff[key] = _byml_diff(base[key], value)
-            elif isinstance(value, list):
-                diff[key] = [item for item in value if item not in base[key]]
-            else:
-                diff[key] = value
-    return diff
-
-
 def _aamp_diff(base: Union[ParameterIO, ParameterList],
                modded: Union[ParameterIO, ParameterList]) -> ParameterList:
     diffs = ParameterList()
@@ -55,7 +40,7 @@ def _aamp_diff(base: Union[ParameterIO, ParameterList],
             diffs.objects[crc] = obj
         else:
             base_obj = base.objects[crc]
-            diff_obj = deepcopy(base_obj)
+            diff_obj = ParameterObject()
             changed = False
             for param, value in obj.params.items():
                 if param not in base_obj.params or value != base_obj.params[param]:
@@ -90,48 +75,6 @@ def _aamp_merge(base: Union[ParameterIO, ParameterList],
             if changed:
                 merged.objects[crc] = merge_obj
     return merged
-
-
-def get_byml_diff(file: Union[Path, str], tmp_dir: Path) -> str:
-    """
-    Diffs a modded BYML file from the stock game version
-
-    :param file: The modded BYML file to diff
-    :type file: :class:`typing.Union[:class:pathlib.Path, str]`
-    :param tmp_dir: The temp directory containing the mod
-    :type tmp_dir: :class:`pathlib.Path`
-    :return: Returns a string representation of the BYML file diff
-    """
-    if isinstance(file, str):
-        nests = file.split('//')
-        mod_bytes = util.get_nested_file_bytes(file)
-        ref_path = str(util.get_game_file(Path(nests[0]).relative_to(tmp_dir))) + '//' + '//'.join(nests[1:])
-        ref_bytes = util.get_nested_file_bytes(ref_path)
-    else:
-        with file.open('rb') as mf:
-            mod_bytes = mf.read()
-        mod_bytes = util.unyaz_if_needed(mod_bytes)
-
-        with util.get_game_file(file.relative_to(tmp_dir)).open('rb') as rf:
-            ref_bytes = rf.read()
-        ref_bytes = util.unyaz_if_needed(ref_bytes)
-
-    dumper = yaml.CSafeDumper
-    yaml_util.add_representers(dumper)
-
-    mod_yml = byml.Byml(mod_bytes).parse()
-    mod_str = StringIO()
-    yaml.dump(mod_yml, mod_str, Dumper=dumper)
-    mod_str = mod_str.getvalue()
-
-    ref_yml = byml.Byml(ref_bytes).parse()
-    ref_str = StringIO()
-    yaml.dump(ref_yml, ref_str, Dumper=dumper)
-    ref_str = ref_str.getvalue()
-
-    dmp = diff_match_patch()
-    patches = dmp.patch_make(ref_str, mod_str)
-    return dmp.patch_toText(patches)
 
 
 def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
@@ -176,64 +119,30 @@ def get_deepmerge_diffs() -> dict:
     :return: Returns a dict containing modified AAMP and BYML file paths and a list of diffs for each.
     :rtype: dict of str: dict of str: list of str
     """
-    diffs = {
-        'aamp': {},
-        'byml': {}
-    }
+    aamp_diffs = {}
     loader = yaml.CSafeLoader
     yaml_util.add_constructors(loader)
     aamp.yaml_util.register_constructors(loader)
     for mod in get_deepmerge_mods():
         with (mod.path / 'logs' / 'deepmerge.yml').open('r', encoding='utf-8') as df:
             mod_diffs = yaml.load(df, Loader=loader)
-            for file in mod_diffs['aamp']:
-                if file not in diffs['aamp']:
-                    diffs['aamp'][file] = []
-                diffs['aamp'][file].append(mod_diffs['aamp'][file])
-            for file in mod_diffs['byml']:
-                if file not in diffs['byml']:
-                    diffs['byml'][file] = []
-                diffs['byml'][file].append(mod_diffs['byml'][file])
-    for file_type, files in diffs.items():
-        for file, items in list(files.items()):
-            if len(items) < 2:
-                del diffs[file_type][file]
-    return diffs
+            for file in mod_diffs:
+                if file not in aamp_diffs:
+                    aamp_diffs[file] = []
+                aamp_diffs[file].append(mod_diffs[file])
+    for file, items in list(aamp_diffs.items()):
+        if len(items) < 2:
+            del aamp_diffs[file]
+    return aamp_diffs
 
 
 def consolidate_diff_files(diffs: dict) -> dict:
     """ Consolidates the files which need to be deep merged to avoid any need to repeatedly open the same files. """
     consolidated_diffs = {}
-    for file_type, files in diffs.items():
-        consolidated_diffs[file_type] = {}
-        for file, diff_list in files.items():
-            nest = reduce(lambda res, cur: {cur: res}, reversed(file.split("//")), diff_list)
-            util.dict_merge(consolidated_diffs[file_type], nest)
+    for file, diff_list in diffs.items():
+        nest = reduce(lambda res, cur: {cur: res}, reversed(file.split("//")), diff_list)
+        util.dict_merge(consolidated_diffs, nest)
     return consolidated_diffs
-
-
-def apply_patches(patches: List[str], base_text: str) -> (str, bool):
-    """
-    Patches a file and returns the patched text and an indication whether all patches applied successfully. If any
-    part of patch in the list of patches fails, that patch is rolled back entirely, but any fullly successul patches
-    are kept intact.
-
-    :param patches: A list of text patches to apply.
-    :type patches: str
-    :param base_text: The test onto which the patches will be applied.
-    :return: Returns a tuple containing the patched text and whether all patches applied successfully.
-    :rtype: (str, bool)
-    """
-    dmp = diff_match_patch()
-    patched_text = base_text
-    for patch in patches:
-        dmp_patch = dmp.patch_fromText(patch)
-        tmp_text, failures = dmp.patch_apply(dmp_patch, patched_text)
-        if False in failures:
-            return patched_text, False
-        else:
-            patched_text = tmp_text
-    return patched_text, True
 
 
 def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
@@ -267,29 +176,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
 
         elif isinstance(stuff, list):
             try:
-                if file_bytes[0:2] == b'BY' or file_bytes[0:2] == b'YB':
-                    dumper = yaml.CDumper
-                    yaml_util.add_representers(dumper)
-                    base_byml = byml.Byml(file_bytes).parse()
-                    str_buf = StringIO()
-                    yaml.dump(base_byml, str_buf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                            default_flow_style=None)
-                    del base_byml
-                    base_text = str_buf.getvalue()
-                    del str_buf
-
-                    new_text, success = apply_patches(stuff, base_text)
-                    if not success:
-                        failures[file] = new_text
-                    
-                    loader = yaml.CSafeLoader
-                    yaml_util.add_constructors(loader)
-                    buf = BytesIO()
-                    root = yaml.load(new_text, Loader=loader)
-                    byml.Writer(root, True).write(buf)
-                    del root
-                    new_bytes = buf.getvalue() if not yazd else wszst_yaz0.compress(buf.getvalue())
-                elif file_bytes[0:4] == b'AAMP':
+                if file_bytes[0:4] == b'AAMP':
                     aamp_contents = aamp.Reader(file_bytes).parse()
                     for change in stuff:
                         aamp_contents = _aamp_merge(aamp_contents, change)
@@ -297,7 +184,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                     del aamp_contents
                     new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(aamp_bytes)
                 else:
-                    raise ValueError('Wait, what the heck, we already checked this?!')
+                    raise ValueError('Wait, what the heck, this isn\'t an AAMP file?!')
             except:
                 new_bytes = pack.get_file_data(file).tobytes()
                 print(f'Deep merging {file} failed. No changed were made.')
@@ -343,34 +230,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
             failures[failure] = contents
     else:
         try:
-            if magic[0:2] == b'BY' or magic[0:2] == b'YB':
-                base_byml = byml.Byml(file_bytes).parse()
-                str_buf = StringIO()
-                yaml.dump(base_byml, str_buf, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                        default_flow_style=None)
-                del base_byml
-                base_text = str_buf.getvalue()
-                del str_buf
-
-                patches = deepcopy(stuff)
-                patches.reverse()
-                new_text, success = apply_patches(patches, base_text)
-                if not success:
-                    failures[file] = new_text
-                    print(f'One or more patches in {file} failed to apply.')
-                else:
-                    if verbose:
-                        print(f'Successfully patched {file}.')
-
-                buf = BytesIO()
-                root = yaml.load(new_text, Loader=loader)
-                bw = byml.Writer(root, True)
-                del root
-                bw.write(buf)
-                del bw
-                new_bytes = buf.getvalue()
-                del buf
-            elif magic == b'AAMP':
+            if magic == b'AAMP':
                 aamp_contents = aamp.Reader(file_bytes).parse()
                 for change in stuff:
                     aamp_contents = _aamp_merge(aamp_contents, change)
@@ -378,7 +238,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
                 del aamp_contents
                 new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(aamp_bytes)
             else:
-                raise ValueError(f'{file} is not a SARC, AAMP, or BYML file.')
+                raise ValueError(f'{file} is not a SARC or AAMP file.')
         except:
             new_bytes = file_bytes
             del file_bytes
@@ -399,7 +259,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
     return util.get_canon_name(file), failures
 
 
-def deep_merge(verbose: bool = False):
+def deep_merge(verbose: bool = False, wait_rstb: bool = False):
     mods = get_deepmerge_mods()
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'rstb.log').unlink()
@@ -414,17 +274,15 @@ def deep_merge(verbose: bool = False):
     failures = {}
 
     print('Performing deep merge...')
-    for file_type in diffs:
-        if len(diffs[file_type]) == 0:
-            continue
-        num_threads = min(multiprocessing.cpu_count(), len(diffs[file_type]))
-        p = multiprocessing.Pool(processes=num_threads)
-        thread_merger = partial(threaded_merge, verbose=verbose)
-        results = p.map(thread_merger, diffs[file_type].items())
-        p.close()
-        p.join()
-        for name, fails in results:
-            failures.update(fails)
+    if len(diffs) == 0:
+        return
+    num_threads = min(multiprocessing.cpu_count(), len(diffs))
+    p = multiprocessing.Pool(processes=num_threads)
+    results = p.map(partial(threaded_merge, verbose=verbose), diffs.items())
+    p.close()
+    p.join()
+    for name, fails in results:
+        failures.update(fails)
 
     print('Updating RSTB...')
     modded_files = install.find_modded_files(util.get_master_modpack_dir())[0]
@@ -452,7 +310,8 @@ def deep_merge(verbose: bool = False):
                 rf.write('{},{},{}\n'
                             .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
                             )
-    bcml.rstable.generate_master_rstb()
+    if not wait_rstb:
+        bcml.rstable.generate_master_rstb()
 
     with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').open('w') as lf:
         for file_type in diffs:

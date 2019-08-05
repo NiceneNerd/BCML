@@ -137,9 +137,10 @@ def generate_master_rstb(verbose: bool = False):
         if not change[1] or (change[1] and verbose):
             print(change[0])
     
-    for bootup_pack in (util.get_master_modpack_dir() / 'content' / 'Pack').glob('Bootup_*.pack'):
+    for bootup_pack in util.get_modpack_dir().rglob('**/Bootup_*.pack'):
         lang = util.get_file_language(bootup_pack)
-        texts.set_message_rstb(table, lang)
+        if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
+            table.delete_entry(f'Message/Msg_{lang}.product.sarc')
         
     rstb_path = util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / \
                                                 'ResourceSizeTable.product.srsizetable'

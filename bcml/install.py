@@ -71,10 +71,6 @@ def get_next_priority() -> int:
     return i
 
 
-def threaded_byml_diffs(file_info: tuple, tmp_dir: Path):
-    return (file_info[0], merge.get_byml_diff(file_info[1], tmp_dir))
-
-
 def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
     return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
 
@@ -95,12 +91,8 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
     """
     modded_files = {}
     log = []
-    diffs = {
-        'aamp': {},
-        'byml': {}
-    }
+    aamp_diffs = {}
     aamps_to_diff = []
-    bymls_to_diff = []
     rstb_path: Path = tmp_dir / 'content' / 'System' / \
         'Resource' / 'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
@@ -124,10 +116,6 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                 if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
                     aamps_to_diff.append(
                         (file.relative_to(tmp_dir).as_posix(), file))
-                elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
-                    if 'ActorInfo' not in str(file):
-                        bymls_to_diff.append(
-                            (file.relative_to(tmp_dir).as_posix(), file))
             else:
                 if verbose:
                     log.append(f'Ignored unmodded file {canon}')
@@ -139,18 +127,10 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
         p.close()
         p.join()
         for file, diff in aamp_results:
-            diffs['aamp'][file] = diff
-    if len(bymls_to_diff) > 0:
-        p = Pool()
-        byml_thread_partial = partial(threaded_byml_diffs, tmp_dir=tmp_dir)
-        byml_results = p.map(byml_thread_partial, bymls_to_diff)
-        p.close()
-        p.join()
-        for file, diff in byml_results:
-            diffs['byml'][file] = diff
+            aamp_diffs[file] = diff
     total = len(modded_files)
     log.append(f'Found {total} modified file{"s" if total > 1 else ""}')
-    return modded_files, log, diffs
+    return modded_files, log, aamp_diffs
 
 
 def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: bool = False, nest_level: int = 0,
@@ -175,10 +155,7 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
     """
     modded_files = {}
     log = []
-    diffs = {
-        'aamp': {},
-        'byml': {}
-    }
+    aamp_diffs = {}
     indent = '  ' * (nest_level + 1)
     for file in mod_sarc.list_files():
         canon = file.replace('.s', '.')
@@ -208,28 +185,20 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                                                                                    nest_level=nest_level + 1, aoc=aoc,
                                                                                    verbose=verbose)
                 modded_files.update(sub_mod_files)
-                diffs['aamp'].update(sub_mod_diffs['aamp'])
-                diffs['byml'].update(sub_mod_diffs['byml'])
+                aamp_diffs.update(sub_mod_diffs)
                 log.extend(sub_mod_log)
             elif canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
                 path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
                 try:
-                    diffs['aamp'][modded_files[canon]['path']
+                    aamp_diffs[modded_files[canon]['path']
                                   ] = merge.get_aamp_diff(path, tmp_dir)
-                except (FileNotFoundError, KeyError, ValueError):
-                    pass
-            elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
-                path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
-                try:
-                    diffs['byml'][modded_files[canon]['path']
-                                  ] = merge.get_byml_diff(path, tmp_dir)
                 except (FileNotFoundError, KeyError, ValueError):
                     pass
         else:
             if verbose:
                 log.append(
                     f'{indent}Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
-    return modded_files, log, diffs
+    return modded_files, log, aamp_diffs
 
 
 def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool, verbose: bool):
@@ -346,7 +315,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     else:
         print()
         print('Scanning for modified files...')
-        modded_files, rstb_changes, diffs = find_modded_files(
+        modded_files, rstb_changes, aamp_diffs = find_modded_files(
             tmp_dir, verbose=verbose, deep_merge=deep_merge)
         if len(rstb_changes) > 0:
             print('\n'.join(rstb_changes))
@@ -375,8 +344,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 if len(modded_sarcs) > 0:
                     modded_sarc_files.update(modded_sarcs)
                     if deep_merge:
-                        diffs['aamp'].update(nested_diffs['aamp'])
-                        diffs['byml'].update(nested_diffs['byml'])
+                        aamp_diffs.update(nested_diffs)
                     if len(sarc_changes) > 0:
                         print('\n'.join(sarc_changes))
             mod_sarc_count = len(modded_sarc_files)
@@ -439,7 +407,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             no_savedata = True
 
         if deep_merge:
-            deep_merge = len(diffs['aamp']) > 0 or len(diffs['byml']) > 0
+            deep_merge = len(aamp_diffs) > 0
 
     priority = get_next_priority()
     mod_id = util.get_mod_id(mod_name, priority)
@@ -503,7 +471,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                           default_flow_style=None)
         if deep_merge:
             with (mod_dir / 'logs' / 'deepmerge.yml').open('w', encoding='utf-8') as df:
-                yaml.dump(diffs, df, Dumper=dumper, allow_unicode=True,
+                yaml.dump(aamp_diffs, df, Dumper=dumper, allow_unicode=True,
                           encoding='utf-8', default_flow_style=None)
 
     rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
@@ -656,11 +624,6 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             with (mod[2].parent / new_mod_id / 'rules.txt').open('w') as rf:
                 rules.write(rf)
             refresh_cemu_mods()
-    if wait_merge:
-        print('Mods resorted, will need to remerge RSTB later')
-    else:
-        rstable.generate_master_rstb(verbose)
-        print()
     if remerge_packs:
         if wait_merge:
             print('Pack merges affected, will need to remerge later')
@@ -668,6 +631,15 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Pack merges affected, remerging packs...')
             pack.merge_installed_packs(verbose)
             print()
+    if len(remerge_texts) > 0:
+        if wait_merge:
+            print('Text merges affected, will need to remerge later')
+        else:
+            for lang in remerge_texts:
+                print(
+                    f'Text merges for {lang} affected, remerging texts for {lang}...')
+                texts.merge_texts(lang, verbose=verbose)
+                print()
     if remerge_gamedata:
         if wait_merge:
             print('Gamedata merges affected, will need to remerge later')
@@ -693,18 +665,15 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
         if wait_merge:
             print('Deep merge affected, will need to remerge later')
         else:
-            print('Deep merge affected, redoing deep merging...')
+            print('Deep merge affected, remerging...')
             merge.deep_merge(verbose)
             print()
-    if len(remerge_texts) > 0:
-        if wait_merge:
-            print('Text merges affected, will need to remerge later')
-        else:
-            for lang in remerge_texts:
-                print(
-                    f'Text merges for {lang} affected, remerging texts for {lang}...')
-                texts.merge_texts(lang, verbose=verbose)
-                print()
+    if wait_merge:
+        print('Mods resorted, will need to remerge RSTB later')
+    else:
+        if not deepmerge:
+            rstable.generate_master_rstb(verbose)
+            print()
     print('Finished updating mod priorities.')
 
 
@@ -716,7 +685,6 @@ def refresh_merges(verbose: bool = False):
     :type verbose: bool, optional
     """
     print('Refreshing merged mods...')
-    rstable.generate_master_rstb(verbose)
     pack.merge_installed_packs(verbose)
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
@@ -724,4 +692,5 @@ def refresh_merges(verbose: bool = False):
     data.merge_gamedata(verbose)
     data.merge_savedata(verbose)
     data.merge_actorinfo(verbose)
-    merge.deep_merge(verbose)
+    merge.deep_merge(verbose, wait_rstb=True)
+    rstable.generate_master_rstb(verbose)

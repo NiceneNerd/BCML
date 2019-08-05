@@ -237,13 +237,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if not self.btnExplore.isEnabled():
             self.btnExplore.setEnabled(True)
 
-    def PerformOperation(self, func, *args):
+    def PerformOperation(self, func, *args, title: str = 'Operation In Progress'):
         self.btnInstall.setEnabled(False)
         self.btnRemerge.setEnabled(False)
         self.btnExport.setEnabled(False)
         self.btnUninstall.setEnabled(False)
         self.btnExplore.setEnabled(False)
         self._progress = ProgressDialog(self)
+        self._progress.setWindowTitle(title)
         self._progress.show()
         self._thread = ProgressThread(self._progress.lblProgress, func, *args)
         self._thread.start()
@@ -336,7 +337,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         dialog = InstallDialog(self)
         result = dialog.GetResult()
         if result:
-            self.PerformOperation(install_all, result)
+            self.PerformOperation(install_all, result, title='Installing')
 
     def RemergeClicked(self):
         self.PerformOperation(install.refresh_merges, ())
