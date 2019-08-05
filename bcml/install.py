@@ -122,10 +122,12 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                 if verbose:
                     log.append(f'Found modded file {canon}')
                 if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                    aamps_to_diff.append((file.relative_to(tmp_dir).as_posix(), file))
+                    aamps_to_diff.append(
+                        (file.relative_to(tmp_dir).as_posix(), file))
                 elif canon in util.get_hash_table() and deep_merge and util.is_file_byml(str(file)):
                     if 'ActorInfo' not in str(file):
-                        bymls_to_diff.append((file.relative_to(tmp_dir).as_posix(), file))
+                        bymls_to_diff.append(
+                            (file.relative_to(tmp_dir).as_posix(), file))
             else:
                 if verbose:
                     log.append(f'Ignored unmodded file {canon}')
@@ -452,14 +454,15 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
     if not logs.exists():
         print('Saving logs...')
+        RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata',
+                        '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
         (mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
         with Path(mod_dir / 'logs' / 'rstb.log').open('w') as rf:
             rf.write('name,rstb\n')
             modded_files.update(modded_sarc_files)
             for file in modded_files:
                 ext = os.path.splitext(file)[1]
-                if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
-                        and 'ActorInfo' not in file:
+                if ext not in RSTB_EXCLUDE and 'ActorInfo' not in file:
                     rf.write('{},{},{}\n'
                              .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
                              )
@@ -468,7 +471,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             with Path(mod_dir / 'logs' / 'packs.log').open('w') as pf:
                 pf.write('name,path\n')
                 for file in modded_files:
-                    if any(file.endswith(ext) for ext in ['pack', 'sarc']) and not modded_files[file]['nested']:
+                    ext = os.path.splitext(file)[1]
+                    if ext in util.SARC_EXTS and not modded_files[file]['nested']:
                         pf.write(f'{file},{modded_files[file]["path"]}\n')
 
         if is_text_mod:

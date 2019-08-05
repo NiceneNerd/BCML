@@ -21,8 +21,7 @@ from byml import yaml_util
 BcmlMod = namedtuple('BcmlMod', 'name priority path')
 CREATE_NO_WINDOW = 0x08000000
 SARC_EXTS = ['.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats', '.ssarc', '.spack',
-             '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats', '.blarc', '.sblarc', '.genvb',
-             '.sgenvb', '.bfarc', '.sbfarc']
+             '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats']
 AAMP_EXTS = ['.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr', '.baglclwd',
              '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof', '.baglenv', '.sbaglenv', '.baglenvset',
              '.sbaglenvset', '.baglfila', '.sbaglfila', '.bagllmap', '.sbagllmap', '.bagllref', '.sbagllref', '.baglmf',
