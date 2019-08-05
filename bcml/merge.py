@@ -194,6 +194,10 @@ def get_deepmerge_diffs() -> dict:
                 if file not in diffs['byml']:
                     diffs['byml'][file] = []
                 diffs['byml'][file].append(mod_diffs['byml'][file])
+    for file_type, files in diffs.items():
+        for file, items in list(files.items()):
+            if len(items) < 2:
+                del diffs[file_type][file]
     return diffs
 
 

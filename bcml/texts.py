@@ -82,38 +82,32 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False, tmp_dir: Path
     msg_pack.extract_to_dir(str(merge_dir))
     msbt_to_msyt(merge_dir)
 
-import sys
-def _msyt_file(file): return subprocess.call([str(util.get_exec_dir() / 'helpers' / 'msyt.exe'), 'export', str(
-    file)], stdout=sys.stdout, stderr=sys.stdout, creationflags=util.CREATE_NO_WINDOW)
+
+def _msyt_file(file):
+    subprocess.call([str(util.get_exec_dir() / "helpers" / "msyt.exe"),
+                     'export', str(file)], creationflags=util.CREATE_NO_WINDOW)
 
 
 def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
     """ Converts MSBTs in given temp dir to MSYTs """
-    subprocess.run([str(util.get_exec_dir() / 'helpers' / 'msyt.exe'), 'export', '-d', str(tmp_dir)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
-    import time; time.sleep(0.5)
-    fix_msbts = []
-    i = 5
-    for msbt in tmp_dir.rglob('**/*.msbt'):
-        msyt = msbt.with_suffix('.msyt')
-        if not msyt.exists():
-            fix_msbts.append(msyt)
+    subprocess.run([str(util.get_exec_dir() / 'helpers' / 'msyt.exe'),
+                    'export', '-d', str(tmp_dir)], creationflags=util.CREATE_NO_WINDOW)
+    fix_msbts = [msbt for msbt in tmp_dir.rglob(
+        '**/*.msbt') if not msbt.with_suffix('.msyt').exists()]
     if len(fix_msbts) > 0:
-        print('Some MSBTs failed to convert. Trying a few more times...')
-    while len(fix_msbts) > 0 and i > 0:
-        subprocess.run([str(util.get_exec_dir() / 'helpers' / 'msyt.exe'), 'export', '-d', str(tmp_dir)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
-        time.sleep(0.5)
-        fix_msbts = []
-        for msbt in tmp_dir.rglob('**/*.msbt'):
-            msyt = msbt.with_suffix('.msyt')
-            if not msyt.exists():
-                fix_msbts.append(msyt)
-        i = i - 1
+        print('Some MSBTs failed to convert. Trying again individually...')
+        p = multiprocessing.Pool(processes=min(
+            multiprocessing.cpu_count(), len(fix_msbts)))
+        out = p.map(_msyt_file, fix_msbts)
+        p.close()
+        p.join()
+        fix_msbts = [msbt for msbt in tmp_dir.rglob(
+            '**/*.msbt') if not msbt.with_suffix('.msyt').exists()]
     if len(fix_msbts) > 0:
-        print(f'{len(fix_msbts)} MSBT files failed to convert. They will not be merged.')
-    #subprocess.call(m_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+        print(
+            f'{len(fix_msbts)} MSBT files failed to convert. They will not be merged.')
     for msbt_file in tmp_dir.rglob('**/*.msbt'):
         Path(msbt_file).unlink()
-    del time
     return fix_msbts
 
 
@@ -307,7 +301,8 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str], tmp_dir: Path = uti
 
     problems = msbt_to_msyt()
     for problem in problems:
-        msyt_name = problem.relative_to(tmp_dir).with_suffix('.msyt').as_posix()
+        msyt_name = problem.relative_to(
+            tmp_dir).with_suffix('.msyt').as_posix()
         modded_msyts.remove(msyt_name)
     if verbose:
         print(f'{d}Scanning texts files for modified entries...')
@@ -375,14 +370,14 @@ def set_message_rstb(table: rstb.ResourceSizeTable, lang: str = 'USen'):
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
     """
-    boot_path = util.get_modpack_dir() / '9999_BCML' / 'content' / \
-        'Pack' / f'Bootup_{lang}.pack'
-    with boot_path.open('rb') as bf:
-        bootup_sarc = sarc.read_file_and_make_sarc(bf)
-    msg_bytes = wszst_yaz0.decompress(
-        bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
-    msg_rstb = rstb.SizeCalculator().calculate_file_size_with_ext(msg_bytes, True, '.sarc')
     if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
+        boot_path = util.get_modpack_dir() / '9999_BCML' / 'content' / \
+            'Pack' / f'Bootup_{lang}.pack'
+        with boot_path.open('rb') as bf:
+            bootup_sarc = sarc.read_file_and_make_sarc(bf)
+        msg_bytes = wszst_yaz0.decompress(
+            bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
+        msg_rstb = rstb.SizeCalculator().calculate_file_size_with_ext(msg_bytes, True, '.sarc')
         table.set_size(f'Message/Msg_{lang}.product.sarc', msg_rstb)
 
 
