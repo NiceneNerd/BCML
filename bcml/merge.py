@@ -28,6 +28,7 @@ from diff_match_patch import diff_match_patch
 def _aamp_diff(base: Union[ParameterIO, ParameterList],
                modded: Union[ParameterIO, ParameterList]) -> ParameterList:
     diffs = ParameterList()
+    diffs._crc32 = base._crc32
     for crc, plist in modded.lists.items():
         if crc not in base.lists:
             diffs.lists[crc] = plist
@@ -41,6 +42,7 @@ def _aamp_diff(base: Union[ParameterIO, ParameterList],
         else:
             base_obj = base.objects[crc]
             diff_obj = ParameterObject()
+            diff_obj._crc32 = base_obj._crc32
             changed = False
             for param, value in obj.params.items():
                 if param not in base_obj.params or value != base_obj.params[param]:
@@ -52,7 +54,7 @@ def _aamp_diff(base: Union[ParameterIO, ParameterList],
 
 
 def _aamp_merge(base: Union[ParameterIO, ParameterList],
-               modded: Union[ParameterIO, ParameterList]) -> ParameterIO:
+                modded: Union[ParameterIO, ParameterList]) -> ParameterIO:
     merged = deepcopy(base)
     for crc, plist in modded.lists.items():
         if crc not in base.lists:
@@ -90,7 +92,8 @@ def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
     if isinstance(file, str):
         nests = file.split('//')
         mod_bytes = util.get_nested_file_bytes(file)
-        ref_path = str(util.get_game_file(Path(nests[0]).relative_to(tmp_dir))) + '//' + '//'.join(nests[1:])
+        ref_path = str(util.get_game_file(
+            Path(nests[0]).relative_to(tmp_dir))) + '//' + '//'.join(nests[1:])
         ref_bytes = util.get_nested_file_bytes(ref_path)
     else:
         with file.open('rb') as mf:
@@ -108,7 +111,8 @@ def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
 
 def get_deepmerge_mods() -> List[BcmlMod]:
     """ Gets a list of all installed mods that use deep merge """
-    dmods = [mod for mod in util.get_installed_mods() if (mod.path / 'logs' / 'deepmerge.yml').exists()]
+    dmods = [mod for mod in util.get_installed_mods() if (
+        mod.path / 'logs' / 'deepmerge.yml').exists()]
     return sorted(dmods, key=lambda mod: mod.priority)
 
 
@@ -130,9 +134,6 @@ def get_deepmerge_diffs() -> dict:
                 if file not in aamp_diffs:
                     aamp_diffs[file] = []
                 aamp_diffs[file].append(mod_diffs[file])
-    for file, items in list(aamp_diffs.items()):
-        if len(items) < 2:
-            del aamp_diffs[file]
     return aamp_diffs
 
 
@@ -140,7 +141,8 @@ def consolidate_diff_files(diffs: dict) -> dict:
     """ Consolidates the files which need to be deep merged to avoid any need to repeatedly open the same files. """
     consolidated_diffs = {}
     for file, diff_list in diffs.items():
-        nest = reduce(lambda res, cur: {cur: res}, reversed(file.split("//")), diff_list)
+        nest = reduce(lambda res, cur: {cur: res}, reversed(
+            file.split("//")), diff_list)
         util.dict_merge(consolidated_diffs, nest)
     return consolidated_diffs
 
@@ -172,25 +174,29 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                 failure[file + '//' + failure] = sub_failures[failure]
             del sub_sarc
             new_bytes = new_sub_sarc.get_bytes()
-            new_sarc.add_file(file, new_bytes if not yazd else wszst_yaz0.compress(new_bytes))
+            new_sarc.add_file(
+                file, new_bytes if not yazd else wszst_yaz0.compress(new_bytes))
 
         elif isinstance(stuff, list):
-            try:
-                if file_bytes[0:4] == b'AAMP':
-                    aamp_contents = aamp.Reader(file_bytes).parse()
-                    for change in stuff:
-                        aamp_contents = _aamp_merge(aamp_contents, change)
-                    aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
-                    del aamp_contents
-                    new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(aamp_bytes)
-                else:
-                    raise ValueError('Wait, what the heck, this isn\'t an AAMP file?!')
-            except:
-                new_bytes = pack.get_file_data(file).tobytes()
-                print(f'Deep merging {file} failed. No changed were made.')
+            if len(stuff) > 1:
+                try:
+                    if file_bytes[0:4] == b'AAMP':
+                        aamp_contents = aamp.Reader(file_bytes).parse()
+                        for change in stuff:
+                            aamp_contents = _aamp_merge(aamp_contents, change)
+                        aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
+                        del aamp_contents
+                        new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
+                            aamp_bytes)
+                    else:
+                        raise ValueError(
+                            'Wait, what the heck, this isn\'t an AAMP file?!')
+                except:
+                    new_bytes = pack.get_file_data(file).tobytes()
+                    print(f'Deep merging {file} failed. No changed were made.')
 
-            new_sarc.delete_file(file)
-            new_sarc.add_file(file, new_bytes)
+                new_sarc.delete_file(file)
+                new_sarc.add_file(file, new_bytes)
     return new_sarc, failures
 
 
@@ -212,6 +218,8 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
     yaml_util.add_constructors(loader)
 
     base_file = util.get_game_file(file, file.startswith('aoc'))
+    if (util.get_master_modpack_dir() / file).exists():
+        base_file = util.get_master_modpack_dir() / file
     file_ext = os.path.splitext(file)[1]
     if file_ext in util.SARC_EXTS and (util.get_master_modpack_dir() / file).exists():
         base_file = (util.get_master_modpack_dir() / file)
@@ -236,7 +244,8 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
                     aamp_contents = _aamp_merge(aamp_contents, change)
                 aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                 del aamp_contents
-                new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(aamp_bytes)
+                new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
+                    aamp_bytes)
             else:
                 raise ValueError(f'{file} is not a SARC or AAMP file.')
         except:
@@ -287,29 +296,30 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False):
     print('Updating RSTB...')
     modded_files = install.find_modded_files(util.get_master_modpack_dir())[0]
     sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(
-            file, '*Bootup_????.pack')]
+        file, '*Bootup_????.pack')]
     modded_sarc_files = {}
-    for file in sarc_files:
-        with Path(util.get_master_modpack_dir() / modded_files[file]['path']).open('rb') as sf:
-            mod_sarc = sarc.read_file_and_make_sarc(sf)
-        if not mod_sarc:
-            print(f'Skipped broken pack {file}')
-            return {}, [], {}
-        modded_sarcs = install.find_modded_sarc_files(mod_sarc, modded_files[file]['path'],
-                                    tmp_dir=util.get_master_modpack_dir(),
-                                    aoc=('aoc' in file.lower()))[0]
-        modded_sarc_files.update(modded_sarcs)
+    if len(sarc_files) > 0:
+        num_threads = min(len(sarc_files), multiprocessing.cpu_count())
+        p = multiprocessing.Pool(processes=num_threads)
+        thread_sarc_search = partial(install.threaded_find_modded_sarc_files, modded_files=modded_files,
+                                     tmp_dir=util.get_master_modpack_dir(), deep_merge=False, verbose=verbose)
+        results = p.map(thread_sarc_search, sarc_files)
+        p.close()
+        p.join()
+        for result in results:
+            modded_sarcs, sarc_changes, nested_diffs = result
+            if len(modded_sarcs) > 0:
+                modded_sarc_files.update(modded_sarcs)
     (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with Path(util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w') as rf:
         rf.write('name,rstb\n')
         modded_files.update(modded_sarc_files)
         for file in modded_files:
             ext = os.path.splitext(file)[1]
-            if ext not in ['.pack', '.bgdata', '.txt', '.bgsvdata', 'data.sarc', '.bat', '.ini', '.png'] \
-                    and 'ActorInfo' not in file:
+            if ext not in install.RSTB_EXCLUDE and 'ActorInfo' not in file:
                 rf.write('{},{},{}\n'
-                            .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
-                            )
+                         .format(file, modded_files[file]["rstb"], str(modded_files[file]["path"]).replace('\\', '/'))
+                         )
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
 

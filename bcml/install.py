@@ -25,6 +25,10 @@ from bcml import pack, texts, util, data, merge, rstable
 from bcml.util import BcmlMod
 
 
+RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata',
+                '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
+
+
 def open_mod(path: Path) -> Path:
     """
     Extracts a provided mod and returns the root path of the graphicpack inside
@@ -191,7 +195,7 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                 path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
                 try:
                     aamp_diffs[modded_files[canon]['path']
-                                  ] = merge.get_aamp_diff(path, tmp_dir)
+                               ] = merge.get_aamp_diff(path, tmp_dir)
                 except (FileNotFoundError, KeyError, ValueError):
                     pass
         else:
@@ -422,8 +426,6 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
     if not logs.exists():
         print('Saving logs...')
-        RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata',
-                        '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
         (mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
         with Path(mod_dir / 'logs' / 'rstb.log').open('w') as rf:
             rf.write('name,rstb\n')

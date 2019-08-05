@@ -103,7 +103,7 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     """
     hashes = util.get_hash_table()
     sarc_log = []
-    sarc_list = sorted(sarc_list, key=itemgetter('priority'))
+    sarc_list = sorted(sarc_list, key=lambda pack: pack['priority'])
     new_sarc = sarc.make_writer_from_sarc(sarc_list[-1]['pack'])
     output_spaces = '  ' * sarc_list[-1]['nest_level']
 
@@ -193,7 +193,10 @@ def threaded_merge_sarcs(pack, modded_sarcs, verbose):
     new_sarc, log = merge_sarcs(versions, verbose)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as of:
-        new_sarc.write(of)
+        if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
+            of.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+        else:
+            new_sarc.write(of)
     return log
 
 
