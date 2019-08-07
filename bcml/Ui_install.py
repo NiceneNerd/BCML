@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui',
 # licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui' applies.
 #
-# Created: Wed Jul 31 11:53:16 2019
+# Created: Tue Aug  6 06:13:01 2019
 #      by: pyside2-uic  running on PySide2 5.12.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -90,9 +90,9 @@ class Ui_InstallDialog(object):
         self.chkDisableGamedata = QtWidgets.QCheckBox(self.groupBox)
         self.chkDisableGamedata.setObjectName("chkDisableGamedata")
         self.verticalLayout_2.addWidget(self.chkDisableGamedata)
-        self.chkDisableSavedata = QtWidgets.QCheckBox(self.groupBox)
-        self.chkDisableSavedata.setObjectName("chkDisableSavedata")
-        self.verticalLayout_2.addWidget(self.chkDisableSavedata)
+        self.chkDisableMap = QtWidgets.QCheckBox(self.groupBox)
+        self.chkDisableMap.setObjectName("chkDisableMap")
+        self.verticalLayout_2.addWidget(self.chkDisableMap)
         self.verticalLayout.addWidget(self.groupBox)
         self.buttonBox = QtWidgets.QDialogButtonBox(InstallDialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -117,11 +117,11 @@ class Ui_InstallDialog(object):
         self.groupBox.setTitle(QtWidgets.QApplication.translate("InstallDialog", "Advanced Install Options", None, -1))
         self.chkRstbShrink.setText(QtWidgets.QApplication.translate("InstallDialog", "Shrink RSTB values where possible", None, -1))
         self.chkEnableDeepMerge.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge (experimental)", None, -1))
-        self.label_2.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might also potentially cause unexpected bugs or issues. ", None, -1))
+        self.label_2.setText(QtWidgets.QApplication.translate("InstallDialog", "Deep merge attempts to merge changes made to individual files of certain kinds. This can be a powerful tool to resolve conflicts but can also potentially cause unexpected bugs or issues. ", None, -1))
         self.chkRstbLeave.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t remove complex RSTB entries", None, -1))
         self.chkDisablePack.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge pack files", None, -1))
         self.chkDisableTexts.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge game texts", None, -1))
         self.chkDisableActorInfo.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge actor info", None, -1))
-        self.chkDisableGamedata.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge game data", None, -1))
-        self.chkDisableSavedata.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge save data", None, -1))
+        self.chkDisableGamedata.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge game/save data", None, -1))
+        self.chkDisableMap.setText(QtWidgets.QApplication.translate("InstallDialog", "Don\'t merge map units", None, -1))
 

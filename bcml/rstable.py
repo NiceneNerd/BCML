@@ -34,13 +34,13 @@ def calculate_size(path: Path) -> int:
         return 0
 
 
-def get_mod_rstb_values(mod: Union[Path, str, BcmlMod]) -> {}:
+def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = 'rstb.log') -> {}:
     """ Gets all of the RSTB values for a given mod """
     path = mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
     changes = {}
     leave = (path / 'logs' / '.leave').exists()
     shrink = (path / 'logs' / '.shrink').exists()
-    with (path / 'logs' / 'rstb.log').open('r') as lf:
+    with (path / 'logs' / log_name).open('r') as lf:
         log_loop = csv.reader(lf)
         for row in log_loop:
             if row[0] != 'name':
@@ -104,8 +104,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
                     continue
             elif newsize > oldsize:
                 table.set_size(change, newsize)
-                if verbose:
-                    change_list.append((f'{d}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
+                change_list.append((f'{d}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
                 change_count['updated'] += 1
         else:
             newsize = int(changes[change]['size'])
@@ -131,6 +130,8 @@ def generate_master_rstb(verbose: bool = False):
         rstb_values.update(get_mod_rstb_values(mod))
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir()))
+    if (util.get_master_modpack_dir() / 'logs' / 'map.log').exists():
+        rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir(), log_name='map.log'))
 
     rstb_changes = merge_rstb(table, rstb_values, verbose)
     for change in rstb_changes:

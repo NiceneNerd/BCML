@@ -265,7 +265,10 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
 
 def get_master_modpack_dir() -> Path:
     """ Gets the directory for the BCML master graphicpack """
-    return get_modpack_dir() / '9999_BCML'
+    master = get_modpack_dir() / '9999_BCML'
+    if not master.exists():
+        create_bcml_graphicpack_if_needed()
+    return master
 
 
 def get_hash_table() -> {}:
@@ -327,6 +330,13 @@ def is_actorinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
     path = mod.path if isinstance(mod, BcmlMod) else Path(
         mod) if isinstance(mod, str) else mod
     return (path / 'logs' / 'actorinfo.yml').exists()
+
+
+def is_map_mod(mod: Union[Path, BcmlMod, str]) -> bool:
+    """ Checks whether a mod affects map merging """
+    path = mod.path if isinstance(mod, BcmlMod) else Path(
+        mod) if isinstance(mod, str) else mod
+    return (path / 'logs' / 'map.yml').exists()
 
 
 def is_deepmerge_mod(mod: Union[Path, BcmlMod, str]) -> bool:
@@ -497,9 +507,9 @@ def update_bcml():
 
 def create_bcml_graphicpack_if_needed():
     bcml_mod_dir = get_master_modpack_dir()
-    if not bcml_mod_dir.exists():
-        bcml_mod_dir.mkdir(parents=True, exist_ok=True)
-        rules = bcml_mod_dir / 'rules.txt'
+    bcml_mod_dir.mkdir(parents=True, exist_ok=True)
+    rules = bcml_mod_dir / 'rules.txt'
+    if not rules.exists():
         with rules.open('w') as rf:
             rf.write('[Definition]\n'
                      'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'

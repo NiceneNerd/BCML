@@ -21,11 +21,11 @@ import xxhash
 import yaml
 from byml import yaml_util
 
-from bcml import pack, texts, util, data, merge, rstable
+from bcml import pack, texts, util, data, merge, rstable, mubin
 from bcml.util import BcmlMod
 
 
-RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata',
+RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata', '.yml',
                 '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
 
 
@@ -101,6 +101,11 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
         'Resource' / 'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
         rstb_path.unlink()
+    aoc_field = tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
+    if aoc_field.exists() and aoc_field.stat().st_size > 0:
+        with aoc_field.open('rb') as af:
+            sarc.read_file_and_make_sarc(af).extract_to_dir(str(tmp_dir / 'aoc' / '0010'))
+        aoc_field.write_bytes(b'')
     for file in tmp_dir.rglob('**/*'):
         if file.is_file():
             canon = util.get_canon_name(file.relative_to(tmp_dir).as_posix())
@@ -121,6 +126,8 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                     aamps_to_diff.append(
                         (file.relative_to(tmp_dir).as_posix(), file))
             else:
+                if 'Aoc/0010/Map/MainField' in canon:
+                    file.unlink()
                 if verbose:
                     log.append(f'Ignored unmodded file {canon}')
                 continue
@@ -256,8 +263,8 @@ def refresh_cemu_mods():
 
 def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_texts: bool = False,
                 no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
-                leave_rstb: bool = False, shrink_rstb: bool = False, wait_merge: bool = False,
-                deep_merge: bool = False):
+                no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
+                wait_merge: bool = False, deep_merge: bool = False):
     """
     Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
 
@@ -276,13 +283,15 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     :type no_savedata: bool, optional
     :param no_actorinfo: Do not attempt to merge actor info, defaults to False.
     :type no_actorinfo: bool, optional
+    :param no_map: Do not attempt to merge map units, defaults to False.
+    :type no_map: bool, optional
     :param leave_rstb: Do not remove RSTB entries when the proper value can't be calculated, defaults to False.
     :type leave_rstb: bool, optional
     :param shrink_rstb: Shrink RSTB values where possible, defaults to False.
     :type shrink_rstb: bool, optional
     :param wait_merge: Install mod and log changes, but wait to run merge manually, defaults to False.
     :type wait_merge: bool, optional
-    :param deep_merge: Attempt to merge changes within individual files, defaults to False.
+    :param deep_merge: Attempt to merge changes within individual AAMP files, defaults to False.
     :type deep_merge: bool, optional
     """
     if type(mod) is str:
@@ -313,6 +322,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         no_gamedata = no_gamedata or (not (logs / 'gamedata.yml').exists())
         no_savedata = no_savedata or (not (logs / 'savedata.yml').exists())
         no_actorinfo = no_actorinfo or (not (logs / 'actorinfo.yml').exists())
+        no_map = no_map or (not (logs / 'map.yml').exists())
+        deep_merge = (logs / 'deepmerge.yml').exists()
         if not no_texts:
             text_mods = texts.get_modded_languages(tmp_dir)
             is_text_mod = len(text_mods) > 0
@@ -410,6 +421,10 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         else:
             no_savedata = True
 
+        modded_mubins = [str(file['path']) for canon, file in modded_files.items() if fnmatch(Path(canon).name, '[A-Z]-[0-9]_*.mubin')]
+        if len(modded_mubins) > 0:
+            mubin.log_modded_texts(tmp_dir, modded_mubins)
+
         if deep_merge:
             deep_merge = len(aamp_diffs) > 0
 
@@ -441,8 +456,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             with Path(mod_dir / 'logs' / 'packs.log').open('w') as pf:
                 pf.write('name,path\n')
                 for file in modded_files:
-                    ext = os.path.splitext(file)[1]
-                    if ext in util.SARC_EXTS and not modded_files[file]['nested']:
+                    name, ext = os.path.splitext(file)
+                    if ext in util.SARC_EXTS and not modded_files[file]['nested'] and not name.startswith('Dungeon'):
                         pf.write(f'{file},{modded_files[file]["path"]}\n')
 
         if is_text_mod:
@@ -509,6 +524,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             data.merge_savedata(verbose)
         if not no_actorinfo:
             data.merge_actorinfo(verbose)
+        if not no_map:
+            mubin.merge_maps()
         if deep_merge:
             merge.deep_merge(verbose)
         if not deep_merge:
@@ -538,6 +555,7 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
     gamedata_mod = util.is_gamedata_mod(path)
     savedata_mod = util.is_savedata_mod(path)
     actorinfo_mod = util.is_actorinfo_mod(path)
+    map_mod = util.is_map_mod(path)
     deepmerge_mod = util.is_deepmerge_mod(path)
 
     shutil.rmtree(str(path))
@@ -566,6 +584,8 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
             data.merge_savedata(verbose)
         if actorinfo_mod:
             data.merge_actorinfo(verbose)
+        if map_mod:
+            mubin.merge_maps()
         if deepmerge_mod:
             merge.deep_merge(verbose)
     print(f'{mod_name} has been uninstalled.')
@@ -597,6 +617,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
     remerge_gamedata = util.is_gamedata_mod(path)
     remerge_savedata = util.is_savedata_mod(path)
     remerge_actorinfo = util.is_actorinfo_mod(path)
+    remerge_map = util.is_map_mod(path)
     deepmerge = util.is_deepmerge_mod(path)
     print('Resorting other affected mods...')
     for mod in mods:
@@ -614,6 +635,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             remerge_actorinfo = util.is_actorinfo_mod(mod) or remerge_actorinfo
             remerge_gamedata = util.is_gamedata_mod(mod) or remerge_gamedata
             remerge_savedata = util.is_savedata_mod(mod) or remerge_savedata
+            remerge_map = util.is_map_mod(mod) or remerge_map
             deepmerge = util.is_deepmerge_mod(mod) or deepmerge
             for lang in texts.get_modded_languages(mod.path):
                 if lang not in remerge_texts:
@@ -663,6 +685,13 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Actor info merges affected, remerging actor info...')
             data.merge_actorinfo(verbose)
             print()
+    if remerge_map:
+        if wait_merge:
+            print('Map merges affected, will need to remerge later')
+        else:
+            print('Map merges affected, remerging map units...')
+            mubin.merge_maps()
+            print()
     if deepmerge:
         if wait_merge:
             print('Deep merge affected, will need to remerge later')
@@ -687,6 +716,11 @@ def refresh_merges(verbose: bool = False):
     :type verbose: bool, optional
     """
     print('Refreshing merged mods...')
+    if not (util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.product.srsizetable').exists():
+        (util.get_master_modpack_dir() / 'content' / 'System' /
+         'Resource').mkdir(parents=True, exist_ok=True)
+        shutil.copy(str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')), str(
+            (util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.product.srsizetable')))
     pack.merge_installed_packs(verbose)
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
@@ -694,5 +728,6 @@ def refresh_merges(verbose: bool = False):
     data.merge_gamedata(verbose)
     data.merge_savedata(verbose)
     data.merge_actorinfo(verbose)
+    mubin.merge_maps(verbose)
     merge.deep_merge(verbose, wait_rstb=True)
     rstable.generate_master_rstb(verbose)

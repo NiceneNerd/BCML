@@ -21,7 +21,8 @@ def get_pack_mods() -> List[BcmlMod]:
     :return: Returns a list of mods that modify pack files
     :rtype: list of :class:`bcml.util.BcmlMod`
     """
-    pmods = [mod for mod in util.get_installed_mods() if (mod.path / 'logs' / 'packs.log').exists()]
+    pmods = [mod for mod in util.get_installed_mods() if (
+        mod.path / 'logs' / 'packs.log').exists()]
     return sorted(pmods, key=lambda mod: mod.priority)
 
 
@@ -47,7 +48,7 @@ def get_modded_sarcs() -> dict:
                     'path': filepath,
                     'rel_path': str(row[1]),
                     'priority': mod.priority
-                    })
+                })
     return packs
 
 
@@ -117,7 +118,8 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         for file in pack.list_files():
             rfile = file.replace('.s', '.')
             if rfile in hashes:
-                fdata = util.unyaz_if_needed(pack.get_file_data(file).tobytes())
+                fdata = util.unyaz_if_needed(
+                    pack.get_file_data(file).tobytes())
                 if util.is_file_modded(rfile, fdata, hashes):
                     ext = os.path.splitext(rfile)[1]
                     if ext in util.SARC_EXTS:
@@ -127,11 +129,11 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
                             modded_files[file] = priority
                             continue
                         modded_sarc = {
-                                'pack': nest_pack,
-                                'priority': priority,
-                                'nest_level': sarc_list[-1]['nest_level'] + 1,
-                                'name': rfile
-                            }
+                            'pack': nest_pack,
+                            'priority': priority,
+                            'nest_level': sarc_list[-1]['nest_level'] + 1,
+                            'name': rfile
+                        }
                         can_skip = False
                         if file not in modded_sarcs:
                             modded_sarcs[file] = []
@@ -150,7 +152,8 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     for modded_file in modded_files.keys():
         if modded_file in sarc_list[-1]['pack'].list_files():
             new_sarc.delete_file(modded_file)
-        p = filter(lambda x: x['priority'] == modded_files[modded_file], sarc_list).__next__()
+        p = filter(lambda x: x['priority'] ==
+                   modded_files[modded_file], sarc_list).__next__()
         new_data = p['pack'].get_file_data(modded_file).tobytes()
         new_sarc.add_file(modded_file, new_data)
         if verbose:
@@ -165,7 +168,7 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         merged_sarcs.append({
             'file': mod_sarc_list,
             'pack': new_pack
-            })
+        })
 
     for merged_sarc in merged_sarcs:
         new_sarc.delete_file(merged_sarc['file'])
@@ -180,15 +183,18 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
 
     if sarc_list[-1]['nest_level'] > 1:
         if verbose:
-            sarc_log.append(f'{output_spaces[4:]}Updated nested pack {sarc_list[-1]["name"]}')
-    
+            sarc_log.append(
+                f'{output_spaces[4:]}Updated nested pack {sarc_list[-1]["name"]}')
+
     if verbose:
-        sarc_log.append(f'{output_spaces[4:]}Merged {len(sarc_list)} versions of {sarc_list[-1]["name"]}')
+        sarc_log.append(
+            f'{output_spaces[4:]}Merged {len(sarc_list)} versions of {sarc_list[-1]["name"]}')
     return new_sarc, sarc_log
 
 
 def threaded_merge_sarcs(pack, modded_sarcs, verbose):
-    output_path = Path(util.get_master_modpack_dir() / modded_sarcs[pack][0]['rel_path'])
+    output_path = Path(util.get_master_modpack_dir() /
+                       modded_sarcs[pack][0]['rel_path'])
     versions = get_sarc_versions(pack, modded_sarcs)
     new_sarc, log = merge_sarcs(versions, verbose)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -213,30 +219,31 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     bcml_dir = util.get_master_modpack_dir()
     if (bcml_dir / 'aoc').exists():
         print('Cleaning old aoc packs...')
-        shutil.rmtree(str(bcml_dir / 'aoc'))
+        for file in (bcml_dir / 'aoc').rglob('**/*'):
+            if file.is_file() and file.suffix in util.SARC_EXTS:
+                file.unlink()
     if (bcml_dir / 'content').exists():
         print('Cleaning old content packs...')
-        for subdir in (bcml_dir / 'content').glob('*'):
-            if subdir.stem not in ['System', 'Pack']:
-                shutil.rmtree(str(subdir))
-            if subdir.stem == 'Pack':
-                for pack in subdir.glob('*'):
-                    if 'Bootup_' not in pack.stem:
-                        pack.unlink()
+        for file in (bcml_dir / 'content').rglob('**/*'):
+            if file.is_file() and file.suffix in util.SARC_EXTS and 'Bootup_' not in file.stem:
+                file.unlink()
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
     print(f'Processing {len(modded_sarcs)} packs...')
-    sarcs_to_merge = [pack for pack in modded_sarcs if len(modded_sarcs[pack]) > 1]
+    sarcs_to_merge = [
+        pack for pack in modded_sarcs if len(modded_sarcs[pack]) > 1]
     if len(sarcs_to_merge) > 0:
-        partial_thread_merge = partial(threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
+        partial_thread_merge = partial(
+            threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
         num_threads = min(cpu_count() // 2, len(modded_sarcs))
         p = Pool(processes=num_threads)
         results = p.map(partial_thread_merge, sarcs_to_merge)
         p.close()
         p.join()
         logs = [log for sublog in results for log in sublog]
-        log_count = len([log for log in logs if log != 'No merges necessary, skipping'])
+        log_count = len([log for log in logs if log !=
+                         'No merges necessary, skipping'])
     else:
         log_count = 0
     print(f'Pack merging complete. Merged {log_count} packs.')

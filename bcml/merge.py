@@ -134,6 +134,9 @@ def get_deepmerge_diffs() -> dict:
                 if file not in aamp_diffs:
                     aamp_diffs[file] = []
                 aamp_diffs[file].append(mod_diffs[file])
+    for file, diffs in list(aamp_diffs.items()):
+        if len(diffs) < 2:
+            del aamp_diffs[file]
     return aamp_diffs
 
 
@@ -178,25 +181,24 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                 file, new_bytes if not yazd else wszst_yaz0.compress(new_bytes))
 
         elif isinstance(stuff, list):
-            if len(stuff) > 1:
-                try:
-                    if file_bytes[0:4] == b'AAMP':
-                        aamp_contents = aamp.Reader(file_bytes).parse()
-                        for change in stuff:
-                            aamp_contents = _aamp_merge(aamp_contents, change)
-                        aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
-                        del aamp_contents
-                        new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
-                            aamp_bytes)
-                    else:
-                        raise ValueError(
-                            'Wait, what the heck, this isn\'t an AAMP file?!')
-                except:
-                    new_bytes = pack.get_file_data(file).tobytes()
-                    print(f'Deep merging {file} failed. No changed were made.')
+            try:
+                if file_bytes[0:4] == b'AAMP':
+                    aamp_contents = aamp.Reader(file_bytes).parse()
+                    for change in stuff:
+                        aamp_contents = _aamp_merge(aamp_contents, change)
+                    aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
+                    del aamp_contents
+                    new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
+                        aamp_bytes)
+                else:
+                    raise ValueError(
+                        'Wait, what the heck, this isn\'t an AAMP file?!')
+            except:
+                new_bytes = pack.get_file_data(file).tobytes()
+                print(f'Deep merging {file} failed. No changed were made.')
 
-                new_sarc.delete_file(file)
-                new_sarc.add_file(file, new_bytes)
+            new_sarc.delete_file(file)
+            new_sarc.add_file(file, new_bytes)
     return new_sarc, failures
 
 

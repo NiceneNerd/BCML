@@ -12,7 +12,7 @@ from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
 
-from bcml import data, install, merge, pack, rstable, texts, util
+from bcml import data, install, merge, pack, rstable, texts, util, mubin
 from bcml.Ui_about import Ui_AboutDialog
 from bcml.Ui_install import Ui_InstallDialog
 from bcml.Ui_main import Ui_MainWindow
@@ -298,6 +298,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     no_gamedata=result.no_gamedata,
                     no_savedata=result.no_savedata,
                     no_actorinfo=result.no_actorinfo,
+                    no_map=result.no_map,
                     leave_rstb=result.leave,
                     shrink_rstb=result.shrink,
                     wait_merge=True if len(result.paths) > 1 else False,
@@ -308,6 +309,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 fix_gamedata = False
                 fix_savedata = False
                 fix_actorinfo = False
+                fix_map = False
                 fix_deepmerge = False
                 fix_texts = []
                 for mod in mods:
@@ -315,6 +317,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                     fix_savedata = fix_savedata or util.is_savedata_mod(mod)
                     fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                    fix_map = fix_map or util.is_map_mod(mod)
                     fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
                     for lang in texts.get_modded_languages(mod.path):
                         if lang not in fix_texts:
@@ -329,6 +332,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     data.merge_savedata()
                 if fix_actorinfo:
                     data.merge_actorinfo()
+                if fix_map:
+                    mubin.merge_maps()
                 if fix_deepmerge:
                     merge.deep_merge()
                 for lang in fix_texts:
@@ -348,6 +353,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
+            fix_map = False
             fix_deepmerge = False
             fix_texts = []
             mods_to_change = []
@@ -360,6 +366,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                     fix_savedata = fix_savedata or util.is_savedata_mod(mod)
                     fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                    fix_map = fix_map or util.is_map_mod(mod)
                     fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
                     for lang in texts.get_modded_languages(mod.path):
                         if lang not in fix_texts:
@@ -384,6 +391,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_savedata()
             if fix_actorinfo:
                 data.merge_actorinfo()
+            if fix_map:
+                mubin.merge_maps()
             if fix_deepmerge:
                 merge.deep_merge()
             for lang in fix_texts:
@@ -444,6 +453,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
+            fix_map = False
             fix_deepmerge = False
             fix_texts = []
             for mod in mods:
@@ -451,6 +461,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                 fix_savedata = fix_savedata or util.is_savedata_mod(mod)
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                fix_map = fix_map or util.is_map_mod(mod)
                 fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
                 for lang in texts.get_modded_languages(mod.path):
                     if lang not in fix_texts:
@@ -467,6 +478,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_savedata()
             if fix_actorinfo:
                 data.merge_actorinfo()
+            if fix_map:
+                mubin.merge_maps()
             if fix_deepmerge:
                 merge.deep_merge()
             for lang in fix_texts:
@@ -551,8 +564,9 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisablePack.isChecked(),
                 self.chkDisableTexts.isChecked(),
                 self.chkDisableGamedata.isChecked(),
-                self.chkDisableSavedata.isChecked(),
+                self.chkDisableGamedata.isChecked(),
                 self.chkDisableActorInfo.isChecked(),
+                self.chkDisableMap.isChecked(),
                 self.chkEnableDeepMerge.isChecked()
             )
         else:
@@ -693,7 +707,7 @@ class ThreadSignal(QtCore.QObject):
 # Main
 
 InstallResult = namedtuple(
-    'InstallResult', 'paths leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo deep_merge')
+    'InstallResult', 'paths leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo no_map deep_merge')
 
 
 def main():

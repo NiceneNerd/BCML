@@ -70,7 +70,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     """
     if not bootup_path:
         installed_bootups = list(util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
-        bootup_path = installed_bootups[len(installed_bootups) - 1] if len(installed_bootups) > 0 \
+        bootup_path = installed_bootups[-1] if len(installed_bootups) > 0 \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as bf:
         bootup_pack = sarc.read_file_and_make_sarc(bf)
@@ -78,6 +78,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
     new_pack.add_file('GameData/gamedata.ssarc', wszst_yaz0.compress(gamedata_bytes))
+    (util.get_master_modpack_dir() / 'content' / 'Pack').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
         new_pack.write(bf)
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
@@ -370,7 +371,7 @@ def merge_savedata(verbose: bool = False):
         print('No gamedata merging necessary.')
         if slog_path.exists():
             slog_path.unlink()
-            (util.get_master_modpack_dir() / 'logs' / 'savedataformat.sarc').unlink()
+            (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').unlink()
         return
     if slog_path.exists():
         with slog_path.open('r') as lf:
