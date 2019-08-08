@@ -506,7 +506,7 @@ def update_bcml():
 
 
 def create_bcml_graphicpack_if_needed():
-    bcml_mod_dir = get_master_modpack_dir()
+    bcml_mod_dir = get_modpack_dir() / '9999_BCML'
     bcml_mod_dir.mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / 'rules.txt'
     if not rules.exists():
