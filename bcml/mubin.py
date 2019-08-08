@@ -177,16 +177,22 @@ def log_modded_texts(tmp_dir: Path, modded_mubins: List[str]):
 
 
 def merge_maps(verbose: bool = False):
-    aoc_pack = util.get_game_file('Pack/AocMainField.pack', aoc=True)
-    if aoc_pack.stat().st_size > 0:
+    aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
+    if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
         print('Emptying AocMainField.pack...')
         aoc_pack.write_bytes(b'')
     shutil.rmtree(str(util.get_master_modpack_dir() /
                       'aoc' / '0010' / 'Map' / 'MainField'), ignore_errors=True)
     shutil.rmtree(str(util.get_master_modpack_dir() /
                       'content' / 'Map' / 'MainField'), ignore_errors=True)
+    log_path = util.get_master_modpack_dir() / 'logs' / 'map.log'
+    if log_path.exists():
+        log_path.unlink()
     print('Loading map mods...')
     map_diffs = get_all_map_diffs()
+    if len(map_diffs) == 0:
+        print('No map merge necessary')
+        return
 
     rstb_vals = {}
     rstb_calc = rstb.SizeCalculator()
@@ -235,7 +241,6 @@ def merge_maps(verbose: bool = False):
         del base_bytes
 
     print('Adjusting RSTB...')
-    log_path = util.get_master_modpack_dir() / 'logs' / 'map.log'
     with log_path.open('w') as lf:
         for canon, val in rstb_vals.items():
             lf.write(f'{canon},{val}\n')
