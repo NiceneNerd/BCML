@@ -266,7 +266,7 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
 def get_master_modpack_dir() -> Path:
     """ Gets the directory for the BCML master graphicpack """
     master = get_modpack_dir() / '9999_BCML'
-    if not master.exists():
+    if not (master / 'rules.txt').exists():
         create_bcml_graphicpack_if_needed()
     return master
 
