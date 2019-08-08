@@ -180,6 +180,7 @@ def merge_maps(verbose: bool = False):
     aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
     if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
         print('Emptying AocMainField.pack...')
+        aoc_pack.parent.mkdir(parents=True, exist_ok=True)
         aoc_pack.write_bytes(b'')
     shutil.rmtree(str(util.get_master_modpack_dir() /
                       'aoc' / '0010' / 'Map' / 'MainField'), ignore_errors=True)
