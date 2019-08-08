@@ -71,11 +71,11 @@ Advanced options should not be necessary for most mods. However, there are a few
 
 *Merge Options*
 
-By default, BCML will attempt to merge changes between mods for modified pack files, game texts, actor info, game data, and save data. All of these can be disabled if you know you don't need them for a particular mod or group of mods.
+By default, BCML will attempt to merge changes between mods for modified pack files, game texts, actor info, game data, and data, and main field maps. All of these can be disabled if you know you don't need them for a particular mod or group of mods.
 
 *Deep Merge*
 
-Deep merge is an optional, experimental feature which attempts to merge changes made to individual files of certain kinds (BYML and AAMP). This can be a powerful tool to resolve conflicts but can in some cases cause unexpected bugs.
+Deep merge is an optional, experimental feature which attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might in some cases cause unexpected bugs.
 
 ### Managing Mods
 
@@ -92,6 +92,11 @@ When conflicts between mods cannot be fully resolved, one of them must take prio
 The load order can be changed simply by dragging and dropping mods in the mod list. By default, mods are sorted from *highest* to *lowest* priority, i.e. mods on the top of the list override mods beneath them. However, since some people prefer the reverse convention (used, for example, by Nexus Mod Manager), you can toggle the mod display order in BCML by clicking the arrow above the mod list.
 
 If you change the load order, you will need to click the "Apply Sort" button for BCML to process and merge any relevant changes.
+
+*Load Order Tips*
+* In general, complex mods should take priority over simple ones. For example, as I am writing this, Crafting Project is probably the most complex mod in use. It should therefore take very high priority.
+* In general, if one mod changes the appearance of an actor and the other changes its behavior or other parameters, the skin should take priority.
+* Any time a mod doesn't appear to work, you can try changing its place in your load order to fix it.
 
 **Uninstalling Mods**
 
@@ -136,7 +141,7 @@ By adding support for Quick Install, you can cut the time it takes to install yo
 
 ## Known Issues
 
-* Deep merge for BYML files is not very reliable and may break things.
+None yet, let me know
 
 ## License
 
