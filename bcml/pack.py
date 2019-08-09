@@ -109,9 +109,9 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     sarc_list = sorted(sarc_list, key=lambda pack: pack['priority'])
     try:
         base_sarc = next(iter([msarc['pack'] for msarc in sarc_list if msarc['base']]))
-        new_sarc = sarc.make_writer_from_sarc(base_sarc)
     except StopIteration:
-        new_sarc = sarc.make_writer_from_sarc(sarc_list[-1]['pack'])
+        base_sarc = sarc_list[-1]['pack']
+    new_sarc = sarc.make_writer_from_sarc(base_sarc)
     output_spaces = '  ' * sarc_list[-1]['nest_level']
 
     modded_files = {}
@@ -123,29 +123,29 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         priority = msarc['priority']
         for file in pack.list_files():
             rfile = file.replace('.s', '.')
-            if rfile in hashes:
-                fdata = util.unyaz_if_needed(
-                    pack.get_file_data(file).tobytes())
-                if util.is_file_modded(rfile, fdata, hashes):
-                    ext = os.path.splitext(rfile)[1]
-                    if ext in util.SARC_EXTS:
-                        try:
-                            nest_pack = sarc.SARC(fdata)
-                        except ValueError:
-                            modded_files[file] = priority
-                            continue
-                        modded_sarc = {
-                            'pack': nest_pack,
-                            'priority': priority,
-                            'nest_level': sarc_list[-1]['nest_level'] + 1,
-                            'name': rfile
-                        }
-                        can_skip = False
-                        if file not in modded_sarcs:
-                            modded_sarcs[file] = []
-                        modded_sarcs[file].append(modded_sarc)
-                    else:
+            fdata = util.unyaz_if_needed(
+                pack.get_file_data(file).tobytes())
+            if util.is_file_modded(rfile, fdata, count_new=True):
+                ext = os.path.splitext(rfile)[1]
+                if ext in util.SARC_EXTS:
+                    try:
+                        nest_pack = sarc.SARC(fdata)
+                    except ValueError:
                         modded_files[file] = priority
+                        continue
+                    modded_sarc = {
+                        'pack': nest_pack,
+                        'priority': priority,
+                        'nest_level': sarc_list[-1]['nest_level'] + 1,
+                        'name': rfile,
+                        'base': False
+                    }
+                    can_skip = False
+                    if file not in modded_sarcs:
+                        modded_sarcs[file] = []
+                    modded_sarcs[file].append(modded_sarc)
+                else:
+                    modded_files[file] = priority
 
     for modded_file in modded_files.keys():
         if not modded_files[modded_file] == priority:
@@ -156,7 +156,7 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         return new_sarc, sarc_log
 
     for modded_file in modded_files.keys():
-        if modded_file in sarc_list[-1]['pack'].list_files():
+        if modded_file in base_sarc.list_files():
             new_sarc.delete_file(modded_file)
         p = filter(lambda x: x['priority'] ==
                    modded_files[modded_file], sarc_list).__next__()
@@ -177,7 +177,8 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         })
 
     for merged_sarc in merged_sarcs:
-        new_sarc.delete_file(merged_sarc['file'])
+        if merged_sarc['file'] in base_sarc.list_files():
+            new_sarc.delete_file(merged_sarc['file'])
         new_stream = io.BytesIO()
         merged_sarc['pack'].write(new_stream)
         new_data = new_stream.getvalue()
