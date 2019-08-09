@@ -107,7 +107,11 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     hashes = util.get_hash_table()
     sarc_log = []
     sarc_list = sorted(sarc_list, key=lambda pack: pack['priority'])
-    new_sarc = sarc.make_writer_from_sarc(sarc_list[-1]['pack'])
+    try:
+        base_sarc = next(iter([msarc['pack'] for msarc in sarc_list if msarc['base']))
+        new_sarc = sarc.make_writer_from_sarc(base_sarc)
+    except StopIteration:
+        new_sarc = sarc.make_writer_from_sarc(sarc_list[-1]['pack'])
     output_spaces = '  ' * sarc_list[-1]['nest_level']
 
     modded_files = {}
