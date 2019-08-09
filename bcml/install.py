@@ -79,7 +79,7 @@ def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
     return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
 
 
-def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = False) -> (dict, list, dict):
+def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = False, guess: bool = False) -> (dict, list, dict):
     """
     Detects all of the modified files in an extracted mod
 
@@ -104,7 +104,8 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
     aoc_field = tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         with aoc_field.open('rb') as af:
-            sarc.read_file_and_make_sarc(af).extract_to_dir(str(tmp_dir / 'aoc' / '0010'))
+            sarc.read_file_and_make_sarc(af).extract_to_dir(
+                str(tmp_dir / 'aoc' / '0010'))
         aoc_field.write_bytes(b'')
     for file in tmp_dir.rglob('**/*'):
         if file.is_file():
@@ -115,9 +116,15 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                         f'Ignored unknown file {file.relative_to(tmp_dir).as_posix()}')
                 continue
             if util.is_file_modded(canon, file, True):
+                size = rstable.calculate_size(file)
+                if size == 0 and guess:
+                    if file.suffix in util.AAMP_EXTS:
+                        size = rstable.guess_aamp_size(file)
+                    elif file.suffix in ['.bfres', '.sbfres']:
+                        size = rstable.guess_bfres_size(file)
                 modded_files[canon] = {
                     'path': file.relative_to(tmp_dir),
-                    'rstb': rstable.calculate_size(file),
+                    'rstb': size,
                     'nested': False
                 }
                 if verbose:
@@ -145,7 +152,7 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
 
 
 def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: bool = False, nest_level: int = 0,
-                           deep_merge: bool = False, verbose: bool = False) -> (dict, list):
+                           deep_merge: bool = False, guess: bool = False, verbose: bool = False) -> (dict, list):
     """
     Detects all of the modified files in a SARC
 
@@ -177,6 +184,12 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
         contents = util.unyaz_if_needed(contents)
         if util.is_file_modded(canon, contents, True):
             rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(contents, True, ext)
+            if rstbsize == 0 and guess:
+                if ext in util.AAMP_EXTS:
+                    rstbsize = rstable.guess_aamp_size(contents, ext)
+                elif ext in ['.bfres', '.sbfres']:
+                    rstbsize = rstable.guess_bfres_size(
+                        contents, Path(canon).name)
             modded_files[canon] = {
                 'path': str(name).replace('\\', '/') + '//' + file,
                 'rstb': rstbsize,
@@ -194,7 +207,7 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
                                                                                    modded_files[canon]['path'],
                                                                                    tmp_dir=tmp_dir,
                                                                                    nest_level=nest_level + 1, aoc=aoc,
-                                                                                   verbose=verbose)
+                                                                                   verbose=verbose, guess=guess, deep_merge=deep_merge)
                 modded_files.update(sub_mod_files)
                 aamp_diffs.update(sub_mod_diffs)
                 log.extend(sub_mod_log)
@@ -212,7 +225,7 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
     return modded_files, log, aamp_diffs
 
 
-def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool, verbose: bool):
+def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool, verbose: bool, guess: bool = False):
     with Path(tmp_dir / modded_files[file]['path']).open('rb') as sf:
         mod_sarc = sarc.read_file_and_make_sarc(sf)
     if not mod_sarc:
@@ -221,7 +234,7 @@ def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path
     return find_modded_sarc_files(mod_sarc, modded_files[file]['path'],
                                   tmp_dir=tmp_dir,
                                   aoc=('aoc' in file.lower()),
-                                  verbose=verbose, deep_merge=deep_merge)
+                                  verbose=verbose, deep_merge=deep_merge, guess=guess)
 
 
 def refresh_cemu_mods():
@@ -264,7 +277,7 @@ def refresh_cemu_mods():
 def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_texts: bool = False,
                 no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
                 no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
-                wait_merge: bool = False, deep_merge: bool = False):
+                guess: bool = False, wait_merge: bool = False, deep_merge: bool = False):
     """
     Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
 
@@ -289,6 +302,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     :type leave_rstb: bool, optional
     :param shrink_rstb: Shrink RSTB values where possible, defaults to False.
     :type shrink_rstb: bool, optional
+    :param guess: Estimate RSTB values for AAMP and BFRES files, defaults to False.
+    :type guess: bool, optional
     :param wait_merge: Install mod and log changes, but wait to run merge manually, defaults to False.
     :type wait_merge: bool, optional
     :param deep_merge: Attempt to merge changes within individual AAMP files, defaults to False.
@@ -331,7 +346,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         print()
         print('Scanning for modified files...')
         modded_files, rstb_changes, aamp_diffs = find_modded_files(
-            tmp_dir, verbose=verbose, deep_merge=deep_merge)
+            tmp_dir, verbose=verbose, deep_merge=deep_merge, guess=guess)
         if len(rstb_changes) > 0:
             print('\n'.join(rstb_changes))
 
@@ -350,7 +365,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             num_threads = min(len(sarc_files), cpu_count())
             p = Pool(processes=num_threads)
             thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files, tmp_dir=tmp_dir,
-                                         deep_merge=deep_merge, verbose=verbose)
+                                         deep_merge=deep_merge, verbose=verbose, guess=guess)
             results = p.map(thread_sarc_search, sarc_files)
             p.close()
             p.join()
@@ -421,9 +436,12 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         else:
             no_savedata = True
 
-        modded_mubins = [str(file['path']) for canon, file in modded_files.items() if fnmatch(Path(canon).name, '[A-Z]-[0-9]_*.mubin')]
+        modded_mubins = [str(file['path']) for canon, file in modded_files.items(
+        ) if fnmatch(Path(canon).name, '[A-Z]-[0-9]_*.mubin')]
         if len(modded_mubins) > 0:
             mubin.log_modded_texts(tmp_dir, modded_mubins)
+        else:
+            no_map = True
 
         if deep_merge:
             deep_merge = len(aamp_diffs) > 0

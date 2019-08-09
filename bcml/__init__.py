@@ -267,7 +267,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnRemerge.setEnabled(True)
         self.btnExport.setEnabled(True)
         QtWidgets.QMessageBox.critical(
-            self, 'Error', f'BCML has encountered an error while performing an operation. Error details:\n\n{self._thread.error}')
+            self, 'Error', f'BCML has encountered an error while performing an operation.'
+                           f'Error details:\n\n{self._thread.error}')
         self.LoadMods()
         self._progress.close()
         del self._progress
@@ -301,6 +302,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     no_map=result.no_map,
                     leave_rstb=result.leave,
                     shrink_rstb=result.shrink,
+                    guess=result.guess,
                     wait_merge=True if len(result.paths) > 1 else False,
                     deep_merge=result.deep_merge
                 ))
@@ -561,6 +563,7 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 paths,
                 self.chkRstbLeave.isChecked(),
                 self.chkRstbShrink.isChecked(),
+                self.chkRstbGuess.isChecked(),
                 self.chkDisablePack.isChecked(),
                 self.chkDisableTexts.isChecked(),
                 self.chkDisableGamedata.isChecked(),
@@ -680,7 +683,7 @@ class ProgressThread(threading.Thread):
             self._target(*self._args)
             self.signal.sig.emit('Done')
         except Exception as e:
-            self.error = traceback.format_exc()
+            self.error = traceback.format_exc(limit=3)
             self.signal.err.emit(e)
 
 
@@ -707,7 +710,7 @@ class ThreadSignal(QtCore.QObject):
 # Main
 
 InstallResult = namedtuple(
-    'InstallResult', 'paths leave shrink no_packs no_texts no_gamedata no_savedata no_actorinfo no_map deep_merge')
+    'InstallResult', 'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map deep_merge')
 
 
 def main():
@@ -726,7 +729,7 @@ def main():
         application.SetupChecks()
         app.exec_()
     except:
-        tb = traceback.format_exc()
+        tb = traceback.format_exc(limit=2)
         e = util.get_work_dir() / 'error.log'
         QtWidgets.QMessageBox.warning(
             None, 'Error', f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'

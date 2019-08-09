@@ -108,7 +108,7 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     sarc_log = []
     sarc_list = sorted(sarc_list, key=lambda pack: pack['priority'])
     try:
-        base_sarc = next(iter([msarc['pack'] for msarc in sarc_list if msarc['base']))
+        base_sarc = next(iter([msarc['pack'] for msarc in sarc_list if msarc['base']]))
         new_sarc = sarc.make_writer_from_sarc(base_sarc)
     except StopIteration:
         new_sarc = sarc.make_writer_from_sarc(sarc_list[-1]['pack'])
@@ -242,7 +242,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     if len(sarcs_to_merge) > 0:
         partial_thread_merge = partial(
             threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
-        num_threads = min(cpu_count() // 2, len(modded_sarcs))
+        num_threads = min(cpu_count() - 1, len(modded_sarcs))
         p = Pool(processes=num_threads)
         results = p.map(partial_thread_merge, sarcs_to_merge)
         p.close()
