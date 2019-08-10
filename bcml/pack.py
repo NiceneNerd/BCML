@@ -34,7 +34,10 @@ def get_modded_packs_in_mod(mod: Union[Path, str, BcmlMod]) -> List[str]:
     path = mod if isinstance(mod, Path) else Path(
         mod) if isinstance(mod, str) else mod.path
     packs = []
-    with (path / 'logs' / 'packs.log').open('r') as rlog:
+    plog = path / 'logs' / 'packs.log'
+    if not plog.exists():
+        return []
+    with plog.open('r') as rlog:
         csv_loop = csv.reader(rlog)
         for row in csv_loop:
             packs.append(row[1])

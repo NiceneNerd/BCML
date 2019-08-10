@@ -118,10 +118,13 @@ def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> dict:
     """ Gets a list of files logged for deep merge in a given mod """
     path = mod if isinstance(mod, Path) else Path(
         mod) if isinstance(mod, str) else mod.path
+    dlog = mod.path / 'logs' / 'deepmerge.yml'
+    if not dlog.exists():
+        return []
     loader = yaml.CSafeLoader
     yaml_util.add_constructors(loader)
     aamp.yaml_util.register_constructors(loader)
-    with (mod.path / 'logs' / 'deepmerge.yml').open('r', encoding='utf-8') as df:
+    with dlog.open('r', encoding='utf-8') as df:
         mod_diffs = yaml.load(df, Loader=loader)
     return [str(key) for key in mod_diffs.keys()]
 
