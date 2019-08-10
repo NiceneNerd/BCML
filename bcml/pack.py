@@ -1,15 +1,16 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import csv
 import io
 import os
-import shutil
-from multiprocessing import Process, Queue, Pool, cpu_count
 from functools import partial
-from operator import itemgetter
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import List
 
 import sarc
 import wszst_yaz0
+
 from bcml import data, util
 from bcml.util import BcmlMod
 
@@ -108,7 +109,8 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     sarc_log = []
     sarc_list = sorted(sarc_list, key=lambda pack: pack['priority'])
     try:
-        base_sarc = next(iter([msarc['pack'] for msarc in sarc_list if msarc['base']]))
+        base_sarc = next(iter([msarc['pack']
+                               for msarc in sarc_list if msarc['base']]))
     except StopIteration:
         base_sarc = sarc_list[-1]['pack']
     new_sarc = sarc.make_writer_from_sarc(base_sarc)

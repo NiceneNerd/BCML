@@ -1,7 +1,8 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import zlib
 from copy import deepcopy
 from io import BytesIO
-from math import ceil
 from pathlib import Path
 from typing import List
 
@@ -12,9 +13,11 @@ import sarc
 import wszst_yaz0
 import xxhash
 import yaml
+from byml import yaml_util
+from math import ceil
+
 from bcml import util
 from bcml.util import BcmlMod
-from byml import yaml_util
 
 
 def get_stock_gamedata() -> sarc.SARC:
@@ -22,7 +25,8 @@ def get_stock_gamedata() -> sarc.SARC:
     if not hasattr(get_stock_gamedata, 'gamedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as bf:
             bootup = sarc.read_file_and_make_sarc(bf)
-        get_stock_gamedata.gamedata = sarc.SARC(wszst_yaz0.decompress(bootup.get_file_data('GameData/gamedata.ssarc')))
+        get_stock_gamedata.gamedata = sarc.SARC(wszst_yaz0.decompress(
+            bootup.get_file_data('GameData/gamedata.ssarc')))
     return get_stock_gamedata.gamedata
 
 
@@ -43,7 +47,8 @@ def get_gamedata_hashes() -> {}:
         get_gamedata_hashes.gamedata_hashes = {}
         gamedata = get_stock_gamedata()
         for file in gamedata.list_files():
-            get_gamedata_hashes.gamedata_hashes[file] = xxhash.xxh32(gamedata.get_file_data(file)).hexdigest()
+            get_gamedata_hashes.gamedata_hashes[file] = xxhash.xxh32(
+                gamedata.get_file_data(file)).hexdigest()
     return get_gamedata_hashes.gamedata_hashes
 
 
@@ -53,7 +58,8 @@ def get_savedata_hashes() -> {}:
         get_savedata_hashes.savedata_hashes = {}
         savedata = get_stock_savedata()
         for file in savedata.list_files():
-            get_savedata_hashes.savedata_hashes[file] = xxhash.xxh32(savedata.get_file_data(file)).hexdigest()
+            get_savedata_hashes.savedata_hashes[file] = xxhash.xxh32(
+                savedata.get_file_data(file)).hexdigest()
     return get_savedata_hashes.savedata_hashes
 
 
@@ -69,7 +75,8 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     :rtype: int
     """
     if not bootup_path:
-        installed_bootups = list(util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
+        installed_bootups = list(
+            util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
         bootup_path = installed_bootups[-1] if len(installed_bootups) > 0 \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as bf:
@@ -77,8 +84,10 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     new_pack = sarc.make_writer_from_sarc(bootup_pack)
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
-    new_pack.add_file('GameData/gamedata.ssarc', wszst_yaz0.compress(gamedata_bytes))
-    (util.get_master_modpack_dir() / 'content' / 'Pack').mkdir(parents=True, exist_ok=True)
+    new_pack.add_file('GameData/gamedata.ssarc',
+                      wszst_yaz0.compress(gamedata_bytes))
+    (util.get_master_modpack_dir() / 'content' /
+     'Pack').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
         new_pack.write(bf)
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
@@ -96,7 +105,8 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     :rtype: int
     """
     if not bootup_path:
-        installed_bootups = list(util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
+        installed_bootups = list(
+            util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
         bootup_path = installed_bootups[len(installed_bootups) - 1] if len(installed_bootups) > 0 \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as bf:
@@ -104,7 +114,8 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     new_pack = sarc.make_writer_from_sarc(bootup_pack)
     new_pack.delete_file('GameData/savedataformat.ssarc')
     savedata_bytes = bgsvdata.get_bytes()
-    new_pack.add_file('GameData/savedataformat.ssarc', wszst_yaz0.compress(savedata_bytes))
+    new_pack.add_file('GameData/savedataformat.ssarc',
+                      wszst_yaz0.compress(savedata_bytes))
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
         new_pack.write(bf)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
@@ -125,7 +136,7 @@ def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
     # To anyone trying to understand a lot of what's going on here:
     # .bgdata files in gamedata.sarc are *supposed* to be stored with a
     # leading slash (e.g. "/bool_data_0.bgdata"), but sometimes they are
-    # repacked without them (e.g. "bool_data_0.bgdata"). So much of the 
+    # repacked without them (e.g. "bool_data_0.bgdata"). So much of the
     # weirdness here is trying to account for both possibilities.
     fix_slash = '/' if not bg_files[0].startswith('/') else ''
     single_gamedatas = [file for file in bg_files
@@ -142,7 +153,8 @@ def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
                 modded_files[fix_slash + bgdata]['ref_yml'] = byml.Byml(
                     ref_gdata.get_file_data(fix_slash + bgdata).tobytes()
                 ).parse()
-    bool_datas = [file for file in bg_files if file.startswith('/bool_data') or file.startswith('bool_data')]
+    bool_datas = [file for file in bg_files if file.startswith(
+        '/bool_data') or file.startswith('bool_data')]
     bool_data_bytes = {}
     bool_data_modded = False
     for bool_data in bool_datas:
@@ -150,7 +162,7 @@ def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
         bool_data_bytes[bool_data] = bgdata_bytes
         if not bool_data_modded:
             bool_data_modded = (fix_slash + bool_data) not in hashes \
-                               or hashes[fix_slash + bool_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
+                or hashes[fix_slash + bool_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
     if bool_data_modded:
         for bool_data in bool_datas:
             modded_files[fix_slash + bool_data] = {
@@ -169,7 +181,7 @@ def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
         revival_data_bytes[revival_data] = bgdata_bytes
         if not revival_data_modded:
             revival_data_modded = (fix_slash + revival_data) not in hashes \
-                                  or hashes[fix_slash + revival_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
+                or hashes[fix_slash + revival_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
     if revival_data_modded:
         for revival_data in revival_datas:
             modded_files[fix_slash + revival_data] = {
@@ -200,7 +212,8 @@ def is_savedata_modded(savedata: sarc.SARC) -> {}:
         svdata_hash = xxhash.xxh32(svdata_bytes).hexdigest()
         del svdata_bytes
         if not modded:
-            modded = fix_slash + svdata not in hashes or svdata_hash != hashes[fix_slash + svdata]
+            modded = fix_slash + \
+                svdata not in hashes or svdata_hash != hashes[fix_slash + svdata]
     return modded
 
 
@@ -216,7 +229,8 @@ def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
     ref_data = {}
     mod_data = {}
     for bgdata in modded_bgdata:
-        key = bgdata[1:len(bgdata) - 9] if 'revival' not in bgdata else 'bool_data'
+        key = bgdata[1:len(bgdata) -
+                     9] if 'revival' not in bgdata else 'bool_data'
         mod_yml = modded_bgdata[bgdata]['mod_yml']
         if key not in mod_data:
             mod_data[key] = {}
@@ -233,7 +247,8 @@ def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
         modded_entries[data_type] = {}
         for data in mod_data[data_type]:
             if data not in ref_data[data_type] or mod_data[data_type][data] != ref_data[data_type][data]:
-                modded_entries[data_type][data] = deepcopy(mod_data[data_type][data])
+                modded_entries[data_type][data] = deepcopy(
+                    mod_data[data_type][data])
     return modded_entries
 
 
@@ -261,13 +276,15 @@ def get_modded_savedata_entries(savedata: sarc.SARC) -> []:
 
 def get_gamedata_mods() -> List[BcmlMod]:
     """ Gets a list of all installed mods that modify gamedata """
-    gdata_mods = [mod for mod in util.get_installed_mods() if (mod.path / 'logs' / 'gamedata.yml').exists()]
+    gdata_mods = [mod for mod in util.get_installed_mods() if (
+        mod.path / 'logs' / 'gamedata.yml').exists()]
     return sorted(gdata_mods, key=lambda mod: mod.priority)
 
 
 def get_savedata_mods() -> List[BcmlMod]:
     """ Gets a list of all installed mods that modify save data """
-    sdata_mods = [mod for mod in util.get_installed_mods() if (mod.path / 'logs' / 'savedata.yml').exists()]
+    sdata_mods = [mod for mod in util.get_installed_mods() if (
+        mod.path / 'logs' / 'savedata.yml').exists()]
     return sorted(sdata_mods, key=lambda mod: mod.priority)
 
 
@@ -320,7 +337,8 @@ def merge_gamedata(verbose: bool = False):
                 i = merged_entries[data_type].index(entry)
                 if verbose:
                     print(f'  {entry["DataName"]} has been modified')
-                merged_entries[data_type][i] = deepcopy(modded_entries[data_type][entry['DataName']])
+                merged_entries[data_type][i] = deepcopy(
+                    modded_entries[data_type][entry['DataName']])
             print(f'Merged modified {data_type} entries')
 
     for data_type in modded_entries:
@@ -340,7 +358,8 @@ def merge_gamedata(verbose: bool = False):
             if end_pos > len(merged_entries[data_type]):
                 end_pos = len(merged_entries[data_type])
             buf = BytesIO()
-            byml.Writer({data_type: merged_entries[data_type][i*4096:end_pos]}, be=True).write(buf)
+            byml.Writer(
+                {data_type: merged_entries[data_type][i*4096:end_pos]}, be=True).write(buf)
             new_gamedata.add_file(f'/{data_type}_{i}.bgdata', buf.getvalue())
     bootup_rstb = inject_gamedata_into_bootup(new_gamedata)
     with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as gf:
@@ -355,7 +374,8 @@ def merge_gamedata(verbose: bool = False):
         if bootup_rstb > old_size:
             table.set_size('GameData/gamedata.sarc', bootup_rstb)
             if verbose:
-                print(f'  Updated RSTB entry for "GameData/gamedata.sarc" from {old_size} bytes to {bootup_rstb} bytes')
+                print(
+                    f'  Updated RSTB entry for "GameData/gamedata.sarc" from {old_size} bytes to {bootup_rstb} bytes')
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     glog_path.parent.mkdir(parents=True, exist_ok=True)
@@ -402,7 +422,8 @@ def merge_savedata(verbose: bool = False):
 
     print('Loading stock savedata...')
     for file in save_files:
-        merged_entries.extend(byml.Byml(savedata.get_file_data(file).tobytes()).parse()['file_list'][1])
+        merged_entries.extend(byml.Byml(savedata.get_file_data(
+            file).tobytes()).parse()['file_list'][1])
 
     print('Merging changes...')
     merged_entries.extend(new_entries)
@@ -441,7 +462,8 @@ def merge_savedata(verbose: bool = False):
         }, True).write(buf)
         new_savedata.add_file(f'/saveformat_{i}.bgsvdata', buf.getvalue())
     new_savedata.add_file(f'/saveformat_{num_files}.bgsvdata', special_bgsv[0])
-    new_savedata.add_file(f'/saveformat_{num_files + 1}.bgsvdata', special_bgsv[1])
+    new_savedata.add_file(
+        f'/saveformat_{num_files + 1}.bgsvdata', special_bgsv[1])
     bootup_rstb = inject_savedata_into_bootup(new_savedata)
     with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as sf:
         new_savedata.write(sf)
@@ -455,7 +477,8 @@ def merge_savedata(verbose: bool = False):
         if bootup_rstb > old_size:
             table.set_size('GameData/savedataformat.sarc', bootup_rstb)
             if verbose:
-                print(f'  Updated RSTB entry for "GameData/savedataformat.sarc" from {old_size} bytes to {bootup_rstb} bytes')
+                print(
+                    f'  Updated RSTB entry for "GameData/savedataformat.sarc" from {old_size} bytes to {bootup_rstb} bytes')
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     slog_path.parent.mkdir(parents=True, exist_ok=True)
@@ -486,7 +509,8 @@ def get_modded_actors(actorinfo: dict) -> dict:
         if actor_hash not in stock_actors['Hashes']:
             modded_actors[actor_hash] = actor
         elif actor != stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]:
-            stock_actor = stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]
+            stock_actor = stock_actors['Actors'][stock_actors['Hashes'].index(
+                actor_hash)]
             modded_actors[actor_hash] = {}
             for key, value in actor.items():
                 if key not in stock_actor or value != stock_actor[key]:
@@ -501,9 +525,10 @@ def get_actorinfo_mods() -> List[BcmlMod]:
     return sorted(actor_mods, key=lambda mod: mod.priority)
 
 
-def merge_actorinfo(verbose:bool = False):
+def merge_actorinfo(verbose: bool = False):
     mods = get_actorinfo_mods()
-    actor_path = (util.get_master_modpack_dir() / 'content' / 'Actor' / 'ActorInfo.product.sbyml')
+    actor_path = (util.get_master_modpack_dir() / 'content' /
+                  'Actor' / 'ActorInfo.product.sbyml')
     if len(mods) < 2:
         print('No actor info merging necessary.')
         if actor_path.exists():
@@ -539,13 +564,15 @@ def merge_actorinfo(verbose:bool = False):
 
     print('Sorting new actor info...')
     actorinfo['Hashes'].sort()
-    actorinfo['Hashes'] = list(map(lambda x: byml.Int(x) if x < 2147483648 else byml.UInt(x), actorinfo['Hashes']))
-    actorinfo['Actors'].sort(key=lambda x: zlib.crc32(x['name'].encode('utf-8')))
+    actorinfo['Hashes'] = list(map(lambda x: byml.Int(
+        x) if x < 2147483648 else byml.UInt(x), actorinfo['Hashes']))
+    actorinfo['Actors'].sort(
+        key=lambda x: zlib.crc32(x['name'].encode('utf-8')))
 
     print('Saving new actor info...')
     buf = BytesIO()
     byml.Writer(actorinfo, True).write(buf)
-    actor_path.parent.mkdir(parents=True,exist_ok=True)
+    actor_path.parent.mkdir(parents=True, exist_ok=True)
     with actor_path.open('wb') as af:
         af.write(wszst_yaz0.compress(buf.getvalue()))
     print('Actor info merged successfully')

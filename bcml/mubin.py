@@ -1,19 +1,20 @@
-import csv
-import io
-import yaml
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import shutil
-from copy import deepcopy
 from collections import namedtuple
+from copy import deepcopy
 from pathlib import Path
 from typing import Union, List
 
-from bcml import util, rstable
 import byml
-from byml import yaml_util
-import sarc
 import rstb
 import rstb.util
+import sarc
 import wszst_yaz0
+import yaml
+from byml import yaml_util
+
+from bcml import util
 
 Map = namedtuple('Map', 'section type')
 
@@ -177,7 +178,8 @@ def log_modded_texts(tmp_dir: Path, modded_mubins: List[str]):
 
 
 def merge_maps(verbose: bool = False):
-    aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
+    aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / \
+        'Pack' / 'AocMainField.pack'
     if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
         print('Emptying AocMainField.pack...')
         aoc_pack.parent.mkdir(parents=True, exist_ok=True)
@@ -200,7 +202,8 @@ def merge_maps(verbose: bool = False):
     print('Merging modded map units...')
     for map_unit, changes in map_diffs.items():
         if verbose:
-            print(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
+            print(
+                f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
         merge_map = get_stock_map(map_unit)
         stock_hashes = [obj['HashId'] for obj in merge_map['Objs']]
         mods = changes['mod'].items()

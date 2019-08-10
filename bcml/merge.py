@@ -1,28 +1,26 @@
-from fnmatch import fnmatch
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
+
 import multiprocessing
 import os
-import sys
 from copy import deepcopy
+from fnmatch import fnmatch
 from functools import partial, reduce
-from io import BytesIO, StringIO
 from pathlib import Path
 from typing import List, Union
 
 import aamp
-from aamp.parameters import ParameterList, ParameterIO, ParameterObject
-import aamp.yaml_util
 import aamp.converters
-import bcml.rstable
-import byml
-import rstb
-import rstb.util
+import aamp.yaml_util
 import sarc
 import wszst_yaz0
 import yaml
+from aamp.parameters import ParameterList, ParameterIO, ParameterObject
+from byml import yaml_util
+
+import bcml.rstable
 from bcml import util, install
 from bcml.util import BcmlMod
-from byml import yaml_util
-from diff_match_patch import diff_match_patch
 
 
 def _aamp_diff(base: Union[ParameterIO, ParameterList],
@@ -135,7 +133,7 @@ def get_deepmerge_diffs() -> dict:
                     aamp_diffs[file] = []
                 aamp_diffs[file].append(mod_diffs[file])
     for file, diffs in list(aamp_diffs.items()):
-        if len(diffs) < 2:
+        if len(diffs) < 2 and '//' not in file:
             del aamp_diffs[file]
     return aamp_diffs
 

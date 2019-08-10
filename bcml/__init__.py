@@ -1,3 +1,5 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import os
 import platform
 import shutil
@@ -12,6 +14,9 @@ from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
 
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import Qt
+
 from bcml import data, install, merge, pack, rstable, texts, util, mubin
 from bcml.Ui_about import Ui_AboutDialog
 from bcml.Ui_install import Ui_InstallDialog
@@ -19,8 +24,6 @@ from bcml.Ui_main import Ui_MainWindow
 from bcml.Ui_progress import Ui_dlgProgress
 from bcml.Ui_settings import Ui_SettingsDialog
 from bcml.util import BcmlMod
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import Qt
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):

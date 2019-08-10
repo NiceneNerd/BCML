@@ -1,3 +1,5 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import csv
 import os
 import re
@@ -7,7 +9,6 @@ import traceback
 import unicodedata
 from collections import Mapping, namedtuple
 from configparser import ConfigParser
-from PySide2.QtGui import QIcon, QPixmap
 from pathlib import Path
 from typing import Union
 
@@ -16,6 +17,7 @@ import sarc
 import wszst_yaz0
 import xxhash
 import yaml
+from PySide2.QtGui import QIcon, QPixmap
 from byml import yaml_util
 
 BcmlMod = namedtuple('BcmlMod', 'name priority path')
@@ -116,7 +118,8 @@ def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
     game_dir = str(get_settings()['game_dir'])
     if len(game_dir) < 1:
-        raise FileNotFoundError('The BotW game directory has not been saved yet.')
+        raise FileNotFoundError(
+            'The BotW game directory has not been saved yet.')
     else:
         return Path(game_dir)
 
@@ -142,14 +145,16 @@ def set_game_dir(path: Path):
         if mlc_path.exists():
             set_mlc_dir(mlc_path)
         else:
-            raise FileNotFoundError('The MLC directory could not be automatically located.')
+            raise FileNotFoundError(
+                'The MLC directory could not be automatically located.')
 
 
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings()['mlc_dir'])
     if len(mlc_dir) < 1:
-        raise FileNotFoundError('The Cemu MLC directory has not been saved yet.')
+        raise FileNotFoundError(
+            'The Cemu MLC directory has not been saved yet.')
     else:
         return Path(mlc_dir)
 
@@ -204,6 +209,7 @@ def get_bcml_version() -> str:
         setup_text = sf.read()
     ver_match = re.search(r"version='([0-9]+\.[0-9]+)'", setup_text)
     return ver_match.group(1) + (' Beta' if 'Beta' in setup_text else '')
+
 
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     """

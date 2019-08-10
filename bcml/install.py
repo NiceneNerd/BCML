@@ -1,19 +1,18 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import os
 import shutil
 import subprocess
-import sys
-import time
-import xml.dom
 from configparser import ConfigParser
 from fnmatch import fnmatch
 from functools import partial
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from multiprocessing import Process, Queue, Pool, cpu_count
 from typing import Union
 from xml.dom import minidom
 
-import byml
 import aamp.yaml_util
+import byml
 import rstb
 import sarc
 import wszst_yaz0
@@ -23,7 +22,6 @@ from byml import yaml_util
 
 from bcml import pack, texts, util, data, merge, rstable, mubin
 from bcml.util import BcmlMod
-
 
 RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata', '.yml',
                 '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']

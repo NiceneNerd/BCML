@@ -1,3 +1,5 @@
+# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Licensed under GPLv3+
 import copy
 import csv
 import io
@@ -14,6 +16,7 @@ import sarc
 import wszst_yaz0
 import xxhash
 import yaml
+
 from bcml import util
 from bcml.util import BcmlMod
 
