@@ -194,6 +194,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 changes.append('save data')
             if util.is_actorinfo_mod(mod):
                 changes.append('actor info')
+            if util.is_map_mod(mod):
+                changes.append('maps')
             if util.is_deepmerge_mod(mod):
                 changes.append('deep merge')
             mod_info = [
@@ -306,43 +308,44 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     leave_rstb=result.leave,
                     shrink_rstb=result.shrink,
                     guess=result.guess,
-                    wait_merge=True if len(result.paths) > 1 else False,
+                    wait_merge=True,
                     deep_merge=result.deep_merge
                 ))
-            if len(mods) > 1:
-                fix_packs = False
-                fix_gamedata = False
-                fix_savedata = False
-                fix_actorinfo = False
-                fix_map = False
-                fix_deepmerge = False
-                fix_texts = []
-                for mod in mods:
-                    fix_packs = fix_packs or util.is_pack_mod(mod)
-                    fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
-                    fix_savedata = fix_savedata or util.is_savedata_mod(mod)
-                    fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
-                    fix_map = fix_map or util.is_map_mod(mod)
-                    fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
-                    for lang in texts.get_modded_languages(mod.path):
-                        if lang not in fix_texts:
-                            fix_texts.append(lang)
-                rstable.generate_master_rstb()
-                if fix_packs:
-                    pack.merge_installed_packs(
-                        no_injection=not (fix_gamedata or fix_savedata))
-                if fix_gamedata:
-                    data.merge_gamedata()
-                if fix_savedata:
-                    data.merge_savedata()
-                if fix_actorinfo:
-                    data.merge_actorinfo()
-                if fix_map:
-                    mubin.merge_maps()
-                if fix_deepmerge:
-                    merge.deep_merge()
-                for lang in fix_texts:
-                    texts.merge_texts(lang)
+            fix_packs = set()
+            fix_gamedata = False
+            fix_savedata = False
+            fix_actorinfo = False
+            fix_map = False
+            fix_deepmerge = set()
+            fix_texts = []
+            for mod in mods:
+                for mpack in pack.get_modded_packs_in_mod(mod):
+                    fix_packs.add(mpack)
+                fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
+                fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                fix_map = fix_map or util.is_map_mod(mod)
+                for mfile in merge.get_mod_deepmerge_files(mod):
+                    fix_deepmerge.add(mfile)
+                for lang in texts.get_modded_languages(mod.path):
+                    if lang not in fix_texts:
+                        fix_texts.append(lang)
+            rstable.generate_master_rstb()
+            if len(fix_packs) > 0:
+                pack.merge_installed_packs(no_injection=not (
+                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
+            if fix_gamedata:
+                data.merge_gamedata()
+            if fix_savedata:
+                data.merge_savedata()
+            if fix_actorinfo:
+                data.merge_actorinfo()
+            if fix_map:
+                mubin.merge_maps()
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
+            for lang in fix_texts:
+                texts.merge_texts(lang)
 
         dialog = InstallDialog(self)
         result = dialog.GetResult()
@@ -354,12 +357,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def ChangeClicked(self):
         def resort_mods(self):
-            fix_packs = False
+            fix_packs = set()
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
             fix_map = False
-            fix_deepmerge = False
+            fix_deepmerge = set()
             fix_texts = []
             mods_to_change = []
             for i in range(self.listWidget.count()):
@@ -367,12 +370,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 target_priority = i + 100 if util.get_settings_bool(
                     'load_reverse') else 100 + ((self.listWidget.count() - 1) - i)
                 if mod.priority != target_priority:
-                    fix_packs = fix_packs or util.is_pack_mod(mod)
+                    for mpack in pack.get_modded_packs_in_mod(mod):
+                        fix_packs.add(mpack)
                     fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                     fix_savedata = fix_savedata or util.is_savedata_mod(mod)
                     fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
                     fix_map = fix_map or util.is_map_mod(mod)
-                    fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
+                    for mfile in merge.get_mod_deepmerge_files(mod):
+                        fix_deepmerge.add(mfile)
                     for lang in texts.get_modded_languages(mod.path):
                         if lang not in fix_texts:
                             fix_texts.append(lang)
@@ -387,9 +392,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 with (new_path / 'rules.txt').open('w') as rf:
                     rules.write(rf)
             rstable.generate_master_rstb()
-            if fix_packs:
-                pack.merge_installed_packs(
-                    no_injection=not (fix_gamedata or fix_savedata))
+            if len(fix_packs) > 0:
+                pack.merge_installed_packs(no_injection=not (
+                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
             if fix_gamedata:
                 data.merge_gamedata()
             if fix_savedata:
@@ -398,8 +403,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_actorinfo()
             if fix_map:
                 mubin.merge_maps()
-            if fix_deepmerge:
-                merge.deep_merge()
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
             for lang in fix_texts:
                 texts.merge_texts(lang)
             self.LoadMods()
@@ -454,29 +459,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def UninstallClicked(self):
         def uninstall(mods):
-            fix_packs = False
+            fix_packs = set()
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
             fix_map = False
-            fix_deepmerge = False
+            fix_deepmerge = set()
             fix_texts = []
             for mod in mods:
-                fix_packs = fix_packs or util.is_pack_mod(mod)
+                for mpack in pack.get_modded_packs_in_mod(mod):
+                    fix_packs.add(mpack)
                 fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
                 fix_savedata = fix_savedata or util.is_savedata_mod(mod)
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
                 fix_map = fix_map or util.is_map_mod(mod)
-                fix_deepmerge = fix_deepmerge or util.is_deepmerge_mod(mod)
+                for mfile in merge.get_mod_deepmerge_files(mod):
+                    fix_deepmerge.add(mfile)
                 for lang in texts.get_modded_languages(mod.path):
                     if lang not in fix_texts:
                         fix_texts.append(lang)
             for mod in mods:
                 install.uninstall_mod(mod, wait_merge=True)
             rstable.generate_master_rstb()
-            if fix_packs:
-                pack.merge_installed_packs(
-                    no_injection=not (fix_gamedata or fix_savedata))
+            if len(fix_packs) > 0:
+                pack.merge_installed_packs(no_injection=not (
+                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
             if fix_gamedata:
                 data.merge_gamedata()
             if fix_savedata:
@@ -485,8 +492,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_actorinfo()
             if fix_map:
                 mubin.merge_maps()
-            if fix_deepmerge:
-                merge.deep_merge()
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
             for lang in fix_texts:
                 texts.merge_texts(lang)
             install.refresh_cemu_mods()

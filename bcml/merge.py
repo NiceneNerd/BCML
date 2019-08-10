@@ -114,7 +114,19 @@ def get_deepmerge_mods() -> List[BcmlMod]:
     return sorted(dmods, key=lambda mod: mod.priority)
 
 
-def get_deepmerge_diffs() -> dict:
+def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> dict:
+    """ Gets a list of files logged for deep merge in a given mod """
+    path = mod if isinstance(mod, Path) else Path(
+        mod) if isinstance(mod, str) else mod.path
+    loader = yaml.CSafeLoader
+    yaml_util.add_constructors(loader)
+    aamp.yaml_util.register_constructors(loader)
+    with (mod.path / 'logs' / 'deepmerge.yml').open('r', encoding='utf-8') as df:
+        mod_diffs = yaml.load(df, Loader=loader)
+    return [str(key) for key in mod_diffs.keys()]
+
+
+def get_deepmerge_diffs(only_these: List[str] = None) -> dict:
     """
     Gets the logged file diffs for installed deep merge mods
 
@@ -129,12 +141,14 @@ def get_deepmerge_diffs() -> dict:
         with (mod.path / 'logs' / 'deepmerge.yml').open('r', encoding='utf-8') as df:
             mod_diffs = yaml.load(df, Loader=loader)
             for file in mod_diffs:
+                if only_these is not None and file not in only_these:
+                    continue
                 if file not in aamp_diffs:
                     aamp_diffs[file] = []
                 aamp_diffs[file].append(mod_diffs[file])
-    for file, diffs in list(aamp_diffs.items()):
-        if len(diffs) < 2 and '//' not in file:
-            del aamp_diffs[file]
+                for file, diffs in list(aamp_diffs.items()):
+                    if len(diffs) < 2 and '//' not in file:
+                        del aamp_diffs[file]
     return aamp_diffs
 
 
@@ -268,7 +282,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
     return util.get_canon_name(file), failures
 
 
-def deep_merge(verbose: bool = False, wait_rstb: bool = False):
+def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[str] = None):
     mods = get_deepmerge_mods()
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'rstb.log').unlink()
@@ -279,7 +293,7 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False):
         return
 
     print('Loading deep merge data...')
-    diffs = consolidate_diff_files(get_deepmerge_diffs())
+    diffs = consolidate_diff_files(get_deepmerge_diffs(only_these=only_these))
     failures = {}
 
     print('Performing deep merge...')

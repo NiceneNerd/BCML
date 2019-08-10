@@ -6,7 +6,7 @@ import os
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import sarc
 import wszst_yaz0
@@ -25,6 +25,20 @@ def get_pack_mods() -> List[BcmlMod]:
     pmods = [mod for mod in util.get_installed_mods() if (
         mod.path / 'logs' / 'packs.log').exists()]
     return sorted(pmods, key=lambda mod: mod.priority)
+
+
+def get_modded_packs_in_mod(mod: Union[Path, str, BcmlMod]) -> List[str]:
+    """
+    Get all pack files modified by a given mod
+    """
+    path = mod if isinstance(mod, Path) else Path(
+        mod) if isinstance(mod, str) else mod.path
+    packs = []
+    with (path / 'logs' / 'packs.log').open('r') as rlog:
+        csv_loop = csv.reader(rlog)
+        for row in csv_loop:
+            packs.append(row[1])
+    return packs
 
 
 def get_modded_sarcs() -> dict:
@@ -226,23 +240,27 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     """
     print('Merging modified SARC packs...')
     bcml_dir = util.get_master_modpack_dir()
-    if (bcml_dir / 'aoc').exists():
-        print('Cleaning old aoc packs...')
-        for file in (bcml_dir / 'aoc').rglob('**/*'):
-            if file.is_file() and file.suffix in util.SARC_EXTS:
-                file.unlink()
-    if (bcml_dir / 'content').exists():
-        print('Cleaning old content packs...')
-        for file in (bcml_dir / 'content').rglob('**/*'):
-            if file.is_file() and file.suffix in util.SARC_EXTS and 'Bootup_' not in file.stem:
-                file.unlink()
+    if only_these is None:
+        if (bcml_dir / 'aoc').exists():
+            print('Cleaning old aoc packs...')
+            for file in (bcml_dir / 'aoc').rglob('**/*'):
+                if file.is_file() and file.suffix in util.SARC_EXTS:
+                    file.unlink()
+        if (bcml_dir / 'content').exists():
+            print('Cleaning old content packs...')
+            for file in (bcml_dir / 'content').rglob('**/*'):
+                if file.is_file() and file.suffix in util.SARC_EXTS and 'Bootup_' not in file.stem:
+                    file.unlink()
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
-    print(f'Processing {len(modded_sarcs)} packs...')
     sarcs_to_merge = [
         pack for pack in modded_sarcs if len(modded_sarcs[pack]) > 1]
+    if only_these is not None:
+        sarcs_to_merge = [
+            pack for pack in sarcs_to_merge if modded_sarcs[pack][0]['rel_path'] in only_these]
     if len(sarcs_to_merge) > 0:
+        print(f'Processing {len(sarcs_to_merge)} packs...')
         partial_thread_merge = partial(
             threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
         num_threads = min(cpu_count() - 1, len(modded_sarcs))
@@ -257,6 +275,8 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
         log_count = 0
     print(f'Pack merging complete. Merged {log_count} packs.')
     if 'Pack/Bootup.pack' in modded_sarcs and not no_injection:
+        if only_these is not None and 'content\\Pack\\Bootup.pack' not in only_these:
+            return
         if (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').exists():
             print('Injecting merged gamedata.sarc into Bootup.pack...')
             with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('rb') as gf:

@@ -566,13 +566,13 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
     mod_name, mod_priority, _ = util.get_mod_info(
         path / 'rules.txt') if not isinstance(mod, BcmlMod) else mod
     print(f'Uninstalling {mod_name}...')
-    pack_mod = util.is_pack_mod(path)
+    pack_mods = pack.get_modded_packs_in_mod(mod)
     text_mods = texts.get_modded_languages(path)
     gamedata_mod = util.is_gamedata_mod(path)
     savedata_mod = util.is_savedata_mod(path)
     actorinfo_mod = util.is_actorinfo_mod(path)
     map_mod = util.is_map_mod(path)
-    deepmerge_mod = util.is_deepmerge_mod(path)
+    deepmerge_mods = merge.get_mod_deepmerge_files(mod)
 
     shutil.rmtree(str(path))
     next_mod = util.get_mod_by_priority(mod_priority + 1)
@@ -583,8 +583,8 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
         print()
 
     if not wait_merge:
-        if pack_mod:
-            pack.merge_installed_packs(verbose)
+        if len(pack_mods):
+            pack.merge_installed_packs(verbose, only_these=pack_mods)
         if len(text_mods) > 0:
             for lang in text_mods:
                 (util.get_master_modpack_dir() / 'content' /
@@ -602,8 +602,8 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
             data.merge_actorinfo(verbose)
         if map_mod:
             mubin.merge_maps()
-        if deepmerge_mod:
-            merge.deep_merge(verbose)
+        if len(deepmerge_mods) > 0:
+            merge.deep_merge(only_these=list(deepmerge_mods))
     print(f'{mod_name} has been uninstalled.')
 
 
@@ -628,13 +628,13 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
         new_priority = len(mods) - 1
     mods.remove(mod)
     mods.insert(new_priority - 100, util.BcmlMod(mod.name, new_priority, path))
-    remerge_packs = util.is_pack_mod(path)
+    remerge_packs = set()
     remerge_texts = texts.get_modded_languages(path)
     remerge_gamedata = util.is_gamedata_mod(path)
     remerge_savedata = util.is_savedata_mod(path)
     remerge_actorinfo = util.is_actorinfo_mod(path)
     remerge_map = util.is_map_mod(path)
-    deepmerge = util.is_deepmerge_mod(path)
+    deepmerge = set()
     print('Resorting other affected mods...')
     for mod in mods:
         if mod.priority != (mods.index(mod) + 100):
@@ -647,12 +647,14 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
                     f'Changing priority of {mod.name} from {mod.priority} to {adjusted_priority}...')
     for mod in mods:
         if not mod.path.stem.startswith(f'{mod.priority:04}'):
-            remerge_packs = util.is_pack_mod(mod) or remerge_packs
+            for mpack in pack.get_modded_packs_in_mod(mod):
+                remerge_packs.add(mpack)
             remerge_actorinfo = util.is_actorinfo_mod(mod) or remerge_actorinfo
             remerge_gamedata = util.is_gamedata_mod(mod) or remerge_gamedata
             remerge_savedata = util.is_savedata_mod(mod) or remerge_savedata
             remerge_map = util.is_map_mod(mod) or remerge_map
-            deepmerge = util.is_deepmerge_mod(mod) or deepmerge
+            for mfile in merge.get_mod_deepmerge_files(mod):
+                deepmerge.add(mfile)
             for lang in texts.get_modded_languages(mod.path):
                 if lang not in remerge_texts:
                     remerge_texts.append(lang)
@@ -664,12 +666,12 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             with (mod[2].parent / new_mod_id / 'rules.txt').open('w') as rf:
                 rules.write(rf)
             refresh_cemu_mods()
-    if remerge_packs:
+    if len(remerge_packs) > 0:
         if wait_merge:
             print('Pack merges affected, will need to remerge later')
         else:
             print('Pack merges affected, remerging packs...')
-            pack.merge_installed_packs(verbose)
+            pack.merge_installed_packs(verbose, only_these=list(remerge_packs))
             print()
     if len(remerge_texts) > 0:
         if wait_merge:
@@ -708,12 +710,12 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Map merges affected, remerging map units...')
             mubin.merge_maps()
             print()
-    if deepmerge:
+    if len(deepmerge) > 0:
         if wait_merge:
             print('Deep merge affected, will need to remerge later')
         else:
             print('Deep merge affected, remerging...')
-            merge.deep_merge(verbose)
+            merge.deep_merge(verbose, only_these=list(deepmerge))
             print()
     if wait_merge:
         print('Mods resorted, will need to remerge RSTB later')
@@ -737,7 +739,7 @@ def refresh_merges(verbose: bool = False):
          'Resource').mkdir(parents=True, exist_ok=True)
         shutil.copy(str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')), str(
             (util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.product.srsizetable')))
-    pack.merge_installed_packs(verbose)
+    pack.merge_installed_packs(verbose=False)
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
         texts.merge_texts(lang, verbose=verbose)
