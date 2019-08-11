@@ -214,6 +214,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 while font_metrics.boundingRect(f'Link: {link}.....').width() >= self.lblModInfo.width():
                     link = link[:-1]
                 mod_info.insert(3, f'<b>Link:</b> <a href="{url}">{link}</a>')
+                if not 'image' in rules['Definition'] and 'gamebanana.com' in url:
+                    response = urllib.request.urlopen(url)
+                    data = response.read().decode()
+                    import re
+                    img_match = re.search(
+                        r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
+                    if img_match:
+                        rules['Definition']['image'] = img_match.group(1)
             if 'image' in rules['Definition']:
                 try:
                     image_path = str(rules['Definition']['image'])

@@ -29,7 +29,6 @@ setup(
     install_requires=[
         'aamp==1.3.0.post1',
         'byml==2.3.0.post1',
-        'diff-match-patch',
         'PySide2',
         'pyYaml==5.1.1',
         'sarc',
