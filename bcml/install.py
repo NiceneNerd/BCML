@@ -245,7 +245,11 @@ def refresh_cemu_mods():
         for line in setfile:
             setread += line.strip()
     settings = minidom.parseString(setread)
-    gpack = settings.getElementsByTagName('GraphicPack')[0]
+    try:
+        gpack = settings.getElementsByTagName('GraphicPack')[0]
+    except IndexError:
+        gpack = settings.createElement('GraphicPack')
+        settings.appendChild(gpack)
     hasbcml = False
     for entry in gpack.getElementsByTagName('Entry'):
         if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
