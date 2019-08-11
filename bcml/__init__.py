@@ -108,6 +108,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 folder = QtWidgets.QFileDialog.getExistingDirectory(
                     self, 'Select Game Dump Directory')
                 if folder:
+                    if (Path(folder) / 'content').exists():
+                        folder = str(Path(folder) / 'content')
                     if not (Path(folder).parent / 'code' / 'app.xml').exists():
                         QtWidgets.QMessageBox.warning(
                             self, 'Error', 'The chosen directory does not appear to be a valid dump. '
@@ -117,7 +119,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             util.set_game_dir(Path(folder))
                         except FileNotFoundError as e:
                             QtWidgets.QMessageBox.information(
-                                self, 'First Time', 'BCML could not guess the location of Cemu\'s MLC directory for your game. '
+                                self, 'First Time', 'BCML could not detect the location of Cemu\'s MLC directory for your game. '
                                 'You will need to specify it manually. Make sure to select the title folder specifically for '
                                 'Breath of the Wild, not just the mlc01 folder itself. For example: \n'
                                 'C:\\Cemu\\mlc01\\title\\00050000\\101C9400')
