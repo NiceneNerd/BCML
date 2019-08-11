@@ -323,8 +323,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for mod in mods:
                 for mpack in pack.get_modded_packs_in_mod(mod):
                     fix_packs.add(mpack)
-                fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
-                fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                fix_gamedata = fix_gamedata or util.is_gamedata_mod(
+                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
+                fix_savedata = fix_savedata or util.is_savedata_mod(
+                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
                 fix_map = fix_map or util.is_map_mod(mod)
                 for mfile in merge.get_mod_deepmerge_files(mod):
@@ -374,8 +376,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 if mod.priority != target_priority:
                     for mpack in pack.get_modded_packs_in_mod(mod):
                         fix_packs.add(mpack)
-                    fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
-                    fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                    fix_gamedata = fix_gamedata or util.is_gamedata_mod(
+                        mod) or 'content\\Pack\\Bootup.pack' in fix_packs
+                    fix_savedata = fix_savedata or util.is_savedata_mod(
+                        mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                     fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
                     fix_map = fix_map or util.is_map_mod(mod)
                     for mfile in merge.get_mod_deepmerge_files(mod):
@@ -471,8 +475,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for mod in mods:
                 for mpack in pack.get_modded_packs_in_mod(mod):
                     fix_packs.add(mpack)
-                fix_gamedata = fix_gamedata or util.is_gamedata_mod(mod)
-                fix_savedata = fix_savedata or util.is_savedata_mod(mod)
+                fix_gamedata = fix_gamedata or util.is_gamedata_mod(
+                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
+                fix_savedata = fix_savedata or util.is_savedata_mod(
+                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
                 fix_map = fix_map or util.is_map_mod(mod)
                 for mfile in merge.get_mod_deepmerge_files(mod):

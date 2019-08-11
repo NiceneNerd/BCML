@@ -492,6 +492,24 @@ def get_installed_mods() -> []:
     return mods
 
 
+def get_all_modded_files(only_loose: bool = False) -> dict:
+    """
+    Gets all installed file modifications and the highest priority of each
+
+    :return: A dict of canonical paths and the priority of the highest modded version
+    :rtype: dict of str: int
+    """
+    modded_files = {}
+    for mod in get_installed_mods():
+        with (mod.path / 'logs' / 'rstb.log').open('r') as lf:
+            csv_loop = csv.reader(lf)
+            for row in csv_loop:
+                if row[0] == 'name' or (only_loose and '//' in row[2]):
+                    continue
+                modded_files[row[0]] = mod.priority
+    return modded_files
+
+
 def log_error():
     """ Writes the most recent error traceback to the error log and prints the traceback text """
     log_path = get_work_dir() / 'error.log'

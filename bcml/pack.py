@@ -110,7 +110,7 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
     return sarc_list
 
 
-def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
+def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> tuple:
     """
     Merges a list of SARC packs and returns the changes
 
@@ -207,6 +207,17 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
         new_sarc.add_file(merged_sarc['file'], new_data)
         del new_data
 
+    for file in base_sarc.list_files():
+        if file in loose_files:
+            if file not in modded_files or loose_files[file] > modded_files[file]:
+                mod = util.get_mod_by_priority(loose_files[file])
+                prefix = 'content' if not file.startswith(
+                    'Aoc/0010') else 'aoc/0010'
+                modded_bytes = (mod / 'content' /
+                                file.replace('Aoc/0010', '')).read_bytes()
+                new_sarc.delete_file(file)
+                new_sarc.add_file(file, modded_bytes)
+
     if sarc_list[-1]['nest_level'] > 1:
         if verbose:
             sarc_log.append(
@@ -218,11 +229,11 @@ def merge_sarcs(sarc_list, verbose: bool = False) -> tuple:
     return new_sarc, sarc_log
 
 
-def threaded_merge_sarcs(pack, modded_sarcs, verbose):
+def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
     output_path = Path(util.get_master_modpack_dir() /
                        modded_sarcs[pack][0]['rel_path'])
     versions = get_sarc_versions(pack, modded_sarcs)
-    new_sarc, log = merge_sarcs(versions, verbose)
+    new_sarc, log = merge_sarcs(versions, verbose, loose_files=modded_files)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as of:
         if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
@@ -242,6 +253,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     :type verbose: bool, optional
     """
     print('Merging modified SARC packs...')
+    modded_files = util.get_all_modded_files(only_loose=True)
     bcml_dir = util.get_master_modpack_dir()
     if only_these is None:
         if (bcml_dir / 'aoc').exists():
@@ -265,7 +277,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     if len(sarcs_to_merge) > 0:
         print(f'Processing {len(sarcs_to_merge)} packs...')
         partial_thread_merge = partial(
-            threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose)
+            threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose, modded_files=modded_files)
         num_threads = min(cpu_count() - 1, len(modded_sarcs))
         p = Pool(processes=num_threads)
         results = p.map(partial_thread_merge, sarcs_to_merge)

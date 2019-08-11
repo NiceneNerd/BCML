@@ -379,14 +379,14 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                         aamp_diffs.update(nested_diffs)
                     if len(sarc_changes) > 0:
                         print('\n'.join(sarc_changes))
-            mod_sarc_count = len(modded_sarc_files)
+            mod_sarc_count = len(sarc_files)
             print(
-                f'Found {mod_sarc_count} modded pack file{"s" if mod_sarc_count != 1 else ""}')
+                f'Found {sarc_files} modded pack file{"s" if mod_sarc_count != 1 else ""}')
 
         if len(modded_files) == 0:
             print('No modified files were found. Very unusual.')
             return
-        no_packs = no_packs or len(modded_sarc_files) == 0
+        no_packs = no_packs or len(sarc_files) == 0
 
         text_mods = {}
         if is_text_mod:
@@ -463,7 +463,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         print('Saving logs...')
         (mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
         with Path(mod_dir / 'logs' / 'rstb.log').open('w') as rf:
-            rf.write('name,rstb\n')
+            rf.write('name,rstb,path\n')
             modded_files.update(modded_sarc_files)
             for file in modded_files:
                 ext = os.path.splitext(file)[1]
@@ -572,8 +572,10 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
     print(f'Uninstalling {mod_name}...')
     pack_mods = pack.get_modded_packs_in_mod(mod)
     text_mods = texts.get_modded_languages(path)
-    gamedata_mod = util.is_gamedata_mod(path)
-    savedata_mod = util.is_savedata_mod(path)
+    gamedata_mod = util.is_gamedata_mod(
+        path) or 'content\\Pack\\Bootup.pack' in pack_mods
+    savedata_mod = util.is_savedata_mod(
+        path) or 'content\\Pack\\Bootup.pack' in pack_mods
     actorinfo_mod = util.is_actorinfo_mod(path)
     map_mod = util.is_map_mod(path)
     deepmerge_mods = merge.get_mod_deepmerge_files(mod)
@@ -634,8 +636,10 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
     mods.insert(new_priority - 100, util.BcmlMod(mod.name, new_priority, path))
     remerge_packs = set()
     remerge_texts = texts.get_modded_languages(path)
-    remerge_gamedata = util.is_gamedata_mod(path)
-    remerge_savedata = util.is_savedata_mod(path)
+    remerge_gamedata = util.is_gamedata_mod(
+        path) or 'content\\Pack\\Bootup.pack' in remerge_packs
+    remerge_savedata = util.is_savedata_mod(
+        path) or 'content\\Pack\\Bootup.pack' in remerge_packs
     remerge_actorinfo = util.is_actorinfo_mod(path)
     remerge_map = util.is_map_mod(path)
     deepmerge = set()
@@ -654,8 +658,10 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             for mpack in pack.get_modded_packs_in_mod(mod):
                 remerge_packs.add(mpack)
             remerge_actorinfo = util.is_actorinfo_mod(mod) or remerge_actorinfo
-            remerge_gamedata = util.is_gamedata_mod(mod) or remerge_gamedata
-            remerge_savedata = util.is_savedata_mod(mod) or remerge_savedata
+            remerge_gamedata = util.is_gamedata_mod(
+                mod) or remerge_gamedata or 'content\\Pack\\Bootup.pack' in remerge_packs
+            remerge_savedata = util.is_savedata_mod(
+                mod) or remerge_savedata or 'content\\Pack\\Bootup.pack' in remerge_packs
             remerge_map = util.is_map_mod(mod) or remerge_map
             for mfile in merge.get_mod_deepmerge_files(mod):
                 deepmerge.add(mfile)
