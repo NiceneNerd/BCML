@@ -12,7 +12,6 @@ A mod installer and manager for BoTW mods on Cemu
 The following `pip` packages, which will be *automatically installed*:
 * [`aamp`](https://pypi.org/project/aamp/)
 * [`byml`](https://pypi.org/project/byml/)
-* [`diff-match-patch`](https://pypi.org/project/diff-match-patch/)
 * [`PySide2`](https://pypi.org/project/PySide2/)
 * [`pyYaml`](https://pypi.org/project/PyYAML/)
 * [`rstb`](https://pypi.org/project/rstb/)
@@ -41,7 +40,7 @@ There are three primary options for installing BCML.
 4. Run BCML using the command `bcml`
 5. (Optional) Create a shortcut to the BCML executable in Python's `Scripts` folder.
 
-On first use, you will have to specify the directory where Cemu is installed and the `content` directory of your BotW game dump.
+On first use, you will have to specify the directory where Cemu is installed and the `content` directory of your BotW game dump. BCML also needs to know the location of Cemu's mlc folder for BotW, but by default it will detect this from your Cemu folder and BotW title ID. If this detection fails or you have another mlc folder you want to use, you will need to specify it manually.
 
 ## How to Use
 
@@ -67,7 +66,8 @@ Advanced options should not be necessary for most mods. However, there are a few
 
 *RSTB Options*
 - "Shrink RSTB values where possible" - By default, BCML will not adjust RSTB entries if the new size would be smaller. You can use this option to instead shrink them if you have good reason to believe it will improve the stability of your installation.
-- "Don't remove complex RSTB entries" - By default, BCML will delete RSTB entries for complex file types (e.g. AAMP, BFRES), since the proper value cannot be calculated. You can use this option to disable this behavior, but know that it can cause instability.
+- "Estimate complex RSTB values" - Though proper RSTB calculations for AAMP and BFRES files is not possible, BCML can optionally apply statistically-generated estimates for most of them. This can potentially add more stability that deleting such entries, but if the estimates are ever too low it can cause crashes.
+- "Don't remove complex RSTB entries" - By default, BCML will delete RSTB entries for complex file types like AAMP and BFRES, since the proper value cannot be calculated. You can use this option to disable this behavior, but know that it can cause instability. If RSTB estimation is enabled for these files, this option will only affect values which the estimation function cannot calculate.
 
 *Merge Options*
 
