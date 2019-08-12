@@ -10,6 +10,7 @@ import traceback
 import urllib.error
 import urllib.request
 import zipfile
+import glob
 from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
@@ -214,30 +215,36 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 while font_metrics.boundingRect(f'Link: {link}.....').width() >= self.lblModInfo.width():
                     link = link[:-1]
                 mod_info.insert(3, f'<b>Link:</b> <a href="{url}">{link}</a>')
-                if not 'image' in rules['Definition'] and 'gamebanana.com' in url:
-                    response = urllib.request.urlopen(url)
-                    data = response.read().decode()
-                    import re
-                    img_match = re.search(
-                        r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
-                    if img_match:
-                        rules['Definition']['image'] = img_match.group(1)
-            if 'image' in rules['Definition']:
-                try:
-                    image_path = str(rules['Definition']['image'])
-                    if image_path.startswith('http'):
-                        response = urllib.request.urlopen(image_path)
-                        data = response.read()
-                        preview = QtGui.QPixmap()
-                        preview.loadFromData(data)
+            try:
+                if not len(glob.glob(str(mod.path / 'thumbnail.*'))):
+                    if not 'image' in rules['Definition']:
+                        if 'url' in rules['Definition'] and 'gamebanana.com' in url:
+                            response = urllib.request.urlopen(url)
+                            data = response.read().decode()
+                            import re
+                            img_match = re.search(
+                                r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
+                            if img_match:
+                                image_path = 'thumbnail.jfif'
+                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
+                        else:
+                            raise Exception(FileNotFoundError)
                     else:
-                        preview = QtGui.QPixmap(
-                            str(mod.path / str(rules['Definition']['image'])))
-                except (FileNotFoundError, urllib.error.HTTPError):
-                    preview = self._logo
-            else:
+                        image_path = str(rules['Definition']['image'])
+                        if image_path.startswith('http'):
+                            urllib.request.urlretrieve(image_path, str(mod.path / ('thumbnail.' + image_path.split(".")[-1])))
+                            image_path = 'thumbnail.' + image_path.split(".")[-1]
+                        if not os.path.isfile(str(mod.path / image_path)):
+                            raise Exception(FileNotFoundError)
+                else:
+                    for n in glob.glob(str(mod.path / 'thumbnail.*')):
+                        image_path = n
+                preview = QtGui.QPixmap(
+                    str(mod.path / image_path))
+            except:
                 preview = self._logo
-            self._mod_infos[mod] = (mod_info, preview)
+            finally:
+                self._mod_infos[mod] = (mod_info, preview)
         else:
             mod_info, preview = self._mod_infos[mod]
 
