@@ -409,7 +409,7 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     """
     print(f'Loading text mods for language {lang}...')
     text_mods = get_modded_text_entries(lang)
-    if len(text_mods) < 2:
+    if len(text_mods) == 0:
         print('No text merging necessary.')
         old_path = util.get_master_modpack_dir() / 'content' / 'Pack' / \
             f'Bootup_{lang}.pack'

@@ -149,9 +149,6 @@ def get_deepmerge_diffs(only_these: List[str] = None) -> dict:
                 if file not in aamp_diffs:
                     aamp_diffs[file] = []
                 aamp_diffs[file].append(mod_diffs[file])
-                for file, diffs in list(aamp_diffs.items()):
-                    if len(diffs) < 2 and '//' not in file:
-                        del aamp_diffs[file]
     return aamp_diffs
 
 
@@ -287,13 +284,13 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
 
 def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[str] = None):
     mods = get_deepmerge_mods()
+    if len(mods) == 0:
+        print('No deep merge necessary.')
+        return
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'rstb.log').unlink()
     if (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').unlink()
-    if len(mods) < 2:
-        print('No deep merge necessary.')
-        return
 
     print('Loading deep merge data...')
     diffs = consolidate_diff_files(get_deepmerge_diffs(only_these=only_these))

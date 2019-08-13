@@ -367,6 +367,7 @@ def merge_gamedata(verbose: bool = False):
                 {data_type: merged_entries[data_type][i*4096:end_pos]}, be=True).write(buf)
             new_gamedata.add_file(f'/{data_type}_{i}.bgdata', buf.getvalue())
     bootup_rstb = inject_gamedata_into_bootup(new_gamedata)
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as gf:
         new_gamedata.write(gf)
 
@@ -470,6 +471,7 @@ def merge_savedata(verbose: bool = False):
     new_savedata.add_file(
         f'/saveformat_{num_files + 1}.bgsvdata', special_bgsv[1])
     bootup_rstb = inject_savedata_into_bootup(new_savedata)
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as sf:
         new_savedata.write(sf)
 
@@ -534,7 +536,7 @@ def merge_actorinfo(verbose: bool = False):
     mods = get_actorinfo_mods()
     actor_path = (util.get_master_modpack_dir() / 'content' /
                   'Actor' / 'ActorInfo.product.sbyml')
-    if len(mods) < 2:
+    if len(mods) == 0:
         print('No actor info merging necessary.')
         if actor_path.exists():
             actor_path.unlink()

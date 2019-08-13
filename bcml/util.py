@@ -132,16 +132,7 @@ def set_game_dir(path: Path):
     try:
         get_mlc_dir()
     except FileNotFoundError:
-        title_id = '00050000101C9400'
-        with (path.parent / 'code' / 'app.xml').open('r') as af:
-            for line in af:
-                title_match = re.search(
-                    r'<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>', line)
-                if title_match:
-                    title_id = title_match.group(1)
-                    break
-        mlc_path = get_cemu_dir() / 'mlc01' / 'usr' / 'title' / \
-            title_id[0:8] / title_id[8:]
+        mlc_path = get_cemu_dir() / 'mlc01'
         if mlc_path.exists():
             set_mlc_dir(mlc_path)
         else:
@@ -164,16 +155,60 @@ def set_mlc_dir(path: Path):
     settings = get_settings()
     settings['mlc_dir'] = str(path.resolve())
     save_settings()
+    if hasattr(get_update_dir, 'update_dir'):
+        del get_update_dir.update_dir
+    if hasattr(get_aoc_dir, 'aoc_dir'):
+        del get_aoc_dir.aoc_dir
+
+
+def get_title_id() -> (str, str):
+    if not hasattr(get_title_id, 'title_id'):
+        title_id = '00050000101C9400'
+        with (get_game_dir().parent / 'code' / 'app.xml').open('r') as af:
+            for line in af:
+                title_match = re.search(
+                    r'<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>', line)
+                if title_match:
+                    title_id = title_match.group(1)
+                    break
+        get_title_id.title_id = (title_id[0:8], title_id[8:])
+    return get_title_id.title_id
 
 
 def get_update_dir() -> Path:
     """ Gets the path to the game's update files in the Cemu mlc directory """
-    return get_mlc_dir() / 'content'
+    if not hasattr(get_update_dir, 'update_dir'):
+        title_id = get_title_id()
+        # First try the 1.15.11c mlc layout
+        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}E' / title_id[1] / 'content').exists():
+            get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
+                f'{title_id[0][0:7]}E' / title_id[1] / 'content'
+        # Then try the legacy layout
+        elif (get_mlc_dir() / 'usr' / 'title' / title_id[0] / title_id[1] / 'content').exists():
+            get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
+                title_id[0] / title_id[1] / 'content'
+        else:
+            raise FileNotFoundError(
+                'The Cemu update directory could not be found.')
+    return get_update_dir.update_dir
 
 
 def get_aoc_dir() -> Path:
     """ Gets the path to the game's aoc files in the Cemu mlc direcroy """
-    return get_mlc_dir() / 'aoc' / 'content' / '0010'
+    if not hasattr(get_aoc_dir, 'aoc_dir'):
+        title_id = get_title_id()
+        # First try the 1.15.11c mlc layout
+        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}C' / title_id[1] / 'content').exists():
+            get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
+                f'{title_id[0][0:7]}C' / title_id[1] / 'content'
+        # Then try the legacy layout
+        elif (get_mlc_dir() / 'usr' / 'title' / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
+            get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
+                title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
+        else:
+            raise FileNotFoundError(
+                'The Cemu aoc directory could not be found.')
+    return get_aoc_dir.aoc_dir
 
 
 def get_modpack_dir() -> Path:
