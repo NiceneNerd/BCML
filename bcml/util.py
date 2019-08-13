@@ -73,8 +73,9 @@ def get_settings() -> {}:
             settings['Settings'] = {
                 'cemu_dir': '',
                 'game_dir': '',
+                'load_reverse': False,
                 'mlc_dir': '',
-                'load_reverse': False
+                'site_meta': ''
             }
             with settings_path.open('w') as sf:
                 settings.write(sf)
@@ -160,6 +161,14 @@ def set_mlc_dir(path: Path):
     if hasattr(get_aoc_dir, 'aoc_dir'):
         del get_aoc_dir.aoc_dir
 
+def set_site_meta(site_meta):
+    """ Caches site meta from url's specified in mods rules.txt """
+    settings = get_settings()
+    if not 'site_meta' in settings:
+        settings['site_meta'] = ''
+    else:
+        settings['site_meta'] = str(settings['site_meta'] + f'{site_meta};')
+    save_settings()
 
 def get_title_id() -> (str, str):
     if not hasattr(get_title_id, 'title_id'):
