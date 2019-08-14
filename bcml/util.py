@@ -323,13 +323,15 @@ def get_hash_table() -> {}:
     return get_hash_table.table
 
 
-def get_canon_name(file: str) -> str:
+def get_canon_name(file: str, allow_no_source: bool = False) -> str:
     """ Gets the canonical path of a game file taken from an extracted graphic pack """
-    name = file.replace("\\", "/").replace('.s', '.')
+    name = str(file).replace("\\", "/").replace('.s', '.')
     if 'aoc/' in name:
         return name.replace('aoc/content', 'aoc').replace('aoc', 'Aoc')
     elif 'content/' in name and '/aoc' not in name:
         return name.replace('content/', '')
+    elif allow_no_source:
+        return name
 
 
 def get_mod_id(mod_name: str, priority: int) -> str:
@@ -409,7 +411,8 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
     if the entry does not exist, false if it matches the table entry.
     :rtype: bool
     """
-    contents = file if type(file) is bytes else file.read_bytes()
+    contents = file if type(file) is bytes else file.read_bytes(
+    ) if isinstance(file, Path) else file.tobytes()
     table = get_hash_table()
     if name not in table:
         return count_new
@@ -579,7 +582,7 @@ def create_bcml_graphicpack_if_needed():
                      'fsPriority = 9999')
 
 
-def dict_merge(dct: dict, merge_dct: dict):
+def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
     to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
@@ -587,6 +590,7 @@ def dict_merge(dct: dict, merge_dct: dict):
 
     :param dct: dict onto which the merge is executed
     :param merge_dct: dct merged into dct
+    :param unique_lists: Whether to prevent duplicate items in lists, defaults to False
     :return: None
     """
     for k, v in merge_dct.items():
@@ -596,5 +600,7 @@ def dict_merge(dct: dict, merge_dct: dict):
         elif (k in dct and isinstance(dct[k], list)
                 and isinstance(merge_dct[k], list)):
             dct[k].extend(merge_dct[k])
+            if unique_lists:
+                dct[k] = list(set(dct[k]))
         else:
             dct[k] = merge_dct[k]

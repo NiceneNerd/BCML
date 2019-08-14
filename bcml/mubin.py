@@ -3,6 +3,8 @@
 import shutil
 from collections import namedtuple
 from copy import deepcopy
+from functools import partial
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import Union, List
 
@@ -144,22 +146,21 @@ def get_all_map_diffs() -> dict:
                 diffs[a_map].append(diff)
     c_diffs = {}
     for file, mods in list(diffs.items()):
-        if len(mods) > 1:
-            c_diffs[file] = {
-                'add': [],
-                'mod': {},
-                'del': list(dict.fromkeys([hash_id for hashes in [mod['del'] for mod in mods] for hash_id in hashes]))
-            }
-            for mod in mods:
-                for hash_id, actor in mod['mod'].items():
-                    c_diffs[file]['mod'][hash_id] = deepcopy(actor)
-            mods.reverse()
-            add_hashes = []
-            for mod in mods:
-                for actor in mod['add']:
-                    if actor['HashId'] not in add_hashes:
-                        add_hashes.append(actor['HashId'])
-                        c_diffs[file]['add'].append(actor)
+        c_diffs[file] = {
+            'add': [],
+            'mod': {},
+            'del': list(dict.fromkeys([hash_id for hashes in [mod['del'] for mod in mods] for hash_id in hashes]))
+        }
+        for mod in mods:
+            for hash_id, actor in mod['mod'].items():
+                c_diffs[file]['mod'][hash_id] = deepcopy(actor)
+        mods.reverse()
+        add_hashes = []
+        for mod in mods:
+            for actor in mod['add']:
+                if actor['HashId'] not in add_hashes:
+                    add_hashes.append(actor['HashId'])
+                    c_diffs[file]['add'].append(actor)
     return c_diffs
 
 
@@ -175,6 +176,50 @@ def log_modded_texts(tmp_dir: Path, modded_mubins: List[str]):
     yaml_util.add_representers(dumper)
     with log_file.open('w') as lf:
         yaml.dump(diffs, lf, Dumper=dumper)
+
+
+def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = False):
+    map_unit, changes = map_pair
+    if verbose:
+        print(
+            f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
+    merge_map = get_stock_map(map_unit)
+    stock_hashes = [obj['HashId'] for obj in merge_map['Objs']]
+    mods = changes['mod'].items()
+    for hash_id, actor in changes['mod'].items():
+        merge_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
+    stock_links = []
+    if map_unit.type == 'Static' and len(changes['del']) > 0:
+        for actor in merge_map['Objs']:
+            if 'LinksToObj' in actor:
+                stock_links.extend([link['DestUnitHashId']
+                                    for link in actor['LinksToObj']])
+    for map_del in changes['del']:
+        if map_del in stock_hashes and map_del not in stock_links:
+            merge_map['Objs'].pop(stock_hashes.index(map_del))
+    merge_map['Objs'].extend(
+        [change for change in changes['add'] if change['HashId'] not in stock_hashes])
+    merge_map['Objs'].sort(key=lambda actor: actor['HashId'])
+
+    aoc_out: Path = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \
+        'MainField' / map_unit.section / \
+        f'{map_unit.section}_{map_unit.type}.smubin'
+    aoc_out.parent.mkdir(parents=True, exist_ok=True)
+    aoc_bytes = byml.Writer(merge_map, be=True).get_bytes()
+    aoc_out.write_bytes(wszst_yaz0.compress(aoc_bytes))
+    merge_map['Objs'] = [obj for obj in merge_map['Objs']
+                         if not obj['UnitConfigName'].startswith('DLC')]
+    (util.get_master_modpack_dir() / 'content' / 'Map' /
+     'MainField' / map_unit.section).mkdir(parents=True, exist_ok=True)
+    base_out = util.get_master_modpack_dir() / 'content' / 'Map' / 'MainField' / \
+        map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
+    base_out.parent.mkdir(parents=True, exist_ok=True)
+    base_bytes = byml.Writer(merge_map, be=True).get_bytes()
+    base_out.write_bytes(wszst_yaz0.compress(base_bytes))
+    return {
+        'aoc': (f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin', rstb_calc.calculate_file_size_with_ext(aoc_bytes, True, '.mubin')),
+        'main': (f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin', rstb_calc.calculate_file_size_with_ext(base_bytes, True, '.mubin'))
+    }
 
 
 def merge_maps(verbose: bool = False):
@@ -200,49 +245,15 @@ def merge_maps(verbose: bool = False):
     rstb_vals = {}
     rstb_calc = rstb.SizeCalculator()
     print('Merging modded map units...')
-    for map_unit, changes in map_diffs.items():
-        if verbose:
-            print(
-                f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
-        merge_map = get_stock_map(map_unit)
-        stock_hashes = [obj['HashId'] for obj in merge_map['Objs']]
-        mods = changes['mod'].items()
-        for hash_id, actor in changes['mod'].items():
-            merge_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
-        stock_links = []
-        if map_unit.type == 'Static' and len(changes['del']) > 0:
-            for actor in merge_map['Objs']:
-                if 'LinksToObj' in actor:
-                    stock_links.extend([link['DestUnitHashId']
-                                        for link in actor['LinksToObj']])
-        for map_del in changes['del']:
-            if map_del in stock_hashes and map_del not in stock_links:
-                merge_map['Objs'].pop(stock_hashes.index(map_del))
-        merge_map['Objs'].extend(
-            [change for change in changes['add'] if change['HashId'] not in stock_hashes])
-        merge_map['Objs'].sort(key=lambda actor: actor['HashId'])
-
-        aoc_out: Path = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \
-            'MainField' / map_unit.section / \
-            f'{map_unit.section}_{map_unit.type}.smubin'
-        aoc_out.parent.mkdir(parents=True, exist_ok=True)
-        aoc_bytes = byml.Writer(merge_map, be=True).get_bytes()
-        rstb_vals[f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin'] = rstb_calc.\
-            calculate_file_size_with_ext(aoc_bytes, True, '.mubin')
-        aoc_out.write_bytes(wszst_yaz0.compress(aoc_bytes))
-        del aoc_bytes
-        merge_map['Objs'] = [obj for obj in merge_map['Objs']
-                             if not obj['UnitConfigName'].startswith('DLC')]
-        (util.get_master_modpack_dir() / 'content' / 'Map' /
-         'MainField' / map_unit.section).mkdir(parents=True, exist_ok=True)
-        base_out = util.get_master_modpack_dir() / 'content' / 'Map' / 'MainField' / \
-            map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
-        base_out.parent.mkdir(parents=True, exist_ok=True)
-        base_bytes = byml.Writer(merge_map, be=True).get_bytes()
-        rstb_vals[f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin'] = rstb_calc.calculate_file_size_with_ext(
-            base_bytes, True, '.mubin')
-        base_out.write_bytes(wszst_yaz0.compress(base_bytes))
-        del base_bytes
+    num_threads = min(cpu_count() - 1, len(map_diffs))
+    p = Pool(processes=num_threads)
+    rstb_results = p.map(partial(merge_map, rstb_calc=rstb_calc,
+                                 verbose=verbose), list(map_diffs.items()))
+    p.close()
+    p.join()
+    for result in rstb_results:
+        rstb_vals[result['aoc'][0]] = result['aoc'][1]
+        rstb_vals[result['main'][0]] = result['main'][1]
 
     print('Adjusting RSTB...')
     with log_path.open('w') as lf:

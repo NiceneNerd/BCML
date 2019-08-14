@@ -226,14 +226,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
                             if img_match:
                                 image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
+                                urllib.request.urlretrieve(
+                                    img_match.group(1), str(mod.path / image_path))
                         else:
                             raise Exception(FileNotFoundError)
                     else:
                         image_path = str(rules['Definition']['image'])
                         if image_path.startswith('http'):
-                            urllib.request.urlretrieve(image_path, str(mod.path / ('thumbnail.' + image_path.split(".")[-1])))
-                            image_path = 'thumbnail.' + image_path.split(".")[-1]
+                            urllib.request.urlretrieve(image_path, str(
+                                mod.path / ('thumbnail.' + image_path.split(".")[-1])))
+                            image_path = 'thumbnail.' + \
+                                image_path.split(".")[-1]
                         if not os.path.isfile(str(mod.path / image_path)):
                             raise Exception(FileNotFoundError)
                 else:
@@ -352,7 +355,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             rstable.generate_master_rstb()
             if len(fix_packs) > 0:
                 pack.merge_installed_packs(no_injection=not (
-                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
+                    fix_gamedata or fix_savedata), only_these=list(fix_packs), even_one=True)
             if fix_gamedata:
                 data.merge_gamedata()
             if fix_savedata:

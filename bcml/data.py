@@ -75,9 +75,8 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     :rtype: int
     """
     if not bootup_path:
-        installed_bootups = list(
-            util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
-        bootup_path = installed_bootups[-1] if len(installed_bootups) > 0 \
+        master_boot = util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+        bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as bf:
         bootup_pack = sarc.read_file_and_make_sarc(bf)
@@ -560,7 +559,8 @@ def merge_actorinfo(verbose: bool = False):
     for actor_hash, actor_info in modded_actors.items():
         if actor_hash in actorinfo['Hashes']:
             idx = actorinfo['Hashes'].index(actor_hash)
-            util.dict_merge(actorinfo['Actors'][idx], actor_info)
+            util.dict_merge(actorinfo['Actors'][idx],
+                            actor_info, unique_lists=True)
             if verbose:
                 print(f'  Updated entry for {actorinfo["Actors"][idx]}')
         else:

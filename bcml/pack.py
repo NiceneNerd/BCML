@@ -86,16 +86,19 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
     """
     sarc_list = []
     for pack in mod_list[name]:
-        with open(pack['path'], 'rb') as opened_pack:
-            o_sarc = sarc.read_file_and_make_sarc(opened_pack)
-            if o_sarc:
-                sarc_list.append({
-                    'pack': o_sarc,
-                    'priority': pack['priority'],
-                    'nest_level': 1,
-                    'name': name,
-                    'base': False
-                })
+        try:
+            with open(pack['path'], 'rb') as opened_pack:
+                o_sarc = sarc.read_file_and_make_sarc(opened_pack)
+                if o_sarc:
+                    sarc_list.append({
+                        'pack': o_sarc,
+                        'priority': pack['priority'],
+                        'nest_level': 1,
+                        'name': name,
+                        'base': False
+                    })
+        except FileNotFoundError:
+            pass
     try:
         base_file = util.get_game_file(mod_list[name][0]['rel_path'])
         with base_file.open('rb') as sf:
@@ -145,6 +148,9 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
         pack = msarc['pack']
         priority = msarc['priority']
         for file in pack.list_files():
+            if file not in base_sarc.list_files():
+                new_sarc.add_file(file, pack.get_file_data(file).tobytes())
+                continue
             rfile = file.replace('.s', '.')
             fdata = util.unyaz_if_needed(
                 pack.get_file_data(file).tobytes())
@@ -275,6 +281,10 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             for file in (bcml_dir / 'content').rglob('**/*'):
                 if file.is_file() and file.suffix in util.SARC_EXTS and 'Bootup_' not in file.stem:
                     file.unlink()
+    else:
+        for file in only_these:
+            if (bcml_dir / file).exists():
+                (bcml_dir / file).unlink()
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
