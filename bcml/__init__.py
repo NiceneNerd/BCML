@@ -2,6 +2,7 @@
 # Licensed under GPLv3+
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -17,6 +18,8 @@ from pathlib import Path
 
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import Qt
+from PySide2.QtCore import QUrl
+from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog
 
 from bcml import data, install, merge, pack, rstable, texts, util, mubin
@@ -164,6 +167,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             mod_item.setData(QtCore.Qt.UserRole, mod)
             self.listWidget.addItem(mod_item)
         self._mod_infos = {}
+        self.lblModInfo.linkActivated.connect(self.link)
         self.lblModInfo.setText('No mod selected')
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 104)
@@ -175,6 +179,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.btnRemerge.setEnabled(False)
             self.btnExport.setEnabled(False)
 
+    def link(self, linkStr):
+        QDesktopServices.openUrl(QUrl(linkStr))
+    
     def SelectItem(self):
         if len(self.listWidget.selectedItems()) == 0:
             return
@@ -216,25 +223,60 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             ]
             if 'url' in rules['Definition']:
                 url = str(rules['Definition']['url'])
-                link = url
-                while font_metrics.boundingRect(f'Link: {link}.....').width() >= self.lblModInfo.width():
-                    link = link[:-1]
-                mod_info.insert(3, f'<b>Link:</b> <a href="{url}">{link}</a>')
+                if 'www.' in url:
+                    mod_domain = url.split('.')[1]
+                elif 'http' in url:
+                    mod_domain = url.split('//')[1].split('.')[0]
+                site_name = mod_domain.capitalize()
+                fetch_site_meta = True
+                if not 'site_meta' in util.get_settings():
+                    util.set_site_meta('')
+                if len(util.get_settings()['site_meta'].split(';')) > 1:
+                    for site_meta in util.get_settings()['site_meta'].split(';'):
+                        if site_meta.split(':')[0] == mod_domain:
+                            fetch_site_meta = False
+                            site_name = site_meta.split(':')[1]
+                if fetch_site_meta:
+                    try:
+                        response = urllib.request.urlopen(url)
+                        data = response.read().decode()
+                        name_match = re.search(
+                            r'property=\"og\:site_name\"[^\/\>]*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]*property=\"og\:site_name\"', data)
+                        if name_match:
+                            for group in name_match.groups():
+                                if group is not None:
+                                    util.set_site_meta(f'{mod_domain}:{group}')
+                                    site_name = str(group)
+                        img_match = re.search(
+                            r'\<link.*rel=\"(shortcut icon|icon)\".*href\=\"(.+?)\".*\>', data)
+                        if img_match:
+                            if not os.path.isdir(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta')):
+                                os.makedirs(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta'))
+                            try:
+                                urllib.request.urlretrieve(img_match.group(2), str(util.get_exec_dir() / 'work_dir' / 'cache' / "site_meta" / f'fav_{site_name}.{img_match.group(2).split(".")[-1]}'))
+                            except:
+                                pass
+                    except:
+                        pass
+                favicon = ''
+                for file in glob.glob(str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / f'fav_{site_name}.*')):
+                        favicon = f'<img src="{str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / file)}" height="16"/> '
+                mod_info.insert(3, f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>')
             try:
                 if not len(glob.glob(str(mod.path / 'thumbnail.*'))):
                     if not 'image' in rules['Definition']:
                         if 'url' in rules['Definition'] and 'gamebanana.com' in url:
                             response = urllib.request.urlopen(url)
                             data = response.read().decode()
-                            import re
                             img_match = re.search(
                                 r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
                             if img_match:
                                 image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(
-                                    img_match.group(1), str(mod.path / image_path))
+                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
+                            else:
+                                raise Exception(f'Rule for {site_name} failed to find the remote preview')
                         else:
-                            raise Exception(FileNotFoundError)
+                            raise Exception(f'No preview image available')
                     else:
                         image_path = str(rules['Definition']['image'])
                         if image_path.startswith('http'):
@@ -243,7 +285,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             image_path = 'thumbnail.' + \
                                 image_path.split(".")[-1]
                         if not os.path.isfile(str(mod.path / image_path)):
-                            raise Exception(FileNotFoundError)
+                            raise Exception(f'Preview {image_path} specified in rules.txt not found')
                 else:
                     for n in glob.glob(str(mod.path / 'thumbnail.*')):
                         image_path = n
