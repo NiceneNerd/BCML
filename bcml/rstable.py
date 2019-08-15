@@ -1,6 +1,7 @@
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
+import io
 import struct
 import zlib
 from copy import deepcopy
@@ -219,7 +220,7 @@ def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = 'rstb.lo
     return changes
 
 
-def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -> List[str]:
+def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -> (ResourceSizeTable, List[str]):
     """
     Merges changes from a list of RSTB mods into a single RSTB
 
@@ -290,7 +291,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
             change_count['added'] += 1
     change_list.append((f'RSTB merge complete: updated {change_count["updated"]} entries,'
                         f' deleted {change_count["deleted"]} entries, added {change_count["added"]} entries', False))
-    return change_list
+    return table, change_list
 
 
 def generate_master_rstb(verbose: bool = False):
@@ -308,7 +309,7 @@ def generate_master_rstb(verbose: bool = False):
         rstb_values.update(get_mod_rstb_values(
             util.get_master_modpack_dir(), log_name='map.log'))
 
-    rstb_changes = merge_rstb(table, rstb_values, verbose)
+    table, rstb_changes = merge_rstb(table, rstb_values, verbose)
     for change in rstb_changes:
         if not change[1] or (change[1] and verbose):
             print(change[0])
@@ -322,7 +323,10 @@ def generate_master_rstb(verbose: bool = False):
                                                 'ResourceSizeTable.product.srsizetable'
     if not rstb_path.exists():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
-    write_rstb(table, str(rstb_path), True)
+    with rstb_path.open('wb') as rf:
+        with io.BytesIO() as buf:
+            table.write(buf, True)
+            rf.write(wszst_yaz0.compress(buf.getvalue()))
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
     rstb_log.parent.mkdir(parents=True, exist_ok=True)

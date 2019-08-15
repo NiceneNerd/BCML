@@ -17,7 +17,7 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import util
+from bcml import util, rstable
 from bcml.util import BcmlMod
 
 text_exclusions = [
@@ -465,9 +465,14 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
 
     rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
                                          'ResourceSizeTable.product.srsizetable'
-    table: rstb.ResourceSizeTable = rstb.util.read_rstb(str(rstb_path), True)
+    if rstb_path.exists():
+        table: rstb.ResourceSizeTable = rstb.util.read_rstb(
+            str(rstb_path), True)
+    else:
+        table = rstable.get_stock_rstb()
     msg_path = f'Message/Msg_{lang}.product.sarc'
     if table.is_in_table(msg_path):
         print('Correcting RSTB...')
         table.delete_entry(msg_path)
+    rstb_path.parent.mkdir(parents=True, exist_ok=True)
     rstb.util.write_rstb(table, str(rstb_path), True)

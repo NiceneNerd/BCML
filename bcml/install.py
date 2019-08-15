@@ -4,8 +4,9 @@ import os
 import shutil
 import subprocess
 from configparser import ConfigParser
+from copy import deepcopy
 from fnmatch import fnmatch
-from functools import partial
+from functools import partial, reduce
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import Union
@@ -39,9 +40,9 @@ def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
     tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh32(str(path)).hexdigest()}'
-    formats = ['.rar', '.zip', '.7z']
+    formats = ['.rar', '.zip', '.7z', '.bnp']
     if tmpdir.exists():
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir, ignore_errors=True)
     if path.suffix.lower() in formats:
         x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
                   'x', str(path), f'-o{str(tmpdir)}']
@@ -49,7 +50,7 @@ def open_mod(path: Path) -> Path:
                        stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
     else:
         raise Exception(
-            'The mod provided was not a supported archive (ZIP, RAR, or 7z).')
+            'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).')
     if not tmpdir.exists():
         raise Exception('No files were extracted.')
     rulesdir = tmpdir
@@ -262,7 +263,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                     print('\n'.join(sarc_changes))
         mod_sarc_count = len(sarc_files)
         print(
-            f'Found {sarc_files} modded pack file{"s" if mod_sarc_count != 1 else ""}')
+            f'Found {len(sarc_files)} modded pack file{"s" if mod_sarc_count != 1 else ""}')
 
     if len(modded_files) == 0:
         print('No modified files were found. Very unusual.')
@@ -379,7 +380,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
     if shrink_rstb:
         Path(tmp_dir / 'logs' / '.shrink').open('w').close()
 
-    return is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, no_map
+    return is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, no_map, modded_files
 
 
 def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool, verbose: bool, guess: bool = False):
@@ -487,21 +488,6 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
-    is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, no_map = generate_logs(
-        tmp_dir=tmp_dir,
-        verbose=verbose,
-        leave_rstb=leave_rstb,
-        shrink_rstb=shrink_rstb,
-        guess=guess,
-        no_packs=no_packs,
-        no_texts=no_texts,
-        no_gamedata=no_gamedata,
-        no_savedata=no_savedata,
-        no_actorinfo=no_actorinfo,
-        no_map=no_map,
-        deep_merge=deep_merge
-    )
-
     rules = ConfigParser()
     rules.read(tmp_dir / 'rules.txt')
     mod_name = str(rules['Definition']['name']).strip(' "\'')
@@ -520,7 +506,20 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             text_mods = texts.get_modded_languages(tmp_dir)
             is_text_mod = len(text_mods) > 0
     else:
-        print()
+        is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, no_map, _ = generate_logs(
+            tmp_dir=tmp_dir,
+            verbose=verbose,
+            leave_rstb=leave_rstb,
+            shrink_rstb=shrink_rstb,
+            guess=guess,
+            no_packs=no_packs,
+            no_texts=no_texts,
+            no_gamedata=no_gamedata,
+            no_savedata=no_savedata,
+            no_actorinfo=no_actorinfo,
+            no_map=no_map,
+            deep_merge=deep_merge
+        )
 
     priority = get_next_priority()
     mod_id = util.get_mod_id(mod_name, priority)
@@ -764,7 +763,7 @@ def refresh_merges(verbose: bool = False):
          'Resource').mkdir(parents=True, exist_ok=True)
         shutil.copy(str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')), str(
             (util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.product.srsizetable')))
-    pack.merge_installed_packs(verbose=False)
+    pack.merge_installed_packs(verbose=False, even_one=True)
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
         texts.merge_texts(lang, verbose=verbose)
@@ -774,3 +773,111 @@ def refresh_merges(verbose: bool = False):
     mubin.merge_maps(verbose)
     merge.deep_merge(verbose, wait_rstb=True)
     rstable.generate_master_rstb(verbose)
+
+
+def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
+    canon = util.get_canon_name(file.relative_to(tmp_dir))
+    if canon not in hashes:
+        return
+    with file.open('rb') as sf:
+        base_sarc = sarc.read_file_and_make_sarc(sf)
+    if not base_sarc:
+        return
+    new_sarc = sarc.SARCWriter(True)
+    can_delete = True
+    for nest_file in base_sarc.list_files():
+        canon = nest_file.replace('.s', '.')
+        ext = Path(canon).suffix
+        file_data = base_sarc.get_file_data(nest_file).tobytes()
+        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
+        if (canon not in hashes and ext not in ['.yml', '.bak']) or \
+                (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
+            can_delete = False
+            new_sarc.add_file(nest_file, file_data)
+    if can_delete:
+        del new_sarc
+        file.unlink()
+    else:
+        with file.open('wb') as sf:
+            if file.suffix.startswith('.s') and file.suffix != '.ssarc':
+                sf.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+            else:
+                new_sarc.write(sf)
+
+
+def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
+                       no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
+                       no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
+                       guess: bool = False, deep_merge: bool = True):
+    if isinstance(mod, str):
+        mod = Path(mod)
+    if mod.is_file():
+        print('Extracting mod...')
+        tmp_dir: Path = open_mod(mod)
+    elif mod.is_dir():
+        print(f'Loading mod from {str(mod)}...')
+        tmp_dir: Path = util.get_work_dir() / \
+            f'tmp_{xxhash.xxh32(str(mod)).hexdigest()}'
+        shutil.copytree(str(mod), str(tmp_dir))
+    else:
+        print(f'Error: {str(mod)} is neither a valid file nor a directory')
+        return
+
+    logged_files = generate_logs(tmp_dir, leave_rstb=leave_rstb, shrink_rstb=shrink_rstb,
+                                 guess=guess, no_packs=no_packs, no_texts=no_texts, no_gamedata=no_gamedata,
+                                 no_savedata=no_savedata, no_actorinfo=no_actorinfo, no_map=no_map,
+                                 deep_merge=deep_merge)[8]
+
+    print('Removing unnecessary files...')
+    if not no_map:
+        print('  Removing map units...')
+        for mubin in [file['path'] for canon, file in logged_files.items()
+                      if fnmatch(Path(canon).name, '[A-Z]-[0-9]_*.mubin')]:
+            try:
+                (tmp_dir / mubin).unlink()
+            except FileNotFoundError:
+                pass
+    if not no_texts and (tmp_dir / 'content' / 'Pack').exists():
+        print('  Removing language bootup packs...')
+        for bootup_lang in (tmp_dir / 'content' / 'Pack').glob('Bootup_*.pack'):
+            bootup_lang.unlink()
+    if not no_actorinfo and (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').exists():
+        print('  Removing ActorInfo.product.sbyml...')
+        (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').unlink()
+    if not no_gamedata and (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').exists():
+        print('  Removing gamedata sarcs...')
+        with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bf:
+            bsarc = sarc.read_file_and_make_sarc(bf)
+        csarc = sarc.make_writer_from_sarc(bsarc)
+        csarc.delete_file('GameData/gamedata.ssarc')
+        csarc.delete_file('GameData/savedataformat.ssarc')
+        with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
+            csarc.write(bf)
+
+    hashes = util.get_hash_table()
+    print('  Creating partial packs...')
+    sarc_files = [file for file in list(
+        tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+    num_threads = min(len(sarc_files), cpu_count())
+    p = Pool(processes=num_threads)
+    p.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
+    p.close()
+    p.join()
+
+    with (tmp_dir / 'logs' / 'packs.log').open('w') as pf:
+        for file in [file for file in list(tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]:
+            pf.write(
+                f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
+            )
+
+    print('  Removing blank folders...')
+    for folder in reversed(list(tmp_dir.rglob('**/*'))):
+        if folder.is_dir() and len(list(folder.glob('*'))) == 0:
+            shutil.rmtree(folder)
+
+    print(f'Saving output file to {str(output)}...')
+    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+              'a', str(output), f'{str(tmp_dir / "*")}']
+    subprocess.run(x_args, stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    print('Conversion complete.')
