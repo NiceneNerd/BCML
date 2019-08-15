@@ -29,11 +29,11 @@ setup(
     install_requires=[
         'aamp==1.3.0.post1',
         'byml==2.3.0.post1',
-        'PySide2',
+        'PySide2==5.13.0',
         'pyYaml==5.1.1',
-        'sarc',
-        'rstb',
-        'wszst-yaz0',
-        'xxhash'
+        'sarc==2.0.1',
+        'rstb==1.1.2',
+        'wszst-yaz0==1.2.0.post1',
+        'xxhash==1.3.0'
     ]
 )
