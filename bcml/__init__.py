@@ -17,6 +17,7 @@ from pathlib import Path
 
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QFileDialog
 
 from bcml import data, install, merge, pack, rstable, texts, util, mubin
 from bcml.Ui_about import Ui_AboutDialog
@@ -24,6 +25,7 @@ from bcml.Ui_install import Ui_InstallDialog
 from bcml.Ui_main import Ui_MainWindow
 from bcml.Ui_progress import Ui_dlgProgress
 from bcml.Ui_settings import Ui_SettingsDialog
+from bcml.Ui_package import Ui_PackageDialog
 from bcml.util import BcmlMod
 
 
@@ -36,6 +38,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setWindowIcon(util.get_icon('bcml.ico'))
         load_reverse = util.get_settings_bool('load_reverse')
 
+        self.btnPackage = QtWidgets.QToolButton(self.statusBar())
+        self.btnPackage.setIcon(util.get_icon('pack.png'))
+        self.btnPackage.setToolTip('Package BNP Mod')
         self.btnSettings = QtWidgets.QToolButton(self.statusBar())
         self.btnSettings.setIcon(util.get_icon('settings.png'))
         self.btnSettings.setToolTip('Settings')
@@ -44,6 +49,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnAbout.setToolTip('About')
         self.statusBar().addPermanentWidget(
             QtWidgets.QLabel('Version ' + util.get_bcml_version()))
+        self.statusBar().addPermanentWidget(self.btnPackage)
         self.statusBar().addPermanentWidget(self.btnSettings)
         self.statusBar().addPermanentWidget(self.btnAbout)
 
@@ -75,6 +81,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnExport.clicked.connect(self.ExportClicked)
         self.btnUninstall.clicked.connect(self.UninstallClicked)
         self.btnExplore.clicked.connect(self.ExploreClicked)
+        self.btnPackage.clicked.connect(self.PackageClicked)
         self.btnSettings.clicked.connect(self.SettingsClicked)
         self.btnAbout.clicked.connect(self.AboutClicked)
 
@@ -92,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self, 'First Time', 'It looks like this may be your first time running BCML. Please select the directory where Cemu is installed.')
-            folder = QtWidgets.QFileDialog.getExistingDirectory(
+            folder = QFileDialog.getExistingDirectory(
                 self, 'Select Cemu Directory')
             if folder:
                 util.set_cemu_dir(Path(folder))
@@ -106,7 +113,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 'Please select the "content" directory in your dumped copy of Breath of the Wild.')
             folder = '/'
             while not (Path(folder).parent / 'code' / 'app.xml').exists():
-                folder = QtWidgets.QFileDialog.getExistingDirectory(
+                folder = QFileDialog.getExistingDirectory(
                     self, 'Select Game Dump Directory')
                 if folder:
                     if (Path(folder) / 'content').exists():
@@ -121,11 +128,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         except FileNotFoundError as e:
                             QtWidgets.QMessageBox.information(
                                 self, 'First Time', 'BCML could not detect the location of Cemu\'s MLC directory for your game. '
-                                'You will need to specify it manually. Make sure to select the title folder specifically for '
-                                'Breath of the Wild, not just the mlc01 folder itself. For example: \n'
-                                'C:\\Cemu\\mlc01\\title\\00050000\\101C9400')
-                            mlc_folder = QtWidgets.QFileDialog.getExistingDirectory(
-                                self, 'Select MLC Title Directory')
+                                'You will need to specify it manually.')
+                            mlc_folder = QFileDialog.getExistingDirectory(
+                                self, 'Select Cemu MLC Directory')
                             if mlc_folder:
                                 util.set_mlc_dir(Path(mlc_folder))
                                 util.set_game_dir(Path(folder))
@@ -268,6 +273,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnExport.setEnabled(False)
         self.btnUninstall.setEnabled(False)
         self.btnExplore.setEnabled(False)
+        self.btnOrder.setEnabled(False)
         self._progress = ProgressDialog(self)
         self._progress.setWindowTitle(title)
         self._progress.show()
@@ -282,6 +288,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnInstall.setEnabled(True)
         self.btnRemerge.setEnabled(True)
         self.btnExport.setEnabled(True)
+        self.btnOrder.setEnabled(True)
         self.LoadMods()
         QtWidgets.QMessageBox.information(
             self, 'Complete', 'Operation finished!')
@@ -476,7 +483,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             rules_path.unlink()
             out.close()
 
-        file_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Exported Mod', str(
+        file_name = QFileDialog.getSaveFileName(self, 'Save Exported Mod', str(
             Path.home()), 'Mod Archive (*.zip);;All Files (*)')[0]
         if file_name:
             self.PerformOperation(export, self, Path(file_name))
@@ -538,6 +545,41 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             subprocess.Popen(["xdg-open", path])
 
+    def PackageClicked(self):
+        def create_package(result):
+            rules = [
+                '[Definition]',
+                'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500',
+                f'name = {result["name"]}',
+                f'path = The Legend of Zelda: Breath of the Wild/BCML Mods/{result["name"]}',
+                f'description = {result["description"]}',
+                'version = 4'
+            ]
+            if len(result['image']) > 0:
+                rules.append(f'image = {result["image"]}')
+            if len(result['url']) > 0:
+                rules.append(f'url = {result["url"]}')
+            (result['folder'] / 'rules.txt').write_text('\n'.join(rules))
+            install.create_minimal_mod(
+                mod=result['folder'],
+                output=result['output'],
+                no_packs=result['no_packs'],
+                no_texts=result['no_texts'],
+                no_gamedata=result['no_gamedata'],
+                no_savedata=result['no_gamedata'],
+                no_actorinfo=result['no_actorinfo'],
+                no_map=result['no_map'],
+                leave_rstb=result['leave'],
+                shrink_rstb=result['shrink'],
+                guess=result['guess'],
+                deep_merge=result['deep_merge']
+            )
+        dialog = PackageDialog(self)
+        result = dialog.GetResult()
+        if result:
+            self.PerformOperation(create_package, (result),
+                                  title=f'Creating BNP package for {result["name"]}')
+
     def SettingsClicked(self):
         if SettingsDialog(self).exec_() == QtWidgets.QDialog.Accepted:
             self.LoadMods()
@@ -563,8 +605,8 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
         self.btnClear.clicked.connect(self.ClearClicked)
 
     def AddFileClicked(self):
-        file_names = QtWidgets.QFileDialog.getOpenFileNames(
-            self, 'Select a Mod', str(Path.home()), 'Mod Archives (*.zip; *.rar; *.7z);;All Files (*)')[0]
+        file_names = QFileDialog.getOpenFileNames(
+            self, 'Select a Mod', str(Path.home()), 'Mod Archives (*.zip; *.rar; *.7z; *.bnp);;All Files (*)')[0]
         for file_name in file_names:
             path = Path(file_name)
             if path.exists():
@@ -574,7 +616,7 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.lstQueue.addItem(mod_item)
 
     def AddFolderClicked(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
+        folder = QFileDialog.getExistingDirectory(
             self, 'Select a Mod Folder')
         if folder:
             path = Path(folder)
@@ -606,8 +648,82 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisableGamedata.isChecked(),
                 self.chkDisableActorInfo.isChecked(),
                 self.chkDisableMap.isChecked(),
-                self.chkEnableDeepMerge.isChecked()
+                not self.chkEnableDeepMerge.isChecked()
             )
+        else:
+            return None
+
+# Package Dialog
+
+
+class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
+
+    def __init__(self, *args, **kwargs):
+        super(PackageDialog, self).__init__()
+        self.setupUi(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(
+            str(util.get_exec_dir() / 'data' / 'bcml.ico')))
+        self.setWindowIcon(icon)
+        self.btnBrowseContent.clicked.connect(self.BrowseContentClicked)
+        self.btnBrowseImg.clicked.connect(self.BrowseImgClicked)
+
+    def BrowseContentClicked(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, 'Select Mod Folder')
+        if folder:
+            path = Path(folder)
+            if path.name == 'content':
+                path = path.parent
+            self.txtFolder.setText(str(path.resolve()))
+
+    def BrowseImgClicked(self):
+        file_name = QFileDialog.getOpenFileName(
+            self, 'Select a Preview Image', str(Path.home()), 'Images (*.png; *.jpg; *.bmp);;All Files (*)')[0]
+        if file_name:
+            self.txtImage.setText(str(Path(file_name).resolve()))
+
+    def accept(self):
+        if len(self.txtName.text().strip()) == 0:
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You must provide a name for your mod.')
+            return
+        if len(self.txtDescript.toPlainText().strip()) == 0:
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You must provide a description for your mod.')
+            return
+        if len(self.txtFolder.text().strip()) == 0 or \
+                not Path(self.txtFolder.text().strip()).exists():
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You must provide a valid folder containing a mod.')
+            return
+        return super().accept()
+
+    def GetResult(self):
+        if self.exec_() == QtWidgets.QDialog.Accepted:
+            output = Path(
+                QFileDialog.getSaveFileName(self, 'Save Your Mod',
+                                            str(Path.home()), 'Botw Nano Patch Mod (*.bnp);;7-Zip Archive (*.7z);;All Files (*)')[0]
+            )
+            if not output:
+                return None
+            return {
+                'name': self.txtName.text().strip(),
+                'description': self.txtDescript.toPlainText().strip(),
+                'image': self.txtImage.text().strip(),
+                'url': self.txtUrl.text().strip(),
+                'folder': Path(self.txtFolder.text().strip()),
+                'shrink': self.chkRstbShrink.isChecked(),
+                'leave': self.chkRstbLeave.isChecked(),
+                'guess': self.chkRstbGuess.isChecked(),
+                'deep_merge': not self.chkEnableDeepMerge.isChecked(),
+                'no_packs': self.chkDisablePack.isChecked(),
+                'no_texts': self.chkDisableTexts.isChecked(),
+                'no_actorinfo': self.chkDisableActorInfo.isChecked(),
+                'no_gamedata': self.chkDisableGamedata.isChecked(),
+                'no_map': self.chkDisableMap.isChecked(),
+                'output': output
+            }
         else:
             return None
 
@@ -633,19 +749,19 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
         self.btnBrowseMlc.clicked.connect(self.BrowseMlcClicked)
 
     def BrowseCemuClicked(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
+        folder = QFileDialog.getExistingDirectory(
             self, 'Select Cemu Directory')
         if folder:
             self.txtCemu.setText(folder)
 
     def BrowseGameClicked(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
+        folder = QFileDialog.getExistingDirectory(
             self, 'Select Game Dump Directory')
         if folder:
             self.txtGameDump.setText(folder)
 
     def BrowseMlcClicked(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
+        folder = QFileDialog.getExistingDirectory(
             self, 'Select Cemu MLC Directory')
         if folder:
             self.txtMlc.setText(folder)

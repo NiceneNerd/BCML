@@ -775,7 +775,37 @@ def refresh_merges(verbose: bool = False):
     rstable.generate_master_rstb(verbose)
 
 
-def create_minimal_mod(mod: Path, output: Path = None, no_packs: bool = False, no_texts: bool = False,
+def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
+    canon = util.get_canon_name(file.relative_to(tmp_dir))
+    if canon not in hashes:
+        return
+    with file.open('rb') as sf:
+        base_sarc = sarc.read_file_and_make_sarc(sf)
+    if not base_sarc:
+        return
+    new_sarc = sarc.SARCWriter(True)
+    can_delete = True
+    for nest_file in base_sarc.list_files():
+        canon = nest_file.replace('.s', '.')
+        ext = Path(canon).suffix
+        file_data = base_sarc.get_file_data(nest_file).tobytes()
+        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
+        if canon not in hashes or \
+                (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
+            can_delete = False
+            new_sarc.add_file(nest_file, file_data)
+    if can_delete:
+        del new_sarc
+        file.unlink()
+    else:
+        with file.open('wb') as sf:
+            if file.suffix.startswith('.s') and file.suffix != '.ssarc':
+                sf.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+            else:
+                new_sarc.write(sf)
+
+
+def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
                        no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
                        no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
                        guess: bool = False, deep_merge: bool = True):
@@ -785,14 +815,10 @@ def create_minimal_mod(mod: Path, output: Path = None, no_packs: bool = False, n
         print('Extracting mod...')
         tmp_dir: Path = open_mod(mod)
     elif mod.is_dir():
-        if (mod / 'rules.txt').exists():
-            print(f'Loading mod from {str(mod)}...')
-            tmp_dir: Path = util.get_work_dir() / \
-                f'tmp_{xxhash.xxh32(str(mod.path)).hexdigest()}'
-            shutil.copytree(str(mod), str(tmp_dir))
-        else:
-            print(f'Cannot open mod at {str(mod)}, no rules.txt found')
-            return
+        print(f'Loading mod from {str(mod)}...')
+        tmp_dir: Path = util.get_work_dir() / \
+            f'tmp_{xxhash.xxh32(str(mod)).hexdigest()}'
+        shutil.copytree(str(mod), str(tmp_dir))
     else:
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
@@ -828,66 +854,30 @@ def create_minimal_mod(mod: Path, output: Path = None, no_packs: bool = False, n
         with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
             csarc.write(bf)
 
-    print('  Removing unnecessary packs...')
-
-    def should_delete(file, value, hashes) -> bool:
-        if util.get_canon_name(file, allow_no_source=True) not in hashes:
-            return False
-        if isinstance(value, dict):
-            delete = True
-            for key, value in value.items():
-                delete = False if not should_delete(
-                    key, value, hashes) else delete
-            return delete
-        elif isinstance(value, str):
-            return Path(value).suffix in util.AAMP_EXTS \
-                and value in hashes
-
     hashes = util.get_hash_table()
-    modded_files = [str(meta['path'])
-                    for file, meta in logged_files.items()]
-    del_files = {}
-    for file in modded_files:
-        parts = file.split('//')
-        top_file = Path(parts[0])
-        if top_file.suffix not in util.SARC_EXTS:
-            continue
-        parts[0] = top_file.as_posix()
-        nest = reduce(lambda res, cur: {
-            cur: res}, reversed(parts))
-        if isinstance(nest, str):
-            nest = {nest: {}}
-        util.dict_merge(del_files, nest)
-    save_files = deepcopy(del_files)
-    for file, value in save_files.items():
-        if not should_delete(file, value, hashes):
-            del del_files[file]
-    for file in del_files:
-        if (tmp_dir / file).exists():
-            (tmp_dir / file).unlink()
-
     print('  Creating partial packs...')
-    for file in [file for file in list(tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]:
-        canon = util.get_canon_name(file.relative_to(tmp_dir))
-        if canon not in hashes:
-            continue
-        with file.open('rb') as sf:
-            base_sarc = sarc.read_file_and_make_sarc(sf)
-        new_sarc = sarc.SARCWriter(True)
-        for nest_file in base_sarc.list_files():
-            canon = nest_file.replace('.s', '.')
-            file_data = base_sarc.get_file_data(nest_file).tobytes()
-            xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
-            if canon not in hashes or xhash != hashes[canon]:
-                new_sarc.add_file(nest_file, file_data)
-        with file.open('wb') as sf:
-            if file.suffix.startswith('.s') and file.suffix != '.ssarc':
-                sf.write(wszst_yaz0.compress(new_sarc.get_bytes()))
-            else:
-                new_sarc.write(sf)
+    sarc_files = [file for file in list(
+        tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+    num_threads = min(len(sarc_files), cpu_count())
+    p = Pool(processes=num_threads)
+    p.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
+    p.close()
+    p.join()
+
+    with (tmp_dir / 'logs' / 'packs.log').open('w') as pf:
+        for file in [file for file in list(tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]:
+            pf.write(
+                f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
+            )
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
         if folder.is_dir() and len(list(folder.glob('*'))) == 0:
             shutil.rmtree(folder)
+
+    print(f'Saving output file to {str(output)}...')
+    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+              'a', str(output), f'{str(tmp_dir / "*")}']
+    subprocess.run(x_args, stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
     print('Conversion complete.')

@@ -42,6 +42,7 @@ AAMP_EXTS = ['.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.bagl
              '.sbsft', '.bshop', '.sbshop', '.bumii', '.sbumii', '.bvege', '.sbvege', '.bactcapt', '.sbactcapt']
 BYML_EXTS = ['.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin', '.smubin',
              '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata', '.sbgsvdata']
+last_dir = Path.home()
 
 
 def get_exec_dir() -> Path:
