@@ -865,10 +865,14 @@ def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts
     p.join()
 
     with (tmp_dir / 'logs' / 'packs.log').open('w') as pf:
-        for file in [file for file in list(tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]:
-            pf.write(
-                f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
-            )
+        final_packs = [file for file in list(
+            tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+        if len(final_packs) > 0:
+            pf.write('name,path\n')
+            for file in final_packs:
+                pf.write(
+                    f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
+                )
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
