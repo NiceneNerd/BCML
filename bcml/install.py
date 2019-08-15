@@ -858,21 +858,22 @@ def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts
     print('  Creating partial packs...')
     sarc_files = [file for file in list(
         tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
-    num_threads = min(len(sarc_files), cpu_count())
-    p = Pool(processes=num_threads)
-    p.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
-    p.close()
-    p.join()
+    if len(sarc_files) > 0:
+        num_threads = min(len(sarc_files), cpu_count())
+        p = Pool(processes=num_threads)
+        p.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
+        p.close()
+        p.join()
 
-    with (tmp_dir / 'logs' / 'packs.log').open('w') as pf:
-        final_packs = [file for file in list(
-            tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
-        if len(final_packs) > 0:
-            pf.write('name,path\n')
-            for file in final_packs:
-                pf.write(
-                    f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
-                )
+        with (tmp_dir / 'logs' / 'packs.log').open('w') as pf:
+            final_packs = [file for file in list(
+                tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+            if len(final_packs) > 0:
+                pf.write('name,path\n')
+                for file in final_packs:
+                    pf.write(
+                        f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
+                    )
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
