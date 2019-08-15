@@ -790,7 +790,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         ext = Path(canon).suffix
         file_data = base_sarc.get_file_data(nest_file).tobytes()
         xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
-        if canon not in hashes or \
+        if (canon not in hashes and ext not in ['.yml', '.bak']) or \
                 (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
             can_delete = False
             new_sarc.add_file(nest_file, file_data)
