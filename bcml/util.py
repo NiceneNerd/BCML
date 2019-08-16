@@ -162,6 +162,7 @@ def set_mlc_dir(path: Path):
     if hasattr(get_aoc_dir, 'aoc_dir'):
         del get_aoc_dir.aoc_dir
 
+
 def set_site_meta(site_meta):
     """ Caches site meta from url's specified in mods rules.txt """
     settings = get_settings()
@@ -170,6 +171,7 @@ def set_site_meta(site_meta):
     else:
         settings['site_meta'] = str(settings['site_meta'] + f'{site_meta};')
     save_settings()
+
 
 def get_title_id() -> (str, str):
     if not hasattr(get_title_id, 'title_id'):
@@ -335,7 +337,8 @@ def get_hash_table() -> {}:
 
 def get_canon_name(file: str, allow_no_source: bool = False) -> str:
     """ Gets the canonical path of a game file taken from an extracted graphic pack """
-    name = str(file).replace("\\", "/").replace('.s', '.')
+    name = str(file).replace("\\", "/").replace('.s', '.')\
+        .replace('Content', 'content').replace('Aoc', 'aoc')
     if 'aoc/' in name:
         return name.replace('aoc/content', 'aoc').replace('aoc', 'Aoc')
     elif 'content/' in name and '/aoc' not in name:

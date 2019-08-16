@@ -266,8 +266,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
             f'Found {len(sarc_files)} modded pack file{"s" if mod_sarc_count != 1 else ""}')
 
     if len(modded_files) == 0:
-        print('No modified files were found. Very unusual.')
-        return
+        raise Exception('No modified files were found. Very unusual.')
     no_packs = no_packs or len(sarc_files) == 0
 
     text_mods = {}

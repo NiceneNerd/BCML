@@ -37,6 +37,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
+        self._mods = []
+        self._mod_infos = {}
 
         self.setWindowIcon(util.get_icon('bcml.ico'))
         load_reverse = util.get_settings_bool('load_reverse')
@@ -101,7 +103,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             util.get_cemu_dir()
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
-                self, 'First Time', 'It looks like this may be your first time running BCML. Please select the directory where Cemu is installed.')
+                self, 'First Time', 'It looks like this may be your first time running BCML.'
+                                    'Please select the directory where Cemu is installed.')
             folder = QFileDialog.getExistingDirectory(
                 self, 'Select Cemu Directory')
             if folder:
@@ -130,8 +133,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             util.set_game_dir(Path(folder))
                         except FileNotFoundError as e:
                             QtWidgets.QMessageBox.information(
-                                self, 'First Time', 'BCML could not detect the location of Cemu\'s MLC directory for your game. '
-                                'You will need to specify it manually.')
+                                self, 'First Time', 'BCML could not detect the location of Cemu\'s MLC directory'
+                                                    'for your game. You will need to specify it manually.')
                             mlc_folder = QFileDialog.getExistingDirectory(
                                 self, 'Select Cemu MLC Directory')
                             if mlc_folder:
@@ -159,7 +162,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
         self.listWidget.clear()
-        self._mods = sorted(util.get_installed_mods(), key=lambda mod: mod.priority,
+        self._mods = sorted(util.get_installed_mods(), key=lambda imod: imod.priority,
                             reverse=not util.get_settings_bool('load_reverse'))
         for mod in self._mods:
             mod_item = QtWidgets.QListWidgetItem()
@@ -187,7 +190,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             return
         mod = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole)
 
-        if not mod in self._mod_infos:
+        if mod not in self._mod_infos:
             rules = ConfigParser()
             rules.read(str(mod.path / 'rules.txt'))
             font_metrics = QtGui.QFontMetrics(self.lblModInfo.font())
@@ -223,13 +226,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             ]
             if 'url' in rules['Definition']:
                 url = str(rules['Definition']['url'])
+                mod_domain = ''
                 if 'www.' in url:
                     mod_domain = url.split('.')[1]
                 elif 'http' in url:
                     mod_domain = url.split('//')[1].split('.')[0]
                 site_name = mod_domain.capitalize()
                 fetch_site_meta = True
-                if not 'site_meta' in util.get_settings():
+                if 'site_meta' not in util.get_settings():
                     util.set_site_meta('')
                 if len(util.get_settings()['site_meta'].split(';')) > 1:
                     for site_meta in util.get_settings()['site_meta'].split(';'):
@@ -239,16 +243,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 if fetch_site_meta:
                     try:
                         response = urllib.request.urlopen(url)
-                        data = response.read().decode()
+                        rdata = response.read().decode()
                         name_match = re.search(
-                            r'property=\"og\:site_name\"[^\/\>]*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]*property=\"og\:site_name\"', data)
+                            r'property=\"og\:site_name\"[^\/\>]*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]*property=\"og\:site_name\"', rdata)
                         if name_match:
                             for group in name_match.groups():
                                 if group is not None:
                                     util.set_site_meta(f'{mod_domain}:{group}')
                                     site_name = str(group)
                         img_match = re.search(
-                            r'\<link.*rel=\"(shortcut icon|icon)\".*href\=\"(.+?)\".*\>', data)
+                            r'<link.*rel=\"(shortcut icon|icon)\".*href=\"(.+?)\".*>', rdata)
                         if img_match:
                             if not os.path.isdir(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta')):
                                 os.makedirs(
@@ -267,16 +271,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     3, f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>')
             try:
                 if not len(glob.glob(str(mod.path / 'thumbnail.*'))):
-                    if not 'image' in rules['Definition']:
+                    if 'image' not in rules['Definition']:
                         if 'url' in rules['Definition'] and 'gamebanana.com' in url:
                             response = urllib.request.urlopen(url)
-                            data = response.read().decode()
+                            rdata = response.read().decode()
                             img_match = re.search(
-                                r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
+                                r'<meta property=\"og:image\" ?content=\"(.+?)\" />', rdata)
                             if img_match:
                                 image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(
-                                    img_match.group(1), str(mod.path / image_path))
+                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
                             else:
                                 raise Exception(
                                     f'Rule for {site_name} failed to find the remote preview')
@@ -285,18 +288,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     else:
                         image_path = str(rules['Definition']['image'])
                         if image_path.startswith('http'):
-                            urllib.request.urlretrieve(image_path, str(
-                                mod.path / ('thumbnail.' + image_path.split(".")[-1])))
-                            image_path = 'thumbnail.' + \
-                                image_path.split(".")[-1]
+                            urllib.request.urlretrieve(image_path,
+                                                       str(mod.path / ('thumbnail.' + image_path.split(".")[-1])))
+                            image_path = 'thumbnail.' + image_path.split(".")[-1]
                         if not os.path.isfile(str(mod.path / image_path)):
                             raise Exception(
                                 f'Preview {image_path} specified in rules.txt not found')
                 else:
                     for n in glob.glob(str(mod.path / 'thumbnail.*')):
                         image_path = n
-                preview = QtGui.QPixmap(
-                    str(mod.path / image_path))
+                preview = QtGui.QPixmap(str(mod.path / image_path))
             except:
                 preview = self._logo
             finally:
