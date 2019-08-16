@@ -181,7 +181,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def link(self, linkStr):
         QDesktopServices.openUrl(QUrl(linkStr))
-    
+
     def SelectItem(self):
         if len(self.listWidget.selectedItems()) == 0:
             return
@@ -251,17 +251,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             r'\<link.*rel=\"(shortcut icon|icon)\".*href\=\"(.+?)\".*\>', data)
                         if img_match:
                             if not os.path.isdir(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta')):
-                                os.makedirs(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta'))
+                                os.makedirs(
+                                    str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta'))
                             try:
-                                urllib.request.urlretrieve(img_match.group(2), str(util.get_exec_dir() / 'work_dir' / 'cache' / "site_meta" / f'fav_{site_name}.{img_match.group(2).split(".")[-1]}'))
+                                urllib.request.urlretrieve(img_match.group(2), str(util.get_exec_dir(
+                                ) / 'work_dir' / 'cache' / "site_meta" / f'fav_{site_name}.{img_match.group(2).split(".")[-1]}'))
                             except:
                                 pass
                     except:
                         pass
                 favicon = ''
                 for file in glob.glob(str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / f'fav_{site_name}.*')):
-                        favicon = f'<img src="{str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / file)}" height="16"/> '
-                mod_info.insert(3, f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>')
+                    favicon = f'<img src="{str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / file)}" height="16"/> '
+                mod_info.insert(
+                    3, f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>')
             try:
                 if not len(glob.glob(str(mod.path / 'thumbnail.*'))):
                     if not 'image' in rules['Definition']:
@@ -272,9 +275,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 r'\<meta property=\"og\:image\" ?content\=\"(.+?)\"\ />', data)
                             if img_match:
                                 image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
+                                urllib.request.urlretrieve(
+                                    img_match.group(1), str(mod.path / image_path))
                             else:
-                                raise Exception(f'Rule for {site_name} failed to find the remote preview')
+                                raise Exception(
+                                    f'Rule for {site_name} failed to find the remote preview')
                         else:
                             raise Exception(f'No preview image available')
                     else:
@@ -285,7 +290,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             image_path = 'thumbnail.' + \
                                 image_path.split(".")[-1]
                         if not os.path.isfile(str(mod.path / image_path)):
-                            raise Exception(f'Preview {image_path} specified in rules.txt not found')
+                            raise Exception(
+                                f'Preview {image_path} specified in rules.txt not found')
                 else:
                     for n in glob.glob(str(mod.path / 'thumbnail.*')):
                         image_path = n
@@ -413,10 +419,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_actorinfo()
             if fix_map:
                 mubin.merge_maps()
-            if len(fix_deepmerge) > 0:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+            mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
 
         dialog = InstallDialog(self)
         result = dialog.GetResult()
@@ -476,10 +483,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_actorinfo()
             if fix_map:
                 mubin.merge_maps()
-            if len(fix_deepmerge) > 0:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+            mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
             self.LoadMods()
             install.refresh_cemu_mods()
 
@@ -567,10 +575,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 data.merge_actorinfo()
             if fix_map:
                 mubin.merge_maps()
-            if len(fix_deepmerge) > 0:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+            mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
+            if len(fix_deepmerge) > 0:
+                merge.deep_merge(only_these=list(fix_deepmerge))
             install.refresh_cemu_mods()
 
         if len(self.listWidget.selectedItems()) > 0:

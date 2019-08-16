@@ -326,6 +326,11 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
     if not no_map:
         mubin.log_modded_texts(tmp_dir, modded_mubins)
 
+    dstatic_diff = None
+    if (tmp_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin').exists():
+        dstatic_diff = mubin.get_dungeonstatic_diff(
+            tmp_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin')
+
     if deep_merge:
         deep_merge = len(aamp_diffs) > 0
 
@@ -375,6 +380,10 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         with (tmp_dir / 'logs' / 'deepmerge.yml').open('w', encoding='utf-8') as df:
             yaml.dump(aamp_diffs, df, Dumper=dumper, allow_unicode=True,
                       encoding='utf-8', default_flow_style=None)
+    if dstatic_diff:
+        with (tmp_dir / 'logs' / 'dstatic.yml').open('w', encoding='utf-8') as af:
+            yaml.dump(dstatic_diff, af, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                      default_flow_style=None)
     if leave_rstb:
         Path(tmp_dir / 'logs' / '.leave').open('w').close()
     if shrink_rstb:
@@ -562,6 +571,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             mubin.merge_maps()
         if deep_merge:
             merge.deep_merge(verbose)
+        mubin.merge_dungeonstatic(verbose)
         if not deep_merge:
             rstable.generate_master_rstb(verbose)
         print()
@@ -622,6 +632,7 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
             data.merge_actorinfo(verbose)
         if map_mod:
             mubin.merge_maps()
+        mubin.merge_dungeonstatic(verbose)
         if len(deepmerge_mods) > 0:
             merge.deep_merge(only_these=list(deepmerge_mods))
     print(f'{mod_name} has been uninstalled.')
@@ -741,6 +752,8 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Deep merge affected, remerging...')
             merge.deep_merge(verbose, only_these=list(deepmerge))
             print()
+    if not wait_merge:
+        mubin.merge_dungeonstatic(verbose)
     if wait_merge:
         print('Mods resorted, will need to remerge RSTB later')
     else:
@@ -772,6 +785,7 @@ def refresh_merges(verbose: bool = False):
     data.merge_actorinfo(verbose)
     mubin.merge_maps(verbose)
     merge.deep_merge(verbose, wait_rstb=True)
+    mubin.merge_dungeonstatic(verbose)
     rstable.generate_master_rstb(verbose)
 
 
@@ -874,6 +888,9 @@ def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts
                     pf.write(
                         f'{util.get_canon_name(file.relative_to(tmp_dir))},{file.relative_to(tmp_dir)}\n'
                     )
+    else:
+        if (tmp_dir / 'logs' / 'packs.log').exists():
+            (tmp_dir / 'logs' / 'packs.log').unlink()
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):

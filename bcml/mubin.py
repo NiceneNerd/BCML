@@ -260,3 +260,84 @@ def merge_maps(verbose: bool = False):
         for canon, val in rstb_vals.items():
             lf.write(f'{canon},{val}\n')
     print('Map merge complete')
+
+
+def get_dungeonstatic_diff(file: Path) -> dict:
+    """Returns the changes made to the Static.smubin containing shrine entrance coordinates
+
+    :param file: The Static.mubin file to diff
+    :type file: :class:`pathlib.Path`
+    :return: Returns a dict of shrines and their updated entrance coordinates
+    :rtype: dict of str: dict
+    """
+    base_file = util.get_game_file(
+        'aoc/0010/Map/CDungeon/Static.smubin', aoc=True)
+    base_pos = byml.Byml(
+        wszst_yaz0.decompress_file(str(base_file))
+    ).parse()['StartPos']
+
+    mod_pos = byml.Byml(
+        wszst_yaz0.decompress_file(str(file))
+    ).parse()['StartPos']
+
+    base_dungeons = [dungeon['Map'] for dungeon in base_pos]
+    diffs = {}
+    for dungeon in mod_pos:
+        if dungeon['Map'] not in base_dungeons:
+            diffs[dungeon['Map']] = dungeon
+        else:
+            base_dungeon = base_pos[base_dungeons.index(dungeon['Map'])]
+            if dungeon['Rotate'] != base_dungeon['Rotate']:
+                diffs[dungeon['Map']] = {
+                    'Rotate': dungeon['Rotate']
+                }
+            if dungeon['Translate'] != base_dungeon['Translate']:
+                if dungeon['Map'] not in diffs:
+                    diffs[dungeon['Map']] = {}
+                diffs[dungeon['Map']]['Translate'] = dungeon['Translate']
+
+    return diffs
+
+
+def merge_dungeonstatic(verbose: bool = False):
+    """
+    Merges all changes to the CDungeon Static.smubin
+
+    :param verbose: Whether to display more detailed output, defaults to False
+    :type verbose: bool, optional
+    """
+    diffs = {}
+    loader = yaml.CSafeLoader
+    yaml_util.add_constructors(loader)
+    for mod in [mod for mod in util.get_installed_mods() if (mod.path / 'logs' / 'dstatic.yml').exists()]:
+        diffs.update(
+            yaml.load(
+                (mod.path / 'logs' / 'dstatic.yml').read_bytes(),
+                Loader=loader
+            )
+        )
+
+    if len(diffs) == 0:
+        return
+
+    new_static = byml.Byml(
+        wszst_yaz0.decompress_file(
+            str(util.get_game_file('aoc/0010/Map/CDungeon/Static.smubin'))
+        )
+    ).parse()
+
+    base_dungeons = [dungeon['Map'] for dungeon in new_static['StartPos']]
+    for dungeon, diff in diffs.items():
+        if dungeon not in base_dungeons:
+            new_static['StartPos'].append(diff)
+        else:
+            for key, value in diff.items():
+                new_static['StartPos'][base_dungeons.index(
+                    dungeon)][key] = value
+
+    output_static = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \
+        'CDungeon' / 'Static.smubin'
+    output_static.parent.mkdir(parents=True, exist_ok=True)
+    output_static.write_bytes(
+        wszst_yaz0.compress(byml.Writer(new_static, True).get_bytes())
+    )
