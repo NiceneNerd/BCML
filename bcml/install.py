@@ -943,7 +943,7 @@ def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
-        if folder.is_dir() and list(folder.glob('*')):
+        if folder.is_dir() and not list(folder.glob('*')):
             shutil.rmtree(folder)
 
     print(f'Saving output file to {str(output)}...')

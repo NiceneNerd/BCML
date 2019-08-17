@@ -402,7 +402,7 @@ def merge_savedata(verbose: bool = False):
     """ Merges install savedata mods and saves the new Bootup.pack, fixing the RSTB if needed"""
     mods = get_savedata_mods()
     slog_path = util.get_master_modpack_dir() / 'logs' / 'savedata.log'
-    if mods:
+    if not mods:
         print('No gamedata merging necessary.')
         if slog_path.exists():
             slog_path.unlink()
