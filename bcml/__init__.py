@@ -335,7 +335,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     for n in glob.glob(str(mod.path / 'thumbnail.*')):
                         image_path = n
                 preview = QtGui.QPixmap(str(mod.path / image_path))
-            except (FileNotFoundError, KeyError, IndexError):
+            except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
                 preview = self._logo
             finally:
                 self._mod_infos[mod] = (mod_info, preview)
