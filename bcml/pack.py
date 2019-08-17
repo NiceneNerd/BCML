@@ -1,9 +1,9 @@
+"""Provides functions for diffing and merging SARC packs"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
 import io
 import os
-import xxhash
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
@@ -11,6 +11,7 @@ from typing import List, Union
 
 import sarc
 import wszst_yaz0
+import xxhash
 
 from bcml import data, util
 from bcml.util import BcmlMod
@@ -49,7 +50,8 @@ def get_modded_sarcs() -> dict:
     """
     Gets all installed SARC modifications, along with their priorities
 
-    :returns: Returns a dict of dicts with the path of each modified SARC and its priority for each canonical file.
+    :returns: Returns a dict of dicts with the path of each modified SARC and its priority for each
+    canonical file.
     :rtype: dict of str: list of dict of str: int
     """
     packs = {}
@@ -101,8 +103,8 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
             pass
     try:
         base_file = util.get_game_file(mod_list[name][0]['rel_path'])
-        with base_file.open('rb') as sf:
-            b_sarc = sarc.read_file_and_make_sarc(sf)
+        with base_file.open('rb') as s_file:
+            b_sarc = sarc.read_file_and_make_sarc(s_file)
             if b_sarc:
                 sarc_list.insert(0, {
                     'pack': b_sarc,
@@ -120,7 +122,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
     """
     Merges a list of SARC packs and returns the changes
 
-    :param sarc_list: A list of dicts with SARCs to be merged and their metadata. 
+    :param sarc_list: A list of dicts with SARCs to be merged and their metadata.
     Each entry must contain keys "pack", "priority", "nest_level", and "name".
     :type sarc_list: list
     :param verbose: Whether to display more detailed output, defaults to False
@@ -142,7 +144,6 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
 
     modded_files = {}
     modded_sarcs = {}
-    can_skip = True
     priority = 100
     for msarc in sarc_list:
         pack = msarc['pack']
@@ -169,7 +170,6 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
                         'name': rfile,
                         'base': False
                     }
-                    can_skip = False
                     if file not in modded_sarcs:
                         modded_sarcs[file] = []
                     modded_sarcs[file].append(modded_sarc)
@@ -184,19 +184,18 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
     #        sarc_log.append(f'{output_spaces}No merges necessary, skipping')
     #    return new_sarc, sarc_log
 
-    for modded_file in modded_files.keys():
+    for modded_file in modded_files:
         if modded_file in base_sarc.list_files():
             new_sarc.delete_file(modded_file)
-        p = filter(lambda x: x['priority'] ==
-                   modded_files[modded_file], sarc_list).__next__()
-        new_data = p['pack'].get_file_data(modded_file).tobytes()
+        ppack = next([pack for pack in sarc_list if pack['priority'] == modded_files[modded_file]])
+        new_data = ppack['pack'].get_file_data(modded_file).tobytes()
         new_sarc.add_file(modded_file, new_data)
         if verbose:
             sarc_log.append(f'{output_spaces}Updated file {modded_file}')
 
     merged_sarcs = []
     for mod_sarc_list in modded_sarcs:
-        if len(modded_sarcs[mod_sarc_list]) == 0:
+        if not modded_sarcs[mod_sarc_list]:
             continue
         new_pack, sub_log = merge_sarcs(
             modded_sarcs[mod_sarc_list], verbose, loose_files=loose_files)
@@ -224,7 +223,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
                 mod = util.get_mod_by_priority(loose_files[file])
                 prefix = 'content' if not file.startswith(
                     'Aoc/0010') else 'aoc/0010'
-                modded_bytes = (mod / 'content' /
+                modded_bytes = (mod / prefix /
                                 file.replace('Aoc/0010', '')).read_bytes()
                 new_sarc.delete_file(file)
                 new_sarc.add_file(file, modded_bytes)
@@ -241,6 +240,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
 
 
 def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
+    """An interface for multiprocessing `merge_sarcs()`"""
     output_path = Path(util.get_master_modpack_dir() /
                        modded_sarcs[pack][0]['rel_path'])
     versions = get_sarc_versions(pack, modded_sarcs)
@@ -250,15 +250,16 @@ def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
     except IndexError:
         return []
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open('wb') as of:
+    with output_path.open('wb') as o_file:
         if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
-            of.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+            o_file.write(wszst_yaz0.compress(new_sarc.get_bytes()))
         else:
-            new_sarc.write(of)
+            new_sarc.write(o_file)
     return log
 
 
-def merge_installed_packs(no_injection: bool = False, only_these: List[str] = None, verbose: bool = False, even_one: bool = False):
+def merge_installed_packs(no_injection: bool = False, only_these: List[str] = None,
+                          verbose: bool = False, even_one: bool = False):
     """
     Merges all modified packs in installed BCML mods
 
@@ -294,15 +295,15 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     if only_these is not None:
         sarcs_to_merge = [
             pack for pack in sarcs_to_merge if modded_sarcs[pack][0]['rel_path'] in only_these]
-    if len(sarcs_to_merge) > 0:
+    if sarcs_to_merge:
         print(f'Processing {len(sarcs_to_merge)} packs...')
-        partial_thread_merge = partial(
-            threaded_merge_sarcs, modded_sarcs=modded_sarcs, verbose=verbose, modded_files=modded_files)
+        partial_thread_merge = partial(threaded_merge_sarcs, modded_sarcs=modded_sarcs,
+                                       verbose=verbose, modded_files=modded_files)
         num_threads = min(cpu_count() - 1, len(modded_sarcs))
-        p = Pool(processes=num_threads)
-        results = p.map(partial_thread_merge, sarcs_to_merge)
-        p.close()
-        p.join()
+        pool = Pool(processes=num_threads)
+        results = pool.map(partial_thread_merge, sarcs_to_merge)
+        pool.close()
+        pool.join()
         logs = [log for sublog in results for log in sublog]
         log_count = len([log for log in logs if log !=
                          'No merges necessary, skipping'])
@@ -314,11 +315,11 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             return
         if (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').exists():
             print('Injecting merged gamedata.sarc into Bootup.pack...')
-            with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('rb') as gf:
-                gamedata = sarc.read_sarc_and_make_writer(gf)
+            with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('rb') as g_file:
+                gamedata = sarc.read_sarc_and_make_writer(g_file)
             data.inject_gamedata_into_bootup(gamedata)
         if (util.get_master_modpack_dir() / 'logs' / 'savedata.log').exists():
             print('Injecting merged savedataformat.sarc into Bootup.pack...')
-            with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('rb') as sf:
-                savedata = sarc.read_sarc_and_make_writer(sf)
+            with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('rb') as s_file:
+                savedata = sarc.read_sarc_and_make_writer(s_file)
             data.inject_savedata_into_bootup(savedata)

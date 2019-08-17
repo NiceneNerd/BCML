@@ -1,3 +1,4 @@
+"""Provides functions for diffing and merging BotW game text files"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import copy
@@ -20,7 +21,7 @@ import yaml
 from bcml import util, rstable
 from bcml.util import BcmlMod
 
-text_exclusions = [
+EXCLUDE_TEXTS = [
     'ErrorMessage',
     'LayoutMsg',
     'StaffRoll'
@@ -42,14 +43,14 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
             f'Msg_{lang}_hashes.csv'
         if hash_table.exists():
             get_msbt_hashes.texthashes[lang] = {}
-            with hash_table.open('r') as hf:
-                csv_loop = csv.reader(hf)
+            with hash_table.open('r') as h_file:
+                csv_loop = csv.reader(h_file)
                 for row in csv_loop:
                     get_msbt_hashes.texthashes[lang][row[0]] = row[1]
         elif util.get_game_file(f'Pack/Bootup_{lang}.pack').exists():
             get_msbt_hashes.texthashes[lang] = {}
-            with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as bf:
-                bootup_pack = sarc.read_file_and_make_sarc(bf)
+            with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
+                bootup_pack = sarc.read_file_and_make_sarc(b_file)
             msg_bytes = wszst_yaz0.decompress(
                 bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
             msg_pack = sarc.SARC(msg_bytes)
@@ -59,7 +60,8 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
     return get_msbt_hashes.texthashes[lang]
 
 
-def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False, tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
+def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
+                      tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
     """
     Extracts the reference MSYT texts for the given language to a temp dir
 
@@ -67,14 +69,15 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False, tmp_dir: Path
     :type lang: str, optional
     :param for_merge: Whether the output is to be merged (or as reference), defaults to False
     :type for_merge: bool
-    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's working directory.
+    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's working
+    directory.
     :type tmp_dir: :class:`pathlib.Path`, optional
     """
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as bf:
-        bootup_pack = sarc.read_file_and_make_sarc(bf)
+    with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
+        bootup_pack = sarc.read_file_and_make_sarc(b_file)
     msg_bytes = wszst_yaz0.decompress(
         bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_pack = sarc.SARC(msg_bytes)
@@ -97,16 +100,16 @@ def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
                     'export', '-d', str(tmp_dir)], creationflags=util.CREATE_NO_WINDOW)
     fix_msbts = [msbt for msbt in tmp_dir.rglob(
         '**/*.msbt') if not msbt.with_suffix('.msyt').exists()]
-    if len(fix_msbts) > 0:
+    if fix_msbts:
         print('Some MSBTs failed to convert. Trying again individually...')
-        p = multiprocessing.Pool(processes=min(
+        pool = multiprocessing.Pool(processes=min(
             multiprocessing.cpu_count(), len(fix_msbts)))
-        out = p.map(_msyt_file, fix_msbts)
-        p.close()
-        p.join()
+        pool.map(_msyt_file, fix_msbts)
+        pool.close()
+        pool.join()
         fix_msbts = [msbt for msbt in tmp_dir.rglob(
             '**/*.msbt') if not msbt.with_suffix('.msyt').exists()]
-    if len(fix_msbts) > 0:
+    if fix_msbts:
         print(
             f'{len(fix_msbts)} MSBT files failed to convert. They will not be merged.')
     for msbt_file in tmp_dir.rglob('**/*.msbt'):
@@ -126,15 +129,18 @@ def msyt_to_msbt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
         merged_msyt.unlink()
 
 
-def bootup_from_msbts(lang: str = 'USen', msbt_dir: Path = util.get_work_dir() / 'tmp_text' / 'merged') -> (Path, int):
+def bootup_from_msbts(lang: str = 'USen',
+                      msbt_dir: Path = util.get_work_dir() / 'tmp_text' / 'merged') -> (Path, int):
     """
     Generates a new Bootup_XXxx.pack from a directory of MSBT files
 
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
-    :param msbt_dir: The directory to pull MSBTs from, defaults to "tmp_text/merged" in BCML's working directory.
+    :param msbt_dir: The directory to pull MSBTs from, defaults to "tmp_text/merged" in BCML's
+    working directory.
     :type msbt_dir: :class:`pathlib.Path`, optional
-    :returns: A tuple with the path to the new Bootup_XXxx.pack and the RSTB size of the new Msg_XXxx.product.sarc
+    :returns: A tuple with the path to the new Bootup_XXxx.pack and the RSTB size of the new
+    Msg_XXxx.product.sarc
     :rtype: (:class:`pathlib.Path`, int)
     """
     new_boot_path = msbt_dir.parent / f'Bootup_{lang}.pack'
@@ -156,6 +162,7 @@ def bootup_from_msbts(lang: str = 'USen', msbt_dir: Path = util.get_work_dir() /
 
 
 def write_msbt(msbt_info: tuple):
+    """Writes an MSBT file"""
     msbt_path, msbt_data = msbt_info
     msbt_path.parent.mkdir(parents=True, exist_ok=True)
     with msbt_path.open(mode='wb') as f_msbt:
@@ -163,8 +170,8 @@ def write_msbt(msbt_info: tuple):
     return None
 
 
-def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text') \
-        -> (list, dict):
+def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
+                     tmp_dir: Path = util.get_work_dir() / 'tmp_text') -> (list, dict):
     """
     Gets a list of modified game text files in a given message SARC
 
@@ -183,7 +190,7 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen', tmp_dir: Path = ut
     added_msbts = {}
     write_msbts = []
     for msbt in msg_sarc.list_files():
-        if any(exclusion in msbt for exclusion in text_exclusions):
+        if any(exclusion in msbt for exclusion in EXCLUDE_TEXTS):
             continue
         m_data = msg_sarc.get_file_data(msbt)
         m_hash = xxhash.xxh32(m_data).hexdigest()
@@ -192,10 +199,10 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen', tmp_dir: Path = ut
         elif m_hash != hashes[msbt]:
             write_msbts.append((tmp_dir / msbt, m_data.tobytes()))
             modded_msyts.append(msbt.replace('.msbt', '.msyt'))
-    p = multiprocessing.Pool()
-    p.map(write_msbt, write_msbts)
-    p.close()
-    p.join()
+    pool = multiprocessing.Pool()
+    pool.map(write_msbt, write_msbts)
+    pool.close()
+    pool.join()
     return modded_msyts, added_msbts
 
 
@@ -208,13 +215,14 @@ def store_added_texts(new_texts: dict) -> sarc.SARCWriter:
 
 
 def threaded_compare_texts(msyt: Path, tmp_dir: Path, ref_dir: Path) -> (str, dict):
+    """Diffs texts in an MYST in a way suitable for multiprocessing"""
     rel_path = str(msyt.relative_to(ref_dir)).replace('\\', '/')
     with (ref_dir / rel_path).open('r', encoding='utf-8') as ref_file:
         ref_text = yaml.safe_load(ref_file)
     try:
         with (tmp_dir / rel_path).open('r', encoding='utf-8') as mod_file:
             mod_text = yaml.safe_load(mod_file)
-    except:
+    except FileNotFoundError:
         return rel_path, None
     text_edits = {
         'entries': {}
@@ -235,7 +243,7 @@ def get_modded_texts(modded_msyts: list, tmp_dir: Path = util.get_work_dir() / '
     :param tmp_dir: The temp directory to use, defaults to "tmp_text" in BCML's working directory.
     :type tmp_dir: :class:`pathlib.Path`
     :returns: Returns a dictionary of modified MSYT text entries.
-    :rtype: dict 
+    :rtype: dict
     """
     ref_dir = tmp_dir / 'ref'
     text_edits = {}
@@ -244,21 +252,22 @@ def get_modded_texts(modded_msyts: list, tmp_dir: Path = util.get_work_dir() / '
     num_threads = min(multiprocessing.cpu_count(), len(check_msyts))
     thread_checker = partial(threaded_compare_texts,
                              tmp_dir=tmp_dir, ref_dir=ref_dir)
-    p = multiprocessing.Pool(processes=num_threads)
-    edit_results = p.map(thread_checker, check_msyts)
-    p.close()
-    p.join()
+    pool = multiprocessing.Pool(processes=num_threads)
+    edit_results = pool.map(thread_checker, check_msyts)
+    pool.close()
+    pool.join()
     for edit in edit_results:
         rel_path, edits = edit
-        if edits == None:
+        if edits is None:
             print(f'{rel_path} is corrupt and will not be merged.')
             continue
-        if len(edits['entries']) > 0:
+        if edits['entries']:
             text_edits[rel_path] = edits
     return text_edits
 
 
-def get_text_mods_from_bootup(bootup_path: Union[Path, str], tmp_dir: Path = util.get_work_dir() / 'tmp_text',
+def get_text_mods_from_bootup(bootup_path: Union[Path, str],
+                              tmp_dir: Path = util.get_work_dir() / 'tmp_text',
                               verbose: bool = False):
     """
     Detects modifications to text files inside a given Bootup_XXxx.pack
@@ -275,16 +284,16 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str], tmp_dir: Path = uti
     """
     lang = util.get_file_language(bootup_path)
     print(f'Scanning text modifications for language {lang}...')
-    d = '  '
+    spaces = '  '
 
     if verbose:
-        print(f'{d}Loading reference texts...')
+        print(f'{spaces}Loading reference texts...')
     extract_ref_msyts(lang)
 
     if verbose:
-        print(f'{d}Identifying modified text files...')
-    with open(bootup_path, 'rb') as bf:
-        bootup_sarc = sarc.read_file_and_make_sarc(bf)
+        print(f'{spaces}Identifying modified text files...')
+    with open(bootup_path, 'rb') as b_file:
+        bootup_sarc = sarc.read_file_and_make_sarc(b_file)
     msg_bytes = wszst_yaz0.decompress(
         bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_sarc = sarc.SARC(msg_bytes)
@@ -293,14 +302,14 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str], tmp_dir: Path = uti
             f'Failed to open Msg_{lang}.product.ssarc, could not analyze texts')
     modded_msyts, added_msbts = get_modded_msyts(msg_sarc, lang)
     added_text_store = None
-    if len(added_msbts) > 0:
+    if added_msbts:
         added_text_store = store_added_texts(added_msbts)
 
     if verbose:
         for modded_text in modded_msyts:
-            print(f'{d}{d}{modded_text} has been changed')
+            print(f'{spaces}{spaces}{modded_text} has been changed')
         for added_text in added_msbts:
-            print(f'{d}{d}{added_text} has been added')
+            print(f'{spaces}{spaces}{added_text} has been added')
 
     problems = msbt_to_msyt()
     for problem in problems:
@@ -308,12 +317,12 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str], tmp_dir: Path = uti
             tmp_dir).with_suffix('.msyt').as_posix()
         modded_msyts.remove(msyt_name)
     if verbose:
-        print(f'{d}Scanning texts files for modified entries...')
+        print(f'{spaces}Scanning texts files for modified entries...')
     modded_texts = get_modded_texts(modded_msyts)
     s_modded = 's' if len(modded_texts) != 1 else ''
     s_added = 's' if len(added_msbts) != 1 else ''
-    print(f'Language {lang} has total {len(modded_texts)} modified text file{s_modded} and {len(added_msbts)}'
-          f' new text file{s_added}')
+    print(f'Language {lang} has total {len(modded_texts)} modified text file{s_modded} and'
+          f'{len(added_msbts)} new text file{s_added}')
     shutil.rmtree(tmp_dir)
     return modded_texts, added_text_store, lang
 
@@ -359,12 +368,25 @@ def get_added_text_mods(lang: str = 'USen') -> List[sarc.SARC]:
     """
     textmods = []
     for mod in sorted(util.get_modpack_dir().rglob(f'logs/newtexts_{lang}.sarc')):
-        with mod.open('rb') as sf:
-            textmods.append(sarc.read_file_and_make_sarc(sf))
+        with mod.open('rb') as s_file:
+            textmods.append(sarc.read_file_and_make_sarc(s_file))
     return textmods
 
 
-def threaded_merge_texts(msyt: Path, merge_dir: Path, text_mods: List[dict], verbose: bool) -> (int, str):
+def threaded_merge_texts(msyt: Path, merge_dir: Path,
+                         text_mods: List[dict], verbose: bool) -> (int, str):
+    """
+    Merges changes to a text file
+
+    :param msyt: The path to the MSYT to merge into.
+    :type msyt: :class:`pathlib.Path`
+    :param merge_dir: The path of the directory containing MSYT files to merge.
+    :type merge_dir: :class:`pathlib.Path`
+    :param text_mods: A list of dicts containing text entires to merge.
+    :type text_mods: list of dict
+    :return: Returns the number of merged entries and the path to the merged MSYT.
+    :rtype: (int, str)
+    """
     rel_path = str(msyt.relative_to(merge_dir)).replace('\\', '/')
     should_bother = False
     merge_count = 0
@@ -396,20 +418,21 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path, text_mods: List[dict], ver
     return merge_count, rel_path
 
 
-def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text', verbose: bool = False):
+def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text',
+                verbose: bool = False):
     """
     Merges installed text mods and saves the new Bootup_XXxx.pack, fixing the RSTB if needed
 
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
-    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's local appdata.
+    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's work dir.
     :type tmp_dir: :class:`pathlib.Path`, optional
     :param verbose: Whether to display more detailed output, defaults to False
     :type verbose: bool, optional
     """
     print(f'Loading text mods for language {lang}...')
     text_mods = get_modded_text_entries(lang)
-    if len(text_mods) == 0:
+    if not text_mods:
         print('No text merging necessary.')
         old_path = util.get_master_modpack_dir() / 'content' / 'Pack' / \
             f'Bootup_{lang}.pack'
@@ -431,12 +454,12 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     print('Merging modified text files...')
     modded_text_files = list(merge_dir.rglob('**/*.msyt'))
     num_threads = min(multiprocessing.cpu_count(), len(modded_text_files))
-    p = multiprocessing.Pool(processes=num_threads)
+    pool = multiprocessing.Pool(processes=num_threads)
     thread_merger = partial(
         threaded_merge_texts, merge_dir=merge_dir, text_mods=text_mods, verbose=verbose)
-    results = p.map(thread_merger, modded_text_files)
-    p.close()
-    p.join()
+    results = pool.map(thread_merger, modded_text_files)
+    pool.close()
+    pool.join()
     for merge_count, rel_path in results:
         if merge_count > 0:
             print(f'  Merged {merge_count} versions of {rel_path}')
@@ -444,16 +467,15 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     msyt_to_msbt(tmp_dir)
 
     added_texts = get_added_text_mods(lang)
-    if len(added_texts) > 0:
+    if added_texts:
         print('Adding mod-original MSBTs...')
         for added_text in added_texts:
             for msbt in added_text.list_files():
                 Path(merge_dir / msbt).parent.mkdir(parents=True, exist_ok=True)
-                with open(Path(merge_dir / msbt), 'wb') as xf:
-                    xf.write(added_text.get_file_data(msbt).tobytes())
+                Path(merge_dir / msbt).write_bytes(added_text.get_file_data(msbt).tobytes())
 
     print(f'Creating new Bootup_{lang}.pack...')
-    tmp_boot_path, msg_rstb = bootup_from_msbts(lang)
+    tmp_boot_path = bootup_from_msbts(lang)[0]
     merged_boot_path = util.get_modpack_dir() / '9999_BCML' / 'content' / \
         'Pack' / f'Bootup_{lang}.pack'
     if merged_boot_path.exists():

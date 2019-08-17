@@ -1,3 +1,4 @@
+"""Provides various utility functions for BCML operations"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
@@ -7,42 +8,47 @@ import subprocess
 import sys
 import traceback
 import unicodedata
-from collections import Mapping, namedtuple
+from collections import namedtuple
+from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from typing import Union
 
 import byml
+from byml import yaml_util
 import sarc
 import wszst_yaz0
 import xxhash
 import yaml
 from PySide2.QtGui import QIcon, QPixmap
-from byml import yaml_util
 
 BcmlMod = namedtuple('BcmlMod', 'name priority path')
 CREATE_NO_WINDOW = 0x08000000
-SARC_EXTS = ['.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats', '.ssarc', '.spack',
-             '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats']
-AAMP_EXTS = ['.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr', '.baglclwd',
-             '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof', '.baglenv', '.sbaglenv', '.baglenvset',
-             '.sbaglenvset', '.baglfila', '.sbaglfila', '.bagllmap', '.sbagllmap', '.bagllref', '.sbagllref', '.baglmf',
-             '.sbaglmf', '.baglshpp', '.sbaglshpp', '.baiprog', '.sbaiprog', '.baslist', '.sbaslist', '.bassetting',
-             '.sbassetting', '.batcl', '.sbatcl', '.batcllist', '.sbatcllist', '.bawareness', '.sbawareness',
-             '.bawntable', '.sbawntable', '.bbonectrl', '.sbbonectrl', '.bchemical', '.sbchemical', '.bchmres',
-             '.sbchmres', '.bdemo', '.sbdemo', '.bdgnenv', '.sbdgnenv', '.bdmgparam', '.sbdmgparam', '.bdrop',
-             '.sbdrop', '.bgapkginfo', '.sbgapkginfo', '.bgapkglist', '.sbgapkglist', '.bgenv', '.sbgenv', '.bglght',
-             '.sbglght', '.bgmsconf', '.sbgmsconf', '.bgparamlist', '.sbgparamlist', '.bgsdw', '.sbgsdw', '.bksky',
-             '.sbksky', '.blifecondition', '.sblifecondition', '.blod', '.sblod', '.bmodellist', '.sbmodellist',
-             '.bmscdef', '.sbmscdef', '.bmscinfo', '.sbmscinfo', '.bnetfp', '.sbnetfp', '.bphyscharcon',
-             '.sbphyscharcon', '.bphyscontact', '.sbphyscontact', '.bphysics', '.sbphysics', '.bphyslayer',
-             '.sbphyslayer', '.bphysmaterial', '.sbphysmaterial', '.bphyssb', '.sbphyssb', '.bphyssubmat',
-             '.sbphyssubmat', '.bptclconf', '.sbptclconf', '.brecipe', '.sbrecipe', '.brgbw', '.sbrgbw', '.brgcon',
-             '.sbrgcon', '.brgconfig', '.sbrgconfig', '.brgconfiglist', '.sbrgconfiglist', '.bsfbt', '.sbsfbt', '.bsft',
-             '.sbsft', '.bshop', '.sbshop', '.bumii', '.sbumii', '.bvege', '.sbvege', '.bactcapt', '.sbactcapt']
-BYML_EXTS = ['.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin', '.smubin',
-             '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata', '.sbgsvdata']
-last_dir = Path.home()
+SARC_EXTS = {'.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats',
+             '.ssarc', '.spack', '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats'}
+AAMP_EXTS = {'.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr',
+             '.baglclwd', '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof',
+             '.baglenv', '.sbaglenv', '.baglenvset', '.sbaglenvset', '.baglfila', '.sbaglfila',
+             '.bagllmap', '.sbagllmap', '.bagllref', '.sbagllref', '.baglmf', '.sbaglmf',
+             '.baglshpp', '.sbaglshpp', '.baiprog', '.sbaiprog', '.baslist', '.sbaslist',
+             '.bassetting', '.sbassetting', '.batcl', '.sbatcl', '.batcllist', '.sbatcllist',
+             '.bawareness', '.sbawareness', '.bawntable', '.sbawntable', '.bbonectrl',
+             '.sbbonectrl', '.bchemical', '.sbchemical', '.bchmres', '.sbchmres', '.bdemo',
+             '.sbdemo', '.bdgnenv', '.sbdgnenv', '.bdmgparam', '.sbdmgparam', '.bdrop', '.sbdrop',
+             '.bgapkginfo', '.sbgapkginfo', '.bgapkglist', '.sbgapkglist', '.bgenv', '.sbgenv',
+             '.bglght', '.sbglght', '.bgmsconf', '.sbgmsconf', '.bgparamlist', '.sbgparamlist',
+             '.bgsdw', '.sbgsdw', '.bksky', '.sbksky', '.blifecondition', '.sblifecondition',
+             '.blod', '.sblod', '.bmodellist', '.sbmodellist', '.bmscdef', '.sbmscdef', '.bmscinfo',
+             '.sbmscinfo', '.bnetfp', '.sbnetfp', '.bphyscharcon', '.sbphyscharcon',
+             '.bphyscontact', '.sbphyscontact', '.bphysics', '.sbphysics', '.bphyslayer',
+             '.sbphyslayer', '.bphysmaterial', '.sbphysmaterial', '.bphyssb', '.sbphyssb',
+             '.bphyssubmat', '.sbphyssubmat', '.bptclconf', '.sbptclconf', '.brecipe', '.sbrecipe',
+             '.brgbw', '.sbrgbw', '.brgcon', '.sbrgcon', '.brgconfig', '.sbrgconfig',
+             '.brgconfiglist', '.sbrgconfiglist', '.bsfbt', '.sbsfbt', '.bsft', '.sbsft', '.bshop',
+             '.sbshop', '.bumii', '.sbumii', '.bvege', '.sbvege', '.bactcapt', '.sbactcapt'}
+BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin',
+             '.smubin', '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata',
+             '.sbgsvdata'}
 
 
 def get_exec_dir() -> Path:
@@ -78,8 +84,8 @@ def get_settings() -> {}:
                 'mlc_dir': '',
                 'site_meta': ''
             }
-            with settings_path.open('w') as sf:
-                settings.write(sf)
+            with settings_path.open('w') as s_file:
+                settings.write(s_file)
         else:
             settings.read(str(settings_path))
         get_settings.settings_file = settings
@@ -87,23 +93,26 @@ def get_settings() -> {}:
 
 
 def get_settings_bool(setting: str) -> bool:
+    """Gets the value of a boolean setting"""
     return get_settings()[setting] == 'True'
 
 
 def set_settings_bool(setting: str, value: bool):
+    """Sets the value of a boolean setting"""
     get_settings()[setting] = str(value)
     save_settings()
 
 
 def save_settings():
-    with (get_work_dir() / 'settings.ini').open('w') as sf:
-        get_settings.settings_file.write(sf)
+    """Saves changes made to settings"""
+    with (get_work_dir() / 'settings.ini').open('w') as s_file:
+        get_settings.settings_file.write(s_file)
 
 
 def get_cemu_dir() -> Path:
     """ Gets the saved Cemu installation directory """
     cemu_dir = str(get_settings()['cemu_dir'])
-    if len(cemu_dir) < 1:
+    if not cemu_dir:
         raise FileNotFoundError('The Cemu directory has not been saved yet.')
     else:
         return Path(cemu_dir)
@@ -119,7 +128,7 @@ def set_cemu_dir(path: Path):
 def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
     game_dir = str(get_settings()['game_dir'])
-    if len(game_dir) < 1:
+    if not game_dir:
         raise FileNotFoundError(
             'The BotW game directory has not been saved yet.')
     else:
@@ -145,7 +154,7 @@ def set_game_dir(path: Path):
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings()['mlc_dir'])
-    if len(mlc_dir) < 1:
+    if not mlc_dir:
         raise FileNotFoundError(
             'The Cemu MLC directory has not been saved yet.')
     else:
@@ -174,10 +183,11 @@ def set_site_meta(site_meta):
 
 
 def get_title_id() -> (str, str):
+    """Gets the title ID of the BotW game dump"""
     if not hasattr(get_title_id, 'title_id'):
         title_id = '00050000101C9400'
-        with (get_game_dir().parent / 'code' / 'app.xml').open('r') as af:
-            for line in af:
+        with (get_game_dir().parent / 'code' / 'app.xml').open('r') as a_file:
+            for line in a_file:
                 title_match = re.search(
                     r'<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>', line)
                 if title_match:
@@ -192,7 +202,8 @@ def get_update_dir() -> Path:
     if not hasattr(get_update_dir, 'update_dir'):
         title_id = get_title_id()
         # First try the 1.15.11c mlc layout
-        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}E' / title_id[1] / 'content').exists():
+        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}E' / title_id[1] / 'content')\
+            .exists():
             get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
                 f'{title_id[0][0:7]}E' / title_id[1] / 'content'
         # Then try the legacy layout
@@ -209,12 +220,13 @@ def get_aoc_dir() -> Path:
     """ Gets the path to the game's aoc files in the Cemu mlc direcroy """
     if not hasattr(get_aoc_dir, 'aoc_dir'):
         title_id = get_title_id()
+        mlc_title = get_mlc_dir() / 'usr' / 'title'
         # First try the 1.15.11c mlc layout
-        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}C' / title_id[1] / 'content').exists():
+        if (mlc_title / f'{title_id[0][0:7]}C' / title_id[1] / 'content').exists():
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
                 f'{title_id[0][0:7]}C' / title_id[1] / 'content'
         # Then try the legacy layout
-        elif (get_mlc_dir() / 'usr' / 'title' / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
+        elif (mlc_title / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
                 title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
         else:
@@ -235,7 +247,8 @@ def get_util_dirs() -> tuple:
     :returns: A tuple containing the root BCML directory, the BCML working
     directory, the Cemu installation directory, and the Cemu graphicPacks
     directory.
-    :rtype: (:class:`pathlib.Path`, :class:`pathlib.Path`, :class:`pathlib.Path`, :class:`pathlib.Path`)
+    :rtype: (:class:`pathlib.Path`, :class:`pathlib.Path`, :class:`pathlib.Path`,
+            :class:`pathlib.Path`)
     """
     return get_exec_dir(), get_work_dir(), get_cemu_dir(), get_modpack_dir()
 
@@ -252,8 +265,9 @@ def get_botw_dirs() -> tuple:
 
 
 def get_bcml_version() -> str:
-    with (get_exec_dir() / 'data' / 'version.txt').open('r') as sf:
-        setup_text = sf.read()
+    """Gets the version string for the installed copy of BCML"""
+    with (get_exec_dir() / 'data' / 'version.txt').open('r') as s_file:
+        setup_text = s_file.read()
     ver_match = re.search(r"version='([0-9]+\.[0-9]+)'", setup_text)
     return ver_match.group(1) + (' Beta' if 'Beta' in setup_text else '')
 
@@ -269,12 +283,14 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     """
     if str(path).startswith('content/') or str(path).startswith('content\\'):
         path = Path(str(path).replace('content/', '').replace('content\\', ''))
-    if type(path) is str:
+    if isinstance(path, str):
         path = Path(path)
     game_dir, update_dir, aoc_dir = get_botw_dirs()
     if 'aoc' in str(path) or aoc:
-        path = Path(path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
-                    .replace('aoc/content/', '').replace('aoc/0010/', ''))
+        path = Path(
+            path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
+            .replace('aoc/content/', '').replace('aoc/0010/', '')
+        )
         return aoc_dir / path
     if (update_dir / path).exists():
         return update_dir / path
@@ -301,8 +317,8 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
     """
     nests = file.split('//')
     sarcs = []
-    with open(nests[0], 'rb') as sf:
-        sarcs.append(sarc.read_file_and_make_sarc(sf))
+    with open(nests[0], 'rb') as s_file:
+        sarcs.append(sarc.read_file_and_make_sarc(s_file))
     i = 1
     while i < len(nests) - 1:
         sarc_bytes = unyaz_if_needed(
@@ -328,8 +344,8 @@ def get_hash_table() -> {}:
     """ Returns a dict containing an xxHash table for BotW game files """
     if not hasattr(get_hash_table, 'table'):
         get_hash_table.table = {}
-        with (get_exec_dir() / 'data' / 'hashtable.csv').open('r') as hf:
-            rows = csv.reader(hf)
+        with (get_exec_dir() / 'data' / 'hashtable.csv').open('r') as h_file:
+            rows = csv.reader(h_file)
             for row in rows:
                 get_hash_table.table[row[0]] = row[1]
     return get_hash_table.table
@@ -424,13 +440,13 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
     if the entry does not exist, false if it matches the table entry.
     :rtype: bool
     """
-    contents = file if type(file) is bytes else file.read_bytes(
-    ) if isinstance(file, Path) else file.tobytes()
+    contents = file if isinstance(file, bytes) else \
+        file.read_bytes() if isinstance(file, Path) else file.tobytes()
     table = get_hash_table()
     if name not in table:
         return count_new
     fhash = xxhash.xxh32(contents).hexdigest()
-    return not (fhash == table[name])
+    return not fhash == table[name]
 
 
 def is_yaml_modded(entry, ref_list: dict, mod_list: dict) -> bool:
@@ -468,8 +484,8 @@ def byml_to_yml_dir(tmp_dir: Path, ext: str = '.byml'):
     yaml_util.add_representers(dumper)
     for data in tmp_dir.rglob(f'**/*{ext}'):
         yml_data = byml.Byml(data.read_bytes())
-        with (data.with_name(data.stem + '.yml')).open('w') as yf:
-            yaml.dump(yml_data.parse(), yf, Dumper=dumper,
+        with (data.with_name(data.stem + '.yml')).open('w') as y_file:
+            yaml.dump(yml_data.parse(), y_file, Dumper=dumper,
                       allow_unicode=True, encoding='utf-8')
         data.unlink()
 
@@ -479,10 +495,10 @@ def yml_to_byml_dir(tmp_dir: Path, ext: str = '.byml'):
     loader = yaml.CSafeLoader
     yaml_util.add_constructors(loader)
     for yml in tmp_dir.rglob('**/*.yml'):
-        with yml.open('r', encoding='utf-8') as yf:
-            root = yaml.load(yf, loader)
-        with (yml.with_name(yml.stem + ext)).open('wb') as bf:
-            byml.Writer(root, True).write(bf)
+        with yml.open('r', encoding='utf-8') as y_file:
+            root = yaml.load(y_file, loader)
+        with (yml.with_name(yml.stem + ext)).open('wb') as b_file:
+            byml.Writer(root, True).write(b_file)
         yml.unlink()
 
 
@@ -523,8 +539,11 @@ def get_mod_info(rules_path: Path) -> BcmlMod:
     """ Gets the name and priority of a mod from its rules.txt """
     rules: ConfigParser = ConfigParser()
     rules.read(str(rules_path))
-    return BcmlMod(str(rules['Definition']['name']).strip('" \''), int(rules['Definition']['fsPriority']),
-                   rules_path.parent)
+    return BcmlMod(
+        str(rules['Definition']['name']).strip('" \''),
+        int(rules['Definition']['fsPriority']),
+        rules_path.parent
+    )
 
 
 def get_installed_mods() -> []:
@@ -552,8 +571,8 @@ def get_all_modded_files(only_loose: bool = False) -> dict:
     """
     modded_files = {}
     for mod in get_installed_mods():
-        with (mod.path / 'logs' / 'rstb.log').open('r') as lf:
-            csv_loop = csv.reader(lf)
+        with (mod.path / 'logs' / 'rstb.log').open('r') as l_file:
+            csv_loop = csv.reader(l_file)
             for row in csv_loop:
                 if row[0] == 'name' or (only_loose and '//' in row[2]):
                     continue
@@ -565,8 +584,8 @@ def log_error():
     """ Writes the most recent error traceback to the error log and prints the traceback text """
     log_path = get_work_dir() / 'error.log'
     error_log = traceback.format_exc()
-    with log_path.open('w') as lf:
-        lf.write(error_log)
+    with log_path.open('w') as l_file:
+        l_file.write(error_log)
     print('BCML has encountered an error. The details are as follows:')
     print(error_log)
     print(f'The error information has been saved to:\n  {str(log_path)}')
@@ -581,18 +600,20 @@ def update_bcml():
 
 
 def create_bcml_graphicpack_if_needed():
+    """Creates the BCML master modpack if it doesn't exist"""
     bcml_mod_dir = get_modpack_dir() / '9999_BCML'
     bcml_mod_dir.mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / 'rules.txt'
     if not rules.exists():
-        with rules.open('w') as rf:
-            rf.write('[Definition]\n'
-                     'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
-                     'name = BCML\n'
-                     'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Master BCML\n'
-                     'description = Auto-generated pack which merges RSTB changes and packs for other mods\n'
-                     'version = 4\n'
-                     'fsPriority = 9999')
+        with rules.open('w') as r_file:
+            r_file.write('[Definition]\n'
+                         'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
+                         'name = BCML\n'
+                         'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Master BCML\n'
+                         'description = Auto-generated pack which merges RSTB changes and packs for'
+                         'other mods\n'
+                         'version = 4\n'
+                         'fsPriority = 9999')
 
 
 def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
@@ -606,12 +627,12 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
     :param unique_lists: Whether to prevent duplicate items in lists, defaults to False
     :return: None
     """
-    for k, v in merge_dct.items():
+    for k in merge_dct:
         if (k in dct and isinstance(dct[k], dict)
                 and isinstance(merge_dct[k], Mapping)):
             dict_merge(dct[k], merge_dct[k])
         elif (k in dct and isinstance(dct[k], list)
-                and isinstance(merge_dct[k], list)):
+              and isinstance(merge_dct[k], list)):
             dct[k].extend(merge_dct[k])
             if unique_lists:
                 dct[k] = list(set(dct[k]))

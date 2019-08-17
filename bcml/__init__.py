@@ -1,5 +1,7 @@
+"""Main BCML application"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+# pylint: disable=invalid-name,missing-docstring,too-many-lines
 import os
 import platform
 import re
@@ -39,6 +41,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self._mods = []
         self._mod_infos = {}
+        self._progress = None
+        self._thread = None
 
         self.setWindowIcon(util.get_icon('bcml.ico'))
         load_reverse = util.get_settings_bool('load_reverse')
@@ -71,8 +75,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         higher = 'top' if not load_reverse else 'bottom'
         lower = 'bottom' if not load_reverse else 'top'
-        self.listWidget.setToolTip(
-            f'Drag and drop to change mod load order. Mods at the {higher} of the list override mods at the {lower}.')
+        self.listWidget.setToolTip(f'Drag and drop to change mod load order. Mods at the {higher}'
+                                   f' of the list override mods at the {lower}.')
 
         # Bind events
         self.listWidget.setDragDropMode(
@@ -126,15 +130,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         folder = str(Path(folder) / 'content')
                     if not (Path(folder).parent / 'code' / 'app.xml').exists():
                         QtWidgets.QMessageBox.warning(
-                            self, 'Error', 'The chosen directory does not appear to be a valid dump. '
-                            'Please select the "content" directory in your dumped copy of Breath of the Wild.')
+                            self,
+                            'Error',
+                            'The chosen directory does not appear to be a valid dump. Please select'
+                            'the "content" directory in your dumped copy of Breath of the Wild.'
+                        )
                     else:
                         try:
                             util.set_game_dir(Path(folder))
-                        except FileNotFoundError as e:
+                        except FileNotFoundError:
                             QtWidgets.QMessageBox.information(
-                                self, 'First Time', 'BCML could not detect the location of Cemu\'s MLC directory'
-                                                    'for your game. You will need to specify it manually.')
+                                self,
+                                'First Time',
+                                'BCML could not detect the location of Cemu\'s MLC directory for '
+                                'your game. You will need to specify it manually.'
+                            )
                             mlc_folder = QFileDialog.getExistingDirectory(
                                 self, 'Select Cemu MLC Directory')
                             if mlc_folder:
@@ -148,13 +158,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
             QtWidgets.QMessageBox.warning(
-                self, 'Error', f'BCML requires Python 3.7 or higher, but your Python version is {ver[0]}.{ver[1]}')
+                self,
+                'Error',
+                f'BCML requires Python 3.7 or higher, but your Python version is {ver[0]}.{ver[1]}'
+            )
             sys.exit(0)
 
         is_64bits = sys.maxsize > 2**32
         if not is_64bits:
             QtWidgets.QMessageBox.warning(
-                self, 'Error', 'BCML requires 64 bit Python, but it looks like you\'re running 32 bit.')
+                self,
+                'Error',
+                'BCML requires 64 bit Python, but it looks like you\'re running 32 bit.'
+            )
             sys.exit(0)
 
         self.LoadMods()
@@ -175,7 +191,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 104)
         self.statusBar().showMessage(f'{len(self._mods)} mods installed')
-        if len(self._mods) > 0:
+        if self._mods:
             self.btnRemerge.setEnabled(True)
             self.btnExport.setEnabled(True)
         else:
@@ -186,23 +202,23 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         QDesktopServices.openUrl(QUrl(linkStr))
 
     def SelectItem(self):
-        if len(self.listWidget.selectedItems()) == 0:
+        if not self.listWidget.selectedItems():
             return
         mod = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole)
 
         if mod not in self._mod_infos:
             rules = ConfigParser()
             rules.read(str(mod.path / 'rules.txt'))
-            font_metrics = QtGui.QFontMetrics(self.lblModInfo.font())
+            font_met = QtGui.QFontMetrics(self.lblModInfo.font())
             path = str(mod.path)
-            while font_metrics.boundingRect(f'Path: {path}.....').width() >= self.lblModInfo.width():
+            while font_met.boundingRect(f'Path: {path}.....').width() >= self.lblModInfo.width():
                 path = path[:-1]
             changes = []
-            if len(rstable.get_mod_rstb_values(mod)) > 0:
+            if rstable.get_mod_rstb_values(mod):
                 changes.append('RSTB')
             if util.is_pack_mod(mod):
                 changes.append('packs')
-            if len(texts.get_modded_languages(mod.path)) > 0:
+            if texts.get_modded_languages(mod.path):
                 changes.append('texts')
                 if 'RSTB' not in changes:
                     changes.insert(0, 'RSTB')
@@ -245,7 +261,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         response = urllib.request.urlopen(url)
                         rdata = response.read().decode()
                         name_match = re.search(
-                            r'property=\"og\:site_name\"[^\/\>]*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]*property=\"og\:site_name\"', rdata)
+                            r'property=\"og\:site_name\"[^\/\>]'
+                            r'*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]'
+                            r'*property=\"og\:site_name\"',
+                            rdata
+                        )
                         if name_match:
                             for group in name_match.groups():
                                 if group is not None:
@@ -254,23 +274,35 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         img_match = re.search(
                             r'<link.*rel=\"(shortcut icon|icon)\".*href=\"(.+?)\".*>', rdata)
                         if img_match:
-                            if not os.path.isdir(str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta')):
-                                os.makedirs(
-                                    str(util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta'))
+                            (util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta').mkdir(
+                                parents=True,
+                                exist_ok=True
+                            )
                             try:
-                                urllib.request.urlretrieve(img_match.group(2), str(util.get_exec_dir(
-                                ) / 'work_dir' / 'cache' / "site_meta" / f'fav_{site_name}.{img_match.group(2).split(".")[-1]}'))
-                            except:
+                                urllib.request.urlretrieve(
+                                    img_match.group(2),
+                                    str(util.get_exec_dir() / 'work_dir' / 'cache' / "site_meta" /\
+                                        f'fav_{site_name}.{img_match.group(2).split(".")[-1]}')
+                                )
+                            except (urllib.error.URLError,
+                                    urllib.error.HTTPError,
+                                    urllib.error.ContentTooShortError):
                                 pass
-                    except:
+                    except (urllib.error.URLError,
+                            urllib.error.HTTPError,
+                            urllib.error.ContentTooShortError):
                         pass
                 favicon = ''
-                for file in glob.glob(str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / f'fav_{site_name}.*')):
-                    favicon = f'<img src="{str(util.get_exec_dir() / "work_dir" / "cache" / "site_meta" / file)}" height="16"/> '
+                for file in (util.get_exec_dir() / "work_dir" / "cache" / "site_meta")\
+                            .glob(f'fav_{site_name}.*'):
+                    favicon = f'<img src="{file.resolve()}" height="16"/> '
                 mod_info.insert(
-                    3, f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>')
+                    3,
+                    f'<b>Link: <a style="text-decoration: none;" href="{url}">'
+                    f'{favicon} {site_name}</a></b>'
+                )
             try:
-                if not len(glob.glob(str(mod.path / 'thumbnail.*'))):
+                if not mod.path.glob('thumbnail.*'):
                     if 'image' not in rules['Definition']:
                         if 'url' in rules['Definition'] and 'gamebanana.com' in url:
                             response = urllib.request.urlopen(url)
@@ -279,26 +311,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 r'<meta property=\"og:image\" ?content=\"(.+?)\" />', rdata)
                             if img_match:
                                 image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(img_match.group(1), str(mod.path / image_path))
+                                urllib.request.urlretrieve(
+                                    img_match.group(1),
+                                    str(mod.path / image_path)
+                                )
                             else:
-                                raise Exception(
-                                    f'Rule for {site_name} failed to find the remote preview')
+                                raise IndexError\
+                                    (f'Rule for {site_name} failed to find the remote preview')
                         else:
-                            raise Exception(f'No preview image available')
+                            raise KeyError(f'No preview image available')
                     else:
                         image_path = str(rules['Definition']['image'])
                         if image_path.startswith('http'):
-                            urllib.request.urlretrieve(image_path,
-                                                       str(mod.path / ('thumbnail.' + image_path.split(".")[-1])))
+                            urllib.request.urlretrieve(
+                                image_path,
+                                str(mod.path / ('thumbnail.' + image_path.split(".")[-1]))
+                            )
                             image_path = 'thumbnail.' + image_path.split(".")[-1]
                         if not os.path.isfile(str(mod.path / image_path)):
-                            raise Exception(
+                            raise FileNotFoundError(
                                 f'Preview {image_path} specified in rules.txt not found')
                 else:
                     for n in glob.glob(str(mod.path / 'thumbnail.*')):
                         image_path = n
                 preview = QtGui.QPixmap(str(mod.path / image_path))
-            except:
+            except (FileNotFoundError, KeyError, IndexError):
                 preview = self._logo
             finally:
                 self._mod_infos[mod] = (mod_info, preview)
@@ -365,8 +402,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         higher = 'top' if not load_reverse else 'bottom'
         lower = 'bottom' if not load_reverse else 'top'
-        self.listWidget.setToolTip(
-            f'Drag and drop to change mod load order. Mods at the {higher} of the list override mods at the {lower}.')
+        self.listWidget.setToolTip('Drag and drop to change mod load order. Mods at the'
+                                   f'{higher} of the list override mods at the {lower}.')
 
     def InstallClicked(self):
         def install_all(result: InstallResult):
@@ -409,7 +446,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     if lang not in fix_texts:
                         fix_texts.append(lang)
             rstable.generate_master_rstb()
-            if len(fix_packs) > 0:
+            if fix_packs:
                 pack.merge_installed_packs(no_injection=not (
                     fix_gamedata or fix_savedata), only_these=list(fix_packs), even_one=True)
             if fix_gamedata:
@@ -423,7 +460,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
-            if len(fix_deepmerge) > 0:
+            if fix_deepmerge:
                 merge.deep_merge(only_these=list(fix_deepmerge))
 
         dialog = InstallDialog(self)
@@ -473,7 +510,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 with (new_path / 'rules.txt').open('w') as rf:
                     rules.write(rf)
             rstable.generate_master_rstb()
-            if len(fix_packs) > 0:
+            if fix_packs:
                 pack.merge_installed_packs(no_injection=not (
                     fix_gamedata or fix_savedata), only_these=list(fix_packs))
             if fix_gamedata:
@@ -487,7 +524,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
-            if len(fix_deepmerge) > 0:
+            if fix_deepmerge:
                 merge.deep_merge(only_these=list(fix_deepmerge))
             self.LoadMods()
             install.refresh_cemu_mods()
@@ -565,9 +602,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for mod in mods:
                 install.uninstall_mod(mod, wait_merge=True)
             rstable.generate_master_rstb()
-            if len(fix_packs) > 0:
-                pack.merge_installed_packs(no_injection=not (
-                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
+            if fix_packs:
+                pack.merge_installed_packs(
+                    no_injection=not (fix_gamedata or fix_savedata),
+                    only_these=list(fix_packs)
+                )
             if fix_gamedata:
                 data.merge_gamedata()
             if fix_savedata:
@@ -579,11 +618,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             mubin.merge_dungeonstatic()
             for lang in fix_texts:
                 texts.merge_texts(lang)
-            if len(fix_deepmerge) > 0:
+            if fix_deepmerge:
                 merge.deep_merge(only_these=list(fix_deepmerge))
             install.refresh_cemu_mods()
 
-        if len(self.listWidget.selectedItems()) > 0:
+        if self.listWidget.selectedItems():
             mods = [item.data(Qt.UserRole)
                     for item in self.listWidget.selectedItems()]
             self.PerformOperation(uninstall, (mods))
@@ -607,9 +646,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 f'description = {result["description"]}',
                 'version = 4'
             ]
-            if len(result['image']) > 0:
+            if result['image']:
                 rules.append(f'image = {result["image"]}')
-            if len(result['url']) > 0:
+            if result['url']:
                 rules.append(f'url = {result["url"]}')
             (result['folder'] / 'rules.txt').write_text('\n'.join(rules))
             install.create_minimal_mod(
@@ -629,8 +668,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         dialog = PackageDialog(self)
         result = dialog.GetResult()
         if result:
-            self.PerformOperation(create_package, (result),
-                                  title=f'Creating BNP package for {result["name"]}')
+            self.PerformOperation(
+                create_package,
+                (result),
+                title=f'Creating BNP package for {result["name"]}'
+            )
 
     def SettingsClicked(self):
         if SettingsDialog(self).exec_() == QtWidgets.QDialog.Accepted:
@@ -644,7 +686,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs): # pylint: disable=unused-argument
         super(InstallDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
@@ -658,7 +700,11 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
 
     def AddFileClicked(self):
         file_names = QFileDialog.getOpenFileNames(
-            self, 'Select a Mod', str(Path.home()), 'Mod Archives (*.zip; *.rar; *.7z; *.bnp);;All Files (*)')[0]
+            self,
+            'Select a Mod',
+            str(Path.home()),
+            'Mod Archives (*.zip; *.rar; *.7z; *.bnp);;All Files (*)'
+        )[0]
         for file_name in file_names:
             path = Path(file_name)
             if path.exists():
@@ -702,8 +748,6 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisableMap.isChecked(),
                 not self.chkEnableDeepMerge.isChecked()
             )
-        else:
-            return None
 
 # Package Dialog
 
@@ -711,6 +755,7 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
 class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
 
     def __init__(self, *args, **kwargs):
+        # pylint: disable=unused-argument
         super(PackageDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
@@ -731,21 +776,25 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
 
     def BrowseImgClicked(self):
         file_name = QFileDialog.getOpenFileName(
-            self, 'Select a Preview Image', str(Path.home()), 'Images (*.png; *.jpg; *.bmp);;All Files (*)')[0]
+            self,
+            'Select a Preview Image',
+            str(Path.home()),
+            'Images (*.png; *.jpg; *.bmp);;All Files (*)'
+        )[0]
         if file_name:
             self.txtImage.setText(str(Path(file_name).resolve()))
 
     def accept(self):
-        if len(self.txtName.text().strip()) == 0:
+        if not self.txtName.text().strip():
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'You must provide a name for your mod.')
             return
-        if len(self.txtDescript.toPlainText().strip()) == 0:
+        if not self.txtDescript.toPlainText().strip():
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'You must provide a description for your mod.')
             return
-        if len(self.txtFolder.text().strip()) == 0 or \
-                not Path(self.txtFolder.text().strip()).exists():
+        if not (self.txtFolder.text().strip() or \
+                Path(self.txtFolder.text().strip()).exists()):
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'You must provide a valid folder containing a mod.')
             return
@@ -754,8 +803,12 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
     def GetResult(self):
         if self.exec_() == QtWidgets.QDialog.Accepted:
             output = Path(
-                QFileDialog.getSaveFileName(self, 'Save Your Mod',
-                                            str(Path.home()), 'Botw Nano Patch Mod (*.bnp);;7-Zip Archive (*.7z);;All Files (*)')[0]
+                QFileDialog.getSaveFileName(
+                    self,
+                    'Save Your Mod',
+                    str(Path.home()),
+                    'Botw Nano Patch Mod (*.bnp);;7-Zip Archive (*.7z);;All Files (*)'
+                )[0]
             )
             if not output:
                 return None
@@ -785,6 +838,7 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
 class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
 
     def __init__(self, *args, **kwargs):
+        # pylint: disable=unused-argument
         super(SettingsDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
@@ -848,6 +902,7 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
 class AboutDialog(QtWidgets.QDialog, Ui_AboutDialog):
 
     def __init__(self, *args, **kwargs):
+        # pylint: disable=unused-argument
         super(AboutDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
@@ -865,6 +920,7 @@ class AboutDialog(QtWidgets.QDialog, Ui_AboutDialog):
 class ProgressDialog(QtWidgets.QDialog, Ui_dlgProgress):
 
     def __init__(self, *args, **kwargs):
+        # pylint: disable=unused-argument
         super(ProgressDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
@@ -880,13 +936,14 @@ class ProgressThread(threading.Thread):
         self._target = target
         self._args = args
         self.signal = ThreadSignal()
+        self.error = None
 
     def run(self):
         sys.stdout = RedirectText(self._out)
         try:
             self._target(*self._args)
             self.signal.sig.emit('Done')
-        except Exception as e:
+        except Exception as e: # pylint: disable=broad-except
             self.error = traceback.format_exc(limit=3)
             self.signal.err.emit(e)
 
@@ -914,7 +971,10 @@ class ThreadSignal(QtCore.QObject):
 # Main
 
 InstallResult = namedtuple(
-    'InstallResult', 'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map deep_merge')
+    'InstallResult',
+    'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map'
+    'deep_merge'
+)
 
 
 def main():
@@ -924,7 +984,7 @@ def main():
                 shutil.rmtree(str(path))
             elif path.is_file():
                 path.unlink()
-        except:
+        except OSError:
             pass
     app = QtWidgets.QApplication([])
     application = MainWindow()
@@ -932,14 +992,16 @@ def main():
         application.show()
         application.SetupChecks()
         app.exec_()
-    except:
+    except Exception: # pylint: disable=broad-except
         tb = traceback.format_exc(limit=2)
         e = util.get_work_dir() / 'error.log'
         QtWidgets.QMessageBox.warning(
-            None, 'Error', f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
-            f'{e}\n\nBCML will now close.')
-        with e.open('w') as ef:
-            ef.write(tb)
+            None,
+            'Error',
+            f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
+            f'{e}\n\nBCML will now close.'
+        )
+        e.write_text(tb)
 
 
 if __name__ == "__main__":

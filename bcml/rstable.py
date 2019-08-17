@@ -1,3 +1,4 @@
+"""Provides functions for diffing and merging the BotW Resource Size Table"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
@@ -9,9 +10,9 @@ from pathlib import Path
 from typing import List, Union
 
 import rstb
-import wszst_yaz0
 from rstb import ResourceSizeTable
-from rstb.util import read_rstb, write_rstb
+from rstb.util import read_rstb
+import wszst_yaz0
 
 from bcml import util
 from bcml.util import BcmlMod
@@ -21,7 +22,9 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
     """ Gets the unmodified RSTB """
     if not hasattr(get_stock_rstb, 'table'):
         get_stock_rstb.table = read_rstb(
-            str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')), True)
+            str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')),
+            True
+        )
     return deepcopy(get_stock_rstb.table)
 
 
@@ -32,13 +35,29 @@ def calculate_size(path: Path) -> int:
     :returns: The proper RSTB value for the file if it can be calculated, otherwise 0.
     :rtype: int
     """
+    if not hasattr(calculate_size, 'rstb_calc'):
+        calculate_size.rstb_calc = rstb.SizeCalculator()
     try:
-        return rstb.SizeCalculator().calculate_file_size(file_name=str(path), wiiu=True, force=False)
+        return calculate_size.rstb_calc.calculate_file_size(
+            file_name=str(path),
+            wiiu=True,
+            force=False
+        )
     except struct.error:
         return 0
 
 
 def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
+    """
+    Attempts to estimate a proper RSTB value for a BFRES file
+
+    :param file: The file to estimate, either as a path or bytes
+    :type file: Union[:class:`pathlib.Path`, bytes]
+    :param name: The name of the file, needed when passing as bytes, defaults to ''
+    :type name: str, optional
+    :return: Returns an estimated RSTB value
+    :rtype: int
+    """
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b'Yaz0':
         real_bytes = wszst_yaz0.decompress(real_bytes)
@@ -48,8 +67,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
         if isinstance(file, Path):
             name = file.name
         else:
-            raise ValueError(
-                'BFRES name must not be blank if passing file as bytes.')
+            raise ValueError('BFRES name must not be blank if passing file as bytes.')
     if '.Tex' in name:
         if real_size < 100:
             return real_size * 9
@@ -111,6 +129,16 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
 
 
 def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
+    """
+    Attempts to estimate a proper RSTB value for an AAMP file. Will only attempt for the following
+    kinds: .baiprog, .bgparamlist, .bdrop, .bshop, .bxml, .brecipe, otherwise will return 0.
+
+    :param file: The file to estimate, either as a path or bytes
+    :type file: Union[:class:`pathlib.Path`, bytes]
+    :param name: The name of the file, needed when passing as bytes, defaults to ''
+    :type name: str, optional
+    :return: Returns an estimated RSTB value
+    :rtype: int"""
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b'Yaz0':
         real_bytes = wszst_yaz0.decompress(real_bytes)
@@ -208,8 +236,8 @@ def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = 'rstb.lo
     changes = {}
     leave = (path / 'logs' / '.leave').exists()
     shrink = (path / 'logs' / '.shrink').exists()
-    with (path / 'logs' / log_name).open('r') as lf:
-        log_loop = csv.reader(lf)
+    with (path / 'logs' / log_name).open('r') as l_file:
+        log_loop = csv.reader(l_file)
         for row in log_loop:
             if row[0] != 'name':
                 changes[row[0]] = {
@@ -220,7 +248,7 @@ def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = 'rstb.lo
     return changes
 
 
-def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -> (ResourceSizeTable, List[str]):
+def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, List[str]):
     """
     Merges changes from a list of RSTB mods into a single RSTB
 
@@ -234,7 +262,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
     :rtype: list of str
     """
     change_list = []
-    d = '  '
+    spaces = '  '
     change_count = {
         'updated': 0,
         'deleted': 0,
@@ -247,54 +275,63 @@ def merge_rstb(table: ResourceSizeTable, changes: dict, verbose: bool = False) -
             if newsize == 0:
                 if not changes[change]['leave']:
                     if change.endswith('.bas') or change.endswith('.baslist'):
-                        change_list.append((f'{d}WARNING: Could not calculate or safely remove RSTB size for {change}. '
-                                            'This may need to be corrected manually, or the game could become unstable',
-                                            False))
+                        change_list.append((
+                            f'{spaces}WARNING: Could not calculate or safely remove RSTB size for'
+                            f'{change}. This may need to be corrected manually, or the game could '
+                            'become unstable',
+                            False
+                        ))
                         change_count['warning'] += 1
                         continue
                     else:
                         table.delete_entry(change)
                         change_list.append(
-                            (f'{d}Deleted RSTB entry for {change}', True))
+                            (f'{spaces}Deleted RSTB entry for {change}', True))
                         change_count['deleted'] += 1
                         continue
                 else:
                     change_list.append(
-                        (f'{d}Skipped deleting RSTB entry for {change}', True))
+                        (f'{spaces}Skipped deleting RSTB entry for {change}', True))
                     continue
             oldsize = table.get_size(change)
             if newsize <= oldsize:
                 if changes[change]['shrink']:
                     table.set_size(change, newsize)
-                    change_list.append(
-                        (f'{d}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
+                    change_list.append((
+                        f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}',
+                        True
+                    ))
                     change_count['updated'] += 1
                     continue
                 else:
                     change_list.append(
-                        (f'{d}Skipped updating RSTB entry for {change}', True))
+                        (f'{spaces}Skipped updating RSTB entry for {change}', True))
                     continue
             elif newsize > oldsize:
                 table.set_size(change, newsize)
                 change_list.append(
-                    (f'{d}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
+                    (f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
                 change_count['updated'] += 1
         else:
             newsize = int(changes[change]['size'])
             if newsize == 0:
                 change_list.append(
-                    (f'{d}Could not calculate size for new entry {change}, skipped', True))
+                    (f'{spaces}Could not calculate size for new entry {change}, skipped', True))
                 continue
             table.set_size(change, newsize)
             change_list.append(
-                (f'{d}Added new RSTB entry for {change} with value {newsize}', True))
+                (f'{spaces}Added new RSTB entry for {change} with value {newsize}', True))
             change_count['added'] += 1
-    change_list.append((f'RSTB merge complete: updated {change_count["updated"]} entries,'
-                        f' deleted {change_count["deleted"]} entries, added {change_count["added"]} entries', False))
+    change_list.append((
+        f'RSTB merge complete: updated {change_count["updated"]} entries, deleted'
+        f' {change_count["deleted"]} entries, added {change_count["added"]} entries',
+        False
+    ))
     return table, change_list
 
 
 def generate_master_rstb(verbose: bool = False):
+    """Merges all installed RSTB modifications"""
     print('Merging RSTB changes...')
     if (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').unlink()
@@ -309,7 +346,7 @@ def generate_master_rstb(verbose: bool = False):
         rstb_values.update(get_mod_rstb_values(
             util.get_master_modpack_dir(), log_name='map.log'))
 
-    table, rstb_changes = merge_rstb(table, rstb_values, verbose)
+    table, rstb_changes = merge_rstb(table, rstb_values)
     for change in rstb_changes:
         if not change[1] or (change[1] and verbose):
             print(change[0])
@@ -323,12 +360,12 @@ def generate_master_rstb(verbose: bool = False):
                                                 'ResourceSizeTable.product.srsizetable'
     if not rstb_path.exists():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
-    with rstb_path.open('wb') as rf:
+    with rstb_path.open('wb') as r_file:
         with io.BytesIO() as buf:
             table.write(buf, True)
-            rf.write(wszst_yaz0.compress(buf.getvalue()))
+            r_file.write(wszst_yaz0.compress(buf.getvalue()))
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
-    with rstb_log.open('w') as rf:
-        rf.write('\n'.join([change[0].strip() for change in rstb_changes]))
+    with rstb_log.open('w') as r_file:
+        r_file.write('\n'.join([change[0].strip() for change in rstb_changes]))

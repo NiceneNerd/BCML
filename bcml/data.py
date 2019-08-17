@@ -1,20 +1,24 @@
+"""
+Provides functions to diff and merge various kinds of BotW data, including gamedata, savedata, and
+actorinfo.
+"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import zlib
 from copy import deepcopy
 from io import BytesIO
+from math import ceil
 from pathlib import Path
 from typing import List
 
 import byml
+from byml import yaml_util
 import rstb
 import rstb.util
 import sarc
 import wszst_yaz0
 import xxhash
 import yaml
-from byml import yaml_util
-from math import ceil
 
 from bcml import util
 from bcml.util import BcmlMod
@@ -23,8 +27,8 @@ from bcml.util import BcmlMod
 def get_stock_gamedata() -> sarc.SARC:
     """ Gets the contents of the unmodded gamedata.sarc """
     if not hasattr(get_stock_gamedata, 'gamedata'):
-        with util.get_game_file('Pack/Bootup.pack').open('rb') as bf:
-            bootup = sarc.read_file_and_make_sarc(bf)
+        with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
+            bootup = sarc.read_file_and_make_sarc(b_file)
         get_stock_gamedata.gamedata = sarc.SARC(wszst_yaz0.decompress(
             bootup.get_file_data('GameData/gamedata.ssarc')))
     return get_stock_gamedata.gamedata
@@ -33,8 +37,8 @@ def get_stock_gamedata() -> sarc.SARC:
 def get_stock_savedata() -> sarc.SARC:
     """ Gets the contents of the unmodded savedataformat.sarc """
     if not hasattr(get_stock_savedata, 'savedata'):
-        with util.get_game_file('Pack/Bootup.pack').open('rb') as bf:
-            bootup = sarc.read_file_and_make_sarc(bf)
+        with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
+            bootup = sarc.read_file_and_make_sarc(b_file)
         get_stock_savedata.savedata = sarc.SARC(wszst_yaz0.decompress(
             bootup.get_file_data('GameData/savedataformat.ssarc')
         ))
@@ -78,8 +82,8 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
         master_boot = util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
-    with bootup_path.open('rb') as bf:
-        bootup_pack = sarc.read_file_and_make_sarc(bf)
+    with bootup_path.open('rb') as b_file:
+        bootup_pack = sarc.read_file_and_make_sarc(b_file)
     new_pack = sarc.make_writer_from_sarc(bootup_pack)
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
@@ -87,8 +91,8 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
                       wszst_yaz0.compress(gamedata_bytes))
     (util.get_master_modpack_dir() / 'content' /
      'Pack').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
-        new_pack.write(bf)
+    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
+        new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
 
 
@@ -106,17 +110,17 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     if not bootup_path:
         installed_bootups = list(
             util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
-        bootup_path = installed_bootups[len(installed_bootups) - 1] if len(installed_bootups) > 0 \
-            else util.get_game_file('Pack/Bootup.pack')
-    with bootup_path.open('rb') as bf:
-        bootup_pack = sarc.read_file_and_make_sarc(bf)
+        bootup_path = installed_bootups[len(installed_bootups) - 1] if installed_bootups \
+                      else util.get_game_file('Pack/Bootup.pack')
+    with bootup_path.open('rb') as b_file:
+        bootup_pack = sarc.read_file_and_make_sarc(b_file)
     new_pack = sarc.make_writer_from_sarc(bootup_pack)
     new_pack.delete_file('GameData/savedataformat.ssarc')
     savedata_bytes = bgsvdata.get_bytes()
     new_pack.add_file('GameData/savedataformat.ssarc',
                       wszst_yaz0.compress(savedata_bytes))
-    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as bf:
-        new_pack.write(bf)
+    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
+        new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
 
 
@@ -140,7 +144,12 @@ def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
     fix_slash = '/' if not bg_files[0].startswith('/') else ''
     single_gamedatas = [file for file in bg_files
                         if not any(file.startswith(mult) for mult in
-                                   ['/bool_data', 'bool_data', '/revival_bool_data', 'revival_bool_data'])]
+                                   [
+                                       '/bool_data',
+                                       'bool_data',
+                                       '/revival_bool_data',
+                                       'revival_bool_data'
+                                   ])]
     for bgdata in single_gamedatas:
         bgdata_bytes = gamedata.get_file_data(bgdata).tobytes()
         bgdata_hash = xxhash.xxh32(bgdata_bytes).hexdigest()
@@ -250,7 +259,8 @@ def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
     for data_type in mod_data:
         modded_entries[data_type] = {}
         for data in mod_data[data_type]:
-            if data not in ref_data[data_type] or mod_data[data_type][data] != ref_data[data_type][data]:
+            if data not in ref_data[data_type] or\
+               mod_data[data_type][data] != ref_data[data_type][data]:
                 modded_entries[data_type][data] = deepcopy(
                     mod_data[data_type][data])
     return modded_entries
@@ -296,15 +306,15 @@ def merge_gamedata(verbose: bool = False):
     """ Merges installed gamedata mods and saves the new Bootup.pack, fixing the RSTB if needed """
     mods = get_gamedata_mods()
     glog_path = util.get_master_modpack_dir() / 'logs' / 'gamedata.log'
-    if len(mods) == 0:
+    if not mods:
         print('No gamedata merging necessary.')
         if glog_path.exists():
             glog_path.unlink()
             (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').unlink()
         return
     if glog_path.exists():
-        with glog_path.open('r') as lf:
-            if xxhash.xxh32(str(mods)).hexdigest() == lf.read():
+        with glog_path.open('r') as l_file:
+            if xxhash.xxh32(str(mods)).hexdigest() == l_file.read():
                 print('No gamedata merging necessary.')
                 return
 
@@ -313,8 +323,8 @@ def merge_gamedata(verbose: bool = False):
     yaml_util.add_constructors(loader)
     print('Loading gamedata mods...')
     for mod in mods:
-        with open(mod.path / 'logs' / 'gamedata.yml') as gf:
-            yml = yaml.load(gf, Loader=loader)
+        with open(mod.path / 'logs' / 'gamedata.yml') as g_file:
+            yml = yaml.load(g_file, Loader=loader)
             for data_type in yml:
                 if data_type not in modded_entries:
                     modded_entries[data_type] = {}
@@ -367,8 +377,8 @@ def merge_gamedata(verbose: bool = False):
             new_gamedata.add_file(f'/{data_type}_{i}.bgdata', buf.getvalue())
     bootup_rstb = inject_gamedata_into_bootup(new_gamedata)
     (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as gf:
-        new_gamedata.write(gf)
+    with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as g_file:
+        new_gamedata.write(g_file)
 
     print('Correcting RSTB if necessary...')
     rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
@@ -379,28 +389,28 @@ def merge_gamedata(verbose: bool = False):
         if bootup_rstb > old_size:
             table.set_size('GameData/gamedata.sarc', bootup_rstb)
             if verbose:
-                print(
-                    f'  Updated RSTB entry for "GameData/gamedata.sarc" from {old_size} bytes to {bootup_rstb} bytes')
+                print('  Updated RSTB entry for "GameData/gamedata.sarc"'
+                      f'from {old_size} bytes to {bootup_rstb} bytes')
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     glog_path.parent.mkdir(parents=True, exist_ok=True)
-    with glog_path.open('w') as lf:
-        lf.write(xxhash.xxh32(str(mods)).hexdigest())
+    with glog_path.open('w') as l_file:
+        l_file.write(xxhash.xxh32(str(mods)).hexdigest())
 
 
 def merge_savedata(verbose: bool = False):
     """ Merges install savedata mods and saves the new Bootup.pack, fixing the RSTB if needed"""
     mods = get_savedata_mods()
     slog_path = util.get_master_modpack_dir() / 'logs' / 'savedata.log'
-    if len(mods) == 0:
+    if mods:
         print('No gamedata merging necessary.')
         if slog_path.exists():
             slog_path.unlink()
             (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').unlink()
         return
     if slog_path.exists():
-        with slog_path.open('r') as lf:
-            if xxhash.xxh32(str(mods)).hexdigest() == lf.read():
+        with slog_path.open('r') as l_file:
+            if xxhash.xxh32(str(mods)).hexdigest() == l_file.read():
                 print('No savedata merging necessary.')
                 return
 
@@ -410,8 +420,8 @@ def merge_savedata(verbose: bool = False):
     yaml_util.add_constructors(loader)
     print('Loading savedata mods...')
     for mod in mods:
-        with open(mod.path / 'logs' / 'savedata.yml') as sf:
-            yml = yaml.load(sf, Loader=loader)
+        with open(mod.path / 'logs' / 'savedata.yml') as s_file:
+            yml = yaml.load(s_file, Loader=loader)
             for entry in yml:
                 if entry['HashValue'] in new_hashes:
                     continue
@@ -471,8 +481,8 @@ def merge_savedata(verbose: bool = False):
         f'/saveformat_{num_files + 1}.bgsvdata', special_bgsv[1])
     bootup_rstb = inject_savedata_into_bootup(new_savedata)
     (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as sf:
-        new_savedata.write(sf)
+    with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as s_file:
+        new_savedata.write(s_file)
 
     print('Correcting RSTB if necessary...')
     rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' / \
@@ -483,20 +493,20 @@ def merge_savedata(verbose: bool = False):
         if bootup_rstb > old_size:
             table.set_size('GameData/savedataformat.sarc', bootup_rstb)
             if verbose:
-                print(
-                    f'  Updated RSTB entry for "GameData/savedataformat.sarc" from {old_size} bytes to {bootup_rstb} bytes')
+                print('  Updated RSTB entry for "GameData/savedataformat.sarc"'
+                      f'from {old_size} bytes to {bootup_rstb} bytes')
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     slog_path.parent.mkdir(parents=True, exist_ok=True)
-    with slog_path.open('w') as lf:
-        lf.write(xxhash.xxh32(str(mods)).hexdigest())
+    with slog_path.open('w') as l_file:
+        l_file.write(xxhash.xxh32(str(mods)).hexdigest())
 
 
 def get_stock_actorinfo() -> dict:
     """ Gets the unmodded contents of ActorInfo.product.sbyml """
     actorinfo = util.get_game_file('Actor/ActorInfo.product.sbyml')
-    with actorinfo.open('rb') as af:
-        return byml.Byml(wszst_yaz0.decompress(af.read())).parse()
+    with actorinfo.open('rb') as a_file:
+        return byml.Byml(wszst_yaz0.decompress(a_file.read())).parse()
 
 
 def get_modded_actors(actorinfo: dict) -> dict:
@@ -532,10 +542,11 @@ def get_actorinfo_mods() -> List[BcmlMod]:
 
 
 def merge_actorinfo(verbose: bool = False):
+    """Merges installed changes to actor info"""
     mods = get_actorinfo_mods()
     actor_path = (util.get_master_modpack_dir() / 'content' /
                   'Actor' / 'ActorInfo.product.sbyml')
-    if len(mods) == 0:
+    if not mods:
         print('No actor info merging necessary.')
         if actor_path.exists():
             actor_path.unlink()
@@ -546,8 +557,8 @@ def merge_actorinfo(verbose: bool = False):
     loader = yaml.CSafeLoader
     yaml_util.add_constructors(loader)
     for mod in mods:
-        with (mod.path / 'logs' / 'actorinfo.yml').open('r', encoding='utf-8') as af:
-            entries = yaml.load(af, Loader=loader)
+        with (mod.path / 'logs' / 'actorinfo.yml').open('r', encoding='utf-8') as a_file:
+            entries = yaml.load(a_file, Loader=loader)
             util.dict_merge(modded_actors, entries)
             if verbose:
                 print(f'Loaded {len(entries)} entries from {mod.name}')
@@ -580,6 +591,5 @@ def merge_actorinfo(verbose: bool = False):
     buf = BytesIO()
     byml.Writer(actorinfo, True).write(buf)
     actor_path.parent.mkdir(parents=True, exist_ok=True)
-    with actor_path.open('wb') as af:
-        af.write(wszst_yaz0.compress(buf.getvalue()))
+    actor_path.write_bytes(wszst_yaz0.compress(buf.getvalue()))
     print('Actor info merged successfully')
