@@ -187,7 +187,11 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
     for modded_file in modded_files:
         if modded_file in base_sarc.list_files():
             new_sarc.delete_file(modded_file)
-        ppack = next([pack for pack in sarc_list if pack['priority'] == modded_files[modded_file]])
+        ppack = next(
+            iter(
+                [pack for pack in sarc_list if pack['priority'] == modded_files[modded_file]]
+            )
+        )
         new_data = ppack['pack'].get_file_data(modded_file).tobytes()
         new_sarc.add_file(modded_file, new_data)
         if verbose:

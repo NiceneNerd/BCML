@@ -972,7 +972,7 @@ class ThreadSignal(QtCore.QObject):
 
 InstallResult = namedtuple(
     'InstallResult',
-    'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map'
+    'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map ' + \
     'deep_merge'
 )
 

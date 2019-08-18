@@ -69,7 +69,7 @@ def open_mod(path: Path) -> Path:
 def get_next_priority() -> int:
     """ Gets the next available mod priority """
     i = 100
-    while util.get_modpack_dir().glob(f'{i:04}_*'):
+    while list(util.get_modpack_dir().glob(f'{i:04}_*')):
         i += 1
     return i
 
@@ -524,7 +524,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         deep_merge = (logs / 'deepmerge.yml').exists()
         if not no_texts:
             text_mods = texts.get_modded_languages(tmp_dir)
-            is_text_mod = bool(text_mods)
+            is_text_mod = len(text_mods) > 0 # pylint: disable=len-as-condition
     else:
         is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, \
             no_map, _ = \
@@ -544,6 +544,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 )
 
     priority = get_next_priority()
+    print(f'Assigned mod priority of {priority}')
     mod_id = util.get_mod_id(mod_name, priority)
     mod_dir = util.get_modpack_dir() / mod_id
     mod_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -824,8 +825,9 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         ext = Path(canon).suffix
         file_data = base_sarc.get_file_data(nest_file).tobytes()
         xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
-        if (canon not in hashes and ext not in ['.yml', '.bak']) or \
-                (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
+        if ext in ['.yml', '.bak']:
+            continue
+        if canon not in hashes or (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
             can_delete = False
             new_sarc.add_file(nest_file, file_data)
     if can_delete:
