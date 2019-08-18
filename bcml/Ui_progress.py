@@ -9,7 +9,7 @@ class Ui_dlgProgress(object):
         dlgProgress.resize(400, 80)
         dlgProgress.setMinimumSize(QtCore.QSize(400, 80))
         dlgProgress.setMaximumSize(QtCore.QSize(400, 80))
-        dlgProgress.setModal(True)
+        dlgProgress.setModal(False)
         self.verticalLayout = QtWidgets.QVBoxLayout(dlgProgress)
         self.verticalLayout.setObjectName("verticalLayout")
         self.progressBar = QtWidgets.QProgressBar(dlgProgress)

@@ -4,6 +4,7 @@
 import csv
 import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
@@ -64,6 +65,18 @@ def get_work_dir() -> Path:
     if not work_dir.exists():
         work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
+
+
+def clear_temp_dir():
+    """Empties BCML's temp directories"""
+    for path in get_work_dir().glob('tmp*'):
+        try:
+            if path.is_dir():
+                shutil.rmtree(str(path))
+            elif path.is_file():
+                path.unlink()
+        except OSError:
+            pass
 
 
 def get_icon(name: str) -> QIcon:
@@ -597,7 +610,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
     return QPixmap(str(mod.path / image_path))
 
 
-def get_mod_link_meta(mod: BcmlMod, rules: ConfigParser = None):
+def get_mod_link_meta(rules: ConfigParser = None):
     url = str(rules['Definition']['url'])
     mod_domain = ''
     if 'www.' in url:

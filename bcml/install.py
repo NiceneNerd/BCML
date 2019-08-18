@@ -582,7 +582,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
     output_mod = BcmlMod(mod_name, priority, mod_dir)
     try:
-        util.get_mod_link_meta(output_mod, rules)
+        util.get_mod_link_meta(rules)
         util.get_mod_preview(output_mod, rules)
     except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
         pass

@@ -243,8 +243,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 f'<b>Changes:</b> {", ".join(changes)}'
             ]
             if 'url' in rules['Definition']:
-                mod_info.insert(3, util.get_mod_link_meta(mod, rules)
-                )
+                mod_info.insert(3, util.get_mod_link_meta(rules))
             try:
                 preview = util.get_mod_preview(mod, rules)
             except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
@@ -280,6 +279,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._thread.signal.sig.connect(self.OperationFinished)
         self._thread.signal.err.connect(self.OperationError)
 
+
     def OperationFinished(self):
         self._progress.close()
         del self._progress
@@ -291,6 +291,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         QtWidgets.QMessageBox.information(
             self, 'Complete', 'Operation finished!')
         del self._thread
+        util.clear_temp_dir()
 
     def OperationError(self):
         self.btnInstall.setEnabled(True)
@@ -303,6 +304,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._progress.close()
         del self._progress
         del self._thread
+        util.clear_temp_dir()
 
     # Button handlers
 
@@ -707,8 +709,8 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'You must provide a description for your mod.')
             return
-        if not (self.txtFolder.text().strip() or \
-                Path(self.txtFolder.text().strip()).exists()):
+        if not self.txtFolder.text().strip() or \
+                not Path(self.txtFolder.text().strip()).exists():
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'You must provide a valid folder containing a mod.')
             return
@@ -743,8 +745,6 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
                 'no_map': self.chkDisableMap.isChecked(),
                 'output': output
             }
-        else:
-            return None
 
 
 # Settings Dialog
@@ -892,14 +892,7 @@ InstallResult = namedtuple(
 
 
 def main():
-    for path in util.get_work_dir().glob('tmp*'):
-        try:
-            if path.is_dir():
-                shutil.rmtree(str(path))
-            elif path.is_file():
-                path.unlink()
-        except OSError:
-            pass
+    util.clear_temp_dir()
     app = QtWidgets.QApplication([])
     application = MainWindow()
     try:

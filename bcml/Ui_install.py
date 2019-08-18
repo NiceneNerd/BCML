@@ -16,7 +16,7 @@ class Ui_InstallDialog(object):
         sizePolicy.setHeightForWidth(
             InstallDialog.sizePolicy().hasHeightForWidth())
         InstallDialog.setSizePolicy(sizePolicy)
-        InstallDialog.setModal(True)
+        InstallDialog.setModal(False)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(InstallDialog)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
