@@ -8,6 +8,8 @@ import subprocess
 import sys
 import traceback
 import unicodedata
+import urllib.error
+import urllib.request
 from collections import namedtuple
 from collections.abc import Mapping
 from configparser import ConfigParser
@@ -544,6 +546,114 @@ def get_mod_info(rules_path: Path) -> BcmlMod:
         int(rules['Definition']['fsPriority']),
         rules_path.parent
     )
+
+
+def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
+    """
+    Gets the preview image of a given mod, if any, and caches it
+
+    :param mod: The mod to preview
+    :type mod: :class:`bcml.util.BcmlMod`
+    :param rules: The contents of the mod's `rules.txt` file
+    :type rules: ConfigParser
+    :return: Returns the preview image for the mod as QPixmap
+    :rtype: QPixmap
+    """
+    if not rules:
+        rules = ConfigParser()
+        rules.read(str(mod.path / 'rules.txt'))
+    url = str(rules['Definition']['url'])
+    if not list(mod.path.glob('thumbnail.*')):
+        if 'image' not in rules['Definition']:
+            if 'url' in rules['Definition'] and 'gamebanana.com' in url:
+                response = urllib.request.urlopen(url)
+                rdata = response.read().decode()
+                img_match = re.search(
+                    r'<meta property=\"og:image\" ?content=\"(.+?)\" />', rdata)
+                if img_match:
+                    image_path = 'thumbnail.jfif'
+                    urllib.request.urlretrieve(
+                        img_match.group(1),
+                        str(mod.path / image_path)
+                    )
+                else:
+                    raise IndexError(f'Rule for {url} failed to find the remote preview')
+            else:
+                raise KeyError(f'No preview image available')
+        else:
+            image_path = str(rules['Definition']['image'])
+            if image_path.startswith('http'):
+                urllib.request.urlretrieve(
+                    image_path,
+                    str(mod.path / ('thumbnail.' + image_path.split(".")[-1]))
+                )
+                image_path = 'thumbnail.' + image_path.split(".")[-1]
+            if not os.path.isfile(str(mod.path / image_path)):
+                raise FileNotFoundError(
+                    f'Preview {image_path} specified in rules.txt not found')
+    else:
+        for thumb in mod.path.glob('thumbnail.*'):
+            image_path = thumb
+    return QPixmap(str(mod.path / image_path))
+
+
+def get_mod_link_meta(mod: BcmlMod, rules: ConfigParser = None):
+    url = str(rules['Definition']['url'])
+    mod_domain = ''
+    if 'www.' in url:
+        mod_domain = url.split('.')[1]
+    elif 'http' in url:
+        mod_domain = url.split('//')[1].split('.')[0]
+    site_name = mod_domain.capitalize()
+    fetch_site_meta = True
+    if 'site_meta' not in get_settings():
+        set_site_meta('')
+    if len(get_settings()['site_meta'].split(';')) > 1:
+        for site_meta in get_settings()['site_meta'].split(';'):
+            if site_meta.split(':')[0] == mod_domain:
+                fetch_site_meta = False
+                site_name = site_meta.split(':')[1]
+    if fetch_site_meta:
+        try:
+            response = urllib.request.urlopen(url)
+            rdata = response.read().decode()
+            name_match = re.search(
+                r'property=\"og\:site_name\"[^\/\>]'
+                r'*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]'
+                r'*property=\"og\:site_name\"',
+                rdata
+            )
+            if name_match:
+                for group in name_match.groups():
+                    if group is not None:
+                        set_site_meta(f'{mod_domain}:{group}')
+                        site_name = str(group)
+            img_match = re.search(
+                r'<link.*rel=\"(shortcut icon|icon)\".*href=\"(.+?)\".*>', rdata)
+            if img_match:
+                (get_exec_dir() / 'work_dir' / 'cache' / 'site_meta').mkdir(
+                    parents=True,
+                    exist_ok=True
+                )
+                try:
+                    urllib.request.urlretrieve(
+                        img_match.group(2),
+                        str(get_exec_dir() / 'work_dir' / 'cache' / "site_meta" /\
+                            f'fav_{site_name}.{img_match.group(2).split(".")[-1]}')
+                    )
+                except (urllib.error.URLError,
+                        urllib.error.HTTPError,
+                        urllib.error.ContentTooShortError):
+                    pass
+        except (urllib.error.URLError,
+                urllib.error.HTTPError,
+                urllib.error.ContentTooShortError):
+            pass
+    favicon = ''
+    for file in (get_exec_dir() / "work_dir" / "cache" / "site_meta")\
+                .glob(f'fav_{site_name}.*'):
+        favicon = f'<img src="{file.resolve()}" height="16"/> '
+    return f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>'
 
 
 def get_installed_mods() -> []:

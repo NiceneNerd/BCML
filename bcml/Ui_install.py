@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui',
-# licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\install.ui' applies.
-#
-# Created: Wed Aug 14 19:25:58 2019
-#      by: pyside2-uic  running on PySide2 5.12.3
-#
-# WARNING! All changes made in this file will be lost!
+# pylint: skip-file
 
 from PySide2 import QtCore, QtGui, QtWidgets
 from bcml import install

@@ -562,8 +562,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             existing_mod_rules = ConfigParser()
             existing_mod_rules.read(str(new_path / 'rules.txt'))
             existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
-            with (new_path / 'rules.txt').open('w') as rf:
-                existing_mod_rules.write(rf)
+            with (new_path / 'rules.txt').open('w') as r_file:
+                existing_mod_rules.write(r_file)
 
     mod_dir.parent.mkdir(parents=True, exist_ok=True)
     print()
@@ -579,6 +579,13 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     rules['Definition']['fsPriority'] = str(priority)
     with Path(mod_dir / 'rules.txt').open('w') as r_file:
         rules.write(r_file)
+
+    output_mod = BcmlMod(mod_name, priority, mod_dir)
+    try:
+        util.get_mod_link_meta(output_mod, rules)
+        util.get_mod_preview(output_mod, rules)
+    except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
+        pass
 
     print(f'Enabling {mod_name} in Cemu...')
     refresh_cemu_mods()
@@ -608,7 +615,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             rstable.generate_master_rstb(verbose)
         print()
         print(f'{mod_name} installed successfully!')
-    return BcmlMod(mod_name, priority, mod_dir)
+    return output_mod
 
 
 def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verbose: bool = False):

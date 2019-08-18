@@ -243,100 +243,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 f'<b>Changes:</b> {", ".join(changes)}'
             ]
             if 'url' in rules['Definition']:
-                url = str(rules['Definition']['url'])
-                mod_domain = ''
-                if 'www.' in url:
-                    mod_domain = url.split('.')[1]
-                elif 'http' in url:
-                    mod_domain = url.split('//')[1].split('.')[0]
-                site_name = mod_domain.capitalize()
-                fetch_site_meta = True
-                if 'site_meta' not in util.get_settings():
-                    util.set_site_meta('')
-                if len(util.get_settings()['site_meta'].split(';')) > 1:
-                    for site_meta in util.get_settings()['site_meta'].split(';'):
-                        if site_meta.split(':')[0] == mod_domain:
-                            fetch_site_meta = False
-                            site_name = site_meta.split(':')[1]
-                if fetch_site_meta:
-                    try:
-                        response = urllib.request.urlopen(url)
-                        rdata = response.read().decode()
-                        name_match = re.search(
-                            r'property=\"og\:site_name\"[^\/\>]'
-                            r'*content\=\"(.+?)\"|content\=\"(.+?)\"[^\/\>]'
-                            r'*property=\"og\:site_name\"',
-                            rdata
-                        )
-                        if name_match:
-                            for group in name_match.groups():
-                                if group is not None:
-                                    util.set_site_meta(f'{mod_domain}:{group}')
-                                    site_name = str(group)
-                        img_match = re.search(
-                            r'<link.*rel=\"(shortcut icon|icon)\".*href=\"(.+?)\".*>', rdata)
-                        if img_match:
-                            (util.get_exec_dir() / 'work_dir' / 'cache' / 'site_meta').mkdir(
-                                parents=True,
-                                exist_ok=True
-                            )
-                            try:
-                                urllib.request.urlretrieve(
-                                    img_match.group(2),
-                                    str(util.get_exec_dir() / 'work_dir' / 'cache' / "site_meta" /\
-                                        f'fav_{site_name}.{img_match.group(2).split(".")[-1]}')
-                                )
-                            except (urllib.error.URLError,
-                                    urllib.error.HTTPError,
-                                    urllib.error.ContentTooShortError):
-                                pass
-                    except (urllib.error.URLError,
-                            urllib.error.HTTPError,
-                            urllib.error.ContentTooShortError):
-                        pass
-                favicon = ''
-                for file in (util.get_exec_dir() / "work_dir" / "cache" / "site_meta")\
-                            .glob(f'fav_{site_name}.*'):
-                    favicon = f'<img src="{file.resolve()}" height="16"/> '
-                mod_info.insert(
-                    3,
-                    f'<b>Link: <a style="text-decoration: none;" href="{url}">'
-                    f'{favicon} {site_name}</a></b>'
+                mod_info.insert(3, util.get_mod_link_meta(mod, rules)
                 )
             try:
-                if not list(mod.path.glob('thumbnail.*')):
-                    if 'image' not in rules['Definition']:
-                        if 'url' in rules['Definition'] and 'gamebanana.com' in url:
-                            response = urllib.request.urlopen(url)
-                            rdata = response.read().decode()
-                            img_match = re.search(
-                                r'<meta property=\"og:image\" ?content=\"(.+?)\" />', rdata)
-                            if img_match:
-                                image_path = 'thumbnail.jfif'
-                                urllib.request.urlretrieve(
-                                    img_match.group(1),
-                                    str(mod.path / image_path)
-                                )
-                            else:
-                                raise IndexError\
-                                    (f'Rule for {site_name} failed to find the remote preview')
-                        else:
-                            raise KeyError(f'No preview image available')
-                    else:
-                        image_path = str(rules['Definition']['image'])
-                        if image_path.startswith('http'):
-                            urllib.request.urlretrieve(
-                                image_path,
-                                str(mod.path / ('thumbnail.' + image_path.split(".")[-1]))
-                            )
-                            image_path = 'thumbnail.' + image_path.split(".")[-1]
-                        if not os.path.isfile(str(mod.path / image_path)):
-                            raise FileNotFoundError(
-                                f'Preview {image_path} specified in rules.txt not found')
-                else:
-                    for n in glob.glob(str(mod.path / 'thumbnail.*')):
-                        image_path = n
-                preview = QtGui.QPixmap(str(mod.path / image_path))
+                preview = util.get_mod_preview(mod, rules)
             except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
                 preview = self._logo
             finally:
