@@ -611,6 +611,14 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
 
 
 def get_mod_link_meta(rules: ConfigParser = None):
+    """
+    Gets the link metadata for the URL field of a mod
+    
+    :param rules: The contents of the mod's `rules.txt` file
+    :type rules: ConfigParser
+    :return: Returns an HTML link to the mod webpage
+    :rtype: str
+    """
     url = str(rules['Definition']['url'])
     mod_domain = ''
     if 'www.' in url:
@@ -733,8 +741,8 @@ def create_bcml_graphicpack_if_needed():
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'
                          'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Master BCML\n'
-                         'description = Auto-generated pack which merges RSTB changes and packs for'
-                         'other mods\n'
+                         'description = Auto-generated pack which merges RSTB changes and packs '
+                         'for other mods\n'
                          'version = 4\n'
                          'fsPriority = 9999')
 

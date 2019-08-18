@@ -7,7 +7,7 @@ class Ui_PackageDialog(object):
         PackageDialog.setObjectName("PackageDialog")
         PackageDialog.setWindowModality(QtCore.Qt.WindowModal)
         PackageDialog.resize(562, 283)
-        PackageDialog.setModal(True)
+        PackageDialog.setModal(False)
         self.verticalLayout = QtWidgets.QVBoxLayout(PackageDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()

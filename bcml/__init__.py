@@ -273,6 +273,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnOrder.setEnabled(False)
         self._progress = ProgressDialog(self)
         self._progress.setWindowTitle(title)
+        self._progress.setModal(False)
         self._progress.show()
         self._thread = ProgressThread(self._progress.lblProgress, func, *args)
         self._thread.start()
