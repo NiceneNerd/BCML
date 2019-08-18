@@ -13,7 +13,7 @@ import traceback
 import urllib.error
 import urllib.request
 import zipfile
-import glob
+#import glob
 from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
@@ -319,7 +319,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.listWidget.setToolTip('Drag and drop to change mod load order. Mods at the'
                                    f'{higher} of the list override mods at the {lower}.')
 
-    def InstallClicked(self):
+    def InstallClicked(self, preload_mod: Path = None):
         def install_all(result: InstallResult):
             mods = []
             for i, mod in enumerate(result.paths):
@@ -379,6 +379,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 merge.deep_merge(only_these=list(fix_deepmerge))
 
         dialog = InstallDialog(self)
+        if preload_mod:
+            mod_item = QtWidgets.QListWidgetItem()
+            mod_item.setText(preload_mod.stem)
+            mod_item.setData(Qt.UserRole, preload_mod)
+            dialog.lstQueue.addItem(mod_item)
         result = dialog.GetResult()
         if result:
             self.PerformOperation(install_all, result, title='Installing')
@@ -898,6 +903,8 @@ def main():
     try:
         application.show()
         application.SetupChecks()
+        if len(sys.argv) > 1 and Path(sys.argv[1]).exists():
+            application.InstallClicked(Path(sys.argv[1]))
         app.exec_()
     except Exception: # pylint: disable=broad-except
         tb = traceback.format_exc(limit=2)
