@@ -5,9 +5,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_PackageDialog(object):
     def setupUi(self, PackageDialog):
         PackageDialog.setObjectName("PackageDialog")
-        PackageDialog.setWindowModality(QtCore.Qt.WindowModal)
         PackageDialog.resize(562, 283)
-        PackageDialog.setModal(False)
         self.verticalLayout = QtWidgets.QVBoxLayout(PackageDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
