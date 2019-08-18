@@ -8,7 +8,6 @@ class Ui_ProgressDialog(object):
         ProgressDialog.resize(400, 80)
         ProgressDialog.setMinimumSize(QtCore.QSize(400, 80))
         ProgressDialog.setMaximumSize(QtCore.QSize(400, 80))
-        ProgressDialog.setWindowModality(QtCore.Qt.ApplicationModal)
         self.verticalLayout = QtWidgets.QVBoxLayout(ProgressDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.progressBar = QtWidgets.QProgressBar(ProgressDialog)
