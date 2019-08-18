@@ -613,7 +613,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
 def get_mod_link_meta(rules: ConfigParser = None):
     """
     Gets the link metadata for the URL field of a mod
-    
+
     :param rules: The contents of the mod's `rules.txt` file
     :type rules: ConfigParser
     :return: Returns an HTML link to the mod webpage

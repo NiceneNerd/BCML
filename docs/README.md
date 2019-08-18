@@ -48,10 +48,10 @@ On first use, you will have to specify the directory where Cemu is installed and
 
 ### General Notes
 
-- Mods can be installed from ZIP, RAR, or 7Z files, or from an unzipped graphic pack folder.
-- Only mods with a `rules.txt` file for Cemu graphics pack file replacement are suppported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
+- Mods can be installed from BNP, ZIP, RAR, or 7Z files, or from an unzipped graphic pack folder.
+- Only mods with a Cemu `rules.txt` file are supported. If you want to convert an older mod, you might find help from [this guide](https://gamebanana.com/tuts/12493).
 - While BCML tries to resolve as many conflicts as possible between mods, some mods simply will not work together. They may need to be merged manually or may be irreconcilable. For more information about resolving mod conflicts, see [the article on ZeldaMods.org](https://zeldamods.org/wiki/Help:Resolving_mod_conflicts).
-- **Important note:** While it is possible to use BCML for some mods and install others manually, no compatibility is guaranteed. Using BCML together with other install methods is *not* supported.
+- **Important note:** While it is possible to use BCML for some mods and install some in other ways, no compatibility is guaranteed. Using BCML together with other install methods is *not* supported.
 
 ### Installing Mods
 
@@ -75,7 +75,7 @@ By default, BCML will attempt to merge changes between mods for modified pack fi
 
 *Deep Merge*
 
-Deep merge is an optional, experimental feature which attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might in some cases cause unexpected bugs.
+Deep merge attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might in *some* cases cause unexpected bugs.
 
 ### Managing Mods
 
@@ -110,9 +110,13 @@ If you make any manual changes to your installed mods, or if you run into other 
 
 ## Notes to Mod Makers
 
-One of the key goals of BCML is to maintain complete compatibility with normal graphic pack mods. Anything that can be installed by the plain Cemu graphic pack menu can be installed via BCML and vice versa. However, in line with this rule, BCML does support some minor additional features that can enhance the experience with BCML without any side-effects for a regular graphic pack install.
+One of the original goals of BCML was to maintain complete backwards compatibility with normal graphic pack mods. Anything that can be installed by the plain Cemu graphic pack menu could be installed via BCML and vice versa. However, as BCML has increased in capability, I found it necessary to expand to support a new, second format for mods. You can continue to use BCML with normal graphic packs, but you can also create and install BCML Nano Patch mods, which have additional benefits.
 
-### Extended `rules.txt`
+Two of BCML's extended mod distribution features can be used with normal graphic packs as well Nano Patch mods. These can be added to any graphic pack mod without causing problems for non-BCML users.
+
+### Bonus Features for Graphic Pack Mods
+
+#### Extended `rules.txt`
 
 BCML supports two extensions to mod metadata in `rules.txt`. You can add two optional fields, `url` and `image`. The `url` field can provide a link to your mod's homepage, GitHub, or GameBanana listing, and `image` can provide a preview image of the mod either as a relative path to an image included in the mod (ideally, just the filename of an image in the same directory as `rules.txt`) or as a URL to an image online. Example:
 
@@ -128,7 +132,7 @@ image = https://files.gamebanana.com/img/ss/maps/530-90_5b5a11842b944.jpg
 url = https://gamebanana.com/maps/200936
 ```
 
-### Quick Install
+#### Quick Install
 
 When BCML installs a mod, it analyzes all of its contents to log changes which can be merged. This process can sometimes be time-consuming, so BCML also has a Quick Install feature. This allows a mod creator to run the analysis process once, and then the user can install much more quickly.
 
@@ -138,6 +142,18 @@ To add Quick Install support to a mod:
 3. Copy the `logs` folder from your installed mod into the mod archive you publish, beside (not inside) the `content` folder.
 
 By adding support for Quick Install, you can cut the time it takes to install your mod through BCML by about half, depending on its contents.
+
+### BCML Nano Patch Mods
+
+One of the key new features of BCML 2.0 is the BNP—BCML Nano Patch—mod format. This format allows for smaller, quicker, and more compatible mod distribution than standard graphic packs.
+
+Instructions to create a BCML Nano Patch mod:
+1. Create your mod the same way you would for a normal graphic pack mod (instructions [here](https://zeldamods.org/wiki/Help:Using_mods#Installing_mods_with_the_graphic_pack_menu) if you need help).
+2. Click the "Create BCML Nano Patch Mod" icon at the bottom of the main BCML window.
+3. Fill out your mod metadata, optionally including a preview image and a URL to a webpage for your mod. If your mod is on GameBanana, it is encouraged to use the GB link.
+4. Select your mod's main folder, the one which contains `content`, `aoc`, and/or `rules.txt`.
+5. (Optional) Select any advanced options you may need. See above in the mod installation instructions for more information about them.
+6. Save your BNP mod where you wish.
 
 ## Known Issues
 
