@@ -9,6 +9,7 @@
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
+from bcml import install
 
 
 class Ui_InstallDialog(object):
@@ -65,6 +66,19 @@ class Ui_InstallDialog(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.groupBox)
         self.verticalLayout_2.setSpacing(4)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.lblInsertPriority = QtWidgets.QLabel(self.groupBox)
+        self.lblInsertPriority.setStyleSheet("margin: 0px 0px 4px 0px;")
+        self.lblInsertPriority.setObjectName("lblInsertPriority")
+        self.horizontalLayout_4.addWidget(self.lblInsertPriority)
+        self.spnInsertPriority = QtWidgets.QSpinBox(self.groupBox)
+        self.spnInsertPriority.setGeometry(QtCore.QRect(0, 0, 51, 22))
+        self.spnInsertPriority.setRange(100,install.get_next_priority())
+        self.spnInsertPriority.setProperty("value", self.spnInsertPriority.maximum())
+        self.spnInsertPriority.setObjectName("spnInsertPriority")
+        self.horizontalLayout_4.addWidget(self.spnInsertPriority)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_4)
         self.chkRstbShrink = QtWidgets.QCheckBox(self.groupBox)
         self.chkRstbShrink.setObjectName("chkRstbShrink")
         self.verticalLayout_2.addWidget(self.chkRstbShrink)
@@ -145,3 +159,5 @@ class Ui_InstallDialog(object):
             "InstallDialog", "Don\'t merge game/save data", None, -1))
         self.chkDisableMap.setText(QtWidgets.QApplication.translate(
             "InstallDialog", "Don\'t merge map units", None, -1))
+        self.lblInsertPriority.setText(QtWidgets.QApplication.translate(
+            "InstallDialog", "Insert at priority", None, -1))

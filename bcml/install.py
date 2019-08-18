@@ -457,7 +457,8 @@ def refresh_cemu_mods():
 def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_texts: bool = False,
                 no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
                 no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
-                guess: bool = False, wait_merge: bool = False, deep_merge: bool = False):
+                guess: bool = False, wait_merge: bool = False, deep_merge: bool = False,
+                insert_priority: int = 0):
     """
     Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
 
@@ -490,7 +491,11 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     :type wait_merge: bool, optional
     :param deep_merge: Attempt to merge changes within individual AAMP files, defaults to False.
     :type deep_merge: bool, optional
+    :param insert_priority: Insert mod(s) at priority specified, defaults to get_next_priority().
+    :type insert_priority: int
     """
+    if insert_priority == 0:
+        insert_priority = get_next_priority()
     util.create_bcml_graphicpack_if_needed()
     if isinstance(mod, str):
         mod = Path(mod)
@@ -543,10 +548,23 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                     deep_merge=deep_merge
                 )
 
-    priority = get_next_priority()
+    priority = insert_priority
     print(f'Assigned mod priority of {priority}')
     mod_id = util.get_mod_id(mod_name, priority)
     mod_dir = util.get_modpack_dir() / mod_id
+
+    for existing_mod in util.get_installed_mods():
+        if existing_mod.priority >= priority:
+            priority_shifted = existing_mod.priority + 1
+            new_id = util.get_mod_id(existing_mod.name, priority_shifted)
+            new_path = util.get_modpack_dir() / new_id
+            shutil.move(str(existing_mod.path), str(new_path))
+            existing_mod_rules = ConfigParser()
+            existing_mod_rules.read(str(new_path / 'rules.txt'))
+            existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
+            with (new_path / 'rules.txt').open('w') as rf:
+                existing_mod_rules.write(rf)
+
     mod_dir.parent.mkdir(parents=True, exist_ok=True)
     print()
     print(f'Moving mod to {str(mod_dir)}...')

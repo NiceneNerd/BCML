@@ -95,11 +95,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnAbout.clicked.connect(self.AboutClicked)
 
     def eventFilter(self, watched, event):
-        if event.type() == QtCore.QEvent.ChildRemoved and not self.btnChange.isEnabled():
+        if event.type() == QtCore.QEvent.ChildRemoved:
             mods = [self.listWidget.item(i).data(Qt.UserRole)
                     for i in range(self.listWidget.count())]
             if mods != self._mods:
                 self.btnChange.setEnabled(True)
+            else:
+                self.btnChange.setEnabled(False)
         return super(MainWindow, self).eventFilter(watched, event)
 
     def SetupChecks(self):
@@ -302,7 +304,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     f'{favicon} {site_name}</a></b>'
                 )
             try:
-                if not mod.path.glob('thumbnail.*'):
+                if not list(mod.path.glob('thumbnail.*')):
                     if 'image' not in rules['Definition']:
                         if 'url' in rules['Definition'] and 'gamebanana.com' in url:
                             response = urllib.request.urlopen(url)
@@ -408,7 +410,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def InstallClicked(self):
         def install_all(result: InstallResult):
             mods = []
-            for mod in result.paths:
+            for i, mod in enumerate(result.paths):
                 mods.append(install.install_mod(
                     mod,
                     verbose=False,
@@ -422,7 +424,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     shrink_rstb=result.shrink,
                     guess=result.guess,
                     wait_merge=True,
-                    deep_merge=result.deep_merge
+                    deep_merge=result.deep_merge,
+                    insert_priority=result.insert_priority + i
                 ))
             fix_packs = set()
             fix_gamedata = False
@@ -746,7 +749,8 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisableGamedata.isChecked(),
                 self.chkDisableActorInfo.isChecked(),
                 self.chkDisableMap.isChecked(),
-                not self.chkEnableDeepMerge.isChecked()
+                not self.chkEnableDeepMerge.isChecked(),
+                self.spnInsertPriority.value()
             )
 
 # Package Dialog
@@ -973,7 +977,7 @@ class ThreadSignal(QtCore.QObject):
 InstallResult = namedtuple(
     'InstallResult',
     'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map ' + \
-    'deep_merge'
+    'deep_merge insert_priority'
 )
 
 
