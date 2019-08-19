@@ -28,7 +28,7 @@ from bcml import data, install, merge, pack, rstable, texts, util, mubin
 from bcml.Ui_about import Ui_AboutDialog
 from bcml.Ui_install import Ui_InstallDialog
 from bcml.Ui_main import Ui_MainWindow
-from bcml.Ui_progress import Ui_dlgProgress
+from bcml.Ui_progress import Ui_ProgressDialog
 from bcml.Ui_settings import Ui_SettingsDialog
 from bcml.Ui_package import Ui_PackageDialog
 from bcml.util import BcmlMod
@@ -273,7 +273,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnOrder.setEnabled(False)
         self._progress = ProgressDialog(self)
         self._progress.setWindowTitle(title)
-        self._progress.setModal(False)
+        self._progress.setWindowModality(QtCore.Qt.ApplicationModal)
         self._progress.show()
         self._thread = ProgressThread(self._progress.lblProgress, func, *args)
         self._thread.start()
@@ -837,7 +837,7 @@ class AboutDialog(QtWidgets.QDialog, Ui_AboutDialog):
 # Progress Operation Stuff
 
 
-class ProgressDialog(QtWidgets.QDialog, Ui_dlgProgress):
+class ProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
 
     def __init__(self, *args, **kwargs):
         # pylint: disable=unused-argument

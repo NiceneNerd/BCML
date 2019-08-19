@@ -7,7 +7,6 @@ from bcml import install
 class Ui_InstallDialog(object):
     def setupUi(self, InstallDialog):
         InstallDialog.setObjectName("InstallDialog")
-        InstallDialog.setWindowModality(QtCore.Qt.WindowModal)
         InstallDialog.resize(587, 267)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -16,7 +15,6 @@ class Ui_InstallDialog(object):
         sizePolicy.setHeightForWidth(
             InstallDialog.sizePolicy().hasHeightForWidth())
         InstallDialog.setSizePolicy(sizePolicy)
-        InstallDialog.setModal(False)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(InstallDialog)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
