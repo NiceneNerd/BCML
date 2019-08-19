@@ -1,4 +1,4 @@
-<img alt="BCML Logo" src="https://i.imgur.com/5JUIm1o.png" style="width:250px" />
+<img alt="BCML Logo" src="https://i.imgur.com/5JUIm1o.png" style="max-width:250px" />
 
 # Breath of the Wild Cemu Mod Loader
 A mod installer and manager for BoTW mods on Cemu
