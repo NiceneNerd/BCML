@@ -155,6 +155,14 @@ Instructions to create a BCML Nano Patch mod:
 5. (Optional) Select any advanced options you may need. See above in the mod installation instructions for more information about them.
 6. Save your BNP mod where you wish.
 
+#### Why Use Nano Patch?
+
+BCML Nano Patch mods work by combining the power of deep merge, quick install, and partial packs, and as such they offer three primary advantages over traditional graphic pack mods.
+
+1. **File size:** Nano Patch mods strip mods to only their basic changes, without extra stuff leftover from the base game, and uses LZMA compression. These together can massive reduce file sizes in most cases. For example, complete current download of [Hyrule Rebalance v5](https://gamebanana.com/gamefiles/8525) totals almost 122MB. Converted to Nano Patch format, it weighs it at only ~2MB. [Crafting Project](https://gamebanana.com/craftings/103) went from 37MB to <1MB. Even the Linkle mod shrunk by over 80MB.
+2. **Installation speed:** As mentioned in the above section on Quick Install, Nano Patch mods save the time of manual processing during installation, which can be a huge boost for more complex mods.
+3. **Compatibility:** By trimming off mod content to only their changes, Nano Patch installation minimizes the potential for conflicts and accidental incompatibilites between mods. It also makes it easier to identify exactly where conflicts take place when they must be manually solved.
+
 ## Known Issues
 
 None yet, let me know
