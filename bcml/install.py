@@ -867,9 +867,9 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
 
 
 def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
-                       no_gamedata: bool = False, no_savedata: bool = False,
-                       no_actorinfo: bool = False, no_map: bool = False, leave_rstb: bool = False,
-                       shrink_rstb: bool = False, guess: bool = False, deep_merge: bool = True):
+                   no_gamedata: bool = False, no_savedata: bool = False,
+                   no_actorinfo: bool = False, no_map: bool = False, leave_rstb: bool = False,
+                   shrink_rstb: bool = False, guess: bool = False, deep_merge: bool = True):
     """
     Converts a graphic pack mod to BotW Nano Patch format
 
