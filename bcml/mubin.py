@@ -218,7 +218,16 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
                                     for link in actor['LinksToObj']])
     for map_del in changes['del']:
         if map_del in stock_hashes and map_del not in stock_links:
-            new_map['Objs'].pop(stock_hashes.index(map_del))
+            try:
+                new_map['Objs'].pop(stock_hashes.index(map_del))
+            except IndexError:
+                try:
+                    obj_to_delete = next(
+                        iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
+                    )
+                    new_map['Objs'].remove(obj_to_delete)
+                except (StopIteration, ValueError):
+                    print(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
         [change for change in changes['add'] if change['HashId'] not in stock_hashes])
     new_map['Objs'].sort(key=lambda actor: actor['HashId'])
