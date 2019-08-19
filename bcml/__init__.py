@@ -572,7 +572,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             if result['url']:
                 rules.append(f'url = {result["url"]}')
             (result['folder'] / 'rules.txt').write_text('\n'.join(rules))
-            install.create_minimal_mod(
+            install.create_bnp_mod(
                 mod=result['folder'],
                 output=result['output'],
                 no_packs=result['no_packs'],

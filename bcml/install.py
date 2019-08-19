@@ -866,7 +866,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
                 new_sarc.write(s_file)
 
 
-def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
+def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
                        no_gamedata: bool = False, no_savedata: bool = False,
                        no_actorinfo: bool = False, no_map: bool = False, leave_rstb: bool = False,
                        shrink_rstb: bool = False, guess: bool = False, deep_merge: bool = True):
@@ -967,6 +967,11 @@ def create_minimal_mod(mod: Path, output: Path, no_packs: bool = False, no_texts
     else:
         if (tmp_dir / 'logs' / 'packs.log').exists():
             (tmp_dir / 'logs' / 'packs.log').unlink()
+
+    print('  Cleaning any junk files...')
+    for file in tmp_dir.rglob('**/*'):
+        if file.suffix in ['.yml', '.bak', '.tmp', '.old']:
+            file.unlink()
 
     print('  Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
