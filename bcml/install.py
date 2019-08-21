@@ -130,8 +130,13 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                 if verbose:
                     log.append(f'Found modded file {canon}')
                 if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                    aamps_to_diff.append(
-                        (file.relative_to(tmp_dir).as_posix(), file))
+                    try:
+                        aamps_to_diff.append(
+                            (file.relative_to(tmp_dir).as_posix(),
+                            file)
+                        )
+                    except FileNotFoundError:
+                        pass
             else:
                 if 'Aoc/0010/Map/MainField' in canon:
                     file.unlink()
@@ -232,7 +237,7 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
 def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False,
                   shrink_rstb: bool = False, guess: bool = False, no_packs=True,
                   no_texts: bool = False, no_gamedata: bool = False, no_savedata: bool = False,
-                  no_actorinfo: bool = False, no_map: bool = False, deep_merge: bool = False):
+                  no_actorinfo: bool = False, no_map: bool = False, deep_merge: bool = True):
     """Analyzes a mod and generates BCML log files containing its changes"""
     print('Scanning for modified files...')
     modded_files, rstb_changes, aamp_diffs = find_modded_files(
@@ -970,6 +975,8 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
 
     print('  Cleaning any junk files...')
     for file in tmp_dir.rglob('**/*'):
+        if file.parent.stem == 'logs':
+            continue
         if file.suffix in ['.yml', '.bak', '.tmp', '.old']:
             file.unlink()
 
