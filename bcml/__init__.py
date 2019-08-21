@@ -177,6 +177,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
+        self.listWidget.clear()
         self._mods = sorted(util.get_installed_mods(), key=lambda imod: imod.priority,
                             reverse=not util.get_settings_bool('load_reverse'))
         for mod in self._mods:
@@ -187,7 +188,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._mod_infos = {}
         self.lblModInfo.linkActivated.connect(self.link)
         self.lblModInfo.setText('No mod selected')
-        self.listWidget.clear()
         self.lblImage.setPixmap(self._logo)
         self.lblImage.setFixedSize(256, 144)
         self.statusBar().showMessage(f'{len(self._mods)} mods installed')

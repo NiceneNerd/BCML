@@ -283,7 +283,7 @@ def get_bcml_version() -> str:
     """Gets the version string for the installed copy of BCML"""
     with (get_exec_dir() / 'data' / 'version.txt').open('r') as s_file:
         setup_text = s_file.read()
-    ver_match = re.search(r"version='([0-9]+\.[0-9]+)'", setup_text)
+    ver_match = re.search(r"version='([0-9]+\.[0-9]+(\.[0-9]+)?)'", setup_text)
     return ver_match.group(1) + (' Beta' if 'Beta' in setup_text else '')
 
 
