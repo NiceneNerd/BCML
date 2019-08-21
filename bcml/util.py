@@ -127,7 +127,7 @@ def save_settings():
 def get_cemu_dir() -> Path:
     """ Gets the saved Cemu installation directory """
     cemu_dir = str(get_settings()['cemu_dir'])
-    if not cemu_dir or not cemu_dir.is_dir():
+    if not cemu_dir or not Path(cemu_dir).is_dir():
         raise FileNotFoundError('The Cemu directory has moved or not been saved yet.')
     else:
         return Path(cemu_dir)
@@ -143,7 +143,7 @@ def set_cemu_dir(path: Path):
 def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
     game_dir = str(get_settings()['game_dir'])
-    if not game_dir or not game_dir.is_dir():
+    if not game_dir or not Path(game_dir).is_dir():
         raise FileNotFoundError(
             'The BotW game directory has has moved or not been saved yet.')
     else:
@@ -169,7 +169,7 @@ def set_game_dir(path: Path):
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings()['mlc_dir'])
-    if not mlc_dir or not mlc_dir.is_dir():
+    if not mlc_dir or not Path(mlc_dir).is_dir():
         raise FileNotFoundError(
             'The Cemu MLC directory has moved or not been saved yet.')
     else:
