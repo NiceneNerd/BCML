@@ -820,6 +820,9 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
 
 class AboutDialog(QtWidgets.QDialog, Ui_AboutDialog):
 
+    def link(self, linkStr):
+        QDesktopServices.openUrl(QUrl(linkStr))
+
     def __init__(self, *args, **kwargs):
         # pylint: disable=unused-argument
         super(AboutDialog, self).__init__()
@@ -831,6 +834,7 @@ class AboutDialog(QtWidgets.QDialog, Ui_AboutDialog):
         logo_path = str(util.get_exec_dir() / 'data' / 'logo-smaller.png')
         self.lblLogo.setPixmap(QtGui.QPixmap(logo_path).scaledToWidth(256))
         self.lblVersion.setText('Version ' + util.get_bcml_version())
+        self.lblSites.linkActivated.connect(self.link)
         self.btnClose.clicked.connect(self.close)
 
 # Progress Operation Stuff
