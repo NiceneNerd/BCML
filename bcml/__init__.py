@@ -64,9 +64,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         logo_path = str(util.get_exec_dir() / 'data' / 'logo-smaller.png')
         self._logo = QtGui.QPixmap(logo_path)
-        self.lblImage.setPixmap(self._logo)
-        self.lblImage.setFixedSize(256, 104)
-
+        self.lblImage.setFixedSize(256, 144)
         self._order_icons = {
             False: util.get_icon('up.png'),
             True: util.get_icon('down.png')
@@ -179,7 +177,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
-        self.listWidget.clear()
         self._mods = sorted(util.get_installed_mods(), key=lambda imod: imod.priority,
                             reverse=not util.get_settings_bool('load_reverse'))
         for mod in self._mods:
@@ -190,8 +187,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._mod_infos = {}
         self.lblModInfo.linkActivated.connect(self.link)
         self.lblModInfo.setText('No mod selected')
+        self.listWidget.clear()
         self.lblImage.setPixmap(self._logo)
-        self.lblImage.setFixedSize(256, 104)
+        self.lblImage.setFixedSize(256, 144)
         self.statusBar().showMessage(f'{len(self._mods)} mods installed')
         if self._mods:
             self.btnRemerge.setEnabled(True)
@@ -255,7 +253,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.lblModInfo.setText('<br><br>'.join(mod_info))
         self.lblImage.setFixedSize(
-            256, 256 // (preview.width() / preview.height()))
+            256, 256 // (preview.width() / preview.height())
+        )
         self.lblImage.setPixmap(preview)
         self.lblModInfo.setWordWrap(True)
 
