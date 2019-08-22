@@ -115,20 +115,17 @@ def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
     """
     diffs = {
         'add': [],
-        'mod': {},
-        'del': []
+        'mod': {}
     }
     if isinstance(base_map, Map):
         base_map = get_stock_map(base_map)
     base_hashes = [obj['HashId'] for obj in base_map['Objs']]
-    mod_hashes = [obj['HashId'] for obj in mod_map['Objs']]
     for obj in mod_map['Objs']:
         if obj['HashId'] not in base_hashes:
             diffs['add'].append(obj)
         elif obj['HashId'] in base_hashes and\
              obj != base_map['Objs'][base_hashes.index(obj['HashId'])]:
             diffs['mod'][obj['HashId']] = deepcopy(obj)
-    diffs['del'] = list(set(base_hashes) - set(mod_hashes))
     return diffs
 
 
@@ -156,9 +153,7 @@ def get_all_map_diffs() -> dict:
     for file, mods in list(diffs.items()):
         c_diffs[file] = {
             'add': [],
-            'mod': {},
-            'del': list(set([hash_id for hashes in [mod['del']\
-                             for mod in mods] for hash_id in hashes]))
+            'mod': {}
         }
         for mod in mods:
             for hash_id, actor in mod['mod'].items():
@@ -210,24 +205,6 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
     stock_hashes = [obj['HashId'] for obj in new_map['Objs']]
     for hash_id, actor in changes['mod'].items():
         new_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
-    stock_links = []
-    if map_unit.type == 'Static' and changes['del']:
-        for actor in new_map['Objs']:
-            if 'LinksToObj' in actor:
-                stock_links.extend([link['DestUnitHashId']
-                                    for link in actor['LinksToObj']])
-    for map_del in changes['del']:
-        if map_del in stock_hashes and map_del not in stock_links:
-            try:
-                new_map['Objs'].pop(stock_hashes.index(map_del))
-            except IndexError:
-                try:
-                    obj_to_delete = next(
-                        iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
-                    )
-                    new_map['Objs'].remove(obj_to_delete)
-                except (StopIteration, ValueError):
-                    print(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
         [change for change in changes['add'] if change['HashId'] not in stock_hashes])
     new_map['Objs'].sort(key=lambda actor: actor['HashId'])
