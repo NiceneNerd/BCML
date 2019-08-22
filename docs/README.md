@@ -64,6 +64,10 @@ On first use, you will have to specify the directory where Cemu is installed and
 
 Advanced options should not be necessary for most mods. However, there are a few possible uses.
 
+*Insert at Priority*
+
+By default, BCML will install any new mods after those that have already been installed, giving them the highest priority. By changing this option however, you can specify the priority at which the mods currently selected to be installed will be inserted at. This can be useful if you have changes made by a mod already installed that you want to take priority, or if you know that a mod you're installing needs to have a lower priority than one you have already installed in order for them to be compatible.
+
 *RSTB Options*
 - "Shrink RSTB values where possible" - By default, BCML will not adjust RSTB entries if the new size would be smaller. You can use this option to instead shrink them if you have good reason to believe it will improve the stability of your installation.
 - "Estimate complex RSTB values" - Though proper RSTB calculations for AAMP and BFRES files is not possible, BCML can optionally apply statistically-generated estimates for most of them. This can potentially add more stability that deleting such entries, but if the estimates are ever too low it can cause crashes.
@@ -159,7 +163,7 @@ Instructions to create a BCML Nano Patch mod:
 
 BCML Nano Patch mods work by combining the power of deep merge, quick install, and partial packs, and as such they offer three primary advantages over traditional graphic pack mods.
 
-1. **File size:** Nano Patch mods strip mods to only their basic changes, without extra stuff leftover from the base game, and uses LZMA compression. These together can massive reduce file sizes in most cases. For example, complete current download of [Hyrule Rebalance v5](https://gamebanana.com/gamefiles/8525) totals almost 122MB. Converted to Nano Patch format, it weighs it at only ~2MB. [Crafting Project](https://gamebanana.com/craftings/103) went from 37MB to <1MB. Even the Linkle mod shrunk by over 80MB.
+1. **File size:** Nano Patches strip mods to only the changes they make to the original game files, and use LZMA compression, which together can massively reduce file sizes in most cases. For example, the current complete download of [Hyrule Rebalance v5](https://gamebanana.com/gamefiles/8525) totals almost 122MB. Converted to Nano Patch format, it weighs it at only ~2MB. [Crafting Project](https://gamebanana.com/craftings/103) went from 37MB to <1MB. Even the Linkle mod shrunk by over 80MB.
 2. **Installation speed:** As mentioned in the above section on Quick Install, Nano Patch mods save the time of manual processing during installation, which can be a huge boost for more complex mods.
 3. **Compatibility:** By trimming off mod content to only their changes, Nano Patch installation minimizes the potential for conflicts and accidental incompatibilites between mods. It also makes it easier to identify exactly where conflicts take place when they must be manually solved.
 
