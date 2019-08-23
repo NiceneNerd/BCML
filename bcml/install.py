@@ -943,8 +943,11 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
         with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as b_file:
             bsarc = sarc.read_file_and_make_sarc(b_file)
         csarc = sarc.make_writer_from_sarc(bsarc)
-        csarc.delete_file('GameData/gamedata.ssarc')
-        csarc.delete_file('GameData/savedataformat.ssarc')
+        bsarc_files = list(bsarc.list_files())
+        if 'GameData/gamedata.ssarc' in bsarc_files:
+            csarc.delete_file('GameData/gamedata.ssarc')
+        if 'GameData/savedataformat.ssarc' in bsarc_files:
+            csarc.delete_file('GameData/savedataformat.ssarc')
         with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
             csarc.write(b_file)
 

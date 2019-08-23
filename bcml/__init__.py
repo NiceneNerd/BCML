@@ -563,7 +563,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500',
                 f'name = {result["name"]}',
                 f'path = The Legend of Zelda: Breath of the Wild/BCML Mods/{result["name"]}',
-                f'description = {result["description"]}',
+                'description = {}'.format(result['description'].replace('\n', ' ')),
                 'version = 4'
             ]
             if result['image']:
