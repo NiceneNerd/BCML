@@ -133,7 +133,7 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
                     try:
                         aamps_to_diff.append(
                             (file.relative_to(tmp_dir).as_posix(),
-                            file)
+                             file)
                         )
                     except FileNotFoundError:
                         pass
