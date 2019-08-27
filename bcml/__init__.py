@@ -701,7 +701,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 '[Definition]',
                 'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500',
                 f'name = {result["name"]}',
-                f'path = ι BCML: Do Not Touch/{result["name"]}',
+                f'path = ι BCML: DON\'T TOUCH/{result["name"]}',
                 'description = {}'.format(result['description'].replace('\n', ' ')),
                 'version = 4'
             ]
