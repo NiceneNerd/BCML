@@ -78,7 +78,10 @@ def get_next_priority() -> int:
 
 def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
     """An interface for using a multiprocessing pool with `get_aamp_diff()`"""
-    return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
+    try:
+        return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
+    except FileNotFoundError:
+        return (file_info[0], None)
 
 
 def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = False,
@@ -152,7 +155,8 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
         pool.close()
         pool.join()
         for file, diff in aamp_results:
-            aamp_diffs[file] = diff
+            if diff:
+                aamp_diffs[file] = diff
     total = len(modded_files)
     log.append(f'Found {total} modified file{"s" if total > 1 else ""}')
     return modded_files, log, aamp_diffs
