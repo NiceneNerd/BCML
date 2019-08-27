@@ -24,7 +24,14 @@ Map = namedtuple('Map', 'section type')
 
 def consolidate_map_files(modded_maps: List[str]) -> List[Map]:
     """ Turns a list of modified .mubin files into a list of modified map sections and types """
-    return list(dict.fromkeys(map(lambda path: Map(*(Path(path).stem.split('_'))), modded_maps)))
+    return list(
+        dict.fromkeys(
+            map(
+                lambda path: Map(*(Path(path).stem.split('_'))),
+                modded_maps
+            )
+        )
+    )
 
 
 def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> dict:
@@ -43,10 +50,11 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
     map_bytes = None
     if force_vanilla:
         try:
-            map_bytes = (util.get_game_dir() / 'Map' / 'MainField' / map_unit.section /\
-                         f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
+            map_bytes = util.get_game_file(
+                f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
+            ).read_bytes()
         except FileNotFoundError:
-            with (util.get_game_dir() / 'Pack' / 'TitleBG.pack').open('rb') \
+            with util.get_game_file('Pack/TitleBG.pack').open('rb') \
                   as s_file:
                 title_pack = sarc.read_file_and_make_sarc(s_file)
             if title_pack:
@@ -70,26 +78,24 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
                 except KeyError:
                     map_bytes = None
         if not map_bytes:
-            if (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
-                    f'{map_unit.section}_{map_unit.type}.smubin').exists():
-                map_bytes = (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
-                            f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
-            elif (util.get_game_dir() / 'Map' / 'MainField' / map_unit.section /\
-                    f'{map_unit.section}_{map_unit.type}.smubin').exists():
-                map_bytes = (util.get_game_dir() / 'content' / 'Map' / 'MainField' /\
-                    map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
-            else:
-                with (util.get_game_dir() / 'Pack' / 'TitleBG.pack').open('rb') \
-                     as s_file:
-                    title_pack = sarc.read_file_and_make_sarc(s_file)
-                if title_pack:
-                    try:
-                        map_bytes = title_pack.get_file_data(
-                            f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
-                            '.smubin'
-                        ).tobytes()
-                    except KeyError:
-                        map_bytes = None
+            map_path = f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
+            try:
+                map_bytes = util.get_game_file(map_path, aoc=True).read_bytes()
+            except FileNotFoundError:
+                try:
+                    map_bytes = util.get_game_file(map_path).read_bytes()
+                except FileNotFoundError:
+                    with util.get_game_file('Pack/TitleBG.pack').open('rb') \
+                        as s_file:
+                        title_pack = sarc.read_file_and_make_sarc(s_file)
+                    if title_pack:
+                        try:
+                            map_bytes = title_pack.get_file_data(
+                                f'Map/MainField/{map_unit.section}/'
+                                f'{map_unit.section}_{map_unit.type}.smubin'
+                            ).tobytes()
+                        except KeyError:
+                            map_bytes = None
     if not map_bytes:
         raise FileNotFoundError(
             f'The stock map file {map_unit.section}_{map_unit.type}.smubin could not be found.'
@@ -114,24 +120,35 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     map_bytes = None
-    if (tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack').exists():
-        with (tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack').open('rb') as s_file:
+    aoc_dir = tmp_dir / 'aoc' / '0010' / 'content'
+    if not aoc_dir.exists():
+        aoc_dir = tmp_dir / 'aoc' / 'content' / '0010'
+        if not aoc_dir.exists():
+            aoc_dir = tmp_dir / 'aoc' / '0010'
+    if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
+        with (aoc_dir / 'Pack' / 'AocMainField.pack').open('rb') as s_file:
             map_pack = sarc.read_file_and_make_sarc(s_file)
         if map_pack:
             try:
                 map_bytes = map_pack.get_file_data(
-                    f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin')
+                    f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
+                ).tobytes()
             except KeyError:
                 pass
     if not map_bytes:
-        if (tmp_dir / 'aoc' / '0010' / 'Map' / 'MainField' / map_unit.section /\
-                f'{map_unit.section}_{map_unit.type}.smubin').exists():
+        if (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
+            f'{map_unit.section}_{map_unit.type}.smubin').exists():
             map_bytes = (tmp_dir / 'aoc' / '0010' / 'Map' / 'MainField' / map_unit.section /\
                          f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
         elif (tmp_dir / 'content' / 'Map' / 'MainField' / map_unit.section /\
                 f'{map_unit.section}_{map_unit.type}.smubin').exists():
             map_bytes = (tmp_dir / 'content' / 'Map' / 'MainField' / map_unit.section /\
                          f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
+    if not map_bytes:
+        raise FileNotFoundError(
+            f'Oddly, the modded map {map_unit.section}_{map_unit.type}.smubin '
+            'could not be found.'
+        )
     map_bytes = wszst_yaz0.decompress(map_bytes)
     return byml.Byml(map_bytes).parse()
 
@@ -271,7 +288,8 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
                 except (StopIteration, ValueError):
                     print(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
-        [change for change in changes['add'] if change['HashId'] not in stock_hashes])
+        [change for change in changes['add'] if change['HashId'] not in stock_hashes]
+    )
     new_map['Objs'].sort(key=lambda actor: actor['HashId'])
 
     aoc_out: Path = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \

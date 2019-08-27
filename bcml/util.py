@@ -237,9 +237,9 @@ def get_aoc_dir() -> Path:
         title_id = get_title_id()
         mlc_title = get_mlc_dir() / 'usr' / 'title'
         # First try the 1.15.11c mlc layout
-        if (mlc_title / f'{title_id[0][0:7]}C' / title_id[1] / 'content').exists():
+        if (mlc_title / f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010').exists():
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
-                f'{title_id[0][0:7]}C' / title_id[1] / 'content'
+                f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010'
         # Then try the legacy layout
         elif (mlc_title / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
@@ -306,7 +306,10 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
             path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
             .replace('aoc/content/', '').replace('aoc/0010/', '')
         )
-        return aoc_dir / path
+        if (aoc_dir / path).exists():
+            return aoc_dir / path
+        else:
+            raise FileNotFoundError(f'{path} not found in DLC files.')
     if (update_dir / path).exists():
         return update_dir / path
     else:
