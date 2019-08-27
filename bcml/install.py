@@ -582,7 +582,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
     rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
     rules['Definition'][
-        'path'] = f'The Legend of Zelda: Breath of the Wild/BCML Mods/{rulepath}'
+        'path'] = f'The Legend of Zelda: Breath of the Wild/BCML-DO NOT TOUCH/{rulepath}'
     rules['Definition']['fsPriority'] = str(priority)
     with Path(mod_dir / 'rules.txt').open('w') as r_file:
         rules.write(r_file)

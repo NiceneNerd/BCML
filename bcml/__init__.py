@@ -567,7 +567,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     '[Definition]\n',
                     'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
                     'name = Exported BCML Mod\n',
-                    'path = The Legend of Zelda: Breath of the Wild/BCML Mods/Exported BCML\n',
+                    'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
                     f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
                     'version = 4\n'
                 ])
@@ -701,7 +701,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 '[Definition]',
                 'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500',
                 f'name = {result["name"]}',
-                f'path = The Legend of Zelda: Breath of the Wild/BCML Mods/{result["name"]}',
+                f'path = The Legend of Zelda: Breath of the Wild/BCML-DO NOT TOUCH/'
+                f'{result["name"]}',
                 'description = {}'.format(result['description'].replace('\n', ' ')),
                 'version = 4'
             ]

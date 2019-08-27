@@ -128,7 +128,7 @@ BCML supports two extensions to mod metadata in `rules.txt`. You can add two opt
 [Definition]
 titleids = 00050000101C9300,00050000101C9400,00050000101C9500
 name = Eventide Extreme
-path = The Legend of Zelda: Breath of the Wild/BCML Mods/Eventide Extreme
+path = The Legend of Zelda: Breath of the Wild/BCML-DO NOT TOUCH/Eventide Extreme
 description = Boosts the difficulty level of Eventide Island by adding enemies and making a few other cool changes.
 version = 3
 fspriority = 100
