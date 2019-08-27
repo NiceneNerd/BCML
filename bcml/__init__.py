@@ -618,7 +618,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 'The Cemu executable could not be found.'
             )
         else:
-            subprocess.Popen([str(self._cemu_exe)], cwd=str(util.get_cemu_dir()))
+            subprocess.Popen(
+                [
+                    str(self._cemu_exe),
+                    '-g',
+                    str(util.get_game_dir().parent / 'code' / 'U-King.rpx')
+                ],
+                cwd=str(util.get_cemu_dir())
+            )
 
     def RemoveAllClicked(self):
         def uninstall_everything():
