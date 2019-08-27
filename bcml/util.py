@@ -743,7 +743,7 @@ def create_bcml_graphicpack_if_needed():
             r_file.write('[Definition]\n'
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'
-                         'path = BCML - DO NOT TOUCH/Master BCML\n'
+                         'path = ι BCML: Do Not Touch/Master BCML\n'
                          'description = Auto-generated pack which merges RSTB changes and packs '
                          'for other mods\n'
                          'version = 4\n'
