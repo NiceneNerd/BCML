@@ -43,19 +43,45 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._mod_infos = {}
         self._progress = None
         self._thread = None
+        self._cemu_exe = None
 
         self.setWindowIcon(util.get_icon('bcml.ico'))
         load_reverse = util.get_settings_bool('load_reverse')
 
+        self.menRemerge = QtWidgets.QMenu()
+        self.actMergeRstb = QtWidgets.QAction('Remerge RSTB')
+        self.actMergePacks = QtWidgets.QAction('Remerge Packs')
+        self.actMergeTexts = QtWidgets.QAction('Remerge Texts')
+        self.actMergeActors = QtWidgets.QAction('Remerge Actor Info')
+        self.actMergeGamedata = QtWidgets.QAction('Remerge Game/Save Data')
+        self.actMergeMaps = QtWidgets.QAction('Remerge Maps')
+        self.actDeepMerge = QtWidgets.QAction('Refresh Deep Merge')
+        self.actMergeRstb.triggered.connect(self.MergeRstb_Clicked)
+        self.actMergePacks.triggered.connect(self.MergePacks_Clicked)
+        self.actMergeTexts.triggered.connect(self.MergeTexts_Clicked)
+        self.actMergeActors.triggered.connect(self.MergeActors_Clicked)
+        self.actMergeGamedata.triggered.connect(self.MergeGamedata_Clicked)
+        self.actMergeMaps.triggered.connect(self.MergeMaps_Clicked)
+        self.actDeepMerge.triggered.connect(self.DeepMerge_Clicked)
+        self.menRemerge.addAction(self.actMergeRstb)
+        self.menRemerge.addAction(self.actMergePacks)
+        self.menRemerge.addAction(self.actMergeTexts)
+        self.menRemerge.addAction(self.actMergeActors)
+        self.menRemerge.addAction(self.actMergeGamedata)
+        self.menRemerge.addAction(self.actMergeMaps)
+        self.menRemerge.addAction(self.actDeepMerge)
+        self.btnRemerge.setMenu(self.menRemerge)
+
         self.btnPackage = QtWidgets.QToolButton(self.statusBar())
         self.btnPackage.setIcon(util.get_icon('pack.png'))
-        self.btnPackage.setToolTip('Package BNP Mod')
+        self.btnPackage.setToolTip('Create BCNL Nano Patch Mod')
         self.btnSettings = QtWidgets.QToolButton(self.statusBar())
         self.btnSettings.setIcon(util.get_icon('settings.png'))
         self.btnSettings.setToolTip('Settings')
         self.btnAbout = QtWidgets.QToolButton(self.statusBar())
         self.btnAbout.setIcon(util.get_icon('about.png'))
         self.btnAbout.setToolTip('About')
+
         self.statusBar().addPermanentWidget(
             QtWidgets.QLabel('Version ' + util.get_bcml_version()))
         self.statusBar().addPermanentWidget(self.btnPackage)
@@ -86,6 +112,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnRemerge.clicked.connect(self.RemergeClicked)
         self.btnChange.clicked.connect(self.ChangeClicked)
         self.btnExport.clicked.connect(self.ExportClicked)
+        self.btnBackup.clicked.connect(self.BackupClicked)
+        self.btnRestore.clicked.connect(self.RestoreClicked)
+        self.btnCemu.clicked.connect(self.CemuClicked)
+        self.btnRemoveAll.clicked.connect(self.RemoveAllClicked)
         self.btnUninstall.clicked.connect(self.UninstallClicked)
         self.btnExplore.clicked.connect(self.ExploreClicked)
         self.btnPackage.clicked.connect(self.PackageClicked)
@@ -194,9 +224,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if self._mods:
             self.btnRemerge.setEnabled(True)
             self.btnExport.setEnabled(True)
+            self.btnBackup.setEnabled(True)
+            self.btnRemoveAll.setEnabled(True)
         else:
             self.btnRemerge.setEnabled(False)
             self.btnExport.setEnabled(False)
+            self.btnBackup.setEnabled(False)
+            self.btnRemoveAll.setEnabled(False)
 
     def link(self, linkStr):
         QDesktopServices.openUrl(QUrl(linkStr))
@@ -269,6 +303,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnExport.setEnabled(False)
         self.btnUninstall.setEnabled(False)
         self.btnExplore.setEnabled(False)
+        self.btnBackup.setEnabled(False)
+        self.btnRestore.setEnabled(False)
+        self.btnCemu.setEnabled(False)
+        self.btnRemoveAll.setEnabled(False)
         self.btnOrder.setEnabled(False)
         self._progress = ProgressDialog(self)
         self._progress.setWindowTitle(title)
@@ -286,6 +324,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnInstall.setEnabled(True)
         self.btnRemerge.setEnabled(True)
         self.btnExport.setEnabled(True)
+        self.btnRestore.setEnabled(True)
+        self.btnCemu.setEnabled(True)
         self.btnOrder.setEnabled(True)
         self.LoadMods()
         QtWidgets.QMessageBox.information(
@@ -391,6 +431,50 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def RemergeClicked(self):
         self.PerformOperation(install.refresh_merges, ())
 
+
+    def MergeRstb_Clicked(self):
+        self.PerformOperation(rstable.generate_master_rstb, title='Remerging RSTB')
+
+
+    def MergePacks_Clicked(self):
+        self.PerformOperation(
+            pack.merge_installed_packs,
+            (False, None, False, True),
+            title='Remerging Packs'
+        )
+
+
+    def MergeTexts_Clicked(self):
+        def all_texts():
+            for text_mod in util.get_modpack_dir().rglob('**/texts_*.yml'):
+                lang = util.get_file_language(text_mod)
+                texts.merge_texts(lang)
+
+        self.PerformOperation(all_texts, title='Remerging Texts')
+
+
+    def MergeActors_Clicked(self):
+        self.PerformOperation(data.merge_actorinfo, title='Remerging Actor Info')
+
+
+    def MergeGamedata_Clicked(self):
+        def both_datas():
+            data.merge_gamedata()
+            data.merge_savedata()
+        self.PerformOperation(both_datas, title='Remerging Game/Save Data')
+
+
+    def MergeMaps_Clicked(self):
+        def map_and_rstb():
+            mubin.merge_maps()
+            rstable.generate_master_rstb()
+        self.PerformOperation(map_and_rstb, title='Remerging Maps')
+
+
+    def DeepMerge_Clicked(self):
+        self.PerformOperation(merge.deep_merge, title='Redoing Deep Merge')
+
+
     def ChangeClicked(self):
         def resort_mods(self):
             fix_packs = set()
@@ -495,6 +579,61 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             Path.home()), 'Mod Archive (*.zip);;All Files (*)')[0]
         if file_name:
             self.PerformOperation(export, self, Path(file_name))
+
+    def BackupClicked(self):
+        backup_name, okay = QtWidgets.QInputDialog.getText(
+            self,
+            'Backup Mod Configuration',
+            'Enter a name for your backup (optional)',
+            QtWidgets.QLineEdit.Normal,
+            '',
+            flags=QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint
+        )
+        if okay:
+            self.PerformOperation(install.create_backup, (backup_name), title='Backing Up Mods')
+
+    def RestoreClicked(self):
+        backups = [backup.stem for backup in install.get_backups()]
+        backup, okay = QtWidgets.QInputDialog.getItem(
+            self,
+            'Restore Backup',
+            'Select the backup to restore',
+            backups,
+            0,
+            False,
+            flags=QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint
+        )
+        if okay and backup:
+            self.PerformOperation(install.restore_backup, (backup))
+
+    def CemuClicked(self):
+        if not self._cemu_exe:
+            for file in util.get_cemu_dir().glob('*.exe'):
+                if 'cemu' in file.stem.lower():
+                    self._cemu_exe = file
+        if not self._cemu_exe:
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Error',
+                'The Cemu executable could not be found.'
+            )
+        else:
+            subprocess.Popen([str(self._cemu_exe)])
+
+    def RemoveAllClicked(self):
+        def uninstall_everything():
+            for folder in [item for item in util.get_modpack_dir().glob('*') if item.is_dir()]:
+                print(f'Removing {folder.name}...')
+                shutil.rmtree(str(folder))
+                print('All BCML mods have been uninstalled!')
+
+        if QtWidgets.QMessageBox.question(
+                self,
+                'Confirm Uninstall',
+                'Are you sure you want to uninstall all of your mods?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        ) == QtWidgets.QMessageBox.Yes:
+            self.PerformOperation(uninstall_everything, title='Uninstalling All Mods')
 
     def UninstallClicked(self):
         def uninstall(mods):
@@ -694,6 +833,17 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
             if path.name == 'content':
                 path = path.parent
             self.txtFolder.setText(str(path.resolve()))
+            if (path / 'rules.txt').exists():
+                rules = ConfigParser()
+                rules.read(str(path / 'rules.txt'))
+                if 'name' in rules['Definition'] and not self.txtName.text():
+                    self.txtName.setText(str(rules['Definition']['name']))
+                if 'url' in rules['Definition'] and not self.txtUrl.text():
+                    self.txtUrl.setText(str(rules['Definition']['url']))
+                if 'image' in rules['Definition'] and not self.txtImage.text():
+                    self.txtImage.setText(str(rules['Definition']['image']))
+                if 'description' in rules['Definition'] and not self.txtDescript.toPlainText():
+                    self.txtDescript.setPlainText(str(rules['Definition']['description']))
 
     def BrowseImgClicked(self):
         file_name = QFileDialog.getOpenFileName(
@@ -850,6 +1000,7 @@ class ProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
         icon.addPixmap(QtGui.QPixmap(
             str(util.get_exec_dir() / 'data' / 'bcml.ico')))
         self.setWindowIcon(icon)
+        self.setWindowFlags(QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint)
 
 
 class ProgressThread(threading.Thread):

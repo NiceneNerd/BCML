@@ -225,6 +225,38 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 5
         else:
             return int(real_size * 4.05)
+    elif ext == '.bas':
+        if real_size < 100:
+            return real_size * 20
+        elif 100 < real_size <= 200:
+            return int(real_size * 12.5)
+        elif 200 < real_size <= 300:
+            return real_size * 10
+        elif 300 < real_size <= 600:
+            return real_size * 8
+        elif 600 < real_size <= 1500:
+            return real_size * 6
+        elif 1500 < real_size <= 2000:
+            return int(real_size * 5.5)
+        elif 2000 < real_size <= 15000:
+            return real_size * 5
+        else:
+            return int(real_size * 4.5)
+    elif ext == '.baslist':
+        if real_size < 100:
+            return real_size * 15
+        elif 100 < real_size <= 200:
+            return real_size * 10
+        elif 200 < real_size <= 300:
+            return real_size * 8
+        elif 300 < real_size <= 500:
+            return real_size * 6
+        elif 500 < real_size <= 800:
+            return real_size * 5
+        elif 800 < real_size <= 4000:
+            return real_size * 4
+        else:
+            return int(real_size * 3.5)
     else:
         return 0
 

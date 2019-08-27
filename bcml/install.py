@@ -1,6 +1,8 @@
 """Provides features for installing, creating, and mananging BCML mods"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+# pylint: disable=too-many-lines
+import datetime
 import os
 import shutil
 import subprocess
@@ -9,7 +11,7 @@ from fnmatch import fnmatch
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 from xml.dom import minidom
 
 import aamp.yaml_util
@@ -994,3 +996,55 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
     subprocess.run(x_args, stdout=subprocess.PIPE,
                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
     print('Conversion complete.')
+
+
+def create_backup(name: str = ''):
+    """
+    Creates a backup of the current mod installations. Saves it as a 7z file in
+    `CEMU_DIR/bcml_backups`.
+
+    :param name: The name to give the backup, defaults to "BCML_Backup_YYYY-MM-DD"
+    :type name: str, optional
+    """
+    import re
+    if not name:
+        name = f'BCML_Backup_{datetime.datetime.now().strftime("%Y-%m-%d")}'
+    else:
+        name = re.sub(r'(?u)[^-\w.]', '', name.strip().replace(' ', '_'))
+    output = util.get_cemu_dir() / 'bcml_backups' / f'{name}.7z'
+    output.parent.mkdir(parents=True, exist_ok=True)
+    print(f'Saving backup {name}...')
+    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+              'a', str(output), f'{str(util.get_modpack_dir() / "*")}']
+    subprocess.run(x_args, stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    print(f'Backup "{name}" created')
+
+
+def get_backups() -> List[Path]:
+    """ Gets a list of BCML mod configuration backups """
+    return list((util.get_cemu_dir() / 'bcml_backups').glob('*.7z'))
+
+
+def restore_backup(backup: Union[str, Path]):
+    """
+    Restores a BCML mod configuration backup
+
+    :param backup: The backup to restore, either by name or by path
+    :type backup: Union[str, Path]
+    """
+    if isinstance(backup, str):
+        backup = util.get_cemu_dir() / 'bcml_backups' / f'{backup}.7z'
+    if not backup.exists():
+        raise FileNotFoundError(f'The backup "{backup.name}" does not exist.')
+    print('Clearing installed mods...')
+    for folder in [item for item in util.get_modpack_dir().glob('*') if item.is_dir()]:
+        shutil.rmtree(str(folder))
+    print('Extracting backup...')
+    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+              'x', str(backup), f'-o{str(util.get_modpack_dir())}']
+    subprocess.run(x_args, stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    print('Re-enabling mods in Cemu...')
+    refresh_cemu_mods()
+    print(f'Backup "{backup.name}" restored')

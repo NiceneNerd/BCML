@@ -237,8 +237,7 @@ def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
     ref_data = {}
     mod_data = {}
     for bgdata in modded_bgdata:
-        key = bgdata[1:len(bgdata) -
-                     9] if 'revival' not in bgdata else 'bool_data'
+        key = bgdata.split('.')[0][1:] if 'revival' not in bgdata else 'bool_data'
         mod_yml = modded_bgdata[bgdata]['mod_yml']
         if key not in mod_yml:
             if f'/{key}' in mod_yml:
