@@ -393,7 +393,7 @@ def merge_gamedata(verbose: bool = False):
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     glog_path.parent.mkdir(parents=True, exist_ok=True)
-    with glog_path.open('w') as l_file:
+    with glog_path.open('w', encoding='utf-8') as l_file:
         l_file.write(xxhash.xxh32(str(mods)).hexdigest())
 
 
@@ -497,7 +497,7 @@ def merge_savedata(verbose: bool = False):
         rstb.util.write_rstb(table, str(rstb_path), True)
 
     slog_path.parent.mkdir(parents=True, exist_ok=True)
-    with slog_path.open('w') as l_file:
+    with slog_path.open('w', encoding='utf-8') as l_file:
         l_file.write(xxhash.xxh32(str(mods)).hexdigest())
 
 

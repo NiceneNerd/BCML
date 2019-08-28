@@ -335,7 +335,7 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
             if modded_sarcs:
                 modded_sarc_files.update(modded_sarcs)
     (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w') as r_file:
+    with Path(util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as r_file:
         r_file.write('name,rstb\n')
         modded_files.update(modded_sarc_files)
         for file in modded_files:
@@ -351,12 +351,12 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
 
-    with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').open('w') as l_file:
+    with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').open('w', encoding='utf-8') as l_file:
         for file_type in diffs:
             for file in diffs[file_type]:
                 l_file.write(f'{file}\n')
     # if len(failures) > 0:
-    #     with (util.get_work_dir() / 'failures.yml').open('w') as ff:
+    #     with (util.get_work_dir() / 'failures.yml').open('w', encoding='utf-8') as ff:
     #         yaml.safe_dump(failures, ff)
     #     print(f'In {len(failures)} files, one or more patches failed to apply. For more
     #           'information, the following log file contains the resultant contents of all of the

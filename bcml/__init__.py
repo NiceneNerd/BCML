@@ -511,7 +511,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 rules = ConfigParser()
                 rules.read(str(new_path / 'rules.txt'))
                 rules['Definition']['fsPriority'] = str(mod[1])
-                with (new_path / 'rules.txt').open('w') as rf:
+                with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
                     rules.write(rf)
             rstable.generate_master_rstb()
             if fix_packs:
@@ -562,7 +562,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     out.write(str(path), file)
             print('Adding rules.txt...')
             rules_path = util.get_work_dir() / 'tmprules.txt'
-            with rules_path.open('w') as rules:
+            with rules_path.open('w', encoding='utf-8') as rules:
                 rules.writelines([
                     '[Definition]\n',
                     'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',

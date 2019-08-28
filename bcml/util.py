@@ -99,7 +99,7 @@ def get_settings() -> {}:
                 'mlc_dir': '',
                 'site_meta': ''
             }
-            with settings_path.open('w') as s_file:
+            with settings_path.open('w', encoding='utf-8') as s_file:
                 settings.write(s_file)
         else:
             settings.read(str(settings_path))
@@ -120,7 +120,7 @@ def set_settings_bool(setting: str, value: bool):
 
 def save_settings():
     """Saves changes made to settings"""
-    with (get_work_dir() / 'settings.ini').open('w') as s_file:
+    with (get_work_dir() / 'settings.ini').open('w', encoding='utf-8') as s_file:
         get_settings.settings_file.write(s_file)
 
 
@@ -502,7 +502,7 @@ def byml_to_yml_dir(tmp_dir: Path, ext: str = '.byml'):
     yaml_util.add_representers(dumper)
     for data in tmp_dir.rglob(f'**/*{ext}'):
         yml_data = byml.Byml(data.read_bytes())
-        with (data.with_name(data.stem + '.yml')).open('w') as y_file:
+        with (data.with_name(data.stem + '.yml')).open('w', encoding='utf-8') as y_file:
             yaml.dump(yml_data.parse(), y_file, Dumper=dumper,
                       allow_unicode=True, encoding='utf-8')
         data.unlink()
@@ -718,7 +718,7 @@ def log_error():
     """ Writes the most recent error traceback to the error log and prints the traceback text """
     log_path = get_work_dir() / 'error.log'
     error_log = traceback.format_exc()
-    with log_path.open('w') as l_file:
+    with log_path.open('w', encoding='utf-8') as l_file:
         l_file.write(error_log)
     print('BCML has encountered an error. The details are as follows:')
     print(error_log)
@@ -739,7 +739,7 @@ def create_bcml_graphicpack_if_needed():
     bcml_mod_dir.mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / 'rules.txt'
     if not rules.exists():
-        with rules.open('w') as r_file:
+        with rules.open('w', encoding='utf-8') as r_file:
             r_file.write('[Definition]\n'
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'

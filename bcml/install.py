@@ -353,7 +353,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
 
     print('Saving logs...')
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(tmp_dir / 'logs' / 'rstb.log').open('w') as r_file:
+    with Path(tmp_dir / 'logs' / 'rstb.log').open('w', encoding='utf-8') as r_file:
         r_file.write('name,rstb,path\n')
         modded_files.update(modded_sarc_files)
         for file in modded_files:
@@ -362,7 +362,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                 r_file.write('{},{},{}\n'.format(file, modded_files[file]["rstb"], str(
                     modded_files[file]["path"]).replace('\\', '/')))
     if not no_packs:
-        with Path(tmp_dir / 'logs' / 'packs.log').open('w') as p_file:
+        with Path(tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
             p_file.write('name,path\n')
             for file in modded_files:
                 name, ext = os.path.splitext(file)
@@ -371,7 +371,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                     p_file.write(f'{file},{modded_files[file]["path"]}\n')
     if is_text_mod:
         for lang in text_mods:
-            with Path(tmp_dir / 'logs' / f'texts_{lang}.yml').open('w') as t_file:
+            with Path(tmp_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
                 yaml.dump(text_mods[lang][0], t_file)
             text_sarc = text_mods[lang][1]
             if text_sarc is not None:
@@ -403,9 +403,9 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
             yaml.dump(dstatic_diff, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
                       default_flow_style=None)
     if leave_rstb:
-        Path(tmp_dir / 'logs' / '.leave').open('w').close()
+        Path(tmp_dir / 'logs' / '.leave').open('w', encoding='utf-8').close()
     if shrink_rstb:
-        Path(tmp_dir / 'logs' / '.shrink').open('w').close()
+        Path(tmp_dir / 'logs' / '.shrink').open('w', encoding='utf-8').close()
 
     return is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, \
            no_map, modded_files
@@ -462,7 +462,7 @@ def refresh_cemu_mods():
         modentry.appendChild(entryfile)
         modentry.appendChild(entrypreset)
         gpack.appendChild(modentry)
-    settings.writexml(setpath.open('w'), addindent='    ', newl='\n')
+    settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
 def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_texts: bool = False,
@@ -573,7 +573,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             existing_mod_rules = ConfigParser()
             existing_mod_rules.read(str(new_path / 'rules.txt'))
             existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
-            with (new_path / 'rules.txt').open('w') as r_file:
+            with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
                 existing_mod_rules.write(r_file)
 
     mod_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -587,7 +587,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
     rules['Definition']['path'] = f'ι BCML: DON\'T TOUCH/{rulepath}'
     rules['Definition']['fsPriority'] = str(priority)
-    with Path(mod_dir / 'rules.txt').open('w') as r_file:
+    with Path(mod_dir / 'rules.txt').open('w', encoding='utf-8') as r_file:
         rules.write(r_file)
 
     output_mod = BcmlMod(mod_name, priority, mod_dir)
@@ -750,7 +750,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             rules = ConfigParser()
             rules.read(str(mod.path.parent / new_mod_id / 'rules.txt'))
             rules['Definition']['fsPriority'] = str(mod[1])
-            with (mod[2].parent / new_mod_id / 'rules.txt').open('w') as r_file:
+            with (mod[2].parent / new_mod_id / 'rules.txt').open('w', encoding='utf-8') as r_file:
                 rules.write(r_file)
             refresh_cemu_mods()
     if remerge_packs:
@@ -967,7 +967,7 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
         pool.close()
         pool.join()
 
-        with (tmp_dir / 'logs' / 'packs.log').open('w') as p_file:
+        with (tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
             final_packs = [file for file in list(
                 tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
             if final_packs:

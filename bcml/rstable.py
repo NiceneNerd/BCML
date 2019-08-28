@@ -399,5 +399,5 @@ def generate_master_rstb(verbose: bool = False):
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
-    with rstb_log.open('w') as r_file:
+    with rstb_log.open('w', encoding='utf-8') as r_file:
         r_file.write('\n'.join([change[0].strip() for change in rstb_changes]))

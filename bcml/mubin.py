@@ -240,7 +240,7 @@ def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
     log_file.parent.mkdir(parents=True, exist_ok=True)
     dumper = yaml.CSafeDumper
     yaml_util.add_representers(dumper)
-    with log_file.open('w') as l_file:
+    with log_file.open('w', encoding='utf-8') as l_file:
         yaml.dump(diffs, l_file, Dumper=dumper)
 
 
@@ -354,7 +354,7 @@ def merge_maps(verbose: bool = False):
         rstb_vals[result['main'][0]] = result['main'][1]
 
     print('Adjusting RSTB...')
-    with log_path.open('w') as l_file:
+    with log_path.open('w', encoding='utf-8') as l_file:
         for canon, val in rstb_vals.items():
             l_file.write(f'{canon},{val}\n')
     print('Map merge complete')
