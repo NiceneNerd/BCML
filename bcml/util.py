@@ -262,8 +262,8 @@ def get_util_dirs() -> tuple:
     :returns: A tuple containing the root BCML directory, the BCML working
     directory, the Cemu installation directory, and the Cemu graphicPacks
     directory.
-    :rtype: (:class:`pathlib.Path`, :class:`pathlib.Path`, :class:`pathlib.Path`,
-            :class:`pathlib.Path`)
+    :rtype: (class:`pathlib.Path`, class:`pathlib.Path`, class:`pathlib.Path`,
+            class:`pathlib.Path`)
     """
     return get_exec_dir(), get_work_dir(), get_cemu_dir(), get_modpack_dir()
 
@@ -274,7 +274,7 @@ def get_botw_dirs() -> tuple:
 
     :returns: A tuple containing the main BotW directory, the update directoy,
     and the aoc directory.
-    :rtype: (:class:`pathlib.Path`, :class:`pathlib.Path`, :class:`pathlib.Path`)
+    :rtype: (class:`pathlib.Path`, class:`pathlib.Path`, class:`pathlib.Path`)
     """
     return get_game_dir(), get_update_dir(), get_aoc_dir()
 
@@ -292,7 +292,7 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     Gets the path to an original copy of a modded file from the game dump.
 
     :param path: The relative path to the modded file.
-    :type path: Union[:class:`pathlib.Path`, str]
+    :type path: Union[class:`pathlib.Path`, str]
     :param aoc: Whether the file is part of add-on content (DLC)
     :type aoc: bool, optional
     """
@@ -569,7 +569,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
     Gets the preview image of a given mod, if any, and caches it
 
     :param mod: The mod to preview
-    :type mod: :class:`bcml.util.BcmlMod`
+    :type mod: class:`bcml.util.BcmlMod`
     :param rules: The contents of the mod's `rules.txt` file
     :type rules: ConfigParser
     :return: Returns the preview image for the mod as QPixmap
@@ -685,7 +685,7 @@ def get_installed_mods() -> []:
     Gets all installed mods and their basic info
 
     :returns: A list of mods with their names, priorities, and installed paths.
-    :rtype: list of (str, int, :class:`pathlib.Path`) )
+    :rtype: list of (str, int, class:`pathlib.Path`) )
     """
     mods = []
     for rules in get_modpack_dir().glob('*/rules.txt'):

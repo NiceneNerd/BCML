@@ -40,7 +40,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
     contents as a dict.
 
     :param map: The map section and type.
-    :type map: :class:`bcml.mubin.Map`
+    :type map: class:`bcml.mubin.Map`
     :return: Returns a dict representation of the requested map unit.
     :rtype: dict
     """
@@ -111,9 +111,9 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
     aoc map_unit files, and then the base game map_unit files.
 
     :param map_unit: The map_unit section and type.
-    :type map_unit: :class:`bcml.mubin.Map`
+    :type map_unit: class:`bcml.mubin.Map`
     :param tmp_dir: The path to the base directory of the mod.
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :return: Returns a dict representation of the requested map_unit unit.
     :rtype: dict
     """
@@ -158,7 +158,7 @@ def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
     Detects the changes made to a modded map unit.
 
     :param base_map: The contents or identity of the map unit from the base game to compare from.
-    :type base_map: Union[dict, :class:`bcml.mubin.Map`]
+    :type base_map: Union[dict, class:`bcml.mubin.Map`]
     :param mod_map: The contents of the modded map unit.
     :type mod_map: dict
     :return: Returns a dict of changes in the modded map unit, including added, modified, and
@@ -248,10 +248,10 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
     """
     Merges changes to a mainfield map and returns the RSTB values
 
-    :param map_pair: A tuple containing :class:`Map` to merge and the changes as a dict
+    :param map_pair: A tuple containing class:`Map` to merge and the changes as a dict
     :type map_pair: tuple
     :param rstb_calc: An `rstb` library SizeCalculator object
-    :type rstb_calc: :class:`rstb.SizeCalculator`
+    :type rstb_calc: class:`rstb.SizeCalculator`
     :param verbose: Whether to display verbose output, defaults to False
     :type verbose: bool, optional
     :return: Returns a dict containing the aoc and base RSTB paths for the merged map units along
@@ -364,7 +364,7 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     """Returns the changes made to the Static.smubin containing shrine entrance coordinates
 
     :param file: The Static.mubin file to diff
-    :type file: :class:`pathlib.Path`
+    :type file: class:`pathlib.Path`
     :return: Returns a dict of shrines and their updated entrance coordinates
     :rtype: dict of str: dict
     """

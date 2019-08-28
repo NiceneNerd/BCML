@@ -83,9 +83,9 @@ def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
     Diffs a modded AAMP file from the stock game version
 
     :param file: The modded AAMP file to diff
-    :type file: :class:`typing.Union[:class:pathlib.Path, str]`
+    :type file: class:`typing.Union[class:pathlib.Path, str]`
     :param tmp_dir: The temp directory containing the mod
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :return: Returns a string representation of the AAMP file diff
     """
     if isinstance(file, str):
@@ -171,11 +171,11 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
     Recursively patches deep merge files in a SARC
 
     :param pack: The SARC in which to recursively patch.
-    :type pack: :class:`sarc.SARC`
+    :type pack: class:`sarc.SARC`
     :param nest: A dict of nested patches to apply.
     :type nest: dict
     :return: Returns a new SARC with patches applied and a dict of any failed patches.
-    :rtype: (:class:`sarc.SARCWriter`, dict, dict)
+    :rtype: (class:`sarc.SARCWriter`, dict, dict)
     """
     new_sarc = sarc.make_writer_from_sarc(pack)
     failures = {}

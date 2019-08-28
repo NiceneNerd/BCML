@@ -71,7 +71,7 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
     :type for_merge: bool
     :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's working
     directory.
-    :type tmp_dir: :class:`pathlib.Path`, optional
+    :type tmp_dir: class:`pathlib.Path`, optional
     """
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -138,10 +138,10 @@ def bootup_from_msbts(lang: str = 'USen',
     :type lang: str, optional
     :param msbt_dir: The directory to pull MSBTs from, defaults to "tmp_text/merged" in BCML's
     working directory.
-    :type msbt_dir: :class:`pathlib.Path`, optional
+    :type msbt_dir: class:`pathlib.Path`, optional
     :returns: A tuple with the path to the new Bootup_XXxx.pack and the RSTB size of the new
     Msg_XXxx.product.sarc
-    :rtype: (:class:`pathlib.Path`, int)
+    :rtype: (class:`pathlib.Path`, int)
     """
     new_boot_path = msbt_dir.parent / f'Bootup_{lang}.pack'
     with new_boot_path.open('wb') as new_boot:
@@ -176,11 +176,11 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
     Gets a list of modified game text files in a given message SARC
 
     :param msg_sarc: The message SARC to scan for changes.
-    :type msg_sarc: :class:`sarc.SARC`
+    :type msg_sarc: class:`sarc.SARC`
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
     :param tmp_dir: The temp directory to use, defaults to "tmp_text" in BCML's working directory.
-    :type tmp_dir: :class:`pathlib.Path`, optional
+    :type tmp_dir: class:`pathlib.Path`, optional
     :returns: Returns a tuple containing a list of modded text files and a dict of new text
     files with their contents.
     :rtype: (list of str, dict of str: bytes)
@@ -241,7 +241,7 @@ def get_modded_texts(modded_msyts: list, tmp_dir: Path = util.get_work_dir() / '
     :param modded_msyts: A list of MSYT files that have been modified.
     :type modded_msyts: list of str
     :param tmp_dir: The temp directory to use, defaults to "tmp_text" in BCML's working directory.
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :returns: Returns a dictionary of modified MSYT text entries.
     :rtype: dict
     """
@@ -273,14 +273,14 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
     Detects modifications to text files inside a given Bootup_XXxx.pack
 
     :param bootup_path: Path to the Bootup_XXxx.pack file.
-    :type bootup_path: :class:`pathlib.Path`
+    :type bootup_path: class:`pathlib.Path`
     :param tmp_dir: The temp directory to use, defaults to "tmp_text" in BCML's working directory.
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :param verbose: Whether to display more detailed output, defaults to False.
     :type verbose: bool, optional
     :returns: Return a tuple containing a dict of modded text entries, a SARC containing added text
     MSBTs, and the game language of the bootup pack.
-    :rtype: (dict, :class:`sarc.SARCWriter`, str)
+    :rtype: (dict, class:`sarc.SARCWriter`, str)
     """
     lang = util.get_file_language(bootup_path)
     print(f'Scanning text modifications for language {lang}...')
@@ -334,7 +334,7 @@ def get_text_mods(lang: str = 'USen') -> List[BcmlMod]:
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
     :return: Returns a list of all text mods installed for the selected language.
-    :rtype: list of :class:`bcml.util.BcmlMod`
+    :rtype: list of class:`bcml.util.BcmlMod`
     """
     tmods = [mod for mod in util.get_installed_mods() if (
         mod.path / 'logs' / f'texts_{lang}.yml').exists()]
@@ -379,9 +379,9 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
     Merges changes to a text file
 
     :param msyt: The path to the MSYT to merge into.
-    :type msyt: :class:`pathlib.Path`
+    :type msyt: class:`pathlib.Path`
     :param merge_dir: The path of the directory containing MSYT files to merge.
-    :type merge_dir: :class:`pathlib.Path`
+    :type merge_dir: class:`pathlib.Path`
     :param text_mods: A list of dicts containing text entires to merge.
     :type text_mods: list of dict
     :return: Returns the number of merged entries and the path to the merged MSYT.
@@ -426,7 +426,7 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     :param lang: The game language to use, defaults to USen.
     :type lang: str, optional
     :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's work dir.
-    :type tmp_dir: :class:`pathlib.Path`, optional
+    :type tmp_dir: class:`pathlib.Path`, optional
     :param verbose: Whether to display more detailed output, defaults to False
     :type verbose: bool, optional
     """

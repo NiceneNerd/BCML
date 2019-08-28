@@ -35,9 +35,9 @@ def open_mod(path: Path) -> Path:
     Extracts a provided mod and returns the root path of the graphicpack inside
 
     :param path: The path to the mod archive.
-    :type path: :class:`pathlib.Path`
+    :type path: class:`pathlib.Path`
     :returns: The path to the extracted root of the mod where the rules.txt file is found.
-    :rtype: :class:`pathlib.Path`
+    :rtype: class:`pathlib.Path`
     """
     if isinstance(path, str):
         path = Path(path)
@@ -90,14 +90,14 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
     Detects all of the modified files in an extracted mod
 
     :param tmp_dir: The path to the base directory of the mod.
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :param deep_merge: Whether to log diffs for individual AAMP and BYML files, defaults to False
     :type deep_merge: bool, optional
     :param verbose: Specifies whether to return more detailed output
     :type verbose: bool, optional
     :returns: Returns a tuple with a dict of modified files and the RSTB entries, a list of changes,
     and (if deep merge) diffs of modded BYML and AAMP files
-    :rtype: (dict of :class:`pathlib.Path`: int, list of str, dict of str: str)
+    :rtype: (dict of class:`pathlib.Path`: int, list of str, dict of str: str)
     """
     modded_files = {}
     log = []
@@ -169,9 +169,9 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
     Detects all of the modified files in a SARC
 
     :param mod_sarc: The SARC to scan for modded files.
-    :type mod_sarc: :class:`sarc.SARC`
+    :type mod_sarc: class:`sarc.SARC`
     :param tmp_dir: The path to the base directory of the mod.
-    :type tmp_dir: :class:`pathlib.Path`
+    :type tmp_dir: class:`pathlib.Path`
     :param name: The name of the SARC which contains the current SARC.
     :type name: str
     :param aoc: Specifies whether the SARC is DLC content, defaults to False.
@@ -475,7 +475,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
 
     :param mod: Path to the mod to install. Must be a RAR, 7z, or ZIP archive or a graphicpack
     directory containing a rules.txt file.
-    :type mod: :class:`pathlib.Path`
+    :type mod: class:`pathlib.Path`
     :param verbose: Whether to display more detailed output, defaults to False.
     :type verbose: bool, optional
     :param no_packs: Do not attempt to merge pack files, defaults to False.
@@ -693,7 +693,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
     Changes the priority of a mod
 
     :param path: The path to the mod.
-    :type path: :class:`pathlib.Path`
+    :type path: class:`pathlib.Path`
     :param new_priority: The new priority of the mod.
     :type new_priority: int
     :param wait_merge: Resort priorities but don't remerge anything yet, defaults to False.

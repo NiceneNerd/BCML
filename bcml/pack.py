@@ -22,7 +22,7 @@ def get_pack_mods() -> List[BcmlMod]:
     Gets a list of all installed pack mods
 
     :return: Returns a list of mods that modify pack files
-    :rtype: list of :class:`bcml.util.BcmlMod`
+    :rtype: list of class:`bcml.util.BcmlMod`
     """
     pmods = [mod for mod in util.get_installed_mods() if (
         mod.path / 'logs' / 'packs.log').exists()]
@@ -84,7 +84,7 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
     :type mod_list: dict
     :returns: Returns a list of dicts containing each modified version
     of the given SARC with metadata.
-    :rtype: list of dict of str: :class:`sarc.SARC`, str: int, str: int, str: str
+    :rtype: list of dict of str: class:`sarc.SARC`, str: int, str: int, str: str
     """
     sarc_list = []
     for pack in mod_list[name]:
@@ -128,7 +128,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
     :param verbose: Whether to display more detailed output, defaults to False
     :type verbose: bool, optional
     :returns: Returns tuple with a merged SARC and a list of changes made.
-    :rtype: (:class:`sarc.SARCWriter`, list of str)
+    :rtype: (class:`sarc.SARCWriter`, list of str)
     """
     hashes = util.get_hash_table()
     sarc_log = []

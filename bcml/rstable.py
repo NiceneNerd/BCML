@@ -52,7 +52,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
     Attempts to estimate a proper RSTB value for a BFRES file
 
     :param file: The file to estimate, either as a path or bytes
-    :type file: Union[:class:`pathlib.Path`, bytes]
+    :type file: Union[class:`pathlib.Path`, bytes]
     :param name: The name of the file, needed when passing as bytes, defaults to ''
     :type name: str, optional
     :return: Returns an estimated RSTB value
@@ -134,7 +134,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
     kinds: .baiprog, .bgparamlist, .bdrop, .bshop, .bxml, .brecipe, otherwise will return 0.
 
     :param file: The file to estimate, either as a path or bytes
-    :type file: Union[:class:`pathlib.Path`, bytes]
+    :type file: Union[class:`pathlib.Path`, bytes]
     :param name: The name of the file, needed when passing as bytes, defaults to ''
     :type name: str, optional
     :return: Returns an estimated RSTB value
@@ -285,7 +285,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
     Merges changes from a list of RSTB mods into a single RSTB
 
     :param table: The base RSTB to merge into. This will be directly modified.
-    :type table: :class:`rstb.ResourceSizeTable`
+    :type table: class:`rstb.ResourceSizeTable`
     :param changes: A dict of resources and their RSTB sizes.
     :type changes: dict of str: int
     :param verbose: Whether to log changes in full detail. Defaults to false.

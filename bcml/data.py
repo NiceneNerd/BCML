@@ -72,9 +72,9 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     Packs a gamedata SARC into Bootup.pack and returns the RSTB size of the new gamedata.sarc
 
     :param bgdata: A SARCWriter for the new gamedata
-    :type bgdata: :class:`sarc.SARCWriter`
+    :type bgdata: class:`sarc.SARCWriter`
     :param bootup_path: Path to the Bootup.pack to update, defaults to a master BCML copy
-    :type bootup_path: :class:`pathlib.Path`, optional
+    :type bootup_path: class:`pathlib.Path`, optional
     :returns: Returns the RSTB size of the new gamedata.sarc
     :rtype: int
     """
@@ -101,9 +101,9 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     Packs a savedata SARC into Bootup.pack and returns the RSTB size of the new savedataformat.sarc
 
     :param bgsvdata: A SARCWriter for the new savedata
-    :type bgsvdata: :class:`sarc.SARCWriter`
+    :type bgsvdata: class:`sarc.SARCWriter`
     :param bootup_path: Path to the Bootup.pack to update, defaults to a master BCML copy
-    :type bootup_path: :class:`pathlib.Path`, optional
+    :type bootup_path: class:`pathlib.Path`, optional
     :returns: Returns the RSTB size of the new savedataformat.sarc
     :rtype: int
     """
@@ -207,7 +207,7 @@ def is_savedata_modded(savedata: sarc.SARC) -> {}:
     Detects if any .bgsvdata file has been modified.
 
     :param savedata: The saveformatdata.sarc to check for modification.
-    :type savedata: :class:`sarc.SARC`
+    :type savedata: class:`sarc.SARC`
     :returns: Returns True if any .bgsvdata in the given savedataformat.sarc has been modified.
     :rtype: bool
     """
@@ -270,7 +270,7 @@ def get_modded_savedata_entries(savedata: sarc.SARC) -> []:
     Gets all of the modified savedata entries in a dict of modded savedata contents.
 
     :param savedata: The saveformatdata.sarc to search for modded entries.
-    :type savedata: :class:`sarc.SARC`
+    :type savedata: class:`sarc.SARC`
     :return: Returns a list of modified savedata entries.
     :rtype: list
     """
