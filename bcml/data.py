@@ -6,8 +6,10 @@ actorinfo.
 # Licensed under GPLv3+
 import zlib
 from copy import deepcopy
+from functools import partial
 from io import BytesIO
 from math import ceil
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import List
 
@@ -124,84 +126,6 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
 
 
-def get_modded_bgdata(gamedata: sarc.SARC) -> {}:
-    """
-    Gets all modded .bgdata files in a gamedata.sarc and their contents
-
-    :returns: Returns a dictionary of modified files with their modded and (if applicable)
-    original contents loaded from YAML.
-    :rtype: dict of str: dict of str: Union[list, dict]
-    """
-    hashes = get_gamedata_hashes()
-    modded_files = {}
-    ref_gdata = get_stock_gamedata()
-    bg_files = list(gamedata.list_files())
-    # To anyone trying to understand a lot of what's going on here:
-    # .bgdata files in gamedata.sarc are *supposed* to be stored with a
-    # leading slash (e.g. "/bool_data_0.bgdata"), but sometimes they are
-    # repacked without them (e.g. "bool_data_0.bgdata"). So much of the
-    # weirdness here is trying to account for both possibilities.
-    fix_slash = '/' if not bg_files[0].startswith('/') else ''
-    single_gamedatas = [file for file in bg_files
-                        if not any(file.startswith(mult) for mult in
-                                   [
-                                       '/bool_data',
-                                       'bool_data',
-                                       '/revival_bool_data',
-                                       'revival_bool_data'
-                                   ])]
-    for bgdata in single_gamedatas:
-        bgdata_bytes = gamedata.get_file_data(bgdata).tobytes()
-        bgdata_hash = xxhash.xxh32(bgdata_bytes).hexdigest()
-        if fix_slash + bgdata not in hashes or bgdata_hash != hashes[fix_slash + bgdata]:
-            modded_files[fix_slash + bgdata] = {
-                'mod_yml': byml.Byml(bgdata_bytes).parse()
-            }
-            if fix_slash + bgdata in list(ref_gdata.list_files()):
-                modded_files[fix_slash + bgdata]['ref_yml'] = byml.Byml(
-                    ref_gdata.get_file_data(fix_slash + bgdata).tobytes()
-                ).parse()
-    bool_datas = [file for file in bg_files if file.startswith(
-        '/bool_data') or file.startswith('bool_data')]
-    bool_data_bytes = {}
-    bool_data_modded = False
-    for bool_data in bool_datas:
-        bgdata_bytes = gamedata.get_file_data(bool_data).tobytes()
-        bool_data_bytes[bool_data] = bgdata_bytes
-        if not bool_data_modded:
-            bool_data_modded = (fix_slash + bool_data) not in hashes \
-                or hashes[fix_slash + bool_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
-    if bool_data_modded:
-        for bool_data in bool_datas:
-            modded_files[fix_slash + bool_data] = {
-                'mod_yml': byml.Byml(bool_data_bytes[bool_data]).parse()
-            }
-            if fix_slash + bool_data in list(ref_gdata.list_files()):
-                modded_files[fix_slash + bool_data]['ref_yml'] = byml.Byml(
-                    ref_gdata.get_file_data(fix_slash + bool_data).tobytes()
-                ).parse()
-    revival_datas = [file for file in bg_files if file.startswith('/revival_bool_data')
-                     or file.startswith('revival_bool_data')]
-    revival_data_bytes = {}
-    revival_data_modded = False
-    for revival_data in revival_datas:
-        bgdata_bytes = gamedata.get_file_data(revival_data).tobytes()
-        revival_data_bytes[revival_data] = bgdata_bytes
-        if not revival_data_modded:
-            revival_data_modded = (fix_slash + revival_data) not in hashes \
-                or hashes[fix_slash + revival_data] != xxhash.xxh32(bgdata_bytes).hexdigest()
-    if revival_data_modded:
-        for revival_data in revival_datas:
-            modded_files[fix_slash + revival_data] = {
-                'mod_yml': byml.Byml(revival_data_bytes[revival_data]).parse()
-            }
-            if fix_slash + revival_data in list(ref_gdata.list_files()):
-                modded_files[fix_slash + revival_data]['ref_yml'] = byml.Byml(
-                    ref_gdata.get_file_data(fix_slash + revival_data).tobytes()
-                ).parse()
-    return modded_files
-
-
 def is_savedata_modded(savedata: sarc.SARC) -> {}:
     """
     Detects if any .bgsvdata file has been modified.
@@ -225,7 +149,46 @@ def is_savedata_modded(savedata: sarc.SARC) -> {}:
     return modded
 
 
-def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
+def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
+    return byml.Byml(game_dict[file]).parse()
+
+
+def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
+    """
+    Consolidates all game data in a game data SARC
+    
+    :return: Returns a dict of all game data entries in a SARC
+    :rtype: dict of str: list
+    """
+    data = {}
+    pool = Pool(processes=cpu_count())
+    game_dict = {}
+    for file in gamedata.list_files():
+        game_dict[file] = gamedata.get_file_data(file).tobytes()
+    results = pool.map(
+        partial(_bgdata_from_bytes, game_dict=game_dict),
+        gamedata.list_files()
+    )
+    pool.close()
+    pool.join()
+    del game_dict
+    del gamedata
+    for result in results:
+        util.dict_merge(data, result)
+    return data
+
+
+def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
+    stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
+    diffs = {}
+    for entry in mod_data[data_type]:
+        if entry['DataName'] not in stock_entries \
+           or entry != stock_data[data_type][stock_entries.index(entry['DataName'])]:
+            diffs[entry['DataName']] = deepcopy(entry)
+    return {data_type: diffs}
+
+
+def get_modded_gamedata_entries(gamedata: sarc.SARC) -> {}:
     """
     Gets all of the modified gamedata entries in a dict of modded gamedata contents.
 
@@ -234,38 +197,21 @@ def get_modded_gamedata_entries(modded_bgdata: dict) -> {}:
     :returns: Returns a dictionary with each data type and the modified entries for it.
     :rtype: dict of str: dict of str: dict
     """
-    ref_data = {}
-    mod_data = {}
-    for bgdata in modded_bgdata:
-        try:
-            key = list(modded_bgdata[bgdata]['ref_yml'].keys())[0]
-        except KeyError:
-            key = list(modded_bgdata[bgdata]['mod_yml'].keys())[0]
-        mod_yml = modded_bgdata[bgdata]['mod_yml']
-        if key not in mod_yml:
-            if f'/{key}' in mod_yml:
-                key = f'/{key}'
-            else:
-                continue
-        if key not in mod_data:
-            mod_data[key] = {}
-        for data in mod_yml[key]:
-            mod_data[key][data['DataName']] = data
-        if 'ref_yml' in modded_bgdata[bgdata]:
-            ref_yml = modded_bgdata[bgdata]['ref_yml']
-            if key not in ref_data:
-                ref_data[key] = {}
-            for data in ref_yml[key]:
-                ref_data[key][data['DataName']] = data
-    modded_entries = {}
-    for data_type in mod_data:
-        modded_entries[data_type] = {}
-        for data in mod_data[data_type]:
-            if data not in ref_data[data_type] or\
-               mod_data[data_type][data] != ref_data[data_type][data]:
-                modded_entries[data_type][data] = deepcopy(
-                    mod_data[data_type][data])
-    return modded_entries
+    stock_data = consolidate_gamedata(get_stock_gamedata())
+    mod_data = consolidate_gamedata(gamedata)
+    diffs = {}
+    pool = Pool(cpu_count())
+    results = pool.map(
+        partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data),
+        list(mod_data.keys())
+    )
+    pool.close()
+    pool.join()
+    for result in results:
+        _, entries = list(result.items())[0]
+        if entries:
+            diffs.update(result)
+    return diffs
 
 
 def get_modded_savedata_entries(savedata: sarc.SARC) -> []:

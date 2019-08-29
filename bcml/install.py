@@ -318,8 +318,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         gamedata = sarc.SARC(wszst_yaz0.decompress(
             bootup.get_file_data('GameData/gamedata.ssarc')))
         del bootup
-        modded_bgdata = data.get_modded_bgdata(gamedata)
-        modded_bgentries = data.get_modded_gamedata_entries(modded_bgdata)
+        modded_bgentries = data.get_modded_gamedata_entries(gamedata)
     else:
         no_gamedata = True
 
@@ -541,6 +540,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         if not no_texts:
             text_mods = texts.get_modded_languages(tmp_dir)
             is_text_mod = len(text_mods) > 0 # pylint: disable=len-as-condition
+        else:
+            is_text_mod = False
     else:
         is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, \
             no_map, _ = \
