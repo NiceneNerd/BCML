@@ -61,7 +61,7 @@ def get_exec_dir() -> Path:
 
 def get_work_dir() -> Path:
     """ Gets the BCML internal working directory """
-    work_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'work_dir'
+    work_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'bcml' / 'work_dir'
     if not work_dir.exists():
         work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
@@ -169,7 +169,7 @@ def set_game_dir(path: Path):
                     set_read += line.strip()
             settings = minidom.parseString(set_read)
             mlc_path = Path(settings.getElementsByTagName('mlc_path')[0].firstChild.nodeValue)
-        except (FileNotFoundError, IndexError):
+        except (FileNotFoundError, IndexError, ValueError, AttributeError):
             mlc_path = get_cemu_dir() / 'mlc01'
         if mlc_path.exists():
             set_mlc_dir(mlc_path)

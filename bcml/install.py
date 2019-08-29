@@ -515,7 +515,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     elif mod.is_dir():
         if (mod / 'rules.txt').exists():
             print(f'Loading mod from {str(mod)}...')
-            tmp_dir = mod
+            tmp_dir = util.get_work_dir() / f'tmp_{mod.name}'
+            shutil.copytree(str(mod), str(tmp_dir))
         else:
             print(f'Cannot open mod at {str(mod)}, no rules.txt found')
             return
