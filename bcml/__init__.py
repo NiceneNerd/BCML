@@ -716,7 +716,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 rules.append(f'image = {result["image"]}')
             if result['url']:
                 rules.append(f'url = {result["url"]}')
-            (result['folder'] / 'rules.txt').write_text('\n'.join(rules))
+            (result['folder'] / 'rules.txt').write_text('\n'.join(rules), encoding='utf-8')
             install.create_bnp_mod(
                 mod=result['folder'],
                 output=result['output'],
@@ -1077,7 +1077,7 @@ def main():
             f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
             f'{e}\n\nBCML will now close.'
         )
-        e.write_text(tb)
+        e.write_text(tb, encoding='utf-8')
 
 
 if __name__ == "__main__":

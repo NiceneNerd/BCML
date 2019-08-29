@@ -594,7 +594,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
     try:
         util.get_mod_link_meta(rules)
         util.get_mod_preview(output_mod, rules)
-    except (FileNotFoundError, KeyError, IndexError, UnboundLocalError):
+    except Exception: # pylint: disable=broad-except
         pass
 
     print(f'Enabling {mod_name} in Cemu...')
