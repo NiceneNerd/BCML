@@ -169,7 +169,7 @@ BCML Nano Patch mods work by combining the power of deep merge, quick install, a
 
 ## Known Issues
 
-None yet, let me know
+* Deep merge may not work properly for mods that use loose files: files which have been moved out of the packs which contain them in the base game.
 
 ## License
 

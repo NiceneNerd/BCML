@@ -61,7 +61,7 @@ def get_exec_dir() -> Path:
 
 def get_work_dir() -> Path:
     """ Gets the BCML internal working directory """
-    work_dir = get_exec_dir() / 'work_dir'
+    work_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'work_dir'
     if not work_dir.exists():
         work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
@@ -158,7 +158,19 @@ def set_game_dir(path: Path):
     try:
         get_mlc_dir()
     except FileNotFoundError:
-        mlc_path = get_cemu_dir() / 'mlc01'
+        try:
+            from xml.dom import minidom
+            set_path = get_cemu_dir() / 'settings.xml'
+            if not set_path.exists():
+                raise FileNotFoundError('The Cemu settings file could not be found.')
+            set_read = ''
+            with set_path.open('r') as setfile:
+                for line in setfile:
+                    set_read += line.strip()
+            settings = minidom.parseString(set_read)
+            mlc_path = Path(settings.getElementsByTagName('mlc_path')[0].firstChild.nodeValue)
+        except (FileNotFoundError, IndexError):
+            mlc_path = get_cemu_dir() / 'mlc01'
         if mlc_path.exists():
             set_mlc_dir(mlc_path)
         else:
@@ -557,9 +569,18 @@ def get_mod_info(rules_path: Path) -> BcmlMod:
     """ Gets the name and priority of a mod from its rules.txt """
     rules: ConfigParser = ConfigParser()
     rules.read(str(rules_path))
+    name = str(rules['Definition']['name']).strip('" \'').replace('_', ' ')
+    try:
+        priority = int(rules['Definition']['fsPriority'])
+    except KeyError:
+        error = KeyError(
+            f'Mod "{name}" contains no priority field. It may not have been installed completely.'
+        )
+        error.path = rules_path.parent
+        raise error
     return BcmlMod(
-        str(rules['Definition']['name']).strip('" \''),
-        int(rules['Definition']['fsPriority']),
+        name,
+        priority,
         rules_path.parent
     )
 
@@ -691,7 +712,12 @@ def get_installed_mods() -> []:
     for rules in get_modpack_dir().glob('*/rules.txt'):
         if rules.parent.stem == '9999_BCML':
             continue
-        mod = get_mod_info(rules)
+        try:
+            mod = get_mod_info(rules)
+        except KeyError as priority_error:
+            rules.unlink()
+            shutil.rmtree(str(priority_error.path), ignore_errors=True)
+            continue
         mods.insert(mod.priority - 100, mod)
     return mods
 

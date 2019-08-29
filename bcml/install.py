@@ -1051,3 +1051,33 @@ def restore_backup(backup: Union[str, Path]):
     print('Re-enabling mods in Cemu...')
     refresh_cemu_mods()
     print(f'Backup "{backup.name}" restored')
+
+
+def link_master_mod(output: Path = None):
+    if not output:
+        output = util.get_cemu_dir() / 'graphicPacks' / 'BreathOfTheWild_BCML'
+    if output.exists():
+        shutil.rmtree(str(output), ignore_errors=True)
+    output.mkdir(parents=True, exist_ok=True)
+    mod_folders: List[Path] = sorted(
+        [item for item in util.get_modpack_dir().glob('*') if item.is_dir()],
+        reverse=True
+    )
+    shutil.copy(
+        str(util.get_master_modpack_dir() / 'rules.txt'),
+        str(output / 'rules.txt')
+    )
+    for mod_folder in mod_folders:
+        for item in mod_folder.rglob('**/*'):
+            rel_path = item.relative_to(mod_folder)
+            if (output / rel_path).exists()\
+               or (str(rel_path).startswith('logs'))\
+               or (len(rel_path.parts) == 1 and rel_path.suffix != '.txt'):
+                continue
+            if item.is_dir():
+                (output / rel_path).mkdir(parents=True, exist_ok=True)
+            elif item.is_file():
+                os.link(
+                    str(item),
+                    str(output / rel_path)
+                )
