@@ -447,7 +447,10 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
             print('Cleaning temp directory...')
         shutil.rmtree(tmp_dir, ignore_errors=True)
     print('Extracting clean MSYTs...')
-    extract_ref_msyts(lang, for_merge=True, tmp_dir=tmp_dir)
+    try:
+        extract_ref_msyts(lang, for_merge=True, tmp_dir=tmp_dir)
+    except FileNotFoundError:
+        return
     merge_dir = tmp_dir / 'merged'
     merge_dir.mkdir(parents=True, exist_ok=True)
 

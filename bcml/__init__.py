@@ -539,29 +539,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def ExportClicked(self):
         def export(self, output: Path):
             print('Loading files...')
-            files = {}
-            mods = sorted([self.listWidget.item(i).data(Qt.UserRole) for i in range(
-                self.listWidget.count())], key=lambda mod: mod.priority)
-            for mod in mods:
-                for file in mod.path.rglob('**/*'):
-                    rel_path = file.relative_to(mod.path)
-                    if rel_path.parts[0] in ['aoc', 'content'] and file.is_file():
-                        files[rel_path.as_posix()] = file
-            for file in util.get_master_modpack_dir().rglob('**/*'):
-                rel_path = file.relative_to(util.get_master_modpack_dir())
-                if rel_path.parts[0] in ['aoc', 'content'] and file.is_file():
-                    files[rel_path.as_posix()] = file
-            print('Creating new ZIP...')
-            out = zipfile.ZipFile(str(output), mode='w',
-                                  compression=zipfile.ZIP_DEFLATED)
-            for file, path in files.items():
-                try:
-                    out.write(str(path), file)
-                except ValueError:
-                    os.utime(str(path))
-                    out.write(str(path), file)
+            tmp_dir = util.get_work_dir() / 'tmp_export'
+            install.link_master_mod(tmp_dir)
             print('Adding rules.txt...')
-            rules_path = util.get_work_dir() / 'tmprules.txt'
+            rules_path = tmp_dir / 'rules.txt'
+            mods = util.get_installed_mods()
             with rules_path.open('w', encoding='utf-8') as rules:
                 rules.writelines([
                     '[Definition]\n',
@@ -571,12 +553,27 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
                     'version = 4\n'
                 ])
-            out.write(str(rules_path), 'rules.txt')
-            rules_path.unlink()
-            out.close()
+            if output.suffix == '.bnp' or output.name.endswith('.bnp.7z'):
+                print('Exporting BNP...')
+                install.create_bnp_mod(
+                    mod=tmp_dir,
+                    output=output,
+                    guess=True
+                )
+            else:
+                print('Exporting as graphic pack mod...')
+                x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+                          'a', str(output), f'{str(tmp_dir / "*")}']
+                subprocess.run(x_args, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+            shutil.rmtree(str(tmp_dir))
 
-        file_name = QFileDialog.getSaveFileName(self, 'Save Exported Mod', str(
-            Path.home()), 'Mod Archive (*.zip);;All Files (*)')[0]
+        file_name = QFileDialog.getSaveFileName(
+            self,
+            'Save Exported Mod',
+            str(Path.home()),
+            'BCML Nano Patch Mod (*.bnp; *.bnp.7z);;Graphic Pack Archive (*.zip);;All Files (*)'
+        )[0]
         if file_name:
             self.PerformOperation(export, self, Path(file_name))
 

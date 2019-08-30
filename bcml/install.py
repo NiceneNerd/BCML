@@ -292,8 +292,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         print('Text modifications detected, analyzing...')
         for bootup_path in bootup_paths:
             try:
-                util.get_game_file(
-                    bootup_path.relative_to('content').as_posix())
+                util.get_game_file(bootup_path.relative_to('content').as_posix())
             except FileNotFoundError:
                 continue
             tmp_text = util.get_work_dir() / 'tmp_text'
@@ -376,6 +375,28 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
             if text_sarc is not None:
                 with Path(tmp_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
                     text_sarc.write(s_file)
+        if 'USen' in text_mods and 'EUen' not in text_mods:
+            if (tmp_dir / 'logs' / f'texts_USen.yml').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'texts_USen.yml'),
+                    str(tmp_dir / 'logs' / f'texts_EUen.yml')
+                )
+            if (tmp_dir / 'logs' / f'newtexts_USen.sarc').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
+                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
+                )
+        elif 'EUen' in text_mods and 'USen' not in text_mods:
+            if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'texts_EUen.yml'),
+                    str(tmp_dir / 'logs' / f'texts_USen.yml')
+                )
+            if (tmp_dir / 'logs' / f'newtexts_EUen.sarc').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
+                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
+                )
     dumper = yaml.CDumper
     yaml_util.add_representers(dumper)
     aamp.yaml_util.register_representers(dumper)
@@ -561,6 +582,32 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                     deep_merge=deep_merge
                 )
 
+    if is_text_mod:
+        if 'USen' in text_mods and 'EUen' not in text_mods:
+            if (tmp_dir / 'logs' / f'texts_USen.yml').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'texts_USen.yml'),
+                    str(tmp_dir / 'logs' / f'texts_EUen.yml')
+                )
+            if (tmp_dir / 'logs' / f'newtexts_USen.sarc').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
+                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
+                )
+            text_mods.append('EUen')
+        elif 'EUen' in text_mods and 'USen' not in text_mods:
+            if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'texts_EUen.yml'),
+                    str(tmp_dir / 'logs' / f'texts_USen.yml')
+                )
+            if (tmp_dir / 'logs' / f'newtexts_EUen.sarc').exists():
+                shutil.copy(
+                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
+                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
+                )
+            text_mods.append('EUen')
+
     priority = insert_priority
     print(f'Assigned mod priority of {priority}')
     mod_id = util.get_mod_id(mod_name, priority)
@@ -611,7 +658,10 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             pack.merge_installed_packs(False, verbose=verbose)
         if is_text_mod:
             for lang in text_mods:
-                texts.merge_texts(lang, verbose=verbose)
+                try:
+                    texts.merge_texts(lang, verbose=verbose)
+                except FileNotFoundError:
+                    pass
         if not no_gamedata:
             data.merge_gamedata(verbose)
         if not no_savedata:
