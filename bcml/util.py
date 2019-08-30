@@ -137,8 +137,7 @@ def get_cemu_dir() -> Path:
     cemu_dir = str(get_settings()['cemu_dir'])
     if not cemu_dir or not Path(cemu_dir).is_dir():
         raise FileNotFoundError('The Cemu directory has moved or not been saved yet.')
-    else:
-        return Path(cemu_dir)
+    return Path(cemu_dir)
 
 
 def set_cemu_dir(path: Path):
@@ -190,10 +189,8 @@ def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings()['mlc_dir'])
     if not mlc_dir or not Path(mlc_dir).is_dir():
-        raise FileNotFoundError(
-            'The Cemu MLC directory has moved or not been saved yet.')
-    else:
-        return Path(mlc_dir)
+        raise FileNotFoundError('The Cemu MLC directory has moved or not been saved yet.')
+    return Path(mlc_dir)
 
 
 def set_mlc_dir(path: Path):
@@ -246,8 +243,7 @@ def get_update_dir() -> Path:
             get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
                 title_id[0] / title_id[1] / 'content'
         else:
-            raise FileNotFoundError(
-                'The Cemu update directory could not be found.')
+            raise FileNotFoundError('The Cemu update directory could not be found.')
     return get_update_dir.update_dir
 
 
@@ -265,8 +261,7 @@ def get_aoc_dir() -> Path:
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
                 title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
         else:
-            raise FileNotFoundError(
-                'The Cemu aoc directory could not be found.')
+            raise FileNotFoundError('The Cemu aoc directory could not be found.')
     return get_aoc_dir.aoc_dir
 
 
@@ -328,18 +323,15 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         )
         if (aoc_dir / path).exists():
             return aoc_dir / path
-        else:
-            raise FileNotFoundError(f'{path} not found in DLC files.')
+        raise FileNotFoundError(f'{path} not found in DLC files.')
     if (update_dir / path).exists():
         return update_dir / path
+    if (game_dir / path).exists():
+        return game_dir / path
+    elif (aoc_dir / path).exists():
+        return aoc_dir / path
     else:
-        if (game_dir / path).exists():
-            return game_dir / path
-        elif (aoc_dir / path).exists():
-            return aoc_dir / path
-        else:
-            raise FileNotFoundError(
-                f'File {str(path)} was not found in game dump.')
+        raise FileNotFoundError(f'File {str(path)} was not found in game dump.')
 
 
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
