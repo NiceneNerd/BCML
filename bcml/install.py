@@ -427,8 +427,8 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
     if shrink_rstb:
         Path(tmp_dir / 'logs' / '.shrink').open('w', encoding='utf-8').close()
 
-    return is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, \
-           no_map, modded_files
+    return is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
+           deep_merge, no_map, modded_files
 
 
 def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool,
@@ -565,8 +565,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         else:
             is_text_mod = False
     else:
-        is_text_mod, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, deep_merge, \
-            no_map, _ = \
+        is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
+        deep_merge, no_map, _ = \
                 generate_logs(
                     tmp_dir=tmp_dir,
                     verbose=verbose,
@@ -594,7 +594,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                     str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
                     str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
                 )
-            text_mods.append('EUen')
+            text_mods['EUen'] = None
         elif 'EUen' in text_mods and 'USen' not in text_mods:
             if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
                 shutil.copy(
@@ -606,7 +606,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                     str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
                     str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
                 )
-            text_mods.append('EUen')
+            text_mods['USen'] = None
 
     priority = insert_priority
     print(f'Assigned mod priority of {priority}')
@@ -977,7 +977,7 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
     logged_files = generate_logs(tmp_dir, leave_rstb=leave_rstb, shrink_rstb=shrink_rstb,
                                  guess=guess, no_packs=no_packs, no_texts=no_texts,
                                  no_gamedata=no_gamedata, no_savedata=no_savedata,
-                                 no_actorinfo=no_actorinfo, no_map=no_map, deep_merge=deep_merge)[8]
+                                 no_actorinfo=no_actorinfo, no_map=no_map, deep_merge=deep_merge)[9]
 
     print('Removing unnecessary files...')
     if not no_map:
