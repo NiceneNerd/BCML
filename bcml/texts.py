@@ -23,7 +23,6 @@ from bcml.util import BcmlMod
 
 EXCLUDE_TEXTS = [
     'ErrorMessage',
-    'LayoutMsg',
     'StaffRoll'
 ]
 
