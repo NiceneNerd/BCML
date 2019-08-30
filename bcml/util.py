@@ -59,9 +59,17 @@ def get_exec_dir() -> Path:
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
 
+def get_data_dir() -> Path:
+    """ Gets BCML's local app data directory """
+    data_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'bcml'
+    if not data_dir.exists():
+        data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+
 def get_work_dir() -> Path:
     """ Gets the BCML internal working directory """
-    work_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'bcml' / 'work_dir'
+    work_dir = get_data_dir() / 'work_dir'
     if not work_dir.exists():
         work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
@@ -90,7 +98,7 @@ def get_settings() -> {}:
     """ Gets the BCML settings as a dict """
     if not hasattr(get_settings, 'settings_file'):
         settings = ConfigParser()
-        settings_path = get_work_dir() / 'settings.ini'
+        settings_path = get_data_dir() / 'settings.ini'
         if not settings_path.exists():
             settings['Settings'] = {
                 'cemu_dir': '',
@@ -120,7 +128,7 @@ def set_settings_bool(setting: str, value: bool):
 
 def save_settings():
     """Saves changes made to settings"""
-    with (get_work_dir() / 'settings.ini').open('w', encoding='utf-8') as s_file:
+    with (get_data_dir() / 'settings.ini').open('w', encoding='utf-8') as s_file:
         get_settings.settings_file.write(s_file)
 
 
