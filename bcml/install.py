@@ -386,6 +386,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                     str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
                     str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
                 )
+            text_mods['EUen'] = text_mods['USen']
         elif 'EUen' in text_mods and 'USen' not in text_mods:
             if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
                 shutil.copy(
@@ -397,6 +398,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                     str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
                     str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
                 )
+                text_mods['USen'] = text_mods['USen']
     dumper = yaml.CDumper
     yaml_util.add_representers(dumper)
     aamp.yaml_util.register_representers(dumper)
@@ -561,6 +563,30 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         deep_merge = (logs / 'deepmerge.yml').exists()
         if not no_texts:
             text_mods = texts.get_modded_languages(tmp_dir)
+            if 'USen' in text_mods and 'EUen' not in text_mods:
+                if (logs / f'texts_USen.yml').exists():
+                    shutil.copy(
+                        str(logs / 'texts_USen.yml'),
+                        str(logs / 'texts_EUen.yml')
+                    )
+                if (logs / f'newtexts_USen.sarc').exists():
+                    shutil.copy(
+                        str(logs / 'newtexts_USen.sarc'),
+                        str(logs / 'newtexts_EUen.sarc')
+                    )
+                text_mods.append('EUen')
+            elif 'EUen' in text_mods and 'USen' not in text_mods:
+                if (logs / f'texts_EUen.yml').exists():
+                    shutil.copy(
+                        str(logs / 'texts_EUen.yml'),
+                        str(logs / 'texts_USen.yml')
+                    )
+                if (logs / f'newtexts_EUen.sarc').exists():
+                    shutil.copy(
+                        str(logs / 'newtexts_EUen.sarc'),
+                        str(logs / 'newtexts_USen.sarc')
+                    )
+                text_mods.append('USen')
             is_text_mod = len(text_mods) > 0 # pylint: disable=len-as-condition
         else:
             is_text_mod = False
@@ -581,32 +607,6 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                     no_map=no_map,
                     deep_merge=deep_merge
                 )
-
-    if is_text_mod:
-        if 'USen' in text_mods and 'EUen' not in text_mods:
-            if (tmp_dir / 'logs' / f'texts_USen.yml').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'texts_USen.yml'),
-                    str(tmp_dir / 'logs' / f'texts_EUen.yml')
-                )
-            if (tmp_dir / 'logs' / f'newtexts_USen.sarc').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
-                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
-                )
-            text_mods['EUen'] = None
-        elif 'EUen' in text_mods and 'USen' not in text_mods:
-            if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'texts_EUen.yml'),
-                    str(tmp_dir / 'logs' / f'texts_USen.yml')
-                )
-            if (tmp_dir / 'logs' / f'newtexts_EUen.sarc').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
-                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
-                )
-            text_mods['USen'] = None
 
     priority = insert_priority
     print(f'Assigned mod priority of {priority}')
