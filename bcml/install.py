@@ -398,7 +398,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
                     str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
                     str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
                 )
-                text_mods['USen'] = text_mods['USen']
+                text_mods['USen'] = text_mods['EUen']
     dumper = yaml.CDumper
     yaml_util.add_representers(dumper)
     aamp.yaml_util.register_representers(dumper)
