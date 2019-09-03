@@ -319,6 +319,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def OperationFinished(self):
+        title = self._progress.windowTitle()
         self._progress.close()
         del self._progress
         self.btnInstall.setEnabled(True)
@@ -328,18 +329,33 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnCemu.setEnabled(True)
         self.btnOrder.setEnabled(True)
         self.LoadMods()
-        QtWidgets.QMessageBox.information(
-            self, 'Complete', 'Operation finished!')
+        msg_done = QtWidgets.QMessageBox(
+            QtWidgets.QMessageBox.Information,
+            f'{title} Finished',
+            'Operation complete!',
+            parent=self
+        )
+        msg_done.addButton('OK', QtWidgets.QMessageBox.NoRole)
+        msg_done.addButton('Launch Game', QtWidgets.QMessageBox.ActionRole)
+        result = msg_done.exec_()
         del self._thread
         util.clear_temp_dir()
+        if result == 1:
+            self.CemuClicked()
 
     def OperationError(self):
         self.btnInstall.setEnabled(True)
         self.btnRemerge.setEnabled(True)
         self.btnExport.setEnabled(True)
+        self.btnRestore.setEnabled(True)
+        self.btnCemu.setEnabled(True)
+        self.btnOrder.setEnabled(True)
         QtWidgets.QMessageBox.critical(
-            self, 'Error', f'BCML has encountered an error while performing an operation.'
-                           f'Error details:\n\n{self._thread.error}')
+            self,
+            'Error',
+            f'BCML has encountered an error while performing an operation. '
+            f'Error details:\n\n{self._thread.error}'
+        )
         self.LoadMods()
         self._progress.close()
         del self._progress

@@ -198,10 +198,11 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
         elif m_hash != hashes[msbt]:
             write_msbts.append((tmp_dir / msbt, m_data.tobytes()))
             modded_msyts.append(msbt.replace('.msbt', '.msyt'))
-    pool = multiprocessing.Pool()
-    pool.map(write_msbt, write_msbts)
-    pool.close()
-    pool.join()
+    if write_msbts:
+        pool = multiprocessing.Pool()
+        pool.map(write_msbt, write_msbts)
+        pool.close()
+        pool.join()
     return modded_msyts, added_msbts
 
 
@@ -248,6 +249,8 @@ def get_modded_texts(modded_msyts: list, tmp_dir: Path = util.get_work_dir() / '
     text_edits = {}
     check_msyts = [msyt for msyt in list(ref_dir.rglob('**/*.msyt'))
                    if str(msyt.relative_to(ref_dir)).replace('\\', '/') in modded_msyts]
+    if not check_msyts:
+        return {}
     num_threads = min(multiprocessing.cpu_count(), len(check_msyts))
     thread_checker = partial(threaded_compare_texts,
                              tmp_dir=tmp_dir, ref_dir=ref_dir)
