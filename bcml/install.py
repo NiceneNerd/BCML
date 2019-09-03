@@ -6,6 +6,7 @@ import datetime
 import os
 import shutil
 import subprocess
+import traceback
 from configparser import ConfigParser
 from fnmatch import fnmatch
 from functools import partial
@@ -547,136 +548,177 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
-    rules = ConfigParser()
-    rules.read(tmp_dir / 'rules.txt')
-    mod_name = str(rules['Definition']['name']).strip(' "\'')
-    print(f'Identified mod: {mod_name}')
+    try:
+        rules = ConfigParser()
+        rules.read(tmp_dir / 'rules.txt')
+        mod_name = str(rules['Definition']['name']).strip(' "\'')
+        print(f'Identified mod: {mod_name}')
 
-    logs = tmp_dir / 'logs'
-    if logs.exists():
-        print('This mod supports Quick Install! Loading changes...')
-        no_packs = no_packs or (not (logs / 'packs.log').exists())
-        no_gamedata = no_gamedata or (not (logs / 'gamedata.yml').exists())
-        no_savedata = no_savedata or (not (logs / 'savedata.yml').exists())
-        no_actorinfo = no_actorinfo or (not (logs / 'actorinfo.yml').exists())
-        no_map = no_map or (not (logs / 'map.yml').exists())
-        deep_merge = (logs / 'deepmerge.yml').exists()
-        if not no_texts:
-            text_mods = texts.get_modded_languages(tmp_dir)
-            if 'USen' in text_mods and 'EUen' not in text_mods:
-                if (logs / f'texts_USen.yml').exists():
-                    shutil.copy(
-                        str(logs / 'texts_USen.yml'),
-                        str(logs / 'texts_EUen.yml')
-                    )
-                if (logs / f'newtexts_USen.sarc').exists():
-                    shutil.copy(
-                        str(logs / 'newtexts_USen.sarc'),
-                        str(logs / 'newtexts_EUen.sarc')
-                    )
-                text_mods.append('EUen')
-            elif 'EUen' in text_mods and 'USen' not in text_mods:
-                if (logs / f'texts_EUen.yml').exists():
-                    shutil.copy(
-                        str(logs / 'texts_EUen.yml'),
-                        str(logs / 'texts_USen.yml')
-                    )
-                if (logs / f'newtexts_EUen.sarc').exists():
-                    shutil.copy(
-                        str(logs / 'newtexts_EUen.sarc'),
-                        str(logs / 'newtexts_USen.sarc')
-                    )
-                text_mods.append('USen')
-            is_text_mod = len(text_mods) > 0 # pylint: disable=len-as-condition
+        logs = tmp_dir / 'logs'
+        if logs.exists():
+            print('This mod supports Quick Install! Loading changes...')
+            no_packs = no_packs or (not (logs / 'packs.log').exists())
+            no_gamedata = no_gamedata or (not (logs / 'gamedata.yml').exists())
+            no_savedata = no_savedata or (not (logs / 'savedata.yml').exists())
+            no_actorinfo = no_actorinfo or (not (logs / 'actorinfo.yml').exists())
+            no_map = no_map or (not (logs / 'map.yml').exists())
+            deep_merge = (logs / 'deepmerge.yml').exists()
+            if not no_texts:
+                text_mods = texts.get_modded_languages(tmp_dir)
+                if 'USen' in text_mods and 'EUen' not in text_mods:
+                    if (logs / f'texts_USen.yml').exists():
+                        shutil.copy(
+                            str(logs / 'texts_USen.yml'),
+                            str(logs / 'texts_EUen.yml')
+                        )
+                    if (logs / f'newtexts_USen.sarc').exists():
+                        shutil.copy(
+                            str(logs / 'newtexts_USen.sarc'),
+                            str(logs / 'newtexts_EUen.sarc')
+                        )
+                    text_mods.append('EUen')
+                elif 'EUen' in text_mods and 'USen' not in text_mods:
+                    if (logs / f'texts_EUen.yml').exists():
+                        shutil.copy(
+                            str(logs / 'texts_EUen.yml'),
+                            str(logs / 'texts_USen.yml')
+                        )
+                    if (logs / f'newtexts_EUen.sarc').exists():
+                        shutil.copy(
+                            str(logs / 'newtexts_EUen.sarc'),
+                            str(logs / 'newtexts_USen.sarc')
+                        )
+                    text_mods.append('USen')
+                is_text_mod = len(text_mods) > 0 # pylint: disable=len-as-condition
+            else:
+                is_text_mod = False
         else:
-            is_text_mod = False
-    else:
-        is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
-        deep_merge, no_map, _ = \
-                generate_logs(
-                    tmp_dir=tmp_dir,
-                    verbose=verbose,
-                    leave_rstb=leave_rstb,
-                    shrink_rstb=shrink_rstb,
-                    guess=guess,
-                    no_packs=no_packs,
-                    no_texts=no_texts,
-                    no_gamedata=no_gamedata,
-                    no_savedata=no_savedata,
-                    no_actorinfo=no_actorinfo,
-                    no_map=no_map,
-                    deep_merge=deep_merge
-                )
+            is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
+            deep_merge, no_map, _ = \
+                    generate_logs(
+                        tmp_dir=tmp_dir,
+                        verbose=verbose,
+                        leave_rstb=leave_rstb,
+                        shrink_rstb=shrink_rstb,
+                        guess=guess,
+                        no_packs=no_packs,
+                        no_texts=no_texts,
+                        no_gamedata=no_gamedata,
+                        no_savedata=no_savedata,
+                        no_actorinfo=no_actorinfo,
+                        no_map=no_map,
+                        deep_merge=deep_merge
+                    )
+    except Exception: # pylint: disable=broad-except
+        clean_error = RuntimeError()
+        try:
+            name = mod_name
+        except NameError:
+            name = 'your mod, the name of which could not be detected'
+        clean_error.error_text = (f'There was an error while processing {name}. '
+                                  'This could indicate there is a problem with the mod itself, '
+                                  'but it could also reflect a new or unusual edge case BCML does '
+                                  'not anticipate. Here is the error:\n\n'
+                                  f'{traceback.format_exc(limit=-3)}')
+        raise clean_error
 
     priority = insert_priority
     print(f'Assigned mod priority of {priority}')
     mod_id = util.get_mod_id(mod_name, priority)
     mod_dir = util.get_modpack_dir() / mod_id
 
-    for existing_mod in util.get_installed_mods():
-        if existing_mod.priority >= priority:
-            priority_shifted = existing_mod.priority + 1
-            new_id = util.get_mod_id(existing_mod.name, priority_shifted)
-            new_path = util.get_modpack_dir() / new_id
-            shutil.move(str(existing_mod.path), str(new_path))
-            existing_mod_rules = ConfigParser()
-            existing_mod_rules.read(str(new_path / 'rules.txt'))
-            existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
-            with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
-                existing_mod_rules.write(r_file)
-
-    mod_dir.parent.mkdir(parents=True, exist_ok=True)
-    print()
-    print(f'Moving mod to {str(mod_dir)}...')
-    if mod.is_file():
-        shutil.move(str(tmp_dir), str(mod_dir))
-    elif mod.is_dir():
-        shutil.copytree(str(tmp_dir), str(mod_dir))
-
-    rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
-    rules['Definition']['path'] = f'ι BCML: DON\'T TOUCH/{rulepath}'
-    rules['Definition']['fsPriority'] = str(priority)
-    with Path(mod_dir / 'rules.txt').open('w', encoding='utf-8') as r_file:
-        rules.write(r_file)
-
-    output_mod = BcmlMod(mod_name, priority, mod_dir)
     try:
-        util.get_mod_link_meta(rules)
-        util.get_mod_preview(output_mod, rules)
-    except Exception: # pylint: disable=broad-except
-        pass
+        for existing_mod in util.get_installed_mods():
+            if existing_mod.priority >= priority:
+                priority_shifted = existing_mod.priority + 1
+                new_id = util.get_mod_id(existing_mod.name, priority_shifted)
+                new_path = util.get_modpack_dir() / new_id
+                shutil.move(str(existing_mod.path), str(new_path))
+                existing_mod_rules = ConfigParser()
+                existing_mod_rules.read(str(new_path / 'rules.txt'))
+                existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
+                with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
+                    existing_mod_rules.write(r_file)
 
-    print(f'Enabling {mod_name} in Cemu...')
-    refresh_cemu_mods()
+        mod_dir.parent.mkdir(parents=True, exist_ok=True)
+        print()
+        print(f'Moving mod to {str(mod_dir)}...')
+        if mod.is_file():
+            shutil.move(str(tmp_dir), str(mod_dir))
+        elif mod.is_dir():
+            shutil.copytree(str(tmp_dir), str(mod_dir))
+
+        rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
+        rules['Definition']['path'] = f'ι BCML: DON\'T TOUCH/{rulepath}'
+        rules['Definition']['fsPriority'] = str(priority)
+        with Path(mod_dir / 'rules.txt').open('w', encoding='utf-8') as r_file:
+            rules.write(r_file)
+
+        output_mod = BcmlMod(mod_name, priority, mod_dir)
+        try:
+            util.get_mod_link_meta(rules)
+            util.get_mod_preview(output_mod, rules)
+        except Exception: # pylint: disable=broad-except
+            pass
+
+        print(f'Enabling {mod_name} in Cemu...')
+        refresh_cemu_mods()
+    except Exception: # pylint: disable=broad-except
+        clean_error = RuntimeError()
+        clean_error.error_text = (f'There was an error installing {mod_name}. '
+                                  'It processed successfully, but could not be added to your BCML '
+                                  'mods. This may indicate a problem with your BCML installation. '
+                                  'Here is the error:\n\n'
+                                  f'{traceback.format_exc(limit=-3)}\n\n'
+                                  f'{mod_name} is being removed and no changes will be made.')
+        if mod_dir.exists():
+            try:
+                uninstall_mod(mod_dir, wait_merge=True)
+            except Exception: # pylint: disable=broad-except
+                shutil.rmtree(str(mod_dir))
+        raise clean_error
+
 
     if wait_merge:
         print('Mod installed, merge still pending...')
     else:
-        print('Performing merges...')
-        print()
-        if not no_packs:
-            pack.merge_installed_packs(False, verbose=verbose)
-        if is_text_mod:
-            for lang in text_mods:
-                try:
-                    texts.merge_texts(lang, verbose=verbose)
-                except FileNotFoundError:
-                    pass
-        if not no_gamedata:
-            data.merge_gamedata(verbose)
-        if not no_savedata:
-            data.merge_savedata(verbose)
-        if not no_actorinfo:
-            data.merge_actorinfo(verbose)
-        if not no_map:
-            mubin.merge_maps()
-        if deep_merge:
-            merge.deep_merge(verbose)
-        mubin.merge_dungeonstatic()
-        if not deep_merge:
-            rstable.generate_master_rstb(verbose)
-        print()
-        print(f'{mod_name} installed successfully!')
+        try:
+            print('Performing merges...')
+            print()
+            if not no_packs:
+                pack.merge_installed_packs(False, verbose=verbose)
+            if is_text_mod:
+                for lang in text_mods:
+                    try:
+                        texts.merge_texts(lang, verbose=verbose)
+                    except FileNotFoundError:
+                        pass
+            if not no_gamedata:
+                data.merge_gamedata(verbose)
+            if not no_savedata:
+                data.merge_savedata(verbose)
+            if not no_actorinfo:
+                data.merge_actorinfo(verbose)
+            if not no_map:
+                mubin.merge_maps()
+            if deep_merge:
+                merge.deep_merge(verbose)
+            mubin.merge_dungeonstatic()
+            if not deep_merge:
+                rstable.generate_master_rstb(verbose)
+            print()
+            print(f'{mod_name} installed successfully!')
+        except Exception: # pylint: disable=broad-except
+            clean_error = RuntimeError()
+            clean_error.error_text = (f'There was an error merging {mod_name}. '
+                                      'It processed and installed without error, but it has not '
+                                      'successfully merged with your other mods. '
+                                      'Here is the error:\n\n'
+                                      f'{traceback.format_exc(limit=-3)}\n\n'
+                                      f'To protect your mod setup, BCML will remove {mod_name} '
+                                      'and remerge.')
+            uninstall_mod(mod_dir)
+            raise clean_error
     return output_mod
 
 

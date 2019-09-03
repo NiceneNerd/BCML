@@ -225,7 +225,7 @@ def get_title_id() -> (str, str):
                 if title_match:
                     title_id = title_match.group(1)
                     break
-        get_title_id.title_id = (title_id[0:8], title_id[8:])
+        get_title_id.title_id = (title_id[0:7] + '0', title_id[8:])
     return get_title_id.title_id
 
 

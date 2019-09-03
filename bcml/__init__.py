@@ -147,9 +147,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 sys.exit(0)
         try:
             util.get_game_dir()
+            util.get_update_dir()
+            util.get_aoc_dir()
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
-                self, 'First Time', 'BCML needs to know the location of your game dump. '
+                self, 'Dump Location', 'BCML needs to know the location of your game dump. '
                 'Please select the "content" directory in your dumped copy of Breath of the Wild.')
             folder = '/'
             while not (Path(folder).parent / 'code' / 'app.xml').exists():
@@ -171,12 +173,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         except FileNotFoundError:
                             QtWidgets.QMessageBox.information(
                                 self,
-                                'First Time',
+                                'MLC Location',
                                 'BCML could not detect the location of Cemu\'s MLC directory for '
                                 'your game. You will need to specify it manually.'
                             )
                             mlc_folder = QFileDialog.getExistingDirectory(
-                                self, 'Select Cemu MLC Directory')
+                                self,
+                                'Select Cemu MLC Directory'
+                            )
                             if mlc_folder:
                                 util.set_mlc_dir(Path(mlc_folder))
                                 util.set_game_dir(Path(folder))
@@ -1038,7 +1042,10 @@ class ProgressThread(threading.Thread):
             self._target(*self._args)
             self.signal.sig.emit('Done')
         except Exception as e: # pylint: disable=broad-except
-            self.error = traceback.format_exc(limit=3)
+            if hasattr(e, 'error_text'):
+                self.error = e.error_text # pylint: disable=no-member
+            else:
+                self.error = traceback.format_exc(limit=-4)
             self.signal.err.emit(e)
 
 
@@ -1082,12 +1089,12 @@ def main():
             application.InstallClicked(Path(sys.argv[1]))
         app.exec_()
     except Exception: # pylint: disable=broad-except
-        tb = traceback.format_exc(limit=2)
+        tb = traceback.format_exc(limit=-2)
         e = util.get_work_dir() / 'error.log'
         QtWidgets.QMessageBox.warning(
             None,
             'Error',
-            f'An unexpected error has occured:\n\n{tb}\nThe error has been logged to:\n'
+            f'An unexpected error has occured:\n\n{tb}\n\nThe error has been logged to:\n'
             f'{e}\n\nBCML will now close.'
         )
         e.write_text(tb, encoding='utf-8')
