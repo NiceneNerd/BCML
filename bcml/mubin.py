@@ -221,7 +221,7 @@ def get_all_map_diffs() -> dict:
                 c_diffs[file]['mod'][hash_id] = deepcopy(actor)
         mods.reverse()
         add_hashes = []
-        for mod in mods:
+        for mod in reversed(mods):
             for actor in mod['add']:
                 if actor['HashId'] not in add_hashes:
                     add_hashes.append(actor['HashId'])
@@ -260,8 +260,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
     """
     map_unit, changes = map_pair
     if verbose:
-        print(
-            f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
+        print(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
     stock_hashes = [obj['HashId'] for obj in new_map['Objs']]
     for hash_id, actor in changes['mod'].items():
