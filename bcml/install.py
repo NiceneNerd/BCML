@@ -24,7 +24,7 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import pack, texts, util, data, merge, rstable, mubin
+from bcml import pack, texts, util, data, merge, rstable, mubin, events
 from bcml.util import BcmlMod
 
 RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata', '.yml',
@@ -244,7 +244,8 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
 def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False,
                   shrink_rstb: bool = False, guess: bool = False, no_packs=True,
                   no_texts: bool = False, no_gamedata: bool = False, no_savedata: bool = False,
-                  no_actorinfo: bool = False, no_map: bool = False, deep_merge: bool = True):
+                  no_actorinfo: bool = False, no_eventinfo: bool = False, no_map: bool = False,
+                  deep_merge: bool = True):
     """Analyzes a mod and generates BCML log files containing its changes"""
     print('Scanning for modified files...')
     modded_files, rstb_changes, aamp_diffs = find_modded_files(
@@ -309,6 +310,17 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         modded_actors = data.get_modded_actors(actorinfo)
     else:
         no_actorinfo = True
+
+    modded_events = {}
+    if 'Event/EventInfo.product.byml' in modded_sarc_files and not no_eventinfo:
+        print('Event info modified, analyzng...')
+        event_info = byml.Byml(util.get_nested_file_bytes(
+            str(tmp_dir / 'content' / 'Pack' / 'Bootup.pack') + '//Event/EventInfo.product.sbyml',
+            unyaz=True
+        )).parse()
+        modded_events = events.get_modded_events(event_info)
+    else:
+        no_eventinfo = True
 
     modded_bgentries = {}
     if 'GameData/gamedata.sarc' in modded_sarc_files and not no_gamedata:
@@ -417,6 +429,12 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         with (tmp_dir / 'logs' / 'actorinfo.yml').open('w', encoding='utf-8') as a_file:
             yaml.dump(modded_actors, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
                       default_flow_style=None)
+
+    if not no_eventinfo:
+        with (tmp_dir / 'logs' / 'eventinfo.yml').open('w', encoding='utf-8') as a_file:
+            yaml.dump(modded_events, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                      default_flow_style=None)
+
     if deep_merge:
         with (tmp_dir / 'logs' / 'deepmerge.yml').open('w', encoding='utf-8') as d_file:
             yaml.dump(aamp_diffs, d_file, Dumper=dumper, allow_unicode=True,
@@ -431,7 +449,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
         Path(tmp_dir / 'logs' / '.shrink').open('w', encoding='utf-8').close()
 
     return is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
-           deep_merge, no_map, modded_files
+           no_eventinfo, deep_merge, no_map, modded_files
 
 
 def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool,
@@ -490,9 +508,9 @@ def refresh_cemu_mods():
 
 def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_texts: bool = False,
                 no_gamedata: bool = False, no_savedata: bool = False, no_actorinfo: bool = False,
-                no_map: bool = False, leave_rstb: bool = False, shrink_rstb: bool = False,
-                guess: bool = False, wait_merge: bool = False, deep_merge: bool = False,
-                insert_priority: int = 0):
+                no_eventinfo: bool = False, no_map: bool = False, leave_rstb: bool = False,
+                shrink_rstb: bool = False, guess: bool = False, wait_merge: bool = False,
+                deep_merge: bool = False, insert_priority: int = 0):
     """
     Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
 
@@ -561,6 +579,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
             no_gamedata = no_gamedata or (not (logs / 'gamedata.yml').exists())
             no_savedata = no_savedata or (not (logs / 'savedata.yml').exists())
             no_actorinfo = no_actorinfo or (not (logs / 'actorinfo.yml').exists())
+            no_eventinfo = no_eventinfo or (not (logs / 'eventinfo.yml').exists())
             no_map = no_map or (not (logs / 'map.yml').exists())
             deep_merge = (logs / 'deepmerge.yml').exists()
             if not no_texts:
@@ -594,7 +613,7 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 is_text_mod = False
         else:
             is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
-            deep_merge, no_map, _ = \
+            no_eventinfo, deep_merge, no_map, _ = \
                     generate_logs(
                         tmp_dir=tmp_dir,
                         verbose=verbose,
@@ -699,6 +718,8 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                 data.merge_savedata(verbose)
             if not no_actorinfo:
                 data.merge_actorinfo(verbose)
+            if not no_eventinfo:
+                events.merge_events()
             if not no_map:
                 mubin.merge_maps()
             if deep_merge:
@@ -744,6 +765,7 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
     savedata_mod = util.is_savedata_mod(
         path) or 'content\\Pack\\Bootup.pack' in pack_mods
     actorinfo_mod = util.is_actorinfo_mod(path)
+    eventinfo_mod = util.is_eventinfo_mod(path)
     map_mod = util.is_map_mod(path)
     deepmerge_mods = merge.get_mod_deepmerge_files(mod)
 
@@ -773,6 +795,8 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
             data.merge_savedata(verbose)
         if actorinfo_mod:
             data.merge_actorinfo(verbose)
+        if eventinfo_mod:
+            events.merge_events()
         if map_mod:
             mubin.merge_maps()
         mubin.merge_dungeonstatic()
@@ -810,6 +834,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
     remerge_savedata = util.is_savedata_mod(
         path) or 'content\\Pack\\Bootup.pack' in remerge_packs
     remerge_actorinfo = util.is_actorinfo_mod(path)
+    remerge_eventinfo = util.is_eventinfo_mod(path)
     remerge_map = util.is_map_mod(path)
     deepmerge = set()
     print('Resorting other affected mods...')
@@ -829,6 +854,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             for mpack in pack.get_modded_packs_in_mod(mod):
                 remerge_packs.add(mpack)
             remerge_actorinfo = util.is_actorinfo_mod(mod) or remerge_actorinfo
+            remerge_eventinfo = util.is_eventinfo_mod(mod) or remerge_eventinfo
             remerge_gamedata = util.is_gamedata_mod(
                 mod) or remerge_gamedata or 'content\\Pack\\Bootup.pack' in remerge_packs
             remerge_savedata = util.is_savedata_mod(
@@ -884,6 +910,13 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Actor info merges affected, remerging actor info...')
             data.merge_actorinfo(verbose)
             print()
+    if remerge_actorinfo:
+        if wait_merge:
+            print('Event info merges affected, will need to remerge later')
+        else:
+            print('Event info merges affected, remerging event info...')
+            events.merge_events()
+            print()
     if remerge_map:
         if wait_merge:
             print('Map merges affected, will need to remerge later')
@@ -933,6 +966,7 @@ def refresh_merges(verbose: bool = False):
     data.merge_gamedata(verbose)
     data.merge_savedata(verbose)
     data.merge_actorinfo(verbose)
+    events.merge_events()
     mubin.merge_maps(verbose)
     merge.deep_merge(verbose, wait_rstb=True)
     mubin.merge_dungeonstatic()
@@ -972,8 +1006,9 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
 
 def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bool = False,
                    no_gamedata: bool = False, no_savedata: bool = False,
-                   no_actorinfo: bool = False, no_map: bool = False, leave_rstb: bool = False,
-                   shrink_rstb: bool = False, guess: bool = False, deep_merge: bool = True):
+                   no_actorinfo: bool = False, no_eventinfo: bool = False, no_map: bool = False,
+                   leave_rstb: bool = False, shrink_rstb: bool = False, guess: bool = False,
+                   deep_merge: bool = True):
     """
     Converts a graphic pack mod to BotW Nano Patch format
 
@@ -1019,7 +1054,8 @@ def create_bnp_mod(mod: Path, output: Path, no_packs: bool = False, no_texts: bo
     logged_files = generate_logs(tmp_dir, leave_rstb=leave_rstb, shrink_rstb=shrink_rstb,
                                  guess=guess, no_packs=no_packs, no_texts=no_texts,
                                  no_gamedata=no_gamedata, no_savedata=no_savedata,
-                                 no_actorinfo=no_actorinfo, no_map=no_map, deep_merge=deep_merge)[9]
+                                 no_actorinfo=no_actorinfo, no_eventinfo=no_eventinfo,
+                                 no_map=no_map, deep_merge=deep_merge)[10]
 
     print('Removing unnecessary files...')
     if not no_map:

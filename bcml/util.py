@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from typing import Union
+from PySide2.QtGui import QIcon, QPixmap
 
 import byml
 from byml import yaml_util
@@ -23,7 +24,6 @@ import sarc
 import wszst_yaz0
 import xxhash
 import yaml
-from PySide2.QtGui import QIcon, QPixmap
 
 BcmlMod = namedtuple('BcmlMod', 'name priority path')
 CREATE_NO_WINDOW = 0x08000000
@@ -434,6 +434,13 @@ def is_actorinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
     return (path / 'logs' / 'actorinfo.yml').exists()
 
 
+def is_eventinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
+    """ Checks whether a mod affects event info merging """
+    path = mod.path if isinstance(mod, BcmlMod) else Path(
+        mod) if isinstance(mod, str) else mod
+    return (path / 'logs' / 'eventinfo.yml').exists()
+
+
 def is_map_mod(mod: Union[Path, BcmlMod, str]) -> bool:
     """ Checks whether a mod affects map merging """
     path = mod.path if isinstance(mod, BcmlMod) else Path(
@@ -563,6 +570,33 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
         return wszst_yaz0.decompress(file_bytes)
     else:
         return file_bytes
+
+
+def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False):
+    """
+    Injects a file into the master BCML `Bootup.pack`
+
+    :param file: The path of the file to inject
+    :type file: str
+    :param data: The bytes of the file to inject
+    :type data: bytes
+    :param create_bootup: Whether to create `Bootup.pack` if it does not exist, defaults to False
+    :type create_bootup: bool, optional
+    """
+    bootup_path = get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+    if bootup_path.exists() or create_bootup:
+        if not bootup_path.exists():
+            bootup_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(get_game_file('Pack/Bootup.pack'), bootup_path)
+        with bootup_path.open('rb') as b_file:
+            old_bootup = sarc.read_file_and_make_sarc(b_file)
+            new_bootup = sarc.make_writer_from_sarc(old_bootup)
+        if file in old_bootup.list_files():
+            new_bootup.delete_file(file)
+        new_bootup.add_file(file, data)
+        bootup_path.write_bytes(new_bootup.get_bytes())
+    else:
+        raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
 
 
 def get_mod_info(rules_path: Path) -> BcmlMod:

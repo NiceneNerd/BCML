@@ -327,3 +327,11 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('rb') as s_file:
                 savedata = sarc.read_sarc_and_make_writer(s_file)
             data.inject_savedata_into_bootup(savedata)
+        if (util.get_master_modpack_dir() / 'logs' / 'eventinfo.log').exists():
+            print('Injecting merged event info into Bootup.pack...')
+            util.inject_file_into_bootup(
+                'Event/EventInfo.product.sbyml',
+                wszst_yaz0.compress(
+                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes()
+                )
+            )

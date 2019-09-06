@@ -90,6 +90,9 @@ class Ui_InstallDialog(object):
         self.chkDisableActorInfo = QtWidgets.QCheckBox(self.groupBox)
         self.chkDisableActorInfo.setObjectName("chkDisableActorInfo")
         self.verticalLayout_2.addWidget(self.chkDisableActorInfo)
+        self.chkDisableEventInfo = QtWidgets.QCheckBox(self.groupBox)
+        self.chkDisableEventInfo.setObjectName("chkDisableEventInfo")
+        self.verticalLayout_2.addWidget(self.chkDisableEventInfo)
         self.chkDisableGamedata = QtWidgets.QCheckBox(self.groupBox)
         self.chkDisableGamedata.setObjectName("chkDisableGamedata")
         self.verticalLayout_2.addWidget(self.chkDisableGamedata)
@@ -134,7 +137,8 @@ class Ui_InstallDialog(object):
         self.chkRstbGuess.setText(QtWidgets.QApplication.translate(
             "InstallDialog", "Estimate complex RSTB values", None, -1))
         self.chkEnableDeepMerge.setToolTip(QtWidgets.QApplication.translate(
-            "InstallDialog", "Deep merge attempts to merge changes made to individual AAMP files. This can be a powerful tool to resolve conflicts but might cause unexpected bugs or issues. ", None, -1))
+            "InstallDialog", "Deep merge attempts to merge changes made to individual AAMP files. "
+                             "This can be a powerful tool to resolve conflicts but might cause unexpected bugs or issues. ", None, -1))
         self.chkEnableDeepMerge.setText(QtWidgets.QApplication.translate(
             "InstallDialog", "Disable deep merge", None, -1))
         self.chkRstbLeave.setText(QtWidgets.QApplication.translate(
@@ -145,6 +149,8 @@ class Ui_InstallDialog(object):
             "InstallDialog", "Don\'t merge game texts", None, -1))
         self.chkDisableActorInfo.setText(QtWidgets.QApplication.translate(
             "InstallDialog", "Don\'t merge actor info", None, -1))
+        self.chkDisableEventInfo.setText(QtWidgets.QApplication.translate(
+            "InstallDialog", "Don\'t merge event info", None, -1))
         self.chkDisableGamedata.setText(QtWidgets.QApplication.translate(
             "InstallDialog", "Don\'t merge game/save data", None, -1))
         self.chkDisableMap.setText(QtWidgets.QApplication.translate(

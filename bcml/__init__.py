@@ -266,6 +266,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 changes.append('save data')
             if util.is_actorinfo_mod(mod):
                 changes.append('actor info')
+            if util.is_eventinfo_mod(mod):
+                changes.append('event info')
             if util.is_map_mod(mod):
                 changes.append('maps')
             if util.is_deepmerge_mod(mod):
@@ -403,6 +405,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
+            fix_eventinfo = False
             fix_map = False
             fix_deepmerge = set()
             fix_texts = []
@@ -414,6 +417,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 fix_savedata = fix_savedata or util.is_savedata_mod(
                     mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
                 fix_map = fix_map or util.is_map_mod(mod)
                 for mfile in merge.get_mod_deepmerge_files(mod):
                     fix_deepmerge.add(mfile)
@@ -501,6 +505,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
+            fix_eventinfo = False
             fix_map = False
             fix_deepmerge = set()
             fix_texts = []
@@ -517,6 +522,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     fix_savedata = fix_savedata or util.is_savedata_mod(
                         mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                     fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                    fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
                     fix_map = fix_map or util.is_map_mod(mod)
                     for mfile in merge.get_mod_deepmerge_files(mod):
                         fix_deepmerge.add(mfile)
@@ -560,6 +566,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         def export(self, output: Path):
             print('Loading files...')
             tmp_dir = util.get_work_dir() / 'tmp_export'
+            if tmp_dir.drive != util.get_modpack_dir().drive:
+                tmp_dir = Path(util.get_modpack_dir().drive) / 'tmp_bcml_export'
             install.link_master_mod(tmp_dir)
             print('Adding rules.txt...')
             rules_path = tmp_dir / 'rules.txt'
@@ -665,6 +673,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             fix_gamedata = False
             fix_savedata = False
             fix_actorinfo = False
+            fix_eventinfo = False
             fix_map = False
             fix_deepmerge = set()
             fix_texts = []
@@ -676,6 +685,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 fix_savedata = fix_savedata or util.is_savedata_mod(
                     mod) or 'content\\Pack\\Bootup.pack' in fix_packs
                 fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
+                fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
                 fix_map = fix_map or util.is_map_mod(mod)
                 for mfile in merge.get_mod_deepmerge_files(mod):
                     fix_deepmerge.add(mfile)
@@ -828,6 +838,7 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
                 self.chkDisableGamedata.isChecked(),
                 self.chkDisableGamedata.isChecked(),
                 self.chkDisableActorInfo.isChecked(),
+                self.chkDisableEventInfo.isChecked(),
                 self.chkDisableMap.isChecked(),
                 not self.chkEnableDeepMerge.isChecked(),
                 self.spnInsertPriority.value()
@@ -920,6 +931,7 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
                 'no_packs': self.chkDisablePack.isChecked(),
                 'no_texts': self.chkDisableTexts.isChecked(),
                 'no_actorinfo': self.chkDisableActorInfo.isChecked(),
+                'no_eventinfo': self.chkDisableEventInfo.isChecked(),
                 'no_gamedata': self.chkDisableGamedata.isChecked(),
                 'no_map': self.chkDisableMap.isChecked(),
                 'output': output
@@ -1073,8 +1085,8 @@ class ThreadSignal(QtCore.QObject):
 
 InstallResult = namedtuple(
     'InstallResult',
-    'paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_map ' + \
-    'deep_merge insert_priority'
+    ('paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_eventinfo '
+    'no_map deep_merge insert_priority')
 )
 
 

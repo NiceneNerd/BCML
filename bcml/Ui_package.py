@@ -87,6 +87,9 @@ class Ui_PackageDialog(object):
         self.chkDisableActorInfo = QtWidgets.QCheckBox(self.groupBox_2)
         self.chkDisableActorInfo.setObjectName("chkDisableActorInfo")
         self.verticalLayout_3.addWidget(self.chkDisableActorInfo)
+        self.chkDisableEventInfo = QtWidgets.QCheckBox(self.groupBox_2)
+        self.chkDisableEventInfo.setObjectName("chkDisableEventInfo")
+        self.verticalLayout_3.addWidget(self.chkDisableEventInfo)
         self.chkDisableGamedata = QtWidgets.QCheckBox(self.groupBox_2)
         self.chkDisableGamedata.setObjectName("chkDisableGamedata")
         self.verticalLayout_3.addWidget(self.chkDisableGamedata)
@@ -125,6 +128,7 @@ class Ui_PackageDialog(object):
         self.chkDisablePack.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge pack files", None, -1))
         self.chkDisableTexts.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge game texts", None, -1))
         self.chkDisableActorInfo.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge actor info", None, -1))
+        self.chkDisableEventInfo.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge event info", None, -1))
         self.chkDisableGamedata.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge game/save data", None, -1))
         self.chkDisableMap.setText(QtWidgets.QApplication.translate("PackageDialog", "Don\'t merge map units", None, -1))
 

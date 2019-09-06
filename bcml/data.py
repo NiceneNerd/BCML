@@ -156,7 +156,7 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
 def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
     """
     Consolidates all game data in a game data SARC
-    
+
     :return: Returns a dict of all game data entries in a SARC
     :rtype: dict of str: list
     """
@@ -179,6 +179,9 @@ def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
+    """
+    Logs the changes of a certain data type made to modded gamedata
+    """
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
     diffs = {}
     for entry in mod_data[data_type]:
@@ -271,7 +274,7 @@ def merge_gamedata(verbose: bool = False):
     yaml_util.add_constructors(loader)
     print('Loading gamedata mods...')
     for mod in mods:
-        with open(mod.path / 'logs' / 'gamedata.yml') as g_file:
+        with (mod.path / 'logs' / 'gamedata.yml').open('r') as g_file:
             yml = yaml.load(g_file, Loader=loader)
             for data_type in yml:
                 if data_type not in modded_entries:
