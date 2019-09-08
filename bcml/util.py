@@ -832,3 +832,7 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
                 dct[k] = list(set(dct[k]))
         else:
             dct[k] = merge_dct[k]
+
+
+class Merger:
+    pass
