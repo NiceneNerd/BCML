@@ -425,8 +425,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     if lang not in fix_texts:
                         fix_texts.append(lang)
             if fix_packs:
-                pack.merge_installed_packs(no_injection=not (
-                    fix_gamedata or fix_savedata), only_these=list(fix_packs), even_one=True)
+                pack.merge_installed_packs(
+                    no_injection=not (fix_gamedata or fix_savedata),
+                    only_these=list(fix_packs)
+                )
             for lang in fix_texts:
                 texts.merge_texts(lang)
             if fix_map:

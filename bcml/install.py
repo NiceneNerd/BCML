@@ -961,7 +961,7 @@ def refresh_merges(verbose: bool = False):
             str(util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' /\
                 'ResourceSizeTable.product.srsizetable')
         )
-    pack.merge_installed_packs(verbose=False, even_one=True)
+    pack.merge_installed_packs(verbose=False)
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
         texts.merge_texts(lang, verbose=verbose)

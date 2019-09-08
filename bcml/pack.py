@@ -263,7 +263,7 @@ def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
 
 
 def merge_installed_packs(no_injection: bool = False, only_these: List[str] = None,
-                          verbose: bool = False, even_one: bool = False):
+                          verbose: bool = False):
     """
     Merges all modified packs in installed BCML mods
 
