@@ -24,7 +24,7 @@ from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog
 
-from bcml import data, install, merge, pack, rstable, texts, util, mubin
+from bcml import data, install, merge, pack, rstable, texts, util, mubin, events
 from bcml.Ui_about import Ui_AboutDialog
 from bcml.Ui_install import Ui_InstallDialog
 from bcml.Ui_main import Ui_MainWindow
@@ -424,23 +424,26 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 for lang in texts.get_modded_languages(mod.path):
                     if lang not in fix_texts:
                         fix_texts.append(lang)
-            rstable.generate_master_rstb()
             if fix_packs:
                 pack.merge_installed_packs(no_injection=not (
                     fix_gamedata or fix_savedata), only_these=list(fix_packs), even_one=True)
+            for lang in fix_texts:
+                texts.merge_texts(lang)
+            if fix_map:
+                mubin.merge_maps()
+            mubin.merge_dungeonstatic()
+            if fix_actorinfo:
+                data.merge_actorinfo()
             if fix_gamedata:
                 data.merge_gamedata()
             if fix_savedata:
                 data.merge_savedata()
-            if fix_actorinfo:
-                data.merge_actorinfo()
-            if fix_map:
-                mubin.merge_maps()
-            mubin.merge_dungeonstatic()
-            for lang in fix_texts:
-                texts.merge_texts(lang)
+            if fix_eventinfo:
+                events.merge_events()
             if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
+            rstable.log_merged_files_rstb()
+            rstable.generate_master_rstb()
 
         dialog = InstallDialog(self)
         if preload_mod:
@@ -457,7 +460,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def MergeRstb_Clicked(self):
-        self.PerformOperation(rstable.generate_master_rstb, title='Remerging RSTB')
+        def full_rstb():
+            rstable.log_merged_files_rstb()
+            rstable.generate_master_rstb()
+        self.PerformOperation(full_rstb, title='Remerging RSTB')
 
 
     def MergePacks_Clicked(self):
@@ -470,9 +476,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def MergeTexts_Clicked(self):
         def all_texts():
+            text_mods = set()
             for text_mod in util.get_modpack_dir().rglob('**/texts_*.yml'):
-                lang = util.get_file_language(text_mod)
-                texts.merge_texts(lang)
+                text_mods.add(util.get_file_language(text_mod))
+            for mod in text_mods:
+                texts.merge_texts(mod)
 
         self.PerformOperation(all_texts, title='Remerging Texts')
 
@@ -539,7 +547,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 rules['Definition']['fsPriority'] = str(mod[1])
                 with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
                     rules.write(rf)
-            rstable.generate_master_rstb()
             if fix_packs:
                 pack.merge_installed_packs(no_injection=not (
                     fix_gamedata or fix_savedata), only_these=list(fix_packs))
@@ -555,7 +562,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for lang in fix_texts:
                 texts.merge_texts(lang)
             if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
+            rstable.log_merged_files_rstb()
+            rstable.generate_master_rstb()
             self.LoadMods()
             install.refresh_cemu_mods()
 
@@ -694,7 +703,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         fix_texts.append(lang)
             for mod in mods:
                 install.uninstall_mod(mod, wait_merge=True)
-            rstable.generate_master_rstb()
             if fix_packs:
                 pack.merge_installed_packs(
                     no_injection=not (fix_gamedata or fix_savedata),
@@ -712,7 +720,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for lang in fix_texts:
                 texts.merge_texts(lang)
             if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge))
+                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
+            rstable.log_merged_files_rstb()
+            rstable.generate_master_rstb()
             install.refresh_cemu_mods()
 
         if self.listWidget.selectedItems():
@@ -1086,7 +1096,7 @@ class ThreadSignal(QtCore.QObject):
 InstallResult = namedtuple(
     'InstallResult',
     ('paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_eventinfo '
-    'no_map deep_merge insert_priority')
+     'no_map deep_merge insert_priority')
 )
 
 

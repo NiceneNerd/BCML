@@ -5,7 +5,6 @@
 import multiprocessing
 import os
 from copy import deepcopy
-from fnmatch import fnmatch
 from functools import partial, reduce
 from pathlib import Path
 from typing import List, Union
@@ -309,46 +308,7 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
     results = pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
     pool.close()
     pool.join()
-    #for name, fails in results:
-    #    failures.update(fails)
 
-    print('Updating RSTB...')
-    modded_files = install.find_modded_files(util.get_master_modpack_dir())[0]
-    sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(
-        file, '*Bootup_????.pack')]
-    modded_sarc_files = {}
-    if sarc_files:
-        num_threads = min(len(sarc_files), multiprocessing.cpu_count())
-        pool = multiprocessing.Pool(processes=num_threads)
-        thread_sarc_search = partial(
-            install.threaded_find_modded_sarc_files,
-            modded_files=modded_files,
-            tmp_dir=util.get_master_modpack_dir(),
-            deep_merge=False,
-            verbose=verbose
-        )
-        results = pool.map(thread_sarc_search, sarc_files)
-        pool.close()
-        pool.join()
-        for result in results:
-            modded_sarcs = result[0]
-            if modded_sarcs:
-                modded_sarc_files.update(modded_sarcs)
-    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(util.get_master_modpack_dir() / 'logs' / 'rstb.log')\
-         .open('w', encoding='utf-8') as r_file:
-        r_file.write('name,rstb\n')
-        modded_files.update(modded_sarc_files)
-        for file in modded_files:
-            ext = os.path.splitext(file)[1]
-            if ext not in install.RSTB_EXCLUDE and 'ActorInfo' not in file:
-                r_file.write('{},{},{}\n'
-                             .format(
-                                 file,
-                                 modded_files[file]["rstb"],
-                                 str(modded_files[file]["path"]).replace('\\', '/')
-                             )
-                            )
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
 
@@ -357,10 +317,3 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
         for file_type in diffs:
             for file in diffs[file_type]:
                 l_file.write(f'{file}\n')
-    # if len(failures) > 0:
-    #     with (util.get_work_dir() / 'failures.yml').open('w', encoding='utf-8') as ff:
-    #         yaml.safe_dump(failures, ff)
-    #     print(f'In {len(failures)} files, one or more patches failed to apply. For more
-    #           'information, the following log file contains the resultant contents of all of the
-    #           'files which had patch failures:\n'
-    #           f'{str(util.get_work_dir() / "failures.yml")}')

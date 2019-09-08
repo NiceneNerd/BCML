@@ -712,21 +712,21 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                         texts.merge_texts(lang, verbose=verbose)
                     except FileNotFoundError:
                         pass
+            if not no_map:
+                mubin.merge_maps()
+            if not no_actorinfo:
+                data.merge_actorinfo(verbose)
             if not no_gamedata:
                 data.merge_gamedata(verbose)
             if not no_savedata:
                 data.merge_savedata(verbose)
-            if not no_actorinfo:
-                data.merge_actorinfo(verbose)
             if not no_eventinfo:
                 events.merge_events()
-            if not no_map:
-                mubin.merge_maps()
             if deep_merge:
-                merge.deep_merge(verbose)
+                merge.deep_merge(verbose, wait_rstb=True)
             mubin.merge_dungeonstatic()
-            if not deep_merge:
-                rstable.generate_master_rstb(verbose)
+            rstable.log_merged_files_rstb()
+            rstable.generate_master_rstb(verbose)
             print()
             print(f'{mod_name} installed successfully!')
         except Exception: # pylint: disable=broad-except
@@ -785,6 +785,11 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
                 (util.get_master_modpack_dir() / 'content' /
                  'Pack' / f'Bootup_{lang}.pack').unlink()
                 texts.merge_texts(lang, verbose=verbose)
+        if map_mod:
+            mubin.merge_maps()
+        mubin.merge_dungeonstatic()
+        if actorinfo_mod:
+            data.merge_actorinfo(verbose)
         if gamedata_mod:
             (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').unlink()
             (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').unlink()
@@ -793,15 +798,12 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
             (util.get_master_modpack_dir() / 'logs' / 'savedata.log').unlink()
             (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').unlink()
             data.merge_savedata(verbose)
-        if actorinfo_mod:
-            data.merge_actorinfo(verbose)
         if eventinfo_mod:
             events.merge_events()
-        if map_mod:
-            mubin.merge_maps()
-        mubin.merge_dungeonstatic()
         if deepmerge_mods:
-            merge.deep_merge(only_these=list(deepmerge_mods))
+            merge.deep_merge(only_these=list(deepmerge_mods), wait_rstb=True)
+        rstable.log_merged_files_rstb()
+        rstable.generate_master_rstb(verbose)
     print(f'{mod_name} has been uninstalled.')
 
 
@@ -889,6 +891,20 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
                     f'Text merges for {lang} affected, remerging texts for {lang}...')
                 texts.merge_texts(lang, verbose=verbose)
                 print()
+    if remerge_map:
+        if wait_merge:
+            print('Map merges affected, will need to remerge later')
+        else:
+            print('Map merges affected, remerging map units...')
+            mubin.merge_maps()
+            print()
+    if remerge_actorinfo:
+        if wait_merge:
+            print('Actor info merges affected, will need to remerge later')
+        else:
+            print('Actor info merges affected, remerging actor info...')
+            data.merge_actorinfo(verbose)
+            print()
     if remerge_gamedata:
         if wait_merge:
             print('Gamedata merges affected, will need to remerge later')
@@ -903,26 +919,12 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
             print('Savedata merges affected, remerging savedata...')
             data.merge_savedata(verbose)
             print()
-    if remerge_actorinfo:
-        if wait_merge:
-            print('Actor info merges affected, will need to remerge later')
-        else:
-            print('Actor info merges affected, remerging actor info...')
-            data.merge_actorinfo(verbose)
-            print()
-    if remerge_actorinfo:
+    if remerge_eventinfo:
         if wait_merge:
             print('Event info merges affected, will need to remerge later')
         else:
             print('Event info merges affected, remerging event info...')
             events.merge_events()
-            print()
-    if remerge_map:
-        if wait_merge:
-            print('Map merges affected, will need to remerge later')
-        else:
-            print('Map merges affected, remerging map units...')
-            mubin.merge_maps()
             print()
     if deepmerge:
         if wait_merge:
@@ -936,9 +938,9 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
     if wait_merge:
         print('Mods resorted, will need to remerge RSTB later')
     else:
-        if not deepmerge:
-            rstable.generate_master_rstb(verbose)
-            print()
+        rstable.log_merged_files_rstb()
+        rstable.generate_master_rstb(verbose)
+        print()
     print('Finished updating mod priorities.')
 
 
@@ -963,13 +965,14 @@ def refresh_merges(verbose: bool = False):
     for bootup in util.get_master_modpack_dir().rglob('content/Pack/Bootup_*'):
         lang = util.get_file_language(bootup)
         texts.merge_texts(lang, verbose=verbose)
+    mubin.merge_dungeonstatic()
+    mubin.merge_maps(verbose)
+    data.merge_actorinfo(verbose)
+    merge.deep_merge(verbose, wait_rstb=True)
     data.merge_gamedata(verbose)
     data.merge_savedata(verbose)
-    data.merge_actorinfo(verbose)
     events.merge_events()
-    mubin.merge_maps(verbose)
-    merge.deep_merge(verbose, wait_rstb=True)
-    mubin.merge_dungeonstatic()
+    rstable.log_merged_files_rstb()
     rstable.generate_master_rstb(verbose)
 
 

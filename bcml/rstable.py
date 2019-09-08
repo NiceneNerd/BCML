@@ -3,9 +3,13 @@
 # Licensed under GPLv3+
 import csv
 import io
+import os
+import multiprocessing
 import struct
 import zlib
 from copy import deepcopy
+from functools import partial
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import List, Union
 
@@ -14,7 +18,7 @@ from rstb import ResourceSizeTable
 from rstb.util import read_rstb
 import wszst_yaz0
 
-from bcml import util
+from bcml import util, install
 from bcml.util import BcmlMod
 
 
@@ -45,6 +49,30 @@ def calculate_size(path: Path) -> int:
         )
     except struct.error:
         return 0
+
+
+def set_size(entry: str, size: int):
+    """
+    Sets the size of a resource in the current master RSTB
+
+    :param entry: The resource to set
+    :type entry: str
+    :param size: The resource size
+    :type size: int
+    """
+    rstb_path = util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' /\
+                'ResourceSizeTable.product.srsizetable'
+    if rstb_path.exists():
+        table = read_rstb(rstb_path, be=True)
+    else:
+        table = get_stock_rstb()
+        rstb_path.parent.mkdir(parents=True, exist_ok=True)
+    table.set_size(entry, size)
+    buf = io.BytesIO()
+    table.write(buf, be=True)
+    rstb_path.write_bytes(
+        wszst_yaz0.compress(buf.getvalue())
+    )
 
 
 def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
@@ -360,6 +388,40 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
         False
     ))
     return table, change_list
+
+
+def log_merged_files_rstb():
+    """ Generates an RSTB log for the master BCML modpack containing merged files """
+    print('Updating RSTB...')
+    modded_files = install.find_modded_files(util.get_master_modpack_dir())[0]
+    sarc_files = [file for file in modded_files if util.is_file_sarc(file) if 'Bootup_' not in file]
+    modded_sarc_files = {}
+    if sarc_files:
+        num_threads = min(len(sarc_files), multiprocessing.cpu_count())
+        pool = multiprocessing.Pool(processes=num_threads)
+        thread_sarc_search = partial(
+            install.threaded_find_modded_sarc_files,
+            modded_files=modded_files,
+            tmp_dir=util.get_master_modpack_dir(),
+            deep_merge=False,
+            verbose=False
+        )
+        results = pool.map(thread_sarc_search, sarc_files)
+        pool.close()
+        pool.join()
+        for result in results:
+            modded_sarcs = result[0]
+            if modded_sarcs:
+                modded_sarc_files.update(modded_sarcs)
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
+    with (util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as log:
+        log.write('name,rstb\n')
+        modded_files.update(modded_sarc_files)
+        for file in modded_files:
+            ext = os.path.splitext(file)[1]
+            if ext not in install.RSTB_EXCLUDE and 'ActorInfo' not in file:
+                path = str(modded_files[file]["path"]).replace('\\', '/')
+                log.write(f'{file},{modded_files[file]["rstb"]},{path}\n')
 
 
 def generate_master_rstb(verbose: bool = False):

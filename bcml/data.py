@@ -22,7 +22,7 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import util
+from bcml import util, rstable
 from bcml.util import BcmlMod
 
 
@@ -331,18 +331,8 @@ def merge_gamedata(verbose: bool = False):
     with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as g_file:
         new_gamedata.write(g_file)
 
-    print('Correcting RSTB if necessary...')
-    rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
-                                         'ResourceSizeTable.product.srsizetable'
-    table = rstb.util.read_rstb(str(rstb_path), True)
-    if table.is_in_table('GameData/gamedata.sarc'):
-        old_size = table.get_size('GameData/gamedata.sarc')
-        if bootup_rstb > old_size:
-            table.set_size('GameData/gamedata.sarc', bootup_rstb)
-            if verbose:
-                print('  Updated RSTB entry for "GameData/gamedata.sarc"'
-                      f'from {old_size} bytes to {bootup_rstb} bytes')
-        rstb.util.write_rstb(table, str(rstb_path), True)
+    print('Updating RSTB...')
+    rstable.set_size('GameData/gamedata.sarc', bootup_rstb)
 
     glog_path.parent.mkdir(parents=True, exist_ok=True)
     with glog_path.open('w', encoding='utf-8') as l_file:
@@ -435,18 +425,8 @@ def merge_savedata(verbose: bool = False):
     with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as s_file:
         new_savedata.write(s_file)
 
-    print('Correcting RSTB if necessary...')
-    rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' / \
-                                         'ResourceSizeTable.product.srsizetable'
-    table = rstb.util.read_rstb(str(rstb_path), True)
-    if table.is_in_table('GameData/savedataformat.sarc'):
-        old_size = table.get_size('GameData/savedataformat.sarc')
-        if bootup_rstb > old_size:
-            table.set_size('GameData/savedataformat.sarc', bootup_rstb)
-            if verbose:
-                print('  Updated RSTB entry for "GameData/savedataformat.sarc"'
-                      f'from {old_size} bytes to {bootup_rstb} bytes')
-        rstb.util.write_rstb(table, str(rstb_path), True)
+    print('Updating RSTB...')
+    rstable.set_size('GameData/savedataformat.sarc', bootup_rstb)
 
     slog_path.parent.mkdir(parents=True, exist_ok=True)
     with slog_path.open('w', encoding='utf-8') as l_file:

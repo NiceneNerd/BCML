@@ -293,7 +293,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
-    num_req = 1 if not even_one else 0
+    num_req = 0
     sarcs_to_merge = [
         pack for pack in modded_sarcs if len(modded_sarcs[pack]) > num_req]
     if only_these is not None:

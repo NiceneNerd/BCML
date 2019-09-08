@@ -5,8 +5,9 @@ from copy import deepcopy
 import yaml
 import byml
 from byml import yaml_util
+import rstb
 import wszst_yaz0
-from bcml import util
+from bcml import util, rstable
 
 
 def get_stock_eventinfo() -> {}:
@@ -100,3 +101,7 @@ def merge_events():
     print('Saving event info merge log...')
     event_merge_log.write_text(event_mod_hash)
     merged_events.write_bytes(event_bytes)
+    
+    print('Updating RSTB...')
+    rstb_size = rstb.SizeCalculator().calculate_file_size_with_ext(event_bytes, True, '.byml')
+    rstable.set_size('Event/EventInfo.product.byml', rstb_size)
