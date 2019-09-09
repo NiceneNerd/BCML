@@ -835,4 +835,29 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
 
 
 class Merger:
-    pass
+    """
+    An abstract base class that represents a collection of merging functions for BCML. It can
+    be subclassed to represent a single kind of merge, e.g. merging packs, game data, maps, etc.
+    """
+    name: str
+    friendly_name: str
+    description: str
+    log_name: str
+
+    def generate_diff(self, **args):
+        """ Detects changes made to a modded file or files from the base game """
+
+    def log_diff(self, **args):
+        """ Saves generated diffs to a log file """
+
+    def load_diffs(self, **args):
+        """ Loads the installed diffs for this merge from all installed mods """
+
+    def consolidate_diffs(self, **args):
+        """ Combines and orders a collection of diffs into a single set of patches """
+
+    def perform_merge(self, **args):
+        """ Applies one or more patches to the current mod installation """
+
+    def get_checkbox_options(self) -> (str, str):
+        """ Gets the options for this merge as a tuple of internal name and UI description """
