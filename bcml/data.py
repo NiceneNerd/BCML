@@ -484,8 +484,8 @@ def get_modded_actors(actorinfo: dict) -> dict:
 
 def get_actorinfo_mods() -> List[BcmlMod]:
     """ Gets a list of all installed mods that modify ActorInfo.product.sbyml """
-    actor_mods = [util.get_mod_info(a_log.parent.parent / 'rules.txt')
-                  for a_log in util.get_modpack_dir().rglob('logs/actorinfo.yml')]
+    actor_mods = [mod for mod in util.get_installed_mods()\
+                  if (mod.path / 'logs' / 'actorinfo.yml').exists()]
     return sorted(actor_mods, key=lambda mod: mod.priority)
 
 

@@ -371,7 +371,7 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False
     if is_text_mod:
         for lang in text_mods:
             with Path(tmp_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
-                yaml.dump(text_mods[lang][0], t_file)
+                yaml.dump(text_mods[lang][0], t_file, allow_unicode=True)
             text_sarc = text_mods[lang][1]
             if text_sarc is not None:
                 with Path(tmp_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
@@ -717,7 +717,10 @@ def install_mod(mod: Path, verbose: bool = False, no_packs: bool = False, no_tex
                                       f'{traceback.format_exc(limit=-3)}\n\n'
                                       f'To protect your mod setup, BCML will remove {mod_name} '
                                       'and remerge.')
-            uninstall_mod(mod_dir)
+            try:
+                uninstall_mod(mod_dir)
+            except FileNotFoundError:
+                pass
             raise clean_error
     return output_mod
 
