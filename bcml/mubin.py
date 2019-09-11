@@ -219,7 +219,6 @@ def get_all_map_diffs() -> dict:
         for mod in mods:
             for hash_id, actor in mod['mod'].items():
                 c_diffs[file]['mod'][hash_id] = deepcopy(actor)
-        mods.reverse()
         add_hashes = []
         for mod in reversed(mods):
             for actor in mod['add']:
