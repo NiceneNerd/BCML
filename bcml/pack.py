@@ -13,7 +13,7 @@ import sarc
 import wszst_yaz0
 import xxhash
 
-from bcml import data, util
+from bcml import data, util, mergers
 from bcml.util import BcmlMod
 
 
@@ -335,3 +335,47 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
                     (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes()
                 )
             )
+
+class PackMerger(mergers.Merger):
+    """ A merger for modified pack files """
+    NAME: str = 'packs'
+
+    def __init__(self):
+        super().__init__('SARC pack merger', 'Merges modified files within SARCs', 'pack.log', {})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        packs = {}
+        for file in [file for file in modded_files if isinstance(file, Path)]:
+            canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
+            if canon:
+                packs[canon] = file.relative_to(mod_dir).as_posix()
+        return packs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+            log.write('name,path\n')
+            for canon, path in diff_material.items():
+                log.write(f'{canon},{path}\n')
+
+    def get_mod_diff(self, mod: util.BcmlMod):
+        return get_modded_packs_in_mod(mod)
+
+    def get_all_diffs(self):
+        diffs = {}
+        for mod in util.get_installed_mods():
+            diffs[mod] = get_modded_packs_in_mod(mod)
+        return diffs
+
+    def consolidate_diffs(self, diffs):
+        raise NotImplementedError('Consolidation is unnecessary for pack merging.')
+
+    def perform_merge(self):
+        if 'only_these' not in self._options:
+            merge_installed_packs(no_injection=False)
+        else:
+            merge_installed_packs(no_injection=False, only_these=self._options['only_these'])
+
+    def get_checkbox_options(self):
+        return []

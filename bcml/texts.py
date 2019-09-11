@@ -18,7 +18,7 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import util, rstable
+from bcml import util, rstable, mergers
 from bcml.util import BcmlMod
 
 EXCLUDE_TEXTS = [
@@ -504,3 +504,39 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
         table.delete_entry(msg_path)
     rstb_path.parent.mkdir(parents=True, exist_ok=True)
     rstb.util.write_rstb(table, str(rstb_path), True)
+
+class TextsMerger(mergers.Merger):
+    """ A merger for game texts """
+    NAME: str = 'texts'
+
+    def __init__(self):
+        super().__init__('texts merge', 'Merges changes to game texts',
+                         '', options={})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        lang_diffs = {}
+        for file in [file for file in modded_files if file.is_file() and\
+                     file.name.startswith('Bootup_') and file.name != 'Bootup_Graphics']:
+            lang = util.get_file_language(file)
+            if lang not in lang_diffs:
+                modded_entries, new_texts, lang = get_text_mods_from_bootup(file)
+                if lang.endswith('en'):
+                    lang_diffs['USen'] = (modded_entries, new_texts)
+                    lang_diffs['EUen'] = (modded_entries, new_texts)
+        return lang_diffs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List[Path]):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        for lang in diff_material:
+            with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
+                yaml.dump(diff_material[lang][0], t_file)
+            text_sarc = diff_material[lang][1]
+            if text_sarc is not None:
+                with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
+                    text_sarc.write(s_file)
+
+    def is_mod_logged(self, mod: BcmlMod):
+        return bool(
+            (mod.path / 'logs').glob('*texts*')
+        )

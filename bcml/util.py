@@ -15,7 +15,7 @@ from collections import namedtuple
 from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 from PySide2.QtGui import QIcon, QPixmap
 
 import byml
@@ -267,7 +267,10 @@ def get_aoc_dir() -> Path:
 
 def get_modpack_dir() -> Path:
     """ Gets the Cemu graphic pack directory for mods """
-    return get_cemu_dir() / 'graphicPacks' / 'BCML'
+    if 'Beta' not in get_bcml_version():
+        return get_cemu_dir() / 'graphicPacks' / 'BCML'
+    else:
+        return get_cemu_dir() / 'graphicPacks' / 'BCML_beta'
 
 
 def get_util_dirs() -> tuple:
@@ -832,32 +835,3 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
                 dct[k] = list(set(dct[k]))
         else:
             dct[k] = merge_dct[k]
-
-
-class Merger:
-    """
-    An abstract base class that represents a collection of merging functions for BCML. It can
-    be subclassed to represent a single kind of merge, e.g. merging packs, game data, maps, etc.
-    """
-    name: str
-    friendly_name: str
-    description: str
-    log_name: str
-
-    def generate_diff(self, **args):
-        """ Detects changes made to a modded file or files from the base game """
-
-    def log_diff(self, **args):
-        """ Saves generated diffs to a log file """
-
-    def load_diffs(self, **args):
-        """ Loads the installed diffs for this merge from all installed mods """
-
-    def consolidate_diffs(self, **args):
-        """ Combines and orders a collection of diffs into a single set of patches """
-
-    def perform_merge(self, **args):
-        """ Applies one or more patches to the current mod installation """
-
-    def get_checkbox_options(self) -> (str, str):
-        """ Gets the options for this merge as a tuple of internal name and UI description """

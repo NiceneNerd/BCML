@@ -24,11 +24,8 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import pack, texts, util, data, merge, rstable, mubin, events
+from bcml import pack, texts, util, data, merge, rstable, mubin, events, mergers
 from bcml.util import BcmlMod
-
-RSTB_EXCLUDE = ['.pack', '.bgdata', '.txt', '.bgsvdata', '.yml',
-                '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
 
 
 def open_mod(path: Path) -> Path:
@@ -85,8 +82,7 @@ def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
         return (file_info[0], None)
 
 
-def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = False,
-                      guess: bool = False) -> (dict, list, dict):
+def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, str]]:
     """
     Detects all of the modified files in an extracted mod
 
@@ -100,72 +96,61 @@ def find_modded_files(tmp_dir: Path, deep_merge: bool = False, verbose: bool = F
     and (if deep merge) diffs of modded BYML and AAMP files
     :rtype: (dict of class:`pathlib.Path`: int, list of str, dict of str: str)
     """
-    modded_files = {}
-    log = []
-    aamp_diffs = {}
-    aamps_to_diff = []
-    rstb_path: Path = tmp_dir / 'content' / 'System' / \
-        'Resource' / 'ResourceSizeTable.product.srsizetable'
+    modded_files = []
+    if isinstance(tmp_dir, str):
+        tmp_dir = Path(tmp_dir)
+    rstb_path = tmp_dir / 'content' / 'System' / 'Resource' /\
+                'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
         rstb_path.unlink()
+
     aoc_field = tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         with aoc_field.open('rb') as a_file:
             sarc.read_file_and_make_sarc(a_file).extract_to_dir(str(tmp_dir / 'aoc' / '0010'))
         aoc_field.write_bytes(b'')
+
     for file in tmp_dir.rglob('**/*'):
         if file.is_file():
             canon = util.get_canon_name(file.relative_to(tmp_dir).as_posix())
             if canon is None:
                 if verbose:
-                    log.append(
-                        f'Ignored unknown file {file.relative_to(tmp_dir).as_posix()}')
+                    print(f'Ignored unknown file {file.relative_to(tmp_dir).as_posix()}')
                 continue
             if util.is_file_modded(canon, file, True):
-                size = rstable.calculate_size(file)
-                if size == 0 and guess:
-                    if file.suffix in util.AAMP_EXTS:
-                        size = rstable.guess_aamp_size(file)
-                    elif file.suffix in ['.bfres', '.sbfres']:
-                        size = rstable.guess_bfres_size(file)
-                modded_files[canon] = {
-                    'path': file.relative_to(tmp_dir),
-                    'rstb': size,
-                    'nested': False
-                }
+                modded_files.append(file)
                 if verbose:
-                    log.append(f'Found modded file {canon}')
-                if canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                    try:
-                        aamps_to_diff.append(
-                            (file.relative_to(tmp_dir).as_posix(),
-                             file)
-                        )
-                    except FileNotFoundError:
-                        pass
+                    print(f'Found modded file {canon}')
             else:
                 if 'Aoc/0010/Map/MainField' in canon:
                     file.unlink()
                 if verbose:
-                    log.append(f'Ignored unmodded file {canon}')
+                    print(f'Ignored unmodded file {canon}')
                 continue
-    if aamps_to_diff:
-        pool = Pool()
-        aamp_thread_partial = partial(threaded_aamp_diffs, tmp_dir=tmp_dir)
-        aamp_results = pool.map(aamp_thread_partial, aamps_to_diff)
+    total = len(modded_files)
+    print(f'Found {total} modified file{"s" if total > 1 else ""}')
+
+    total = 0
+    sarc_files = [file for file in modded_files if file.suffix in util.SARC_EXTS]
+    if sarc_files:
+        print(f'Scanning files packed in SARCs...')
+        num_threads = min(len(sarc_files), cpu_count() - 1)
+        pool = Pool(processes=num_threads)
+        modded_sarc_files = pool.map(
+            partial(find_modded_sarc_files, tmp_dir=tmp_dir, verbose=verbose),
+            sarc_files
+        )
         pool.close()
         pool.join()
-        for file, diff in aamp_results:
-            if diff:
-                aamp_diffs[file] = diff
-    total = len(modded_files)
-    log.append(f'Found {total} modified file{"s" if total > 1 else ""}')
-    return modded_files, log, aamp_diffs
+        for files in modded_sarc_files:
+            total += len(files)
+            modded_files.extend(files)
+        print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
+    return modded_files
 
 
-def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: bool = False,
-                           nest_level: int = 0, deep_merge: bool = False, guess: bool = False,
-                           verbose: bool = False) -> (dict, list):
+def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name: str = '',
+                           aoc: bool = False, verbose: bool = False) -> List[str]:
     """
     Detects all of the modified files in a SARC
 
@@ -184,286 +169,64 @@ def find_modded_sarc_files(mod_sarc: sarc.SARC, name: str, tmp_dir: Path, aoc: b
     :param verbose: Specifies whether to return more detailed output
     :type verbose: bool, optional
     """
-    modded_files = {}
-    log = []
-    aamp_diffs = {}
-    indent = '  ' * (nest_level + 1)
+    if isinstance(mod_sarc, Path):
+        if any(mod_sarc.name.startswith(exclude) for exclude in ['Bootup_']):
+            return []
+        name = str(mod_sarc.relative_to(tmp_dir))
+        aoc = 'aoc' in mod_sarc.parts or 'Aoc' in mod_sarc.parts
+        with mod_sarc.open('rb') as s_file:
+            mod_sarc = sarc.read_file_and_make_sarc(s_file)
+        if not mod_sarc:
+            return []
+    modded_files = []
     for file in mod_sarc.list_files():
         canon = file.replace('.s', '.')
         if aoc:
             canon = 'Aoc/0010/' + canon
-        ext = os.path.splitext(file)[1]
         contents = mod_sarc.get_file_data(file).tobytes()
         contents = util.unyaz_if_needed(contents)
+        nest_path = str(name).replace('\\', '/') + '//' + file
         if util.is_file_modded(canon, contents, True):
-            rstbsize = rstb.SizeCalculator().calculate_file_size_with_ext(contents, True, ext)
-            if rstbsize == 0 and guess:
-                if ext in util.AAMP_EXTS:
-                    rstbsize = rstable.guess_aamp_size(contents, ext)
-                elif ext in ['.bfres', '.sbfres']:
-                    rstbsize = rstable.guess_bfres_size(
-                        contents, Path(canon).name)
-            modded_files[canon] = {
-                'path': str(name).replace('\\', '/') + '//' + file,
-                'rstb': rstbsize,
-                'nested': True
-            }
+            modded_files.append(
+                nest_path
+            )
             if verbose:
-                log.append(
-                    f'{indent}Found modded file {canon} in {str(name).replace("//", "/")}')
-            if util.is_file_sarc(canon):
+                print(f'Found modded file {canon} in {str(name).replace("//", "/")}')
+            if util.is_file_sarc(canon) and '.ssarc' not in file:
                 try:
                     nest_sarc = sarc.SARC(contents)
                 except ValueError:
                     continue
-                sub_mod_files,\
-                sub_mod_log,\
-                sub_mod_diffs = find_modded_sarc_files(nest_sarc,
-                                                       modded_files[canon]['path'],
-                                                       tmp_dir=tmp_dir,
-                                                       nest_level=nest_level + 1, aoc=aoc,
-                                                       verbose=verbose, guess=guess,
-                                                       deep_merge=deep_merge)
-                modded_files.update(sub_mod_files)
-                aamp_diffs.update(sub_mod_diffs)
-                log.extend(sub_mod_log)
-            elif canon in util.get_hash_table() and deep_merge and util.is_file_aamp(str(file)):
-                path = tmp_dir.as_posix() + '/' + modded_files[canon]['path']
-                try:
-                    aamp_diffs[modded_files[canon]['path']
-                               ] = merge.get_aamp_diff(path, tmp_dir)
-                except (FileNotFoundError, KeyError, ValueError):
-                    pass
+                sub_mod_files = find_modded_sarc_files(
+                    nest_sarc,
+                    name=nest_path,
+                    tmp_dir=tmp_dir,
+                    aoc=aoc,
+                    verbose=verbose
+                )
+                modded_files.extend(sub_mod_files)
         else:
             if verbose:
-                log.append(
-                    f'{indent}Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
-    return modded_files, log, aamp_diffs
+                print(f'Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
+    return modded_files
 
 
-def generate_logs(tmp_dir: Path, verbose: bool = False, leave_rstb: bool = False,
-                  shrink_rstb: bool = False, guess: bool = False, no_packs=True,
-                  no_texts: bool = False, no_gamedata: bool = False, no_savedata: bool = False,
-                  no_actorinfo: bool = False, no_eventinfo: bool = False, no_map: bool = False,
-                  deep_merge: bool = True):
+def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None):
     """Analyzes a mod and generates BCML log files containing its changes"""
+    if isinstance(tmp_dir, str):
+        tmp_dir = Path(tmp_dir)
+
     print('Scanning for modified files...')
-    modded_files, rstb_changes, aamp_diffs = find_modded_files(
-        tmp_dir, verbose=verbose, deep_merge=deep_merge, guess=guess)
-    if rstb_changes:
-        print('\n'.join(rstb_changes))
-
-    modded_sarc_files = {}
-    is_text_mod = False
-    bootup_paths = []
-    print('Scanning modified pack files...')
-    for file in modded_files:
-        if fnmatch(file, '*Bootup_????.pack') and not no_texts:
-            is_text_mod = True
-            bootup_paths.append(modded_files[file]['path'])
-            continue
-    sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(
-        file, '*Bootup_????.pack')]
-    if sarc_files:
-        num_threads = min(len(sarc_files), cpu_count())
-        pool = Pool(processes=num_threads)
-        thread_sarc_search = partial(threaded_find_modded_sarc_files, modded_files=modded_files,
-                                     tmp_dir=tmp_dir, deep_merge=deep_merge, verbose=verbose,
-                                     guess=guess)
-        results = pool.map(thread_sarc_search, sarc_files)
-        pool.close()
-        pool.join()
-        for result in results:
-            modded_sarcs, sarc_changes, nested_diffs = result
-            if modded_sarcs:
-                modded_sarc_files.update(modded_sarcs)
-                if deep_merge:
-                    aamp_diffs.update(nested_diffs)
-                if sarc_changes:
-                    print('\n'.join(sarc_changes))
-        mod_sarc_count = len(sarc_files)
-        print(
-            f'Found {len(sarc_files)} modded pack file{"s" if mod_sarc_count != 1 else ""}')
-
+    modded_files = find_modded_files(tmp_dir, verbose=verbose)
     if not modded_files:
-        raise Exception('No modified files were found. Very unusual.')
-    no_packs = no_packs or len(sarc_files) == 0
+        raise RuntimeError('No modified files were found. Very unusual.')
 
-    text_mods = {}
-    if is_text_mod:
-        print('Text modifications detected, analyzing...')
-        for bootup_path in bootup_paths:
-            try:
-                util.get_game_file(bootup_path.relative_to('content').as_posix())
-            except FileNotFoundError:
-                continue
-            tmp_text = util.get_work_dir() / 'tmp_text'
-            modded_texts, added_text_store, lang = texts.get_text_mods_from_bootup(
-                str(tmp_dir / bootup_path), tmp_text, verbose)
-            text_mods[lang] = (modded_texts, added_text_store)
-
-    modded_actors = {}
-    if 'Actor/ActorInfo.product.byml' in modded_files and not no_actorinfo:
-        print('Actor info modified, analyzing...')
-        with (tmp_dir / 'content/Actor/ActorInfo.product.sbyml').open('rb') as a_file:
-            actorinfo = byml.Byml(wszst_yaz0.decompress(a_file.read())).parse()
-        modded_actors = data.get_modded_actors(actorinfo)
-    else:
-        no_actorinfo = True
-
-    modded_events = {}
-    if 'Event/EventInfo.product.byml' in modded_sarc_files and not no_eventinfo:
-        print('Event info modified, analyzng...')
-        event_info = byml.Byml(util.get_nested_file_bytes(
-            str(tmp_dir / 'content' / 'Pack' / 'Bootup.pack') + '//Event/EventInfo.product.sbyml',
-            unyaz=True
-        )).parse()
-        modded_events = events.get_modded_events(event_info)
-    else:
-        no_eventinfo = True
-
-    modded_bgentries = {}
-    if 'GameData/gamedata.sarc' in modded_sarc_files and not no_gamedata:
-        print('Game data modified, analyzing...')
-        with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as b_file:
-            bootup = sarc.read_file_and_make_sarc(b_file)
-        gamedata = sarc.SARC(wszst_yaz0.decompress(
-            bootup.get_file_data('GameData/gamedata.ssarc')))
-        del bootup
-        modded_bgentries = data.get_modded_gamedata_entries(gamedata)
-    else:
-        no_gamedata = True
-
-    modded_bgsventries = []
-    if 'GameData/savedataformat.sarc' in modded_sarc_files and not no_savedata:
-        print('Save data modified, analyzing...')
-        with (tmp_dir / modded_files['Pack/Bootup.pack']['path']).open('rb') as b_file:
-            bootup = sarc.read_file_and_make_sarc(b_file)
-        savedata = sarc.SARC(wszst_yaz0.decompress(
-            bootup.get_file_data('GameData/savedataformat.ssarc')))
-        del bootup
-        if data.is_savedata_modded(savedata):
-            modded_bgsventries.extend(
-                data.get_modded_savedata_entries(savedata))
-    else:
-        no_savedata = True
-
-    modded_mubins = [str(file['path']) for canon, file in modded_files.items(
-    ) if fnmatch(Path(canon).name, '[A-Z]-[0-9]_*.mubin')]
-    no_map = no_map or len(modded_mubins) == 0
-    if not no_map:
-        mubin.log_modded_maps(tmp_dir, modded_mubins)
-
-    dstatic_diff = None
-    if (tmp_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin').exists():
-        dstatic_diff = mubin.get_dungeonstatic_diff(
-            tmp_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin')
-
-    if deep_merge:
-        deep_merge = bool(aamp_diffs)
-
-    print('Saving logs...')
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(tmp_dir / 'logs' / 'rstb.log').open('w', encoding='utf-8') as r_file:
-        r_file.write('name,rstb,path\n')
-        modded_files.update(modded_sarc_files)
-        for file in modded_files:
-            ext = os.path.splitext(file)[1]
-            if ext not in RSTB_EXCLUDE and 'ActorInfo' not in file:
-                r_file.write('{},{},{}\n'.format(file, modded_files[file]["rstb"], str(
-                    modded_files[file]["path"]).replace('\\', '/')))
-    if not no_packs:
-        with Path(tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
-            p_file.write('name,path\n')
-            for file in modded_files:
-                name, ext = os.path.splitext(file)
-                if ext in util.SARC_EXTS and not modded_files[file]['nested'] \
-                   and not name.startswith('Dungeon'):
-                    p_file.write(f'{file},{modded_files[file]["path"]}\n')
-    if is_text_mod:
-        for lang in text_mods:
-            with Path(tmp_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
-                yaml.dump(text_mods[lang][0], t_file, allow_unicode=True)
-            text_sarc = text_mods[lang][1]
-            if text_sarc is not None:
-                with Path(tmp_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
-                    text_sarc.write(s_file)
-        if 'USen' in text_mods and 'EUen' not in text_mods:
-            if (tmp_dir / 'logs' / f'texts_USen.yml').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'texts_USen.yml'),
-                    str(tmp_dir / 'logs' / f'texts_EUen.yml')
-                )
-            if (tmp_dir / 'logs' / f'newtexts_USen.sarc').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc'),
-                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc')
-                )
-            text_mods['EUen'] = text_mods['USen']
-        elif 'EUen' in text_mods and 'USen' not in text_mods:
-            if (tmp_dir / 'logs' / f'texts_EUen.yml').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'texts_EUen.yml'),
-                    str(tmp_dir / 'logs' / f'texts_USen.yml')
-                )
-            if (tmp_dir / 'logs' / f'newtexts_EUen.sarc').exists():
-                shutil.copy(
-                    str(tmp_dir / 'logs' / f'newtexts_EUen.sarc'),
-                    str(tmp_dir / 'logs' / f'newtexts_USen.sarc')
-                )
-                text_mods['USen'] = text_mods['EUen']
-    dumper = yaml.CDumper
-    yaml_util.add_representers(dumper)
-    aamp.yaml_util.register_representers(dumper)
-    dumper.__aamp_reader = None # pylint: disable=protected-access
-    aamp.yaml_util._get_pstruct_name = lambda reader, idx, k, parent_crc32: k # pylint: disable=protected-access
-    if not no_gamedata:
-        with (tmp_dir / 'logs' / 'gamedata.yml').open('w', encoding='utf-8') as g_file:
-            yaml.dump(modded_bgentries, g_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-    if not no_savedata:
-        with (tmp_dir / 'logs' / 'savedata.yml').open('w', encoding='utf-8') as s_file:
-            yaml.dump(modded_bgsventries, s_file, Dumper=dumper, allow_unicode=True,
-                      encoding='utf-8', default_flow_style=None)
-    if not no_actorinfo:
-        with (tmp_dir / 'logs' / 'actorinfo.yml').open('w', encoding='utf-8') as a_file:
-            yaml.dump(modded_actors, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-
-    if not no_eventinfo:
-        with (tmp_dir / 'logs' / 'eventinfo.yml').open('w', encoding='utf-8') as a_file:
-            yaml.dump(modded_events, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-
-    if deep_merge:
-        with (tmp_dir / 'logs' / 'deepmerge.yml').open('w', encoding='utf-8') as d_file:
-            yaml.dump(aamp_diffs, d_file, Dumper=dumper, allow_unicode=True,
-                      encoding='utf-8', default_flow_style=None)
-    if dstatic_diff:
-        with (tmp_dir / 'logs' / 'dstatic.yml').open('w', encoding='utf-8') as a_file:
-            yaml.dump(dstatic_diff, a_file, Dumper=dumper, allow_unicode=True, encoding='utf-8',
-                      default_flow_style=None)
-    if leave_rstb:
-        Path(tmp_dir / 'logs' / '.leave').open('w', encoding='utf-8').close()
-    if shrink_rstb:
-        Path(tmp_dir / 'logs' / '.shrink').open('w', encoding='utf-8').close()
-
-    return is_text_mod, text_mods, no_texts, no_packs, no_gamedata, no_savedata, no_actorinfo, \
-           no_eventinfo, deep_merge, no_map, modded_files
-
-
-def threaded_find_modded_sarc_files(file: str, modded_files: dict, tmp_dir: Path, deep_merge: bool,
-                                    verbose: bool, guess: bool = False):
-    """Interface for multiprocessing `find_modded_sarc_files()`"""
-    with Path(tmp_dir / modded_files[file]['path']).open('rb') as s_file:
-        mod_sarc = sarc.read_file_and_make_sarc(s_file)
-    if not mod_sarc:
-        print(f'Skipped broken pack {file}')
-        return {}, [], {}
-    return find_modded_sarc_files(mod_sarc, modded_files[file]['path'],
-                                  tmp_dir=tmp_dir,
-                                  aoc=('aoc' in file.lower()),
-                                  verbose=verbose, deep_merge=deep_merge, guess=guess)
+    for merger_class in mergers.get_mergers():
+        merger = merger_class()
+        if options is not None and merger.NAME in options:
+            merger.set_options(options[merger.NAME])
+        merger.log_diff(tmp_dir, modded_files)
 
 
 def refresh_cemu_mods():
