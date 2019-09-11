@@ -38,6 +38,7 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
     """
     if not hasattr(get_msbt_hashes, 'texthashes'):
         get_msbt_hashes.texthashes = {}
+    if lang not in get_msbt_hashes.texthashes:
         hash_table = util.get_exec_dir() / 'data' / 'msyt' / \
             f'Msg_{lang}_hashes.csv'
         if hash_table.exists():
