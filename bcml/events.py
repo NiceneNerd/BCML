@@ -2,12 +2,15 @@
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 from copy import deepcopy
+from pathlib import Path
+from typing import List, Union
 import yaml
 import byml
 from byml import yaml_util
 import rstb
+import sarc
 import wszst_yaz0
-from bcml import util, rstable
+from bcml import util, rstable, mergers
 
 
 def get_stock_eventinfo() -> {}:
@@ -101,7 +104,65 @@ def merge_events():
     print('Saving event info merge log...')
     event_merge_log.write_text(event_mod_hash)
     merged_events.write_bytes(event_bytes)
-    
+
     print('Updating RSTB...')
     rstb_size = rstb.SizeCalculator().calculate_file_size_with_ext(event_bytes, True, '.byml')
     rstable.set_size('Event/EventInfo.product.byml', rstb_size)
+
+
+class EventInfoMerger(mergers.Merger):
+    NAME: str = 'eventinfo'
+
+    def __init__(self):
+        super().__init__('event info merge', 'Merges changes to EventInfo.product.byml',
+                         'eventinfo.yml', options={})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        if 'content/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
+            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            event_info = byml.Byml(
+                wszst_yaz0.decompress(
+                    bootup_sarc.get_file_data('Event/EventInfo.product.sbyml').tobytes()
+                )
+            ).parse()
+            return get_modded_events(event_info)
+        else:
+            return {}
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: util.BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+            
+    def get_all_diffs(self):
+        diffs = []
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            all_diffs.update(diff)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_events()
+
+    def get_checkbox_options(self):
+        return []

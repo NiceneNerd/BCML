@@ -105,7 +105,8 @@ def get_settings() -> {}:
                 'game_dir': '',
                 'load_reverse': False,
                 'mlc_dir': '',
-                'site_meta': ''
+                'site_meta': '',
+                'dark_theme': False
             }
             with settings_path.open('w', encoding='utf-8') as s_file:
                 settings.write(s_file)
@@ -117,6 +118,8 @@ def get_settings() -> {}:
 
 def get_settings_bool(setting: str) -> bool:
     """Gets the value of a boolean setting"""
+    if not setting in get_settings():
+        return False
     return get_settings()[setting] == 'True'
 
 
@@ -799,14 +802,14 @@ def update_bcml():
 def create_bcml_graphicpack_if_needed():
     """Creates the BCML master modpack if it doesn't exist"""
     bcml_mod_dir = get_modpack_dir() / '9999_BCML'
-    bcml_mod_dir.mkdir(parents=True, exist_ok=True)
+    (bcml_mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / 'rules.txt'
     if not rules.exists():
         with rules.open('w', encoding='utf-8') as r_file:
             r_file.write('[Definition]\n'
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'
-                         'path = ι BCML: DON\'T TOUCH/Master BCML\n'
+                         'path = {BCML: DON\'T TOUCH}/Master BCML\n'
                          'description = Auto-generated pack which merges RSTB changes and packs '
                          'for other mods\n'
                          'version = 4\n'

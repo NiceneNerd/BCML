@@ -357,6 +357,8 @@ def get_modded_text_entries(lang: str = 'USen') -> List[dict]:
 
 def get_modded_languages(mod: Path) -> []:
     """ Gets all languages with modded texts for a given mod """
+    if isinstance(mod, BcmlMod):
+        mod = mod.path
     text_langs = []
     for text_lang in (mod / 'logs').glob('*text*'):
         lang = util.get_file_language(text_lang)
@@ -417,7 +419,7 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
             merge_count += 1
 
     with msyt.open('w', encoding='utf-8') as f_ref:
-        yaml.dump(merged_text, f_ref)
+        yaml.dump(merged_text, f_ref, allow_unicode=True)
     return merge_count, rel_path
 
 
@@ -515,22 +517,25 @@ class TextsMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         lang_diffs = {}
-        for file in [file for file in modded_files if file.is_file() and\
+        for file in [file for file in modded_files if isinstance(file, Path) and file.is_file() and\
                      file.name.startswith('Bootup_') and file.name != 'Bootup_Graphics']:
             lang = util.get_file_language(file)
             if lang not in lang_diffs:
-                modded_entries, new_texts, lang = get_text_mods_from_bootup(file)
+                try:
+                    modded_entries, new_texts, lang = get_text_mods_from_bootup(file)
+                except FileNotFoundError:
+                    continue
                 if lang.endswith('en'):
                     lang_diffs['USen'] = (modded_entries, new_texts)
                     lang_diffs['EUen'] = (modded_entries, new_texts)
         return lang_diffs
 
     def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
-        if isinstance(diff_material, List[Path]):
+        if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         for lang in diff_material:
             with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
-                yaml.dump(diff_material[lang][0], t_file)
+                yaml.dump(diff_material[lang][0], t_file, allow_unicode=True)
             text_sarc = diff_material[lang][1]
             if text_sarc is not None:
                 with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
@@ -538,5 +543,60 @@ class TextsMerger(mergers.Merger):
 
     def is_mod_logged(self, mod: BcmlMod):
         return bool(
-            (mod.path / 'logs').glob('*texts*')
+            list((mod.path / 'logs').glob('*texts*'))
         )
+
+    def get_mod_diff(self, mod: BcmlMod):
+        diff = {}
+        for file in (mod.path / 'logs').glob('texts_*.yml'):
+            lang = util.get_file_language(file)
+            if not lang in diff:
+                diff[lang] = {}
+            with file.open('r', encoding='utf-8') as log:
+                diff[lang]['mod'] = yaml.safe_load(log)
+        for file in (mod.path / 'logs').glob('newtexts*.sarc'):
+            lang = util.get_file_language(file)
+            if not lang in diff:
+                diff[lang] = {}
+            with file.open('rb') as t_sarc:
+                diff[lang]['add'] = sarc.read_file_and_make_sarc(t_sarc)
+        return diff
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in reversed(diffs):
+            for lang in diff:
+                if lang not in all_diffs:
+                    all_diffs[lang] = {}
+                if 'mod' in diff[lang]:
+                    if 'mod' not in all_diffs[lang]:
+                        all_diffs[lang]['mod'] = {}
+                    for file in diff[lang]['mod']:
+                        if file not in all_diffs[lang]['mod']:
+                            all_diffs[lang]['mod'][file] = {'entries': {}}
+                        for entry, contents in diff[lang]['mod'][file]['entries'].items():
+                            if entry not in all_diffs[lang]['mod'][file]['entries']:
+                                all_diffs[lang]['mod'][file]['entries'][entry] = contents
+                if 'add' in diff[lang]:
+                    if 'add' not in all_diffs[lang]:
+                        all_diffs[lang]['add'] = []
+                    all_diffs[lang]['add'].append(diff[lang]['add'])
+        return all_diffs
+
+    def perform_merge(self):
+        langs = []
+        for mod in util.get_installed_mods():
+            if self.is_mod_logged(mod):
+                langs.extend(get_modded_languages(mod))
+        langs = set(langs)
+        for lang in langs:
+            try:
+                merge_texts(lang)
+            except FileNotFoundError:
+                pass

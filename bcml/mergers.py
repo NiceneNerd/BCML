@@ -1,9 +1,10 @@
 """ Provides abstracted merging objects """
+from abc import ABCMeta
 from pathlib import Path
 from typing import List, Union
 from bcml import util
 
-class Merger:
+class Merger(metaclass=ABCMeta):
     """
     An abstract base class that represents a collection of merging functions for BCML. It can
     be subclassed to represent a single kind of merge, e.g. merging packs, game data, maps, etc.
@@ -42,9 +43,11 @@ class Merger:
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         """ Detects changes made to a modded file or files from the base game """
+        raise NotImplementedError
 
     def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
         """ Saves generated diffs to a log file """
+        raise NotImplementedError
 
     def is_mod_logged(self, mod: util.BcmlMod) -> bool:
         """ Checks if a mod is logged for this merge """
@@ -52,24 +55,57 @@ class Merger:
 
     def get_mod_diff(self, mod: util.BcmlMod):
         """ Gets the logged diff for this merge in a given mod """
+        raise NotImplementedError
 
     def get_all_diffs(self):
         """ Loads the installed diffs for this merge from all installed mods """
+        raise NotImplementedError
 
     def consolidate_diffs(self, diffs: list):
         """ Combines and orders a collection of diffs into a single set of patches """
+        raise NotImplementedError
+
+    def can_partial_remerge(self) -> bool:
+        """ Checks whether this merger can perform a partial remerge """
+        return False
+
+    def get_mod_affected(self, mod: util.BcmlMod) -> []:
+        """ Gets a list of files affected by a mod, if merger supports partial remerge """
+        raise NotImplementedError
 
     def perform_merge(self):
         """ Applies one or more patches to the current mod installation """
+        raise NotImplementedError
 
     def get_checkbox_options(self) -> List[tuple]:
         """ Gets the options for this merge as a tuple of internal name and UI description """
+        return []
 
 
 def get_mergers() -> List[Merger]:
-    from bcml import rstable, pack, texts, data, merge, data, mubin, events
+    """ Retrieves all available types of mod mergers """
+
+    from bcml import pack
+    from bcml import texts
+    from bcml import merge
+    from bcml import data
+    from bcml import mubin
+    from bcml import events
+    from bcml import rstable
+
     return [
         pack.PackMerger,
+        texts.TextsMerger,
+        data.ActorInfoMerger,
+        mubin.DungeonStaticMerger,
+        merge.DeepMerger,
+        mubin.MapMerger,
+        data.GameDataMerger,
+        data.SaveDataMerger,
+        events.EventInfoMerger,
         rstable.RstbMerger
     ]
 
+
+def sort_mergers(mergers: List[Merger]) -> List[Merger]:
+    return sorted(mergers, key=lambda merger: merger.NAME == 'rstb', reverse=False)

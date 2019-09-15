@@ -24,13 +24,14 @@ from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog
 
-from bcml import data, install, merge, pack, rstable, texts, util, mubin, events
+from bcml import data, install, merge, pack, rstable, texts, util, mubin, events, mergers
 from bcml.Ui_about import Ui_AboutDialog
 from bcml.Ui_install import Ui_InstallDialog
 from bcml.Ui_main import Ui_MainWindow
 from bcml.Ui_progress import Ui_ProgressDialog
 from bcml.Ui_settings import Ui_SettingsDialog
 from bcml.Ui_package import Ui_PackageDialog
+from bcml.Ui_options import Ui_OptionsDialog
 from bcml.util import BcmlMod
 
 
@@ -382,70 +383,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                    f'{higher} of the list override mods at the {lower}.')
 
     def InstallClicked(self, preload_mod: Path = None):
-        def install_all(result: InstallResult):
+        def install_all(result: dict):
             mods = []
-            for i, mod in enumerate(result.paths):
+            for i, mod in enumerate(result['paths']):
                 mods.append(install.install_mod(
                     mod,
                     verbose=False,
-                    no_packs=result.no_packs,
-                    no_texts=result.no_texts,
-                    no_gamedata=result.no_gamedata,
-                    no_savedata=result.no_savedata,
-                    no_actorinfo=result.no_actorinfo,
-                    no_map=result.no_map,
-                    leave_rstb=result.leave,
-                    shrink_rstb=result.shrink,
-                    guess=result.guess,
+                    options=result['options'],
                     wait_merge=True,
-                    deep_merge=result.deep_merge,
-                    insert_priority=result.insert_priority + i
+                    insert_priority=result['insert_priority'] + i
                 ))
-            fix_packs = set()
-            fix_gamedata = False
-            fix_savedata = False
-            fix_actorinfo = False
-            fix_eventinfo = False
-            fix_map = False
-            fix_deepmerge = set()
-            fix_texts = []
+            all_mergers = [merge_class() for merge_class in mergers.get_mergers()]
+            merges = set()
+            partials = {}
             for mod in mods:
-                for mpack in pack.get_modded_packs_in_mod(mod):
-                    fix_packs.add(mpack)
-                fix_gamedata = fix_gamedata or util.is_gamedata_mod(
-                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                fix_savedata = fix_savedata or util.is_savedata_mod(
-                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
-                fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
-                fix_map = fix_map or util.is_map_mod(mod)
-                for mfile in merge.get_mod_deepmerge_files(mod):
-                    fix_deepmerge.add(mfile)
-                for lang in texts.get_modded_languages(mod.path):
-                    if lang not in fix_texts:
-                        fix_texts.append(lang)
-            if fix_packs:
-                pack.merge_installed_packs(
-                    no_injection=not (fix_gamedata or fix_savedata),
-                    only_these=list(fix_packs)
-                )
-            for lang in fix_texts:
-                texts.merge_texts(lang)
-            if fix_map:
-                mubin.merge_maps()
-            mubin.merge_dungeonstatic()
-            if fix_actorinfo:
-                data.merge_actorinfo()
-            if fix_gamedata:
-                data.merge_gamedata()
-            if fix_savedata:
-                data.merge_savedata()
-            if fix_eventinfo:
-                events.merge_events()
-            if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
-            rstable.log_merged_files_rstb()
-            rstable.generate_master_rstb()
+                for merger in all_mergers:
+                    if merger.is_mod_logged(mod):
+                        merges.add(merger)
+                        if merger.can_partial_remerge():
+                            if not merger.NAME in partials:
+                                partials[merger.NAME] = set()
+                            partials[merger.NAME] |= set(merger.get_mod_affected(mod))
+            for merger in mergers.sort_mergers(merges):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
 
         dialog = InstallDialog(self)
         if preload_mod:
@@ -511,35 +473,22 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def ChangeClicked(self):
         def resort_mods(self):
-            fix_packs = set()
-            fix_gamedata = False
-            fix_savedata = False
-            fix_actorinfo = False
-            fix_eventinfo = False
-            fix_map = False
-            fix_deepmerge = set()
-            fix_texts = []
+            all_mergers = [merger() for merger in mergers.get_mergers()]
+            remergers = set()
+            partials = {}
             mods_to_change = []
             for i in range(self.listWidget.count()):
                 mod = self.listWidget.item(i).data(QtCore.Qt.UserRole)
                 target_priority = i + 100 if util.get_settings_bool(
                     'load_reverse') else 100 + ((self.listWidget.count() - 1) - i)
                 if mod.priority != target_priority:
-                    for mpack in pack.get_modded_packs_in_mod(mod):
-                        fix_packs.add(mpack)
-                    fix_gamedata = fix_gamedata or util.is_gamedata_mod(
-                        mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                    fix_savedata = fix_savedata or util.is_savedata_mod(
-                        mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                    fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
-                    fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
-                    fix_map = fix_map or util.is_map_mod(mod)
-                    for mfile in merge.get_mod_deepmerge_files(mod):
-                        fix_deepmerge.add(mfile)
-                    for lang in texts.get_modded_languages(mod.path):
-                        if lang not in fix_texts:
-                            fix_texts.append(lang)
-                    mods_to_change.append((mod, target_priority))
+                    for merger in all_mergers:
+                        if merger.is_mod_logged(mod):
+                            remergers.add(merger)
+                            if merger.can_partial_remerge():
+                                if merger.NAME not in partials:
+                                    partials[merger.NAME] = set()
+                                partials[merger.NAME] |= set(merger.get_mod_affected(mod))
             for mod in mods_to_change:
                 new_path = util.get_modpack_dir(
                 ) / util.get_mod_id(mod[0].name, mod[1])
@@ -549,24 +498,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 rules['Definition']['fsPriority'] = str(mod[1])
                 with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
                     rules.write(rf)
-            if fix_packs:
-                pack.merge_installed_packs(no_injection=not (
-                    fix_gamedata or fix_savedata), only_these=list(fix_packs))
-            if fix_gamedata:
-                data.merge_gamedata()
-            if fix_savedata:
-                data.merge_savedata()
-            if fix_actorinfo:
-                data.merge_actorinfo()
-            if fix_map:
-                mubin.merge_maps()
-            mubin.merge_dungeonstatic()
-            for lang in fix_texts:
-                texts.merge_texts(lang)
-            if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
-            rstable.log_merged_files_rstb()
-            rstable.generate_master_rstb()
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
             self.LoadMods()
             install.refresh_cemu_mods()
 
@@ -597,7 +532,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 install.create_bnp_mod(
                     mod=tmp_dir,
                     output=output,
-                    guess=True
+                    options={'rstb':{'guess':True}}
                 )
             else:
                 print('Exporting as graphic pack mod...')
@@ -680,51 +615,23 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def UninstallClicked(self):
         def uninstall(mods):
-            fix_packs = set()
-            fix_gamedata = False
-            fix_savedata = False
-            fix_actorinfo = False
-            fix_eventinfo = False
-            fix_map = False
-            fix_deepmerge = set()
-            fix_texts = []
+            all_mergers = [merger() for merger in mergers.get_mergers()]
+            remergers = set()
+            partials = {}
             for mod in mods:
-                for mpack in pack.get_modded_packs_in_mod(mod):
-                    fix_packs.add(mpack)
-                fix_gamedata = fix_gamedata or util.is_gamedata_mod(
-                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                fix_savedata = fix_savedata or util.is_savedata_mod(
-                    mod) or 'content\\Pack\\Bootup.pack' in fix_packs
-                fix_actorinfo = fix_actorinfo or util.is_actorinfo_mod(mod)
-                fix_eventinfo = fix_eventinfo or util.is_eventinfo_mod(mod)
-                fix_map = fix_map or util.is_map_mod(mod)
-                for mfile in merge.get_mod_deepmerge_files(mod):
-                    fix_deepmerge.add(mfile)
-                for lang in texts.get_modded_languages(mod.path):
-                    if lang not in fix_texts:
-                        fix_texts.append(lang)
+                for merger in all_mergers:
+                    if merger.is_mod_logged(mod):
+                        remergers.add(merger)
+                        if merger.can_partial_remerge():
+                            if merger.NAME not in partials:
+                                partials[merger.NAME] = set()
+                            partials[merger.NAME] |= set(merger.get_mod_affected(mod))
             for mod in mods:
                 install.uninstall_mod(mod, wait_merge=True)
-            if fix_packs:
-                pack.merge_installed_packs(
-                    no_injection=not (fix_gamedata or fix_savedata),
-                    only_these=list(fix_packs)
-                )
-            if fix_gamedata:
-                data.merge_gamedata()
-            if fix_savedata:
-                data.merge_savedata()
-            if fix_actorinfo:
-                data.merge_actorinfo()
-            if fix_map:
-                mubin.merge_maps()
-            mubin.merge_dungeonstatic()
-            for lang in fix_texts:
-                texts.merge_texts(lang)
-            if fix_deepmerge:
-                merge.deep_merge(only_these=list(fix_deepmerge), wait_rstb=True)
-            rstable.log_merged_files_rstb()
-            rstable.generate_master_rstb()
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
             install.refresh_cemu_mods()
 
         if self.listWidget.selectedItems():
@@ -747,7 +654,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 '[Definition]',
                 'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500',
                 f'name = {result["name"]}',
-                f'path = ι BCML: DON\'T TOUCH/{result["name"]}',
+                f'path = {{BCML: DON\'T TOUCH}}/{result["name"]}',
                 'description = {}'.format(result['description'].replace('\n', ' ')),
                 'version = 4'
             ]
@@ -759,16 +666,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             install.create_bnp_mod(
                 mod=result['folder'],
                 output=result['output'],
-                no_packs=result['no_packs'],
-                no_texts=result['no_texts'],
-                no_gamedata=result['no_gamedata'],
-                no_savedata=result['no_gamedata'],
-                no_actorinfo=result['no_actorinfo'],
-                no_map=result['no_map'],
-                leave_rstb=result['leave'],
-                shrink_rstb=result['shrink'],
-                guess=result['guess'],
-                deep_merge=result['deep_merge']
+                options=result['options']
             )
         dialog = PackageDialog(self)
         result = dialog.GetResult()
@@ -792,16 +690,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
 
     def __init__(self, *args, **kwargs): # pylint: disable=unused-argument
+        self._options = {
+            'disable': [],
+            'options': {}
+        }
         super(InstallDialog, self).__init__()
         self.setupUi(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(
-            str(util.get_exec_dir() / 'data' / 'bcml.ico')))
+        icon.addPixmap(QtGui.QPixmap(str(util.get_exec_dir() / 'data' / 'bcml.ico')))
         self.setWindowIcon(icon)
         self.btnAddFile.clicked.connect(self.AddFileClicked)
         self.btnAddFolder.clicked.connect(self.AddFolderClicked)
         self.btnRemove.clicked.connect(self.RemoveClicked)
         self.btnClear.clicked.connect(self.ClearClicked)
+        self.btnAdvanced.clicked.connect(self.AdvancedClicked)
+        self.spnPriority.setValue(install.get_next_priority())
 
     def AddFileClicked(self):
         file_names = QFileDialog.getOpenFileNames(
@@ -836,25 +739,46 @@ class InstallDialog(QtWidgets.QDialog, Ui_InstallDialog):
     def ClearClicked(self):
         self.lstQueue.clear()
 
+    def AdvancedClicked(self):
+        self._options = OptionsDialog(self).get_options()
+
     def GetResult(self):
         if self.exec_() == QtWidgets.QDialog.Accepted:
             paths = [self.lstQueue.item(i).data(Qt.UserRole)
                      for i in range(self.lstQueue.count())]
-            return InstallResult(
-                paths,
-                self.chkRstbLeave.isChecked(),
-                self.chkRstbShrink.isChecked(),
-                self.chkRstbGuess.isChecked(),
-                self.chkDisablePack.isChecked(),
-                self.chkDisableTexts.isChecked(),
-                self.chkDisableGamedata.isChecked(),
-                self.chkDisableGamedata.isChecked(),
-                self.chkDisableActorInfo.isChecked(),
-                self.chkDisableEventInfo.isChecked(),
-                self.chkDisableMap.isChecked(),
-                not self.chkEnableDeepMerge.isChecked(),
-                self.spnInsertPriority.value()
-            )
+            return {
+                'paths': paths,
+                'insert_priority': self.spnPriority.value(),
+                'options': self._options
+            }
+
+# Options Dialog
+
+
+class OptionsDialog(QtWidgets.QDialog, Ui_OptionsDialog):
+
+    def __init__(self, *args, **kwargs):
+        super(OptionsDialog, self).__init__()
+        self.setupUi(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(str(util.get_exec_dir() / 'data' / 'bcml.ico')))
+        self.setWindowIcon(icon)
+
+    def get_options(self) -> dict:
+        if self.exec_():
+            options = {
+                'disable': []
+            }
+            for widget in self.checkboxes:
+                if hasattr(widget, 'disable_name') and widget.isChecked():
+                    options['disable'].append(widget.disable_name)
+                if hasattr(widget, 'option_name'):
+                    if not widget.merger in options:
+                        options[widget.merger] = {}
+                    options[widget.merger][widget.option_name] = widget.isChecked()
+            return options
+        else:
+            return {}
 
 # Package Dialog
 
@@ -865,12 +789,13 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
         # pylint: disable=unused-argument
         super(PackageDialog, self).__init__()
         self.setupUi(self)
+        self._options = {}
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(
-            str(util.get_exec_dir() / 'data' / 'bcml.ico')))
+        icon.addPixmap(QtGui.QPixmap(str(util.get_exec_dir() / 'data' / 'bcml.ico')))
         self.setWindowIcon(icon)
         self.btnBrowseContent.clicked.connect(self.BrowseContentClicked)
         self.btnBrowseImg.clicked.connect(self.BrowseImgClicked)
+        self.btnAdvanced.clicked.connect(self.AdvancedClicked)
 
     def BrowseContentClicked(self):
         folder = QFileDialog.getExistingDirectory(
@@ -901,6 +826,9 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
         )[0]
         if file_name:
             self.txtImage.setText(str(Path(file_name).resolve()))
+
+    def AdvancedClicked(self):
+        self._options = OptionsDialog(self).get_options()
 
     def accept(self):
         if not self.txtName.text().strip():
@@ -936,16 +864,7 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
                 'image': self.txtImage.text().strip(),
                 'url': self.txtUrl.text().strip(),
                 'folder': Path(self.txtFolder.text().strip()),
-                'shrink': self.chkRstbShrink.isChecked(),
-                'leave': self.chkRstbLeave.isChecked(),
-                'guess': self.chkRstbGuess.isChecked(),
-                'deep_merge': not self.chkEnableDeepMerge.isChecked(),
-                'no_packs': self.chkDisablePack.isChecked(),
-                'no_texts': self.chkDisableTexts.isChecked(),
-                'no_actorinfo': self.chkDisableActorInfo.isChecked(),
-                'no_eventinfo': self.chkDisableEventInfo.isChecked(),
-                'no_gamedata': self.chkDisableGamedata.isChecked(),
-                'no_map': self.chkDisableMap.isChecked(),
+                'options': self._options,
                 'output': output
             }
 
@@ -966,6 +885,7 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
         self.txtCemu.setText(str(util.get_cemu_dir()))
         self.txtGameDump.setText(str(util.get_game_dir()))
         self.txtMlc.setText(str(util.get_mlc_dir()))
+        self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
 
         self.btnBrowseCemu.clicked.connect(self.BrowseCemuClicked)
         self.btnBrowseGame.clicked.connect(self.BrowseGameClicked)
@@ -1011,6 +931,13 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
             QtWidgets.QMessageBox.warning(
                 self, 'Error', 'The specified Cemu MLC directory does not exist.')
             return
+        dark = util.get_settings_bool('dark_theme')
+        if dark != self.chkDark.isChecked():
+            util.set_settings_bool('dark_theme', self.chkDark.isChecked())
+            if self.chkDark.isChecked():
+                QtWidgets.QApplication.instance().setStyleSheet(DARK_THEME)
+            else:
+                QtWidgets.QApplication.instance().setStyleSheet('')
         return super().accept()
 
 # About Dialog
@@ -1093,18 +1020,145 @@ class ThreadSignal(QtCore.QObject):
     err = QtCore.Signal(str)
 
 
-# Main
+DARK_THEME = """
+    QMainWindow, QDialog {
+        background-color: #2f3136;
+    }
 
-InstallResult = namedtuple(
-    'InstallResult',
-    ('paths leave shrink guess no_packs no_texts no_gamedata no_savedata no_actorinfo no_eventinfo '
-     'no_map deep_merge insert_priority')
-)
+    QMainWindow, QLabel, QGroupBox, QCheckBox {
+        color: #eeeeee;
+    }
+
+    QStatusBar, QStatusBar QLabel {
+        color: #7f8186;
+    }
+
+    QStatusBar:item {
+        border: 0;
+    }
+
+    QPushButton, QToolButton {
+        background-color: #3899d8;
+        color: #e0e0e0;
+    }
+
+    QToolButton {
+        padding: 0px 2px;
+        border-radius: 2px;
+    }
+
+    QPushButton {
+        border-radius: 2px;
+        padding: 4px 6px;
+    }
+
+    QPushButton:disabled, QToolButton:disabled {
+        background-color: #4f5b62;
+        color: #212121;
+    }
+
+    QPushButton:hover, QToolButton:hover {
+        background-color: #4dc8dc;
+    }
+
+    QPushButton:focus, QToolButton:focus {
+        background-color: #28b6ce;
+    }
+
+    QGroupBox {
+        background-color: #212121;
+        border: 1px solid #202225;
+        border-radius: 4px;
+        padding-top: 8px;
+        margin-top: 6px;
+    }
+
+    QGroupBox:title {
+        subcontrol-origin: margin;
+        top: 0;
+        left: 12px;
+        padding: 0 4px;
+    }
+
+    QListWidget {
+        background-color: #212121;
+        border: 1px solid #202225;
+        border-radius: 2px;
+        color: #fafafa;
+        padding: 0 4px;
+    }
+
+    QListWidget:item {
+        padding: 4px 0;
+    }
+
+    QLineEdit, QPlainTextEdit {
+        background-color: #484c52;
+        border: 0;
+        border-radius: 2px;
+        color: #fafafa;
+        padding: 2px;
+    }    
+
+    QScrollBar:vertical {
+        background-color: #212121;
+        border: 0;
+        width: 10px;
+        margin: 0;
+    }
+
+    QScrollBar::handle:vertical {
+        background: #424242;
+        min-height: 0;
+    }
+
+    QScrollBar::add-line:vertical {
+        border: 0;
+        background: #32CC99;
+        height: 0;
+        subcontrol-position: bottom;
+        subcontrol-origin: margin;
+    }
+
+    QScrollBar::sub-line:vertical {
+        border: 0;
+        background: #32CC99;
+        height: 0;
+        subcontrol-position: top;
+        subcontrol-origin: margin;
+    }
+
+    QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+        border: 0;
+        width: 3px;
+        height: 0;
+        background: white;
+    }
+
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+        background: none;
+    }
+
+    QMenu {
+        background-color: #212121;
+        color: #fafafa;
+    }
+
+    QMenu:item:selected {
+        background-color: #424242;
+    }
+"""
+
+# Main
 
 
 def main():
     util.clear_temp_dir()
     app = QtWidgets.QApplication([])
+    if util.get_settings_bool('dark_theme'):
+        app.setStyleSheet(DARK_THEME)
+    if 'Roboto Lt' in QtGui.QFontDatabase().families(QtGui.QFontDatabase.Latin):
+        app.setFont(QtGui.QFont('Roboto Lt', 10, weight=QtGui.QFont.DemiBold))
     application = MainWindow()
     try:
         application.show()

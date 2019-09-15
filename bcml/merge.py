@@ -19,7 +19,7 @@ import yaml
 from byml import yaml_util
 
 import bcml.rstable
-from bcml import util, install
+from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
 
@@ -114,10 +114,9 @@ def get_deepmerge_mods() -> List[BcmlMod]:
     return sorted(dmods, key=lambda mod: mod.priority)
 
 
-def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> dict:
+def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> []:
     """ Gets a list of files logged for deep merge in a given mod """
-    path = mod if isinstance(mod, Path) else Path(
-        mod) if isinstance(mod, str) else mod.path
+    path = mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
     dlog = path / 'logs' / 'deepmerge.yml'
     if not dlog.exists():
         return []
@@ -305,15 +304,78 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
         return
     num_threads = min(multiprocessing.cpu_count(), len(diffs))
     pool = multiprocessing.Pool(processes=num_threads)
-    results = pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
+    pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
     pool.close()
     pool.join()
 
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
 
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log')\
          .open('w', encoding='utf-8') as l_file:
         for file_type in diffs:
             for file in diffs[file_type]:
                 l_file.write(f'{file}\n')
+
+
+class DeepMerger(mergers.Merger):
+    NAME: str = 'deepmerge'
+
+    def __init__(self):
+        super().__init__('deep merge', 'Merges changes within arbitrary AAMP files',
+                         'deepmerge.yml', options={})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        diffs = {}
+        for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
+            try:
+                diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
+            except (FileNotFoundError, KeyError):
+                continue
+        return diffs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            dumper = yaml.CSafeDumper
+            aamp.yaml_util.register_representers(dumper)
+            setattr(dumper, '__aamp_reader', None)
+            aamp.yaml_util._get_pstruct_name = lambda reader, idx, k, parent_crc32: k # pylint: disable=protected-access
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def can_partial_remerge(self):
+        return True
+
+    def get_mod_affected(self, mod):
+        return get_mod_deepmerge_files(mod)
+
+    def get_mod_diff(self, mod: Path):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                aamp.yaml_util.register_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        if 'only_these' in self._options:
+            return get_deepmerge_diffs(self._options['only_these'])
+        else:
+            return get_deepmerge_diffs()
+
+    def consolidate_diffs(self, diffs: list):
+        return consolidate_diff_files(self.get_all_diffs())
+
+    def perform_merge(self):
+        if 'only_these' in self._options:
+            deep_merge(wait_rstb=True, only_these=self._options['only_these'])
+        else:
+            deep_merge(wait_rstb=True)
+
+    def get_checkbox_options(self):
+        return []

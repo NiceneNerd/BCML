@@ -11,7 +11,7 @@ from io import BytesIO
 from math import ceil
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import byml
 from byml import yaml_util
@@ -22,7 +22,7 @@ import wszst_yaz0
 import xxhash
 import yaml
 
-from bcml import util, rstable
+from bcml import util, rstable, mergers
 from bcml.util import BcmlMod
 
 
@@ -524,3 +524,180 @@ def merge_actorinfo(verbose: bool = False):
     actor_path.parent.mkdir(parents=True, exist_ok=True)
     actor_path.write_bytes(wszst_yaz0.compress(buf.getvalue()))
     print('Actor info merged successfully')
+
+
+class GameDataMerger(mergers.Merger):
+    NAME: str = 'gamedata'
+
+    def __init__(self):
+        super().__init__(
+            'game data merge',
+            'Merges changes to gamedata.sarc',
+            'gamedata.yml', options={}
+        )
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        if 'content/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
+            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            return get_modded_gamedata_entries(
+                sarc.SARC(
+                    wszst_yaz0.decompress(
+                        bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
+                    )
+                )
+            )
+        else:
+            return {}
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_gamedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            util.dict_merge(all_diffs, diff, unique_lists=True)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_gamedata()
+
+    def get_checkbox_options(self):
+        return []
+
+
+class SaveDataMerger(mergers.Merger):
+    NAME: str = 'savedata'
+
+    def __init__(self):
+        super().__init__('save data merge', 'Merge changes to savedataformat.ssarc', 'savedata.yml')
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        if 'content/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
+            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            return get_modded_savedata_entries(
+                sarc.SARC(
+                    wszst_yaz0.decompress(
+                        bootup_sarc.get_file_data('GameData/savedataformat.ssarc').tobytes()
+                    )
+                )
+            )
+        else:
+            return []
+
+    def log_diff(self, mod_dir: Path, diff_material):
+        if isinstance(diff_material[0], Path):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return []
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_savedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = []
+        hashes = []
+        for diff in reversed(diffs):
+            for entry in diff:
+                if entry['HashValue'] not in hashes:
+                    all_diffs.append(entry)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_savedata()
+
+    def get_checkbox_options(self):
+        return []
+
+
+class ActorInfoMerger(mergers.Merger):
+    NAME: str = 'actors'
+
+    def __init__(self):
+        super().__init__('actor info merge', 'Merges changes to ActorInfo.product.byml',
+                         'actorinfo.yml ', {})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        try:
+            actor_file = next(iter([file for file in modded_files \
+                               if Path(file).name == 'ActorInfo.product.sbyml']))
+        except StopIteration:
+            return {}
+        actor_info = byml.Byml(wszst_yaz0.decompress_file(str(actor_file))).parse()
+        return get_modded_actors(actor_info)
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, list]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(Path, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_gamedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            all_diffs.update(diff)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_actorinfo()
+
+    def get_checkbox_options(self):
+        return []

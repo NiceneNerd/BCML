@@ -1,4 +1,12 @@
-# pylint: skip-file
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\settings.ui',
+# licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\settings.ui' applies.
+#
+# Created: Fri Sep 13 23:11:59 2019
+#      by: pyside2-uic  running on PySide2 5.13.0
+#
+# WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
@@ -47,6 +55,9 @@ class Ui_SettingsDialog(object):
         self.btnBrowseMlc.setObjectName("btnBrowseMlc")
         self.horizontalLayout_3.addWidget(self.btnBrowseMlc)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
+        self.chkDark = QtWidgets.QCheckBox(SettingsDialog)
+        self.chkDark.setObjectName("chkDark")
+        self.verticalLayout.addWidget(self.chkDark)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.buttonBox = QtWidgets.QDialogButtonBox(SettingsDialog)
@@ -68,4 +79,5 @@ class Ui_SettingsDialog(object):
         self.btnBrowseGame.setText(QtWidgets.QApplication.translate("SettingsDialog", "Browse...", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("SettingsDialog", "MLC Directory", None, -1))
         self.btnBrowseMlc.setText(QtWidgets.QApplication.translate("SettingsDialog", "Browse...", None, -1))
+        self.chkDark.setText(QtWidgets.QApplication.translate("SettingsDialog", "Use dark theme", None, -1))
 

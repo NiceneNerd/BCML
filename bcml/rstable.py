@@ -412,11 +412,11 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
                 wiiu=True,
                 ext=ext
             )
-            if size == 0:
-                if ext in util.AAMP_EXTS:
-                    size = guess_aamp_size(data, ext)
-                elif ext in ['.bfres', '.sbfres']:
-                    size = guess_bfres_size(data, canon)
+            # if size == 0:
+            #     if ext in util.AAMP_EXTS:
+            #         size = guess_aamp_size(data, ext)
+            #     elif ext in ['.bfres', '.sbfres']:
+            #         size = guess_bfres_size(data, canon)
             sizes[canon] = size
             if util.is_file_sarc(nest_file) and not nest_file.endswith('.ssarc'):
                 try:
@@ -437,11 +437,11 @@ def log_merged_files_rstb():
             continue
         if file.suffix not in RSTB_EXCLUDE_EXTS and file.name not in RSTB_EXCLUDE_NAMES:
             size = calculate_size(file)
-            if size == 0:
-                if file.suffix in util.AAMP_EXTS:
-                    size = guess_aamp_size(file)
-                elif file.suffix in ['.bfres', '.sbfres']:
-                    size = guess_bfres_size(file)
+            # if size == 0:
+            #     if file.suffix in util.AAMP_EXTS:
+            #         size = guess_aamp_size(file)
+            #     elif file.suffix in ['.bfres', '.sbfres']:
+            #         size = guess_bfres_size(file)
             canon = util.get_canon_name(file.relative_to(util.get_master_modpack_dir()))
             if canon:
                 diffs[canon] = size
@@ -628,6 +628,11 @@ class RstbMerger(mergers.Merger):
         ]
 
     def perform_merge(self):
+        print('Perfoming RSTB merge...')
+        log_merged_files_rstb()
+        generate_master_rstb()
+
+    def perform_merge_2(self):
         print('Perfoming RSTB merge...')
         log_merged_files_rstb()
         master_diffs = [
