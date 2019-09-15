@@ -50,9 +50,16 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
     map_bytes = None
     if force_vanilla:
         try:
-            map_bytes = util.get_game_file(
-                f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
-            ).read_bytes()
+            map_path = (
+                util.get_update_dir() / 'Map/MainField/'
+                f'{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
+            )
+            if not map_path.exists():
+                map_path = (
+                    util.get_game_dir() / 'Map/MainField/'
+                    f'{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
+                )
+            map_bytes = map_path.read_bytes()
         except FileNotFoundError:
             with util.get_game_file('Pack/TitleBG.pack').open('rb') \
                   as s_file:
