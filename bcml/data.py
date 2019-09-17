@@ -507,7 +507,7 @@ def merge_actorinfo(verbose: bool = False):
     for mod in mods:
         with (mod.path / 'logs' / 'actorinfo.yml').open('r', encoding='utf-8') as a_file:
             entries = yaml.load(a_file, Loader=loader)
-            util.dict_merge(modded_actors, entries)
+            util.dict_merge(modded_actors, entries, overwrite_lists=True)
             if verbose:
                 print(f'Loaded {len(entries)} entries from {mod.name}')
             del entries
@@ -519,7 +519,7 @@ def merge_actorinfo(verbose: bool = False):
         if actor_hash in actorinfo['Hashes']:
             idx = actorinfo['Hashes'].index(actor_hash)
             util.dict_merge(actorinfo['Actors'][idx],
-                            actor_info, unique_lists=True)
+                            actor_info, overwrite_lists=True)
             if verbose:
                 print(f'  Updated entry for {actorinfo["Actors"][idx]}')
         else:

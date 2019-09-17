@@ -776,7 +776,7 @@ def create_bcml_graphicpack_if_needed():
                          'fsPriority = 9999')
 
 
-def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
+def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
     to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
@@ -793,8 +793,9 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
             dict_merge(dct[k], merge_dct[k])
         elif (k in dct and isinstance(dct[k], list)
               and isinstance(merge_dct[k], list)):
-            dct[k].extend(merge_dct[k])
-            if unique_lists:
-                dct[k] = list(set(dct[k]))
+            if overwrite_lists:
+                dct[k] = merge_dct[k]
+            else:
+                dct[k].extend(merge_dct[k])
         else:
             dct[k] = merge_dct[k]
