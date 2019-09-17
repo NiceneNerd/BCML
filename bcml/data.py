@@ -18,7 +18,7 @@ from byml import yaml_util
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 import yaml
 
@@ -31,7 +31,7 @@ def get_stock_gamedata() -> sarc.SARC:
     if not hasattr(get_stock_gamedata, 'gamedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_gamedata.gamedata = sarc.SARC(wszst_yaz0.decompress(
+        get_stock_gamedata.gamedata = sarc.SARC(libyaz0.decompress(
             bootup.get_file_data('GameData/gamedata.ssarc')))
     return get_stock_gamedata.gamedata
 
@@ -41,7 +41,7 @@ def get_stock_savedata() -> sarc.SARC:
     if not hasattr(get_stock_savedata, 'savedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_savedata.savedata = sarc.SARC(wszst_yaz0.decompress(
+        get_stock_savedata.savedata = sarc.SARC(libyaz0.decompress(
             bootup.get_file_data('GameData/savedataformat.ssarc')
         ))
     return get_stock_savedata.savedata
@@ -90,7 +90,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
     new_pack.add_file('GameData/gamedata.ssarc',
-                      wszst_yaz0.compress(gamedata_bytes))
+                      libyaz0.compress(gamedata_bytes, level=10))
     (util.get_master_modpack_dir() / 'content' /
      'Pack').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
@@ -120,7 +120,7 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     new_pack.delete_file('GameData/savedataformat.ssarc')
     savedata_bytes = bgsvdata.get_bytes()
     new_pack.add_file('GameData/savedataformat.ssarc',
-                      wszst_yaz0.compress(savedata_bytes))
+                      libyaz0.compress(savedata_bytes, level=10))
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
         new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
@@ -437,7 +437,7 @@ def get_stock_actorinfo() -> dict:
     """ Gets the unmodded contents of ActorInfo.product.sbyml """
     actorinfo = util.get_game_file('Actor/ActorInfo.product.sbyml')
     with actorinfo.open('rb') as a_file:
-        return byml.Byml(wszst_yaz0.decompress(a_file.read())).parse()
+        return byml.Byml(libyaz0.decompress(a_file.read())).parse()
 
 
 def get_modded_actors(actorinfo: dict) -> dict:
@@ -502,7 +502,7 @@ def merge_actorinfo(verbose: bool = False):
         if actor_hash in actorinfo['Hashes']:
             idx = actorinfo['Hashes'].index(actor_hash)
             util.dict_merge(actorinfo['Actors'][idx],
-                            actor_info, unique_lists=True)
+                            actor_info, overwrite_lists=True)
             if verbose:
                 print(f'  Updated entry for {actorinfo["Actors"][idx]}')
         else:
@@ -522,7 +522,7 @@ def merge_actorinfo(verbose: bool = False):
     buf = BytesIO()
     byml.Writer(actorinfo, True).write(buf)
     actor_path.parent.mkdir(parents=True, exist_ok=True)
-    actor_path.write_bytes(wszst_yaz0.compress(buf.getvalue()))
+    actor_path.write_bytes(libyaz0.compress(buf.getvalue(), level=10))
     print('Actor info merged successfully')
 
 
@@ -542,7 +542,7 @@ class GameDataMerger(mergers.Merger):
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_gamedata_entries(
                 sarc.SARC(
-                    wszst_yaz0.decompress(
+                    libyaz0.decompress(
                         bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
                     )
                 )
@@ -578,7 +578,7 @@ class GameDataMerger(mergers.Merger):
     def consolidate_diffs(self, diffs: list):
         all_diffs = {}
         for diff in diffs:
-            util.dict_merge(all_diffs, diff, unique_lists=True)
+            util.dict_merge(all_diffs, diff, overwrite_lists=True)
         return all_diffs
 
     def perform_merge(self):
@@ -586,6 +586,20 @@ class GameDataMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc'
+        if tmp_sarc.exists():
+            return (
+                'GameData/gamedata.ssarc',
+                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+            )
+        else:
+            return
 
 
 class SaveDataMerger(mergers.Merger):
@@ -600,7 +614,7 @@ class SaveDataMerger(mergers.Merger):
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_savedata_entries(
                 sarc.SARC(
-                    wszst_yaz0.decompress(
+                    libyaz0.decompress(
                         bootup_sarc.get_file_data('GameData/savedataformat.ssarc').tobytes()
                     )
                 )
@@ -648,6 +662,20 @@ class SaveDataMerger(mergers.Merger):
     def get_checkbox_options(self):
         return []
 
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'savedata.sarc'
+        if tmp_sarc.exists():
+            return (
+                'GameData/savedataformat.ssarc',
+                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+            )
+        else:
+            return
+
 
 class ActorInfoMerger(mergers.Merger):
     NAME: str = 'actors'
@@ -662,7 +690,7 @@ class ActorInfoMerger(mergers.Merger):
                                if Path(file).name == 'ActorInfo.product.sbyml']))
         except StopIteration:
             return {}
-        actor_info = byml.Byml(wszst_yaz0.decompress_file(str(actor_file))).parse()
+        actor_info = byml.Byml(util.decompress_file(str(actor_file))).parse()
         return get_modded_actors(actor_info)
 
     def log_diff(self, mod_dir: Path, diff_material: Union[dict, list]):

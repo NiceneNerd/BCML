@@ -9,7 +9,7 @@ import byml
 from byml import yaml_util
 import rstb
 import sarc
-import wszst_yaz0
+import libyaz0
 from bcml import util, rstable, mergers
 
 
@@ -98,7 +98,7 @@ def merge_events():
     event_bytes = byml.Writer(new_events, be=True).get_bytes()
     util.inject_file_into_bootup(
         'Event/EventInfo.product.sbyml',
-        wszst_yaz0.compress(event_bytes),
+        libyaz0.compress(event_bytes, level=10),
         create_bootup=True
     )
     print('Saving event info merge log...')
@@ -122,7 +122,7 @@ class EventInfoMerger(mergers.Merger):
             with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             event_info = byml.Byml(
-                wszst_yaz0.decompress(
+                libyaz0.decompress(
                     bootup_sarc.get_file_data('Event/EventInfo.product.sbyml').tobytes()
                 )
             ).parse()
@@ -166,3 +166,17 @@ class EventInfoMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml'
+        if tmp_sarc.exists():
+            return (
+                'Event/EventInfo.product.sbyml',
+                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+            )
+        else:
+            return

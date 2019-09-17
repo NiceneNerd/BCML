@@ -13,14 +13,12 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_InstallDialog(object):
     def setupUi(self, InstallDialog):
         InstallDialog.setObjectName("InstallDialog")
-        InstallDialog.setWindowModality(QtCore.Qt.WindowModal)
         InstallDialog.resize(226, 358)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(InstallDialog.sizePolicy().hasHeightForWidth())
         InstallDialog.setSizePolicy(sizePolicy)
-        InstallDialog.setModal(True)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(InstallDialog)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()

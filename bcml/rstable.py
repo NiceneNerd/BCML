@@ -16,7 +16,7 @@ import rstb
 from rstb import ResourceSizeTable
 from rstb.util import read_rstb
 import sarc
-import wszst_yaz0
+import libyaz0
 
 from bcml import util, install, mergers
 from bcml.util import BcmlMod
@@ -75,7 +75,7 @@ def set_size(entry: str, size: int):
     buf = io.BytesIO()
     table.write(buf, be=True)
     rstb_path.write_bytes(
-        wszst_yaz0.compress(buf.getvalue())
+        libyaz0.compress(buf.getvalue(), level=10)
     )
 
 
@@ -92,7 +92,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
     """
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b'Yaz0':
-        real_bytes = wszst_yaz0.decompress(real_bytes)
+        real_bytes = libyaz0.decompress(real_bytes)
     real_size = len(real_bytes)
     del real_bytes
     if name == '':
@@ -173,7 +173,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
     :rtype: int"""
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b'Yaz0':
-        real_bytes = wszst_yaz0.decompress(real_bytes)
+        real_bytes = libyaz0.decompress(real_bytes)
     real_size = len(real_bytes)
     del real_bytes
     if ext == '':
@@ -493,7 +493,7 @@ def generate_master_rstb(verbose: bool = False):
     with rstb_path.open('wb') as r_file:
         with io.BytesIO() as buf:
             table.write(buf, True)
-            r_file.write(wszst_yaz0.compress(buf.getvalue()))
+            r_file.write(libyaz0.compress(buf.getvalue(), level=10))
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
@@ -663,7 +663,7 @@ class RstbMerger(mergers.Merger):
             rstb_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.BytesIO()
         new_rstb.write(buf, be=True)
-        rstb_path.write_bytes(wszst_yaz0.compress(buf.getvalue()))
+        rstb_path.write_bytes(libyaz0.compress(buf.getvalue(), level=10))
         print(
             f'RSTB merge complete: updated {counts["update"]} entries, '
             f'added {counts["add"]} entries, deleted {counts["del"]} entries'

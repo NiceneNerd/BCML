@@ -20,8 +20,8 @@ from PySide2.QtGui import QIcon, QPixmap
 
 import byml
 from byml import yaml_util
+import libyaz0
 import sarc
-import wszst_yaz0
 import xxhash
 import yaml
 
@@ -363,7 +363,7 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
         i += 1
     file_bytes = sarcs[-1].get_file_data(nests[-1]).tobytes()
     if file_bytes[0:4] == b'Yaz0' and unyaz:
-        file_bytes = wszst_yaz0.decompress(file_bytes)
+        file_bytes = libyaz0.decompress(file_bytes)
     del sarcs
     return file_bytes
 
@@ -563,6 +563,12 @@ def is_file_byml(path: str) -> bool:
     return ext in BYML_EXTS
 
 
+def decompress_file(file) -> bytes:
+    if isinstance(file, str):
+        file = Path(file)
+    return libyaz0.decompress(file.read_bytes())
+
+
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
     """
     Detects by file extension if a file should be decompressed, and decompresses if needed
@@ -573,7 +579,7 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
     :rtype: bytes
     """
     if file_bytes[0:4] == b'Yaz0':
-        return wszst_yaz0.decompress(file_bytes)
+        return libyaz0.decompress(file_bytes)
     else:
         return file_bytes
 
@@ -816,7 +822,7 @@ def create_bcml_graphicpack_if_needed():
                          'fsPriority = 9999')
 
 
-def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
+def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
     to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
@@ -824,7 +830,7 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
 
     :param dct: dict onto which the merge is executed
     :param merge_dct: dct merged into dct
-    :param unique_lists: Whether to prevent duplicate items in lists, defaults to False
+    :param overwrite_lists: Whether to prevent duplicate items in lists, defaults to False
     :return: None
     """
     for k in merge_dct:
@@ -833,8 +839,9 @@ def dict_merge(dct: dict, merge_dct: dict, unique_lists: bool = False):
             dict_merge(dct[k], merge_dct[k])
         elif (k in dct and isinstance(dct[k], list)
               and isinstance(merge_dct[k], list)):
-            dct[k].extend(merge_dct[k])
-            if unique_lists:
-                dct[k] = list(set(dct[k]))
+            if overwrite_lists:
+                dct[k] = merge_dct[k]
+            else:
+                dct[k].extend(merge_dct[k])
         else:
             dct[k] = merge_dct[k]

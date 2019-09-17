@@ -1038,7 +1038,7 @@ DARK_THEME = """
     }
 
     QPushButton, QToolButton {
-        background-color: #3899d8;
+        background-color: #1584CD;
         color: #e0e0e0;
     }
 
@@ -1058,11 +1058,11 @@ DARK_THEME = """
     }
 
     QPushButton:hover, QToolButton:hover {
-        background-color: #4dc8dc;
+        background-color: #3899D8;
     }
 
     QPushButton:focus, QToolButton:focus {
-        background-color: #28b6ce;
+        background-color: #0765A3;
     }
 
     QGroupBox {
@@ -1090,6 +1090,10 @@ DARK_THEME = """
 
     QListWidget:item {
         padding: 4px 0;
+    }
+
+    QListWidget:item:alternate {
+        background-color: #424242;
     }
 
     QLineEdit, QPlainTextEdit {

@@ -14,7 +14,7 @@ import aamp.converters
 from aamp.parameters import ParameterList, ParameterIO, ParameterObject
 import aamp.yaml_util
 import sarc
-import wszst_yaz0
+import libyaz0
 import yaml
 from byml import yaml_util
 
@@ -181,7 +181,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
     for file, stuff in nest.items():
         file_bytes = pack.get_file_data(file).tobytes()
         yazd = file_bytes[0:4] == b'Yaz0'
-        file_bytes = wszst_yaz0.decompress(file_bytes) if yazd else file_bytes
+        file_bytes = libyaz0.decompress(file_bytes) if yazd else file_bytes
 
         if isinstance(stuff, dict):
             sub_sarc = sarc.SARC(file_bytes)
@@ -192,7 +192,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
             del sub_sarc
             new_bytes = new_sub_sarc.get_bytes()
             new_sarc.add_file(
-                file, new_bytes if not yazd else wszst_yaz0.compress(new_bytes))
+                file, new_bytes if not yazd else libyaz0.compress(new_bytes, level=10))
 
         elif isinstance(stuff, list):
             try:
@@ -202,8 +202,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                         aamp_contents = _aamp_merge(aamp_contents, change)
                     aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                     del aamp_contents
-                    new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
-                        aamp_bytes)
+                    new_bytes = aamp_bytes if not yazd else libyaz0.compress(aamp_bytes, level=10)
                 else:
                     raise ValueError(
                         'Wait, what the heck, this isn\'t an AAMP file?!')
@@ -243,7 +242,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
         base_file = (util.get_master_modpack_dir() / file)
     file_bytes = base_file.read_bytes()
     yazd = file_bytes[0:4] == b'Yaz0'
-    file_bytes = file_bytes if not yazd else wszst_yaz0.decompress(file_bytes)
+    file_bytes = file_bytes if not yazd else libyaz0.decompress(file_bytes)
     magic = file_bytes[0:4]
 
     if magic == b'SARC':
@@ -261,8 +260,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
                     aamp_contents = _aamp_merge(aamp_contents, change)
                 aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                 del aamp_contents
-                new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
-                    aamp_bytes)
+                new_bytes = aamp_bytes if not yazd else libyaz0.compress(aamp_bytes, level=10)
             else:
                 raise ValueError(f'{file} is not a SARC or AAMP file.')
         except ValueError:
@@ -270,7 +268,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
             del file_bytes
             print(f'Deep merging file {file} failed. No changes were made.')
 
-    new_bytes = new_bytes if not yazd else wszst_yaz0.compress(new_bytes)
+    new_bytes = new_bytes if not yazd else libyaz0.compress(new_bytes, level=10)
     output_file = (util.get_master_modpack_dir() / file)
     if base_file == output_file:
         output_file.unlink()
@@ -331,7 +329,7 @@ class DeepMerger(mergers.Merger):
         for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
-            except (FileNotFoundError, KeyError):
+            except (FileNotFoundError, KeyError, TypeError):
                 continue
         return diffs
 

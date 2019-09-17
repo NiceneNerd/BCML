@@ -14,7 +14,7 @@ from typing import List, Union
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 import yaml
 
@@ -51,7 +51,7 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
             get_msbt_hashes.texthashes[lang] = {}
             with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
                 bootup_pack = sarc.read_file_and_make_sarc(b_file)
-            msg_bytes = wszst_yaz0.decompress(
+            msg_bytes = libyaz0.decompress(
                 bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
             msg_pack = sarc.SARC(msg_bytes)
             for msbt in msg_pack.list_files():
@@ -78,7 +78,7 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
 
     with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
         bootup_pack = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = wszst_yaz0.decompress(
+    msg_bytes = libyaz0.decompress(
         bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_pack = sarc.SARC(msg_bytes)
     if not for_merge:
@@ -154,7 +154,7 @@ def bootup_from_msbts(lang: str = 'USen',
         s_msg.write(new_msg_stream)
         unyaz_bytes = new_msg_stream.getvalue()
         rsize = rstb.SizeCalculator().calculate_file_size_with_ext(unyaz_bytes, True, '.sarc')
-        new_msg_bytes = wszst_yaz0.compress(unyaz_bytes)
+        new_msg_bytes = libyaz0.compress(unyaz_bytes, level=10)
         s_boot = sarc.SARCWriter(True)
         s_boot.add_file(f'Message/Msg_{lang}.product.ssarc', new_msg_bytes)
         s_boot.write(new_boot)
@@ -297,7 +297,7 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
         print(f'{spaces}Identifying modified text files...')
     with open(bootup_path, 'rb') as b_file:
         bootup_sarc = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = wszst_yaz0.decompress(
+    msg_bytes = libyaz0.decompress(
         bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_sarc = sarc.SARC(msg_bytes)
     if not msg_sarc:

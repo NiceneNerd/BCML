@@ -16,7 +16,7 @@ from typing import Union, List
 from xml.dom import minidom
 
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 
 from bcml import pack, texts, util, data, merge, rstable, mubin, events, mergers
@@ -571,7 +571,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
     else:
         with file.open('wb') as s_file:
             if file.suffix.startswith('.s') and file.suffix != '.ssarc':
-                s_file.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+                s_file.write(libyaz0.compress(new_sarc.get_bytes(), level=10))
             else:
                 new_sarc.write(s_file)
 

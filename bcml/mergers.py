@@ -65,9 +65,19 @@ class Merger(metaclass=ABCMeta):
         """ Combines and orders a collection of diffs into a single set of patches """
         raise NotImplementedError
 
-    def can_partial_remerge(self) -> bool:
+    @staticmethod
+    def can_partial_remerge() -> bool:
         """ Checks whether this merger can perform a partial remerge """
         return False
+
+    @staticmethod
+    def is_bootup_injector() -> bool:
+        """ Checks whether this merger needs to inject a file into `Bootup.pack` """
+        return False
+
+    def get_bootup_injection(self) -> (str, bytes):
+        """ Gets whatever file this merger needs to inject into `Bootup.pack` """
+        raise NotImplementedError
 
     def get_mod_affected(self, mod: util.BcmlMod) -> []:
         """ Gets a list of files affected by a mod, if merger supports partial remerge """

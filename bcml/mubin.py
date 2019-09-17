@@ -14,7 +14,7 @@ from byml import yaml_util
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import yaml
 
 from bcml import util, mergers
@@ -107,7 +107,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
         raise FileNotFoundError(
             f'The stock map file {map_unit.section}_{map_unit.type}.smubin could not be found.'
         )
-    map_bytes = wszst_yaz0.decompress(map_bytes)
+    map_bytes = libyaz0.decompress(map_bytes)
     return byml.Byml(map_bytes).parse()
 
 
@@ -156,7 +156,7 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
             f'Oddly, the modded map {map_unit.section}_{map_unit.type}.smubin '
             'could not be found.'
         )
-    map_bytes = wszst_yaz0.decompress(map_bytes)
+    map_bytes = libyaz0.decompress(map_bytes)
     return byml.Byml(map_bytes).parse()
 
 
@@ -310,7 +310,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
         f'{map_unit.section}_{map_unit.type}.smubin'
     aoc_out.parent.mkdir(parents=True, exist_ok=True)
     aoc_bytes = byml.Writer(new_map, be=True).get_bytes()
-    aoc_out.write_bytes(wszst_yaz0.compress(aoc_bytes))
+    aoc_out.write_bytes(libyaz0.compress(aoc_bytes, level=10))
     new_map['Objs'] = [obj for obj in new_map['Objs']
                        if not obj['UnitConfigName'].startswith('DLC')]
     (util.get_master_modpack_dir() / 'content' / 'Map' /
@@ -319,7 +319,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
         map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
     base_out.parent.mkdir(parents=True, exist_ok=True)
     base_bytes = byml.Writer(new_map, be=True).get_bytes()
-    base_out.write_bytes(wszst_yaz0.compress(base_bytes))
+    base_out.write_bytes(libyaz0.compress(base_bytes, level=10))
     return {
         'aoc': (
             f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin',
@@ -384,11 +384,11 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     base_file = util.get_game_file(
         'aoc/0010/Map/CDungeon/Static.smubin', aoc=True)
     base_pos = byml.Byml(
-        wszst_yaz0.decompress_file(str(base_file))
+        util.decompress_file(str(base_file))
     ).parse()['StartPos']
 
     mod_pos = byml.Byml(
-        wszst_yaz0.decompress_file(str(file))
+        util.decompress_file(str(file))
     ).parse()['StartPos']
 
     base_dungeons = [dungeon['Map'] for dungeon in base_pos]
@@ -429,7 +429,7 @@ def merge_dungeonstatic(diffs: dict = None):
         return
 
     new_static = byml.Byml(
-        wszst_yaz0.decompress_file(
+        util.decompress_file(
             str(util.get_game_file('aoc/0010/Map/CDungeon/Static.smubin'))
         )
     ).parse()
@@ -447,7 +447,7 @@ def merge_dungeonstatic(diffs: dict = None):
         'CDungeon' / 'Static.smubin'
     output_static.parent.mkdir(parents=True, exist_ok=True)
     output_static.write_bytes(
-        wszst_yaz0.compress(byml.Writer(new_static, True).get_bytes())
+        libyaz0.compress(byml.Writer(new_static, True).get_bytes(), level=10)
     )
 
 

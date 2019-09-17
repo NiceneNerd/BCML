@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Union
 
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 
 from bcml import data, util, mergers
@@ -219,7 +219,7 @@ def merge_sarcs_old(sarc_list, verbose: bool = False, loose_files: dict = None) 
         new_data = new_stream.getvalue()
         del new_stream
         if '.s' in merged_sarc['file'] and not merged_sarc['file'].endswith('.sarc'):
-            new_data = wszst_yaz0.compress(new_data)
+            new_data = libyaz0.compress(new_data, level=10)
         new_sarc.add_file(merged_sarc['file'], new_data)
         del new_data
 
@@ -257,7 +257,7 @@ def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as o_file:
         if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
-            o_file.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+            o_file.write(libyaz0.compress(new_sarc.get_bytes(), level=10))
         else:
             new_sarc.write(o_file)
     return log
@@ -332,8 +332,9 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             print('Injecting merged event info into Bootup.pack...')
             util.inject_file_into_bootup(
                 'Event/EventInfo.product.sbyml',
-                wszst_yaz0.compress(
-                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes()
+                libyaz0.compress(
+                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes(),
+                    level=10
                 )
             )
 
@@ -349,10 +350,12 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
             opened_sarcs.append(sarc.SARC(sarc_bytes))
         except ValueError:
             continue
+
     all_files = {key for open_sarc in opened_sarcs for key in open_sarc.list_files()}
     nested_sarcs = {}
     new_sarc = sarc.SARCWriter(be=True)
     files_added = []
+
     for opened_sarc in reversed(opened_sarcs):
         for file in [file for file in opened_sarc.list_files() if file not in files_added]:
             data = opened_sarc.get_file_data(file).tobytes()
@@ -367,7 +370,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for file, sarcs in nested_sarcs.items():
         merged_bytes = merge_sarcs(file, sarcs)[1]
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
-            merged_bytes = wszst_yaz0.compress(merged_bytes)
+            merged_bytes = libyaz0.compress(merged_bytes, level=10)
         new_sarc.add_file(file, merged_bytes)
         files_added.append(file)
     for file in [file for file in all_files if file not in files_added]:
@@ -375,6 +378,19 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
                             if file in open_sarc.list_files()]:
             new_sarc.add_file(file, opened_sarc.get_file_data(file).tobytes())
             break
+
+    if 'Bootup.pack' in file_name:
+        for merger in [merger() for merger in mergers.get_mergers() if merger.is_bootup_injector()]:
+            inject = merger.get_bootup_injection()
+            if not inject:
+                continue
+            file, data = inject
+            try:
+                new_sarc.delete_file(file)
+            except KeyError:
+                pass
+            new_sarc.add_file(file, data)
+
     return (file_name, new_sarc.get_bytes())
 
 
@@ -396,7 +412,7 @@ class PackMerger(mergers.Merger):
         for file in [file for file in modded_files \
                      if isinstance(file, Path) and file.suffix in util.SARC_EXTS]:
             canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-            if canon and not any(ex in file.name for ex in ['Dungeon', 'Bootup_']):
+            if canon and not any(ex in file.name for ex in ['Dungeon', 'Bootup_', 'AocMainField']):
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs
 
@@ -466,7 +482,7 @@ class PackMerger(mergers.Merger):
             output_path = util.get_master_modpack_dir() / file
             output_path.parent.mkdir(parents=True, exist_ok=True)
             if output_path.suffix.startswith('.s'):
-                data = wszst_yaz0.compress(data)
+                data = libyaz0.compress(data, level=10)
             output_path.write_bytes(data)
         print('Finished merging SARCs')
 
