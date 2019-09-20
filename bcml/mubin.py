@@ -460,7 +460,7 @@ class MapMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
-                         file.suffix == '.smubin' and 'MainField' in file.parts]
+                         file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name]
         if modded_mubins:
             return generate_modded_map_log(mod_dir, modded_mubins)
         else:
