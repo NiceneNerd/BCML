@@ -5,7 +5,6 @@
 import multiprocessing
 import os
 from copy import deepcopy
-from fnmatch import fnmatch
 from functools import partial, reduce
 from pathlib import Path
 from typing import List, Union
@@ -15,12 +14,12 @@ import aamp.converters
 from aamp.parameters import ParameterList, ParameterIO, ParameterObject
 import aamp.yaml_util
 import sarc
-import wszst_yaz0
+import libyaz0
 import yaml
 from byml import yaml_util
 
 import bcml.rstable
-from bcml import util, install
+from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
 
@@ -115,10 +114,9 @@ def get_deepmerge_mods() -> List[BcmlMod]:
     return sorted(dmods, key=lambda mod: mod.priority)
 
 
-def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> dict:
+def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> []:
     """ Gets a list of files logged for deep merge in a given mod """
-    path = mod if isinstance(mod, Path) else Path(
-        mod) if isinstance(mod, str) else mod.path
+    path = mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
     dlog = path / 'logs' / 'deepmerge.yml'
     if not dlog.exists():
         return []
@@ -183,7 +181,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
     for file, stuff in nest.items():
         file_bytes = pack.get_file_data(file).tobytes()
         yazd = file_bytes[0:4] == b'Yaz0'
-        file_bytes = wszst_yaz0.decompress(file_bytes) if yazd else file_bytes
+        file_bytes = libyaz0.decompress(file_bytes) if yazd else file_bytes
 
         if isinstance(stuff, dict):
             sub_sarc = sarc.SARC(file_bytes)
@@ -194,7 +192,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
             del sub_sarc
             new_bytes = new_sub_sarc.get_bytes()
             new_sarc.add_file(
-                file, new_bytes if not yazd else wszst_yaz0.compress(new_bytes))
+                file, new_bytes if not yazd else libyaz0.compress(new_bytes, level=10))
 
         elif isinstance(stuff, list):
             try:
@@ -204,8 +202,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                         aamp_contents = _aamp_merge(aamp_contents, change)
                     aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                     del aamp_contents
-                    new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
-                        aamp_bytes)
+                    new_bytes = aamp_bytes if not yazd else libyaz0.compress(aamp_bytes, level=10)
                 else:
                     raise ValueError(
                         'Wait, what the heck, this isn\'t an AAMP file?!')
@@ -245,7 +242,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
         base_file = (util.get_master_modpack_dir() / file)
     file_bytes = base_file.read_bytes()
     yazd = file_bytes[0:4] == b'Yaz0'
-    file_bytes = file_bytes if not yazd else wszst_yaz0.decompress(file_bytes)
+    file_bytes = file_bytes if not yazd else libyaz0.decompress(file_bytes)
     magic = file_bytes[0:4]
 
     if magic == b'SARC':
@@ -263,8 +260,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
                     aamp_contents = _aamp_merge(aamp_contents, change)
                 aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                 del aamp_contents
-                new_bytes = aamp_bytes if not yazd else wszst_yaz0.compress(
-                    aamp_bytes)
+                new_bytes = aamp_bytes if not yazd else libyaz0.compress(aamp_bytes, level=10)
             else:
                 raise ValueError(f'{file} is not a SARC or AAMP file.')
         except ValueError:
@@ -272,7 +268,7 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
             del file_bytes
             print(f'Deep merging file {file} failed. No changes were made.')
 
-    new_bytes = new_bytes if not yazd else wszst_yaz0.compress(new_bytes)
+    new_bytes = new_bytes if not yazd else libyaz0.compress(new_bytes, level=10)
     output_file = (util.get_master_modpack_dir() / file)
     if base_file == output_file:
         output_file.unlink()
@@ -306,61 +302,78 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
         return
     num_threads = min(multiprocessing.cpu_count(), len(diffs))
     pool = multiprocessing.Pool(processes=num_threads)
-    results = pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
+    pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
     pool.close()
     pool.join()
-    #for name, fails in results:
-    #    failures.update(fails)
 
-    print('Updating RSTB...')
-    modded_files = install.find_modded_files(util.get_master_modpack_dir())[0]
-    sarc_files = [file for file in modded_files if util.is_file_sarc(file) and not fnmatch(
-        file, '*Bootup_????.pack')]
-    modded_sarc_files = {}
-    if sarc_files:
-        num_threads = min(len(sarc_files), multiprocessing.cpu_count())
-        pool = multiprocessing.Pool(processes=num_threads)
-        thread_sarc_search = partial(
-            install.threaded_find_modded_sarc_files,
-            modded_files=modded_files,
-            tmp_dir=util.get_master_modpack_dir(),
-            deep_merge=False,
-            verbose=verbose
-        )
-        results = pool.map(thread_sarc_search, sarc_files)
-        pool.close()
-        pool.join()
-        for result in results:
-            modded_sarcs = result[0]
-            if modded_sarcs:
-                modded_sarc_files.update(modded_sarcs)
-    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with Path(util.get_master_modpack_dir() / 'logs' / 'rstb.log')\
-         .open('w', encoding='utf-8') as r_file:
-        r_file.write('name,rstb\n')
-        modded_files.update(modded_sarc_files)
-        for file in modded_files:
-            ext = os.path.splitext(file)[1]
-            if ext not in install.RSTB_EXCLUDE and 'ActorInfo' not in file:
-                r_file.write('{},{},{}\n'
-                             .format(
-                                 file,
-                                 modded_files[file]["rstb"],
-                                 str(modded_files[file]["path"]).replace('\\', '/')
-                             )
-                            )
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
 
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log')\
          .open('w', encoding='utf-8') as l_file:
         for file_type in diffs:
             for file in diffs[file_type]:
                 l_file.write(f'{file}\n')
-    # if len(failures) > 0:
-    #     with (util.get_work_dir() / 'failures.yml').open('w', encoding='utf-8') as ff:
-    #         yaml.safe_dump(failures, ff)
-    #     print(f'In {len(failures)} files, one or more patches failed to apply. For more
-    #           'information, the following log file contains the resultant contents of all of the
-    #           'files which had patch failures:\n'
-    #           f'{str(util.get_work_dir() / "failures.yml")}')
+
+
+class DeepMerger(mergers.Merger):
+    NAME: str = 'deepmerge'
+
+    def __init__(self):
+        super().__init__('deep merge', 'Merges changes within arbitrary AAMP files',
+                         'deepmerge.yml', options={})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        diffs = {}
+        for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
+            try:
+                diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
+            except (FileNotFoundError, KeyError, TypeError):
+                continue
+        return diffs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            dumper = yaml.CSafeDumper
+            aamp.yaml_util.register_representers(dumper)
+            setattr(dumper, '__aamp_reader', None)
+            aamp.yaml_util._get_pstruct_name = lambda reader, idx, k, parent_crc32: k # pylint: disable=protected-access
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def can_partial_remerge(self):
+        return True
+
+    def get_mod_affected(self, mod):
+        return get_mod_deepmerge_files(mod)
+
+    def get_mod_diff(self, mod: Path):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                aamp.yaml_util.register_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        if 'only_these' in self._options:
+            return get_deepmerge_diffs(self._options['only_these'])
+        else:
+            return get_deepmerge_diffs()
+
+    def consolidate_diffs(self, diffs: list):
+        return consolidate_diff_files(self.get_all_diffs())
+
+    def perform_merge(self):
+        if 'only_these' in self._options:
+            deep_merge(wait_rstb=True, only_these=self._options['only_these'])
+        else:
+            deep_merge(wait_rstb=True)
+
+    def get_checkbox_options(self):
+        return []

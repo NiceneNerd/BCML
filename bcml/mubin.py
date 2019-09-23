@@ -14,10 +14,10 @@ from byml import yaml_util
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import yaml
 
-from bcml import util
+from bcml import util, mergers
 
 Map = namedtuple('Map', 'section type')
 
@@ -107,7 +107,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
         raise FileNotFoundError(
             f'The stock map file {map_unit.section}_{map_unit.type}.smubin could not be found.'
         )
-    map_bytes = wszst_yaz0.decompress(map_bytes)
+    map_bytes = libyaz0.decompress(map_bytes)
     return byml.Byml(map_bytes).parse()
 
 
@@ -156,7 +156,7 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
             f'Oddly, the modded map {map_unit.section}_{map_unit.type}.smubin '
             'could not be found.'
         )
-    map_bytes = wszst_yaz0.decompress(map_bytes)
+    map_bytes = libyaz0.decompress(map_bytes)
     return byml.Byml(map_bytes).parse()
 
 
@@ -235,13 +235,19 @@ def get_all_map_diffs() -> dict:
     return c_diffs
 
 
-def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
-    """Logs modified mainfield maps to a YAML document"""
+def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str]):
+    """Generates a dict log of modified mainfield maps"""
     diffs = {}
     modded_maps = consolidate_map_files(modded_mubins)
     for modded_map in modded_maps:
         diffs['_'.join(modded_map)] = get_map_diff(
             modded_map, get_modded_map(modded_map, tmp_dir))
+    return diffs
+
+
+def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
+    """Logs modified mainfield maps to a YAML document"""
+    diffs = generate_modded_map_log(tmp_dir, modded_mubins)
     log_file: Path = tmp_dir / 'logs' / 'map.yml'
     log_file.parent.mkdir(parents=True, exist_ok=True)
     dumper = yaml.CSafeDumper
@@ -250,7 +256,8 @@ def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
         yaml.dump(diffs, l_file, Dumper=dumper)
 
 
-def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = False) -> {}:
+def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False,
+              verbose: bool = False) -> {}:
     """
     Merges changes to a mainfield map and returns the RSTB values
 
@@ -280,18 +287,19 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
             if 'LinksToObj' in actor:
                 stock_links.extend([link['DestUnitHashId']
                                     for link in actor['LinksToObj']])
-    for map_del in changes['del']:
-        if map_del in stock_hashes and map_del not in stock_links:
-            try:
-                new_map['Objs'].pop(stock_hashes.index(map_del))
-            except IndexError:
+    if not no_del:
+        for map_del in changes['del']:
+            if map_del in stock_hashes and map_del not in stock_links:
                 try:
-                    obj_to_delete = next(
-                        iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
-                    )
-                    new_map['Objs'].remove(obj_to_delete)
-                except (StopIteration, ValueError):
-                    print(f'Could not delete actor with HashId {map_del}')
+                    new_map['Objs'].pop(stock_hashes.index(map_del))
+                except IndexError:
+                    try:
+                        obj_to_delete = next(
+                            iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
+                        )
+                        new_map['Objs'].remove(obj_to_delete)
+                    except (StopIteration, ValueError):
+                        print(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
         [change for change in changes['add'] if change['HashId'] not in stock_hashes]
     )
@@ -302,7 +310,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
         f'{map_unit.section}_{map_unit.type}.smubin'
     aoc_out.parent.mkdir(parents=True, exist_ok=True)
     aoc_bytes = byml.Writer(new_map, be=True).get_bytes()
-    aoc_out.write_bytes(wszst_yaz0.compress(aoc_bytes))
+    aoc_out.write_bytes(libyaz0.compress(aoc_bytes, level=10))
     new_map['Objs'] = [obj for obj in new_map['Objs']
                        if not obj['UnitConfigName'].startswith('DLC')]
     (util.get_master_modpack_dir() / 'content' / 'Map' /
@@ -311,7 +319,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
         map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
     base_out.parent.mkdir(parents=True, exist_ok=True)
     base_bytes = byml.Writer(new_map, be=True).get_bytes()
-    base_out.write_bytes(wszst_yaz0.compress(base_bytes))
+    base_out.write_bytes(libyaz0.compress(base_bytes, level=10))
     return {
         'aoc': (
             f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin',
@@ -324,7 +332,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, verbose: bool = F
     }
 
 
-def merge_maps(verbose: bool = False):
+def merge_maps(no_del: bool = False, verbose: bool = False):
     """Merges all installed modifications to mainfield maps"""
     aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / \
         'Pack' / 'AocMainField.pack'
@@ -350,7 +358,7 @@ def merge_maps(verbose: bool = False):
     print('Merging modded map units...')
     num_threads = min(cpu_count() - 1, len(map_diffs))
     pool = Pool(processes=num_threads)
-    rstb_results = pool.map(partial(merge_map, rstb_calc=rstb_calc,
+    rstb_results = pool.map(partial(merge_map, rstb_calc=rstb_calc, no_del=no_del,
                                     verbose=verbose), list(map_diffs.items()))
     pool.close()
     pool.join()
@@ -376,11 +384,11 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     base_file = util.get_game_file(
         'aoc/0010/Map/CDungeon/Static.smubin', aoc=True)
     base_pos = byml.Byml(
-        wszst_yaz0.decompress_file(str(base_file))
+        util.decompress_file(str(base_file))
     ).parse()['StartPos']
 
     mod_pos = byml.Byml(
-        wszst_yaz0.decompress_file(str(file))
+        util.decompress_file(str(file))
     ).parse()['StartPos']
 
     base_dungeons = [dungeon['Map'] for dungeon in base_pos]
@@ -402,25 +410,26 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     return diffs
 
 
-def merge_dungeonstatic():
+def merge_dungeonstatic(diffs: dict = None):
     """Merges all changes to the CDungeon Static.smubin"""
-    diffs = {}
-    loader = yaml.CSafeLoader
-    yaml_util.add_constructors(loader)
-    for mod in [mod for mod in util.get_installed_mods() \
-                if (mod.path / 'logs' / 'dstatic.yml').exists()]:
-        diffs.update(
-            yaml.load(
-                (mod.path / 'logs' / 'dstatic.yml').read_bytes(),
-                Loader=loader
+    if not diffs:
+        diffs = {}
+        loader = yaml.CSafeLoader
+        yaml_util.add_constructors(loader)
+        for mod in [mod for mod in util.get_installed_mods() \
+                    if (mod.path / 'logs' / 'dstatic.yml').exists()]:
+            diffs.update(
+                yaml.load(
+                    (mod.path / 'logs' / 'dstatic.yml').read_bytes(),
+                    Loader=loader
+                )
             )
-        )
 
     if not diffs:
         return
 
     new_static = byml.Byml(
-        wszst_yaz0.decompress_file(
+        util.decompress_file(
             str(util.get_game_file('aoc/0010/Map/CDungeon/Static.smubin'))
         )
     ).parse()
@@ -438,5 +447,108 @@ def merge_dungeonstatic():
         'CDungeon' / 'Static.smubin'
     output_static.parent.mkdir(parents=True, exist_ok=True)
     output_static.write_bytes(
-        wszst_yaz0.compress(byml.Writer(new_static, True).get_bytes())
+        libyaz0.compress(byml.Writer(new_static, True).get_bytes(), level=10)
     )
+
+
+class MapMerger(mergers.Merger):
+    NAME: str = 'maps'
+
+    def __init__(self, no_del: bool = False):
+        super().__init__('map merge', 'Merges changes to actors in mainfield map units',
+                         'map.yml', options={'no_del': no_del})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
+                         file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name]
+        if modded_mubins:
+            return generate_modded_map_log(mod_dir, modded_mubins)
+        else:
+            return {}
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: util.BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        return get_all_map_diffs()
+
+    def perform_merge(self):
+        merge_maps(no_del=self._options['no_del'])
+
+    def get_checkbox_options(self):
+        return [
+            ('no_del', 'Never remove stock actors from merged maps')
+        ]
+
+
+class DungeonStaticMerger(mergers.Merger):
+    NAME: str = 'dungeonstatic'
+
+    def __init__(self):
+        super().__init__('shrine entry merge', 'Merges changes to shrine entrance coordinates',
+                         'dstatic.yml', options={})
+    
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        dstatic_path = mod_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin'
+        if dstatic_path.exists():
+            return get_dungeonstatic_diff(dstatic_path)
+        else:
+            return {}
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper)
+
+    def get_mod_diff(self, mod: util.BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            all_diffs.update(diff)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_dungeonstatic(self.consolidate_diffs(self.get_all_diffs()))
+
+    def get_checkbox_options(self):
+        return []

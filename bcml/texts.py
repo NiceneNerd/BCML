@@ -14,11 +14,11 @@ from typing import List, Union
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 import yaml
 
-from bcml import util, rstable
+from bcml import util, rstable, mergers
 from bcml.util import BcmlMod
 
 EXCLUDE_TEXTS = [
@@ -51,7 +51,7 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
             get_msbt_hashes.texthashes[lang] = {}
             with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
                 bootup_pack = sarc.read_file_and_make_sarc(b_file)
-            msg_bytes = wszst_yaz0.decompress(
+            msg_bytes = libyaz0.decompress(
                 bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
             msg_pack = sarc.SARC(msg_bytes)
             for msbt in msg_pack.list_files():
@@ -78,7 +78,7 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
 
     with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
         bootup_pack = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = wszst_yaz0.decompress(
+    msg_bytes = libyaz0.decompress(
         bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_pack = sarc.SARC(msg_bytes)
     if not for_merge:
@@ -154,7 +154,7 @@ def bootup_from_msbts(lang: str = 'USen',
         s_msg.write(new_msg_stream)
         unyaz_bytes = new_msg_stream.getvalue()
         rsize = rstb.SizeCalculator().calculate_file_size_with_ext(unyaz_bytes, True, '.sarc')
-        new_msg_bytes = wszst_yaz0.compress(unyaz_bytes)
+        new_msg_bytes = libyaz0.compress(unyaz_bytes, level=10)
         s_boot = sarc.SARCWriter(True)
         s_boot.add_file(f'Message/Msg_{lang}.product.ssarc', new_msg_bytes)
         s_boot.write(new_boot)
@@ -297,7 +297,7 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
         print(f'{spaces}Identifying modified text files...')
     with open(bootup_path, 'rb') as b_file:
         bootup_sarc = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = wszst_yaz0.decompress(
+    msg_bytes = libyaz0.decompress(
         bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
     msg_sarc = sarc.SARC(msg_bytes)
     if not msg_sarc:
@@ -357,6 +357,8 @@ def get_modded_text_entries(lang: str = 'USen') -> List[dict]:
 
 def get_modded_languages(mod: Path) -> []:
     """ Gets all languages with modded texts for a given mod """
+    if isinstance(mod, BcmlMod):
+        mod = mod.path
     text_langs = []
     for text_lang in (mod / 'logs').glob('*text*'):
         lang = util.get_file_language(text_lang)
@@ -417,7 +419,7 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
             merge_count += 1
 
     with msyt.open('w', encoding='utf-8') as f_ref:
-        yaml.dump(merged_text, f_ref)
+        yaml.dump(merged_text, f_ref, allow_unicode=True)
     return merge_count, rel_path
 
 
@@ -504,3 +506,97 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
         table.delete_entry(msg_path)
     rstb_path.parent.mkdir(parents=True, exist_ok=True)
     rstb.util.write_rstb(table, str(rstb_path), True)
+
+class TextsMerger(mergers.Merger):
+    """ A merger for game texts """
+    NAME: str = 'texts'
+
+    def __init__(self):
+        super().__init__('texts merge', 'Merges changes to game texts',
+                         '', options={})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        lang_diffs = {}
+        for file in [file for file in modded_files if isinstance(file, Path) and file.is_file() and\
+                     file.name.startswith('Bootup_') and file.name != 'Bootup_Graphics']:
+            lang = util.get_file_language(file)
+            if lang not in lang_diffs:
+                try:
+                    modded_entries, new_texts, lang = get_text_mods_from_bootup(file)
+                except FileNotFoundError:
+                    continue
+                if lang.endswith('en'):
+                    lang_diffs['USen'] = (modded_entries, new_texts)
+                    lang_diffs['EUen'] = (modded_entries, new_texts)
+        return lang_diffs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        for lang in diff_material:
+            with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
+                yaml.dump(diff_material[lang][0], t_file, allow_unicode=True)
+            text_sarc = diff_material[lang][1]
+            if text_sarc is not None:
+                with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
+                    text_sarc.write(s_file)
+
+    def is_mod_logged(self, mod: BcmlMod):
+        return bool(
+            list((mod.path / 'logs').glob('*texts*'))
+        )
+
+    def get_mod_diff(self, mod: BcmlMod):
+        diff = {}
+        for file in (mod.path / 'logs').glob('texts_*.yml'):
+            lang = util.get_file_language(file)
+            if not lang in diff:
+                diff[lang] = {}
+            with file.open('r', encoding='utf-8') as log:
+                diff[lang]['mod'] = yaml.safe_load(log)
+        for file in (mod.path / 'logs').glob('newtexts*.sarc'):
+            lang = util.get_file_language(file)
+            if not lang in diff:
+                diff[lang] = {}
+            with file.open('rb') as t_sarc:
+                diff[lang]['add'] = sarc.read_file_and_make_sarc(t_sarc)
+        return diff
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in reversed(diffs):
+            for lang in diff:
+                if lang not in all_diffs:
+                    all_diffs[lang] = {}
+                if 'mod' in diff[lang]:
+                    if 'mod' not in all_diffs[lang]:
+                        all_diffs[lang]['mod'] = {}
+                    for file in diff[lang]['mod']:
+                        if file not in all_diffs[lang]['mod']:
+                            all_diffs[lang]['mod'][file] = {'entries': {}}
+                        for entry, contents in diff[lang]['mod'][file]['entries'].items():
+                            if entry not in all_diffs[lang]['mod'][file]['entries']:
+                                all_diffs[lang]['mod'][file]['entries'][entry] = contents
+                if 'add' in diff[lang]:
+                    if 'add' not in all_diffs[lang]:
+                        all_diffs[lang]['add'] = []
+                    all_diffs[lang]['add'].append(diff[lang]['add'])
+        return all_diffs
+
+    def perform_merge(self):
+        langs = []
+        for mod in util.get_installed_mods():
+            if self.is_mod_logged(mod):
+                langs.extend(get_modded_languages(mod))
+        langs = set(langs)
+        for lang in langs:
+            try:
+                merge_texts(lang)
+            except FileNotFoundError:
+                pass

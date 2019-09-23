@@ -15,15 +15,15 @@ from collections import namedtuple
 from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Union
+from typing import List, Union
+from PySide2.QtGui import QIcon, QPixmap
 
 import byml
 from byml import yaml_util
+import libyaz0
 import sarc
-import wszst_yaz0
 import xxhash
 import yaml
-from PySide2.QtGui import QIcon, QPixmap
 
 BcmlMod = namedtuple('BcmlMod', 'name priority path')
 CREATE_NO_WINDOW = 0x08000000
@@ -105,7 +105,8 @@ def get_settings() -> {}:
                 'game_dir': '',
                 'load_reverse': False,
                 'mlc_dir': '',
-                'site_meta': ''
+                'site_meta': '',
+                'dark_theme': False
             }
             with settings_path.open('w', encoding='utf-8') as s_file:
                 settings.write(s_file)
@@ -117,6 +118,8 @@ def get_settings() -> {}:
 
 def get_settings_bool(setting: str) -> bool:
     """Gets the value of a boolean setting"""
+    if not setting in get_settings():
+        return False
     return get_settings()[setting] == 'True'
 
 
@@ -267,7 +270,10 @@ def get_aoc_dir() -> Path:
 
 def get_modpack_dir() -> Path:
     """ Gets the Cemu graphic pack directory for mods """
-    return get_cemu_dir() / 'graphicPacks' / 'BCML'
+    if 'Beta' not in get_bcml_version():
+        return get_cemu_dir() / 'graphicPacks' / 'BCML'
+    else:
+        return get_cemu_dir() / 'graphicPacks' / 'BCML_beta'
 
 
 def get_util_dirs() -> tuple:
@@ -357,7 +363,7 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
         i += 1
     file_bytes = sarcs[-1].get_file_data(nests[-1]).tobytes()
     if file_bytes[0:4] == b'Yaz0' and unyaz:
-        file_bytes = wszst_yaz0.decompress(file_bytes)
+        file_bytes = libyaz0.decompress(file_bytes)
     del sarcs
     return file_bytes
 
@@ -432,6 +438,13 @@ def is_actorinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
     path = mod.path if isinstance(mod, BcmlMod) else Path(
         mod) if isinstance(mod, str) else mod
     return (path / 'logs' / 'actorinfo.yml').exists()
+
+
+def is_eventinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
+    """ Checks whether a mod affects event info merging """
+    path = mod.path if isinstance(mod, BcmlMod) else Path(
+        mod) if isinstance(mod, str) else mod
+    return (path / 'logs' / 'eventinfo.yml').exists()
 
 
 def is_map_mod(mod: Union[Path, BcmlMod, str]) -> bool:
@@ -550,6 +563,12 @@ def is_file_byml(path: str) -> bool:
     return ext in BYML_EXTS
 
 
+def decompress_file(file) -> bytes:
+    if isinstance(file, str):
+        file = Path(file)
+    return libyaz0.decompress(file.read_bytes())
+
+
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
     """
     Detects by file extension if a file should be decompressed, and decompresses if needed
@@ -560,9 +579,36 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
     :rtype: bytes
     """
     if file_bytes[0:4] == b'Yaz0':
-        return wszst_yaz0.decompress(file_bytes)
+        return libyaz0.decompress(file_bytes)
     else:
         return file_bytes
+
+
+def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False):
+    """
+    Injects a file into the master BCML `Bootup.pack`
+
+    :param file: The path of the file to inject
+    :type file: str
+    :param data: The bytes of the file to inject
+    :type data: bytes
+    :param create_bootup: Whether to create `Bootup.pack` if it does not exist, defaults to False
+    :type create_bootup: bool, optional
+    """
+    bootup_path = get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+    if bootup_path.exists() or create_bootup:
+        if not bootup_path.exists():
+            bootup_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(get_game_file('Pack/Bootup.pack'), bootup_path)
+        with bootup_path.open('rb') as b_file:
+            old_bootup = sarc.read_file_and_make_sarc(b_file)
+            new_bootup = sarc.make_writer_from_sarc(old_bootup)
+        if file in old_bootup.list_files():
+            new_bootup.delete_file(file)
+        new_bootup.add_file(file, data)
+        bootup_path.write_bytes(new_bootup.get_bytes())
+    else:
+        raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
 
 
 def get_mod_info(rules_path: Path) -> BcmlMod:
@@ -762,14 +808,14 @@ def update_bcml():
 def create_bcml_graphicpack_if_needed():
     """Creates the BCML master modpack if it doesn't exist"""
     bcml_mod_dir = get_modpack_dir() / '9999_BCML'
-    bcml_mod_dir.mkdir(parents=True, exist_ok=True)
+    (bcml_mod_dir / 'logs').mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / 'rules.txt'
     if not rules.exists():
         with rules.open('w', encoding='utf-8') as r_file:
             r_file.write('[Definition]\n'
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'
-                         'path = ι BCML: DON\'T TOUCH/Master BCML\n'
+                         'path = {BCML: DON\'T TOUCH}/Master BCML\n'
                          'description = Auto-generated pack which merges RSTB changes and packs '
                          'for other mods\n'
                          'version = 4\n'
@@ -784,7 +830,7 @@ def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
 
     :param dct: dict onto which the merge is executed
     :param merge_dct: dct merged into dct
-    :param unique_lists: Whether to prevent duplicate items in lists, defaults to False
+    :param overwrite_lists: Whether to prevent duplicate items in lists, defaults to False
     :return: None
     """
     for k in merge_dct:

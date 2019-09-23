@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import List, Union
 
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 
-from bcml import data, util
+from bcml import data, util, mergers
 from bcml.util import BcmlMod
 
 
@@ -42,7 +42,9 @@ def get_modded_packs_in_mod(mod: Union[Path, str, BcmlMod]) -> List[str]:
     with plog.open('r') as rlog:
         csv_loop = csv.reader(rlog)
         for row in csv_loop:
-            packs.append(row[1])
+            if 'logs' in str(row[1]) or str(row[0]) == 'name':
+                continue
+            packs.append(Path(str(row[1])).as_posix())
     return packs
 
 
@@ -68,7 +70,7 @@ def get_modded_sarcs() -> dict:
                     packs[row[0]] = []
                 packs[row[0]].append({
                     'path': filepath,
-                    'rel_path': str(row[1]),
+                    'rel_path': Path(str(row[1])).as_posix(),
                     'priority': mod.priority
                 })
     return packs
@@ -118,7 +120,7 @@ def get_sarc_versions(name: str, mod_list: dict) -> List[dict]:
     return sarc_list
 
 
-def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> tuple:
+def merge_sarcs_old(sarc_list, verbose: bool = False, loose_files: dict = None) -> tuple:
     """
     Merges a list of SARC packs and returns the changes
 
@@ -201,7 +203,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
     for mod_sarc_list in modded_sarcs:
         if not modded_sarcs[mod_sarc_list]:
             continue
-        new_pack, sub_log = merge_sarcs(
+        new_pack, sub_log = merge_sarcs_old(
             modded_sarcs[mod_sarc_list], verbose, loose_files=loose_files)
         sarc_log.extend(sub_log)
         merged_sarcs.append({
@@ -217,7 +219,7 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
         new_data = new_stream.getvalue()
         del new_stream
         if '.s' in merged_sarc['file'] and not merged_sarc['file'].endswith('.sarc'):
-            new_data = wszst_yaz0.compress(new_data)
+            new_data = libyaz0.compress(new_data, level=10)
         new_sarc.add_file(merged_sarc['file'], new_data)
         del new_data
 
@@ -244,26 +246,25 @@ def merge_sarcs(sarc_list, verbose: bool = False, loose_files: dict = None) -> t
 
 
 def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
-    """An interface for multiprocessing `merge_sarcs()`"""
+    """An interface for multiprocessing `merge_sarcs_old()`"""
     output_path = Path(util.get_master_modpack_dir() /
                        modded_sarcs[pack][0]['rel_path'])
     versions = get_sarc_versions(pack, modded_sarcs)
     try:
-        new_sarc, log = merge_sarcs(
-            versions, verbose, loose_files=modded_files)
+        new_sarc, log = merge_sarcs_old(versions, verbose, loose_files=modded_files)
     except IndexError:
         return []
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as o_file:
         if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
-            o_file.write(wszst_yaz0.compress(new_sarc.get_bytes()))
+            o_file.write(libyaz0.compress(new_sarc.get_bytes(), level=10))
         else:
             new_sarc.write(o_file)
     return log
 
 
 def merge_installed_packs(no_injection: bool = False, only_these: List[str] = None,
-                          verbose: bool = False, even_one: bool = False):
+                          verbose: bool = False):
     """
     Merges all modified packs in installed BCML mods
 
@@ -293,7 +294,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
     print('Loading modded packs...')
     modded_sarcs = get_modded_sarcs()
     log_count = 0
-    num_req = 1 if not even_one else 0
+    num_req = 0
     sarcs_to_merge = [
         pack for pack in modded_sarcs if len(modded_sarcs[pack]) > num_req]
     if only_these is not None:
@@ -315,7 +316,7 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
         log_count = 0
     print(f'Pack merging complete. Merged {log_count} packs.')
     if 'Pack/Bootup.pack' in modded_sarcs and not no_injection:
-        if only_these is not None and 'content\\Pack\\Bootup.pack' not in only_these:
+        if only_these is not None and 'content/Pack/Bootup.pack' not in only_these:
             return
         if (util.get_master_modpack_dir() / 'logs' / 'gamedata.log').exists():
             print('Injecting merged gamedata.sarc into Bootup.pack...')
@@ -327,3 +328,169 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('rb') as s_file:
                 savedata = sarc.read_sarc_and_make_writer(s_file)
             data.inject_savedata_into_bootup(savedata)
+        if (util.get_master_modpack_dir() / 'logs' / 'eventinfo.log').exists():
+            print('Injecting merged event info into Bootup.pack...')
+            util.inject_file_into_bootup(
+                'Event/EventInfo.product.sbyml',
+                libyaz0.compress(
+                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes(),
+                    level=10
+                )
+            )
+
+
+def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
+    opened_sarcs: List[sarc.SARC] = []
+    if isinstance(sarcs[0], Path):
+        for i, sarc_path in enumerate(sarcs):
+            sarcs[i] = sarc_path.read_bytes()
+    for sarc_bytes in sarcs:
+        sarc_bytes = util.unyaz_if_needed(sarc_bytes)
+        try:
+            opened_sarcs.append(sarc.SARC(sarc_bytes))
+        except ValueError:
+            continue
+
+    all_files = {key for open_sarc in opened_sarcs for key in open_sarc.list_files()}
+    nested_sarcs = {}
+    new_sarc = sarc.SARCWriter(be=True)
+    files_added = []
+
+    for opened_sarc in reversed(opened_sarcs):
+        for file in [file for file in opened_sarc.list_files() if file not in files_added]:
+            data = opened_sarc.get_file_data(file).tobytes()
+            if util.is_file_modded(file.replace('.s', '.'), data, count_new=True):
+                if not Path(file).suffix in util.SARC_EXTS:
+                    new_sarc.add_file(file, data)
+                    files_added.append(file)
+                else:
+                    if file not in nested_sarcs:
+                        nested_sarcs[file] = []
+                    nested_sarcs[file].append(util.unyaz_if_needed(data))
+    for file, sarcs in nested_sarcs.items():
+        merged_bytes = merge_sarcs(file, sarcs)[1]
+        if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
+            merged_bytes = libyaz0.compress(merged_bytes, level=10)
+        new_sarc.add_file(file, merged_bytes)
+        files_added.append(file)
+    for file in [file for file in all_files if file not in files_added]:
+        for opened_sarc in [open_sarc for open_sarc in opened_sarcs \
+                            if file in open_sarc.list_files()]:
+            new_sarc.add_file(file, opened_sarc.get_file_data(file).tobytes())
+            break
+
+    if 'Bootup.pack' in file_name:
+        for merger in [merger() for merger in mergers.get_mergers() if merger.is_bootup_injector()]:
+            inject = merger.get_bootup_injection()
+            if not inject:
+                continue
+            file, data = inject
+            try:
+                new_sarc.delete_file(file)
+            except KeyError:
+                pass
+            new_sarc.add_file(file, data)
+
+    return (file_name, new_sarc.get_bytes())
+
+
+class PackMerger(mergers.Merger):
+    """ A merger for modified pack files """
+    NAME: str = 'packs'
+
+    def __init__(self):
+        super().__init__('SARC pack merger', 'Merges modified files within SARCs', 'packs.log', {})
+
+    def can_partial_remerge(self):
+        return True
+
+    def get_mod_affected(self, mod):
+        return get_modded_packs_in_mod(mod)
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        packs = {}
+        for file in [file for file in modded_files \
+                     if isinstance(file, Path) and file.suffix in util.SARC_EXTS]:
+            canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
+            if canon and not any(ex in file.name for ex in ['Dungeon', 'Bootup_', 'AocMainField']):
+                packs[canon] = file.relative_to(mod_dir).as_posix()
+        return packs
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+            log.write('name,path\n')
+            for canon, path in diff_material.items():
+                if 'logs' in path:
+                    continue
+                log.write(f'{canon},{path}\n')
+
+    def get_mod_diff(self, mod: util.BcmlMod):
+        return get_modded_packs_in_mod(mod)
+
+    def get_all_diffs(self):
+        diffs = {}
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+            diffs[mod] = get_modded_packs_in_mod(mod)
+        return diffs
+
+    def consolidate_diffs(self, diffs):
+        all_sarcs = set()
+        all_diffs = {}
+        for mod in sorted(diffs.keys(), key=lambda mod: mod.priority):
+            all_sarcs |= set(diffs[mod])
+        for modded_sarc in all_sarcs:
+            for mod, diff in diffs.items():
+                if modded_sarc in diff:
+                    if not modded_sarc in all_diffs:
+                        all_diffs[modded_sarc] = []
+                    if (mod.path / modded_sarc).exists():
+                        all_diffs[modded_sarc].append(mod.path / modded_sarc)
+        return all_diffs
+
+    def perform_merge(self):
+        print('Loading modded SARC list...')
+        sarcs = self.consolidate_diffs(self.get_all_diffs())
+        if 'only_these' in self._options:
+            for sarc_file in self._options['only_these']:
+                master_path = (util.get_master_modpack_dir() / sarc_file)
+                if master_path.exists():
+                    master_path.unlink()
+            for sarc_file in [file for file in sarcs if file not in self._options['only_these']]:
+                del sarcs[sarc_file]
+        else:
+            for file in [file for file in util.get_master_modpack_dir().rglob('**/*') \
+                        if file.suffix in util.SARC_EXTS]:
+                file.unlink()
+        for sarc_file in sarcs:
+            try:
+                sarcs[sarc_file].insert(0, util.get_game_file(sarc_file))
+            except FileNotFoundError:
+                continue
+        if not sarcs:
+            print('No SARC merging necessary')
+            return
+        num_threads = min(cpu_count(), len(sarcs))
+        pool = Pool(processes=num_threads)
+        print(f'Merging {len(sarcs)} SARC files...')
+        results = pool.starmap(merge_sarcs, sarcs.items())
+        pool.close()
+        pool.join()
+        for result in results:
+            file, data = result
+            output_path = util.get_master_modpack_dir() / file
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if output_path.suffix.startswith('.s'):
+                data = libyaz0.compress(data, level=10)
+            output_path.write_bytes(data)
+        print('Finished merging SARCs')
+
+    def perform_merge_old(self):
+        if 'only_these' not in self._options:
+            merge_installed_packs(no_injection=False)
+        else:
+            merge_installed_packs(no_injection=False, only_these=self._options['only_these'])
+
+    def get_checkbox_options(self):
+        return []

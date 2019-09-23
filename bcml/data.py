@@ -11,18 +11,18 @@ from io import BytesIO
 from math import ceil
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import byml
 from byml import yaml_util
 import rstb
 import rstb.util
 import sarc
-import wszst_yaz0
+import libyaz0
 import xxhash
 import yaml
 
-from bcml import util
+from bcml import util, rstable, mergers
 from bcml.util import BcmlMod
 
 
@@ -31,7 +31,7 @@ def get_stock_gamedata() -> sarc.SARC:
     if not hasattr(get_stock_gamedata, 'gamedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_gamedata.gamedata = sarc.SARC(wszst_yaz0.decompress(
+        get_stock_gamedata.gamedata = sarc.SARC(libyaz0.decompress(
             bootup.get_file_data('GameData/gamedata.ssarc')))
     return get_stock_gamedata.gamedata
 
@@ -41,7 +41,7 @@ def get_stock_savedata() -> sarc.SARC:
     if not hasattr(get_stock_savedata, 'savedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_savedata.savedata = sarc.SARC(wszst_yaz0.decompress(
+        get_stock_savedata.savedata = sarc.SARC(libyaz0.decompress(
             bootup.get_file_data('GameData/savedataformat.ssarc')
         ))
     return get_stock_savedata.savedata
@@ -90,7 +90,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
     new_pack.add_file('GameData/gamedata.ssarc',
-                      wszst_yaz0.compress(gamedata_bytes))
+                      libyaz0.compress(gamedata_bytes, level=10))
     (util.get_master_modpack_dir() / 'content' /
      'Pack').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
@@ -120,7 +120,7 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     new_pack.delete_file('GameData/savedataformat.ssarc')
     savedata_bytes = bgsvdata.get_bytes()
     new_pack.add_file('GameData/savedataformat.ssarc',
-                      wszst_yaz0.compress(savedata_bytes))
+                      libyaz0.compress(savedata_bytes, level=10))
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
         new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
@@ -156,7 +156,7 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
 def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
     """
     Consolidates all game data in a game data SARC
-    
+
     :return: Returns a dict of all game data entries in a SARC
     :rtype: dict of str: list
     """
@@ -179,6 +179,9 @@ def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
+    """
+    Logs the changes of a certain data type made to modded gamedata
+    """
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
     diffs = {}
     for entry in mod_data[data_type]:
@@ -271,7 +274,7 @@ def merge_gamedata(verbose: bool = False):
     yaml_util.add_constructors(loader)
     print('Loading gamedata mods...')
     for mod in mods:
-        with open(mod.path / 'logs' / 'gamedata.yml') as g_file:
+        with (mod.path / 'logs' / 'gamedata.yml').open('r') as g_file:
             yml = yaml.load(g_file, Loader=loader)
             for data_type in yml:
                 if data_type not in modded_entries:
@@ -328,18 +331,8 @@ def merge_gamedata(verbose: bool = False):
     with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as g_file:
         new_gamedata.write(g_file)
 
-    print('Correcting RSTB if necessary...')
-    rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
-                                         'ResourceSizeTable.product.srsizetable'
-    table = rstb.util.read_rstb(str(rstb_path), True)
-    if table.is_in_table('GameData/gamedata.sarc'):
-        old_size = table.get_size('GameData/gamedata.sarc')
-        if bootup_rstb > old_size:
-            table.set_size('GameData/gamedata.sarc', bootup_rstb)
-            if verbose:
-                print('  Updated RSTB entry for "GameData/gamedata.sarc"'
-                      f'from {old_size} bytes to {bootup_rstb} bytes')
-        rstb.util.write_rstb(table, str(rstb_path), True)
+    print('Updating RSTB...')
+    rstable.set_size('GameData/gamedata.sarc', bootup_rstb)
 
     glog_path.parent.mkdir(parents=True, exist_ok=True)
     with glog_path.open('w', encoding='utf-8') as l_file:
@@ -432,18 +425,8 @@ def merge_savedata(verbose: bool = False):
     with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as s_file:
         new_savedata.write(s_file)
 
-    print('Correcting RSTB if necessary...')
-    rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' / \
-                                         'ResourceSizeTable.product.srsizetable'
-    table = rstb.util.read_rstb(str(rstb_path), True)
-    if table.is_in_table('GameData/savedataformat.sarc'):
-        old_size = table.get_size('GameData/savedataformat.sarc')
-        if bootup_rstb > old_size:
-            table.set_size('GameData/savedataformat.sarc', bootup_rstb)
-            if verbose:
-                print('  Updated RSTB entry for "GameData/savedataformat.sarc"'
-                      f'from {old_size} bytes to {bootup_rstb} bytes')
-        rstb.util.write_rstb(table, str(rstb_path), True)
+    print('Updating RSTB...')
+    rstable.set_size('GameData/savedataformat.sarc', bootup_rstb)
 
     slog_path.parent.mkdir(parents=True, exist_ok=True)
     with slog_path.open('w', encoding='utf-8') as l_file:
@@ -454,7 +437,7 @@ def get_stock_actorinfo() -> dict:
     """ Gets the unmodded contents of ActorInfo.product.sbyml """
     actorinfo = util.get_game_file('Actor/ActorInfo.product.sbyml')
     with actorinfo.open('rb') as a_file:
-        return byml.Byml(wszst_yaz0.decompress(a_file.read())).parse()
+        return byml.Byml(libyaz0.decompress(a_file.read())).parse()
 
 
 def get_modded_actors(actorinfo: dict) -> dict:
@@ -539,5 +522,210 @@ def merge_actorinfo(verbose: bool = False):
     buf = BytesIO()
     byml.Writer(actorinfo, True).write(buf)
     actor_path.parent.mkdir(parents=True, exist_ok=True)
-    actor_path.write_bytes(wszst_yaz0.compress(buf.getvalue()))
+    actor_path.write_bytes(libyaz0.compress(buf.getvalue(), level=10))
     print('Actor info merged successfully')
+
+
+class GameDataMerger(mergers.Merger):
+    NAME: str = 'gamedata'
+
+    def __init__(self):
+        super().__init__(
+            'game data merge',
+            'Merges changes to gamedata.sarc',
+            'gamedata.yml', options={}
+        )
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        if 'content/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
+            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            return get_modded_gamedata_entries(
+                sarc.SARC(
+                    libyaz0.decompress(
+                        bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
+                    )
+                )
+            )
+        else:
+            return {}
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_gamedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            util.dict_merge(all_diffs, diff, overwrite_lists=True)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_gamedata()
+
+    def get_checkbox_options(self):
+        return []
+
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc'
+        if tmp_sarc.exists():
+            return (
+                'GameData/gamedata.ssarc',
+                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+            )
+        else:
+            return
+
+
+class SaveDataMerger(mergers.Merger):
+    NAME: str = 'savedata'
+
+    def __init__(self):
+        super().__init__('save data merge', 'Merge changes to savedataformat.ssarc', 'savedata.yml')
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        if 'content/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
+            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            return get_modded_savedata_entries(
+                sarc.SARC(
+                    libyaz0.decompress(
+                        bootup_sarc.get_file_data('GameData/savedataformat.ssarc').tobytes()
+                    )
+                )
+            )
+        else:
+            return []
+
+    def log_diff(self, mod_dir: Path, diff_material):
+        if isinstance(diff_material[0], Path):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return []
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_savedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = []
+        hashes = []
+        for diff in reversed(diffs):
+            for entry in diff:
+                if entry['HashValue'] not in hashes:
+                    all_diffs.append(entry)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_savedata()
+
+    def get_checkbox_options(self):
+        return []
+
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'savedata.sarc'
+        if tmp_sarc.exists():
+            return (
+                'GameData/savedataformat.ssarc',
+                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+            )
+        else:
+            return
+
+
+class ActorInfoMerger(mergers.Merger):
+    NAME: str = 'actors'
+
+    def __init__(self):
+        super().__init__('actor info merge', 'Merges changes to ActorInfo.product.byml',
+                         'actorinfo.yml ', {})
+
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        try:
+            actor_file = next(iter([file for file in modded_files \
+                               if Path(file).name == 'ActorInfo.product.sbyml']))
+        except StopIteration:
+            return {}
+        actor_info = byml.Byml(util.decompress_file(str(actor_file))).parse()
+        return get_modded_actors(actor_info)
+
+    def log_diff(self, mod_dir: Path, diff_material: Union[dict, list]):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(Path, diff_material)
+        if diff_material:
+            with (mod_dir / 'logs' / self._log_name).open('w', encoding='utf-8') as log:
+                dumper = yaml.CSafeDumper
+                yaml_util.add_representers(dumper)
+                yaml.dump(diff_material, log, Dumper=dumper, allow_unicode=True, encoding='utf-8',
+                          default_flow_style=None)
+
+    def get_mod_diff(self, mod: BcmlMod):
+        if self.is_mod_logged(mod):
+            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as log:
+                loader = yaml.CSafeLoader
+                yaml_util.add_constructors(loader)
+                return yaml.load(log, Loader=loader)
+        else:
+            return {}
+
+    def get_all_diffs(self):
+        diffs = []
+        for mod in get_gamedata_mods():
+            diffs.append(self.get_mod_diff(mod))
+        return diffs
+
+    def consolidate_diffs(self, diffs: list):
+        all_diffs = {}
+        for diff in diffs:
+            all_diffs.update(diff)
+        return all_diffs
+
+    def perform_merge(self):
+        merge_actorinfo()
+
+    def get_checkbox_options(self):
+        return []
