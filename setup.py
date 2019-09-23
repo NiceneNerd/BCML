@@ -29,6 +29,7 @@ setup(
     install_requires=[
         'aamp>=1.3.0.post1',
         'byml>=2.3.0.post1',
+        'cython>=0.29.13',
         'libyaz0>=0.5',
         'PySide2>=5.13.0',
         'pyYaml>=5.1.1',
