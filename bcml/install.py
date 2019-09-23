@@ -44,8 +44,7 @@ def open_mod(path: Path) -> Path:
         subprocess.run(x_args, stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
     else:
-        raise Exception(
-            'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).')
+        raise Exception('The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).')
     if not tmpdir.exists():
         raise Exception('No files were extracted.')
     rulesdir = tmpdir
@@ -57,7 +56,7 @@ def open_mod(path: Path) -> Path:
                 found_rules = True
                 break
         if not found_rules:
-            raise Exception('No rules.txt was found in this mod.')
+            raise FileNotFoundError(f'No rules.txt was found in "{path.name}".')
     return rulesdir
 
 
