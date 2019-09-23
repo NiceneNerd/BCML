@@ -214,6 +214,8 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) ->
             'disable': [],
             'options': {}
         }
+    if 'disable' not in options:
+        options['disable'] = []
 
     print('Scanning for modified files...')
     modded_files = find_modded_files(tmp_dir, verbose=verbose)

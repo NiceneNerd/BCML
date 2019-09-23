@@ -1158,6 +1158,15 @@ DARK_THEME = """
 
 def main():
     util.clear_temp_dir()
+    try:
+        import libyaz0.yaz0_cy
+    except ImportError:
+        compiled_path = Path.home() / '.pyxbld' / 'lib.win-amd64-3.7' / 'libyaz0' /\
+                        'yaz0_cy.cp37-win_amd64.pyd'
+        if not compiled_path.exists():
+            compiled_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(util.get_exec_dir() / 'data' / 'yaz0_cy.cp37-win_amd64.pyd', compiled_path)
+            import libyaz0.yaz0_cy
     app = QtWidgets.QApplication([])
     if util.get_settings_bool('dark_theme'):
         app.setStyleSheet(DARK_THEME)
@@ -1180,6 +1189,8 @@ def main():
             f'{e}\n\nBCML will now close.'
         )
         e.write_text(tb, encoding='utf-8')
+    finally:
+        util.clear_temp_dir()
 
 
 if __name__ == "__main__":

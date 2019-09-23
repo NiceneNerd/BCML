@@ -581,9 +581,9 @@ class RstbMerger(mergers.Merger):
                 if ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
                     log.write(f'{canon},{value},{path}\n')
 
-        if self._options['leave']:
+        if 'leave' in self._options and self._options['leave']:
             (mod_dir / 'logs' / '.leave').write_bytes(b'')
-        if self._options['shrink']:
+        if 'shrink' in self._options and self._options['shrink']:
             (mod_dir / 'logs' / '.shrink').write_bytes(b'')
 
     def get_mod_diff(self, mod: util.BcmlMod):
