@@ -572,7 +572,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
     else:
         with file.open('wb') as s_file:
             if file.suffix.startswith('.s') and file.suffix != '.ssarc':
-                s_file.write(libyaz0.compress(new_sarc.get_bytes(), level=10))
+                s_file.write(util.compress(new_sarc.get_bytes()))
             else:
                 new_sarc.write(s_file)
 

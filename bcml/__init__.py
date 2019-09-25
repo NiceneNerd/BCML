@@ -1153,11 +1153,7 @@ DARK_THEME = """
     }
 """
 
-# Main
-
-
-def main():
-    util.clear_temp_dir()
+def libyaz_load():
     try:
         import libyaz0.yaz0_cy
     except ImportError:
@@ -1166,7 +1162,19 @@ def main():
         if not compiled_path.exists():
             compiled_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(util.get_exec_dir() / 'data' / 'yaz0_cy.cp37-win_amd64.pyd', compiled_path)
+            if 'pkgs' in list(util.get_exec_dir().glob('../*')):
+                shutil.copy(
+                    util.get_exec_dir() / 'data' / 'yaz0_cy.cp37-win_amd64.pyd',
+                    util.get_exec_dir() / 'pkgs' / 'libyaz0' / 'yaz0_cy.cp37-win_amd64.pyd'
+                )
             import libyaz0.yaz0_cy
+
+# Main
+
+
+def main():
+    util.clear_temp_dir()
+    libyaz_load()
     app = QtWidgets.QApplication([])
     if util.get_settings_bool('dark_theme'):
         app.setStyleSheet(DARK_THEME)

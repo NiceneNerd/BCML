@@ -20,7 +20,6 @@ from PySide2.QtGui import QIcon, QPixmap
 
 import byml
 from byml import yaml_util
-import libyaz0
 import sarc
 import xxhash
 import yaml
@@ -52,6 +51,34 @@ AAMP_EXTS = {'.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.bagl
 BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin',
              '.smubin', '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata',
              '.sbgsvdata'}
+
+
+def decompress(data: bytes) -> bytes:
+    try:
+        import libyaz0.yaz0_cy
+        if isinstance(data, memoryview):
+            data = data.tobytes()
+        return libyaz0.yaz0_cy.DecompressYaz(data)
+    except ImportError:
+        import wszst_yaz0
+        return wszst_yaz0.decompress(data)
+
+
+def compress(data: bytes) -> bytes:
+    try:
+        import libyaz0.yaz0_cy
+        if isinstance(data, memoryview):
+            data = data.tobytes()
+        comp_data = libyaz0.yaz0_cy.CompressYaz(data, 9)
+        result = bytearray(b'Yaz0')
+        result += len(data).to_bytes(4, "big")
+        result += int(0).to_bytes(4, "big")
+        result += b'\0\0\0\0'
+        result += comp_data
+        return result
+    except ImportError:
+        import wszst_yaz0
+        return wszst_yaz0.compress(data, level=9)
 
 
 def get_exec_dir() -> Path:
@@ -363,7 +390,7 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
         i += 1
     file_bytes = sarcs[-1].get_file_data(nests[-1]).tobytes()
     if file_bytes[0:4] == b'Yaz0' and unyaz:
-        file_bytes = libyaz0.decompress(file_bytes)
+        file_bytes = decompress(file_bytes)
     del sarcs
     return file_bytes
 
@@ -566,7 +593,7 @@ def is_file_byml(path: str) -> bool:
 def decompress_file(file) -> bytes:
     if isinstance(file, str):
         file = Path(file)
-    return libyaz0.decompress(file.read_bytes())
+    return decompress(file.read_bytes())
 
 
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
@@ -579,7 +606,7 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
     :rtype: bytes
     """
     if file_bytes[0:4] == b'Yaz0':
-        return libyaz0.decompress(file_bytes)
+        return decompress(file_bytes)
     else:
         return file_bytes
 

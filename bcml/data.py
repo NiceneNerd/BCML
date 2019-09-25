@@ -31,7 +31,7 @@ def get_stock_gamedata() -> sarc.SARC:
     if not hasattr(get_stock_gamedata, 'gamedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_gamedata.gamedata = sarc.SARC(libyaz0.decompress(
+        get_stock_gamedata.gamedata = sarc.SARC(util.decompress(
             bootup.get_file_data('GameData/gamedata.ssarc')))
     return get_stock_gamedata.gamedata
 
@@ -41,7 +41,7 @@ def get_stock_savedata() -> sarc.SARC:
     if not hasattr(get_stock_savedata, 'savedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_savedata.savedata = sarc.SARC(libyaz0.decompress(
+        get_stock_savedata.savedata = sarc.SARC(util.decompress(
             bootup.get_file_data('GameData/savedataformat.ssarc')
         ))
     return get_stock_savedata.savedata
@@ -90,7 +90,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     new_pack.delete_file('GameData/gamedata.ssarc')
     gamedata_bytes = bgdata.get_bytes()
     new_pack.add_file('GameData/gamedata.ssarc',
-                      libyaz0.compress(gamedata_bytes, level=10))
+                      util.compress(gamedata_bytes))
     (util.get_master_modpack_dir() / 'content' /
      'Pack').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
@@ -120,7 +120,7 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     new_pack.delete_file('GameData/savedataformat.ssarc')
     savedata_bytes = bgsvdata.get_bytes()
     new_pack.add_file('GameData/savedataformat.ssarc',
-                      libyaz0.compress(savedata_bytes, level=10))
+                      util.compress(savedata_bytes))
     with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
         new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
@@ -437,7 +437,7 @@ def get_stock_actorinfo() -> dict:
     """ Gets the unmodded contents of ActorInfo.product.sbyml """
     actorinfo = util.get_game_file('Actor/ActorInfo.product.sbyml')
     with actorinfo.open('rb') as a_file:
-        return byml.Byml(libyaz0.decompress(a_file.read())).parse()
+        return byml.Byml(util.decompress(a_file.read())).parse()
 
 
 def get_modded_actors(actorinfo: dict) -> dict:
@@ -522,7 +522,7 @@ def merge_actorinfo(verbose: bool = False):
     buf = BytesIO()
     byml.Writer(actorinfo, True).write(buf)
     actor_path.parent.mkdir(parents=True, exist_ok=True)
-    actor_path.write_bytes(libyaz0.compress(buf.getvalue(), level=10))
+    actor_path.write_bytes(util.compress(buf.getvalue()))
     print('Actor info merged successfully')
 
 
@@ -542,7 +542,7 @@ class GameDataMerger(mergers.Merger):
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_gamedata_entries(
                 sarc.SARC(
-                    libyaz0.decompress(
+                    util.decompress(
                         bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
                     )
                 )
@@ -596,7 +596,7 @@ class GameDataMerger(mergers.Merger):
         if tmp_sarc.exists():
             return (
                 'GameData/gamedata.ssarc',
-                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+                util.compress(tmp_sarc.read_bytes())
             )
         else:
             return
@@ -614,7 +614,7 @@ class SaveDataMerger(mergers.Merger):
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_savedata_entries(
                 sarc.SARC(
-                    libyaz0.decompress(
+                    util.decompress(
                         bootup_sarc.get_file_data('GameData/savedataformat.ssarc').tobytes()
                     )
                 )
@@ -671,7 +671,7 @@ class SaveDataMerger(mergers.Merger):
         if tmp_sarc.exists():
             return (
                 'GameData/savedataformat.ssarc',
-                libyaz0.compress(tmp_sarc.read_bytes(), level=10)
+                util.compress(tmp_sarc.read_bytes())
             )
         else:
             return

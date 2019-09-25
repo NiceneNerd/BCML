@@ -219,7 +219,7 @@ def merge_sarcs_old(sarc_list, verbose: bool = False, loose_files: dict = None) 
         new_data = new_stream.getvalue()
         del new_stream
         if '.s' in merged_sarc['file'] and not merged_sarc['file'].endswith('.sarc'):
-            new_data = libyaz0.compress(new_data, level=10)
+            new_data = util.compress(new_data)
         new_sarc.add_file(merged_sarc['file'], new_data)
         del new_data
 
@@ -257,7 +257,7 @@ def threaded_merge_sarcs(pack, modded_sarcs, verbose, modded_files):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open('wb') as o_file:
         if output_path.suffix.startswith('.s') and output_path.suffix != '.sarc':
-            o_file.write(libyaz0.compress(new_sarc.get_bytes(), level=10))
+            o_file.write(util.compress(new_sarc.get_bytes()))
         else:
             new_sarc.write(o_file)
     return log
@@ -370,7 +370,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for file, sarcs in nested_sarcs.items():
         merged_bytes = merge_sarcs(file, sarcs)[1]
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
-            merged_bytes = libyaz0.compress(merged_bytes, level=10)
+            merged_bytes = util.compress(merged_bytes)
         new_sarc.add_file(file, merged_bytes)
         files_added.append(file)
     for file in [file for file in all_files if file not in files_added]:
@@ -482,7 +482,7 @@ class PackMerger(mergers.Merger):
             output_path = util.get_master_modpack_dir() / file
             output_path.parent.mkdir(parents=True, exist_ok=True)
             if output_path.suffix.startswith('.s'):
-                data = libyaz0.compress(data, level=10)
+                data = util.compress(data)
             output_path.write_bytes(data)
         print('Finished merging SARCs')
 
