@@ -482,6 +482,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 target_priority = i + 100 if util.get_settings_bool(
                     'load_reverse') else 100 + ((self.listWidget.count() - 1) - i)
                 if mod.priority != target_priority:
+                    mods_to_change.append(BcmlMod(mod.name, target_priority, mod.path))
                     for merger in all_mergers:
                         if merger.is_mod_logged(mod):
                             remergers.add(merger)
@@ -490,12 +491,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                     partials[merger.NAME] = set()
                                 partials[merger.NAME] |= set(merger.get_mod_affected(mod))
             for mod in mods_to_change:
-                new_path = util.get_modpack_dir(
-                ) / util.get_mod_id(mod[0].name, mod[1])
-                shutil.move(str(mod[0].path), str(new_path))
+                new_path = util.get_modpack_dir() / util.get_mod_id(mod.name, mod.priority)
+                shutil.move(str(mod.path), str(new_path))
                 rules = ConfigParser()
                 rules.read(str(new_path / 'rules.txt'))
-                rules['Definition']['fsPriority'] = str(mod[1])
+                rules['Definition']['fsPriority'] = str(mod.priority)
                 with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
                     rules.write(rf)
             for merger in mergers.sort_mergers(remergers):
