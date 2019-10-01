@@ -133,7 +133,8 @@ def get_settings() -> {}:
                 'load_reverse': False,
                 'mlc_dir': '',
                 'site_meta': '',
-                'dark_theme': False
+                'dark_theme': False,
+                'lang': ''
             }
             with settings_path.open('w', encoding='utf-8') as s_file:
                 settings.write(s_file)
@@ -348,20 +349,28 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         path = Path(str(path).replace('content/', '').replace('content\\', ''))
     if isinstance(path, str):
         path = Path(path)
-    game_dir, update_dir, aoc_dir = get_botw_dirs()
+    game_dir = get_game_dir()
+    update_dir = get_update_dir()
+    try:
+        aoc_dir = get_aoc_dir()
+    except FileNotFoundError:
+        aoc_dir = None
     if 'aoc' in str(path) or aoc:
-        path = Path(
-            path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
-            .replace('aoc/content/', '').replace('aoc/0010/', '')
-        )
-        if (aoc_dir / path).exists():
-            return aoc_dir / path
-        raise FileNotFoundError(f'{path} not found in DLC files.')
+        if aoc_dir:
+            path = Path(
+                path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
+                .replace('aoc/content/', '').replace('aoc/0010/', '')
+            )
+            if (aoc_dir / path).exists():
+                return aoc_dir / path
+            raise FileNotFoundError(f'{path} not found in DLC files.')
+        else:
+            raise FileNotFoundError(f'{path} is a DLC file, but the DLC directory is missing.')
     if (update_dir / path).exists():
         return update_dir / path
     if (game_dir / path).exists():
         return game_dir / path
-    elif (aoc_dir / path).exists():
+    elif aoc_dir and (aoc_dir / path).exists():
         return aoc_dir / path
     else:
         raise FileNotFoundError(f'File {str(path)} was not found in game dump.')
@@ -534,12 +543,10 @@ def is_yaml_modded(entry, ref_list: dict, mod_list: dict) -> bool:
     matches the reference entry.
     :rtype: bool
     """
-    mod_entry = unicodedata.normalize(
-        'NFC', mod_list['entries'][entry].__str__())
+    mod_entry = unicodedata.normalize('NFC', mod_list['entries'][entry].__str__())
     mod_entry = re.sub('[^0-9a-zA-Z]+', '', mod_entry)
     try:
-        ref_entry = unicodedata.normalize(
-            'NFC', ref_list['entries'][entry].__str__())
+        ref_entry = unicodedata.normalize('NFC', ref_list['entries'][entry].__str__())
         ref_entry = re.sub('[^0-9a-zA-Z]+', '', ref_entry)
     except KeyError:
         return True
@@ -828,8 +835,7 @@ def log_error():
 
 def update_bcml():
     """ Updates BCML to the latest version """
-    subprocess.call([sys.executable, '-m', 'pip',
-                     'install', '--upgrade', 'bcml'])
+    subprocess.call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'bcml'])
 
 
 def create_bcml_graphicpack_if_needed():
@@ -872,3 +878,21 @@ def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
                 dct[k].extend(merge_dct[k])
         else:
             dct[k] = merge_dct[k]
+
+
+def create_schema_handler():
+    import winreg
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\Classes\bcml') as key:
+        try:
+            winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Classes\bcml\shell\open\command',
+                           0, winreg.KEY_READ)
+        except (WindowsError, OSError):
+            winreg.SetValueEx(key, 'URL Protocol', 0, winreg.REG_SZ, '')
+            with winreg.CreateKey(key, r'shell\open\command') as key2:
+                if (Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe').exists():
+                    exec_path = Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe'
+                elif (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe'):
+                    exec_path = (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe')
+                else:
+                    return
+                winreg.SetValueEx(key2, '', 0, winreg.REG_SZ, f'"{exec_path.resolve()}" "%1"')

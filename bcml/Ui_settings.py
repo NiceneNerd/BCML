@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'c:\Users\macad\Documents\Git\BCML-2\.vscode\settings.ui',
 # licensing of 'c:\Users\macad\Documents\Git\BCML-2\.vscode\settings.ui' applies.
 #
-# Created: Fri Sep 13 23:11:59 2019
+# Created: Tue Oct  1 11:32:50 2019
 #      by: pyside2-uic  running on PySide2 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -13,7 +13,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
         SettingsDialog.setObjectName("SettingsDialog")
-        SettingsDialog.resize(400, 200)
+        SettingsDialog.resize(333, 248)
         self.verticalLayout = QtWidgets.QVBoxLayout(SettingsDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(SettingsDialog)
@@ -55,6 +55,20 @@ class Ui_SettingsDialog(object):
         self.btnBrowseMlc.setObjectName("btnBrowseMlc")
         self.horizontalLayout_3.addWidget(self.btnBrowseMlc)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.label_4 = QtWidgets.QLabel(SettingsDialog)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
+        self.label_4.setSizePolicy(sizePolicy)
+        self.label_4.setObjectName("label_4")
+        self.horizontalLayout_4.addWidget(self.label_4)
+        self.drpLang = QtWidgets.QComboBox(SettingsDialog)
+        self.drpLang.setObjectName("drpLang")
+        self.horizontalLayout_4.addWidget(self.drpLang)
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
         self.chkDark = QtWidgets.QCheckBox(SettingsDialog)
         self.chkDark.setObjectName("chkDark")
         self.verticalLayout.addWidget(self.chkDark)
@@ -79,5 +93,6 @@ class Ui_SettingsDialog(object):
         self.btnBrowseGame.setText(QtWidgets.QApplication.translate("SettingsDialog", "Browse...", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("SettingsDialog", "MLC Directory", None, -1))
         self.btnBrowseMlc.setText(QtWidgets.QApplication.translate("SettingsDialog", "Browse...", None, -1))
+        self.label_4.setText(QtWidgets.QApplication.translate("SettingsDialog", "Game Language", None, -1))
         self.chkDark.setText(QtWidgets.QApplication.translate("SettingsDialog", "Use dark theme", None, -1))
 

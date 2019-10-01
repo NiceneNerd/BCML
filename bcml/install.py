@@ -399,6 +399,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
     else:
         try:
             print('Performing merges...')
+            if 'disable' not in options:
+                options['disable'] = []
             for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
                                                 if cls.NAME not in options['disable']]):
                 if merger.NAME in options:

@@ -13,7 +13,6 @@ import traceback
 import urllib.error
 import urllib.request
 import zipfile
-#import glob
 from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
@@ -75,7 +74,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.btnPackage = QtWidgets.QToolButton(self.statusBar())
         self.btnPackage.setIcon(util.get_icon('pack.png'))
-        self.btnPackage.setToolTip('Create BCNL Nano Patch Mod')
+        self.btnPackage.setToolTip('Create BNP Mod')
         self.btnSettings = QtWidgets.QToolButton(self.statusBar())
         self.btnSettings.setIcon(util.get_icon('settings.png'))
         self.btnSettings.setToolTip('Settings')
@@ -139,7 +138,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self, 'First Time', 'It looks like this may be your first time running BCML.'
-                                    'Please select the directory where Cemu is installed.')
+                                    'Please select the directory where Cemu is installed. You can '
+                                    'tell it\'s right if it contains <code>Cemu.exe</code>.')
             folder = QFileDialog.getExistingDirectory(
                 self, 'Select Cemu Directory')
             if folder:
@@ -153,7 +153,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self, 'Dump Location', 'BCML needs to know the location of your game dump. '
-                'Please select the "content" directory in your dumped copy of Breath of the Wild.')
+                'Please select the "content" directory in your dumped copy of Breath of the Wild. '
+                'Note this is <em>not</em> usually inside Cemu\'s MLC folder. This is where the '
+                'base game in installed, not update or DLC data.')
             folder = '/'
             while not (Path(folder).parent / 'code' / 'app.xml').exists():
                 folder = QFileDialog.getExistingDirectory(
@@ -189,25 +191,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 sys.exit(0)
                 else:
                     sys.exit(0)
-
-        ver = platform.python_version_tuple()
-        if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            QtWidgets.QMessageBox.warning(
+        if 'lang' not in util.get_settings() or not util.get_settings()['lang']:
+            lang, okay = QtWidgets.QInputDialog.getItem(
                 self,
-                'Error',
-                f'BCML requires Python 3.7 or higher, but your Python version is {ver[0]}.{ver[1]}'
+                'Select Language',
+                'Select the regional language you\nuse to play Breath of the Wild',
+                texts.LANGUAGES,
+                0,
+                False,
+                flags=QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint
             )
-            sys.exit(0)
-
-        is_64bits = sys.maxsize > 2**32
-        if not is_64bits:
-            QtWidgets.QMessageBox.warning(
-                self,
-                'Error',
-                'BCML requires 64 bit Python, but it looks like you\'re running 32 bit.'
-            )
-            sys.exit(0)
-
+            if okay and lang:
+                util.get_settings()['lang'] = lang
+                util.save_settings()
         self.LoadMods()
 
     def LoadMods(self):
@@ -440,11 +436,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def MergeTexts_Clicked(self):
         def all_texts():
-            text_mods = set()
-            for text_mod in util.get_modpack_dir().rglob('**/texts_*.yml'):
-                text_mods.add(util.get_file_language(text_mod))
-            for mod in text_mods:
-                texts.merge_texts(mod)
+            tm = texts.TextsMerger()
+            tm.perform_merge()
 
         self.PerformOperation(all_texts, title='Remerging Texts')
 
@@ -886,6 +879,8 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
         self.txtGameDump.setText(str(util.get_game_dir()))
         self.txtMlc.setText(str(util.get_mlc_dir()))
         self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
+        self.drpLang.addItems(texts.LANGUAGES)
+        self.drpLang.setCurrentText(util.get_settings()['lang'])
 
         self.btnBrowseCemu.clicked.connect(self.BrowseCemuClicked)
         self.btnBrowseGame.clicked.connect(self.BrowseGameClicked)
@@ -938,6 +933,8 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
                 QtWidgets.QApplication.instance().setStyleSheet(DARK_THEME)
             else:
                 QtWidgets.QApplication.instance().setStyleSheet('')
+        util.get_settings()['lang'] = self.drpLang.currentText()
+        util.save_settings()
         return super().accept()
 
 # About Dialog
@@ -1171,21 +1168,67 @@ def libyaz_load():
 
 # Main
 
+def uri_validator(x):
+    from urllib.parse import urlparse
+    try:
+        result = urlparse(x)
+        return all([result.scheme, result.netloc, result.path])
+    except Exception: # pylint: disable=broad-except
+        return False
+
+
+def process_args() -> Path:
+    try:
+        if Path(sys.argv[1]).exists():
+            return Path(sys.argv[1])
+    except WindowsError:
+        try_url = sys.argv[1].replace('bcml:', '')
+        if uri_validator(try_url) and 'gamebanana.com' in try_url:
+            from tempfile import NamedTemporaryFile
+            try:
+                with NamedTemporaryFile('wb', prefix='GameBanana',
+                                        suffix='.bnp', delete=False) as tmp:
+                    tmp.write(urllib.request.urlopen(try_url).read())
+                return Path(tmp.name)
+            except Exception: # pylint: disable=broad-except
+                pass
+    return None
+
 
 def main():
     util.clear_temp_dir()
+    util.create_schema_handler()
     libyaz_load()
     app = QtWidgets.QApplication([])
+    ver = platform.python_version_tuple()
+    if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
+        QtWidgets.QMessageBox.warning(
+            None,
+            'Error',
+            f'BCML requires Python 3.7 or higher, but your Python version is {ver[0]}.{ver[1]}'
+        )
+        sys.exit(0)
+
+    is_64bits = sys.maxsize > 2**32
+    if not is_64bits:
+        QtWidgets.QMessageBox.warning(
+            None,
+            'Error',
+            'BCML requires 64 bit Python, but it looks like you\'re running 32 bit.'
+        )
+        sys.exit(0)
     if util.get_settings_bool('dark_theme'):
         app.setStyleSheet(DARK_THEME)
-    if 'Roboto Lt' in QtGui.QFontDatabase().families(QtGui.QFontDatabase.Latin):
-        app.setFont(QtGui.QFont('Roboto Lt', 10, weight=QtGui.QFont.DemiBold))
+        if 'Roboto Lt' in QtGui.QFontDatabase().families(QtGui.QFontDatabase.Latin):
+            app.setFont(QtGui.QFont('Roboto Lt', 10, weight=QtGui.QFont.DemiBold))
     application = MainWindow()
     try:
         application.show()
         application.SetupChecks()
-        if len(sys.argv) > 1 and Path(sys.argv[1]).exists():
-            application.InstallClicked(Path(sys.argv[1]))
+        if len(sys.argv) > 1:
+            parg = process_args()
+            if parg:
+                application.InstallClicked(parg)
         app.exec_()
     except Exception: # pylint: disable=broad-except
         tb = traceback.format_exc(limit=-2)

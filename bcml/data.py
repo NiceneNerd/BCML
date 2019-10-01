@@ -253,7 +253,7 @@ def get_savedata_mods() -> List[BcmlMod]:
     return sorted(sdata_mods, key=lambda mod: mod.priority)
 
 
-def merge_gamedata(verbose: bool = False):
+def merge_gamedata(verbose: bool = False, force: bool = False):
     """ Merges installed gamedata mods and saves the new Bootup.pack, fixing the RSTB if needed """
     mods = get_gamedata_mods()
     glog_path = util.get_master_modpack_dir() / 'logs' / 'gamedata.log'
@@ -261,9 +261,10 @@ def merge_gamedata(verbose: bool = False):
         print('No gamedata merging necessary.')
         if glog_path.exists():
             glog_path.unlink()
+        if (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').exists():
             (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').unlink()
         return
-    if glog_path.exists():
+    if glog_path.exists() and not force:
         with glog_path.open('r') as l_file:
             if xxhash.xxh32(str(mods)).hexdigest() == l_file.read():
                 print('No gamedata merging necessary.')
@@ -339,7 +340,7 @@ def merge_gamedata(verbose: bool = False):
         l_file.write(xxhash.xxh32(str(mods)).hexdigest())
 
 
-def merge_savedata(verbose: bool = False):
+def merge_savedata(verbose: bool = False, force: bool = False):
     """ Merges install savedata mods and saves the new Bootup.pack, fixing the RSTB if needed"""
     mods = get_savedata_mods()
     slog_path = util.get_master_modpack_dir() / 'logs' / 'savedata.log'
@@ -347,9 +348,10 @@ def merge_savedata(verbose: bool = False):
         print('No gamedata merging necessary.')
         if slog_path.exists():
             slog_path.unlink()
+        if (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').exists():
             (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').unlink()
         return
-    if slog_path.exists():
+    if slog_path.exists() and not force:
         with slog_path.open('r') as l_file:
             if xxhash.xxh32(str(mods)).hexdigest() == l_file.read():
                 print('No savedata merging necessary.')
@@ -582,10 +584,13 @@ class GameDataMerger(mergers.Merger):
         return all_diffs
 
     def perform_merge(self):
-        merge_gamedata()
+        force = False
+        if 'force' in self._options:
+            force = self._options['force']
+        merge_gamedata(force=force)
 
     def get_checkbox_options(self):
-        return []
+        return [('force', 'Remerge game data even if no changes detected')]
 
     @staticmethod
     def is_bootup_injector():
@@ -657,10 +662,13 @@ class SaveDataMerger(mergers.Merger):
         return all_diffs
 
     def perform_merge(self):
-        merge_savedata()
+        force = False
+        if 'force' in self._options:
+            force = self._options['force']
+        merge_savedata(force=force)
 
     def get_checkbox_options(self):
-        return []
+        return [('force', 'Remerge save data even if no changes detected')]
 
     @staticmethod
     def is_bootup_injector():
