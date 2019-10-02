@@ -597,7 +597,7 @@ class TextsMerger(mergers.Merger):
             if lang in mod_langs:
                 lang_map[lang] = lang
             elif lang[2:4] in [l[2:4] for l in mod_langs]:
-                lang_map[lang] = [l[2:4] for l in mod_langs][0]
+                lang_map[lang] = [l for l in mod_langs if l[2:4] == lang[2:4]][0]
             else:
                 lang_map[lang] = [l for l in LANGUAGES if l in mod_langs][0]
         lang_diffs = {}
