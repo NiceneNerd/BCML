@@ -589,6 +589,8 @@ class TextsMerger(mergers.Merger):
         diffs = {}
         bootups = {util.get_file_language(file): file for file in modded_files
                    if 'Bootup_' in str(file) and 'Graphics' not in str(file)}
+        if not bootups:
+            return {}
         mod_langs = list(bootups.keys())
         lang_map = {}
         for lang in LANGUAGES:
