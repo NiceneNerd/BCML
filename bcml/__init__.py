@@ -1181,18 +1181,31 @@ def process_args() -> Path:
     try:
         if Path(sys.argv[1]).exists():
             return Path(sys.argv[1])
-    except WindowsError:
+    except (WindowsError, OSError):
         try_url = sys.argv[1].replace('bcml:', '')
         if uri_validator(try_url) and 'gamebanana.com' in try_url:
+            process_args.progress = QtWidgets.QProgressDialog(
+                'Downloading requested mod...', 'Stop', 0, 0, None
+            )
             from tempfile import NamedTemporaryFile
             try:
                 with NamedTemporaryFile('wb', prefix='GameBanana',
                                         suffix='.bnp', delete=False) as tmp:
-                    tmp.write(urllib.request.urlopen(try_url).read())
+                    path = Path(tmp.name)
+                process_args.progress.open()
+                urllib.request.urlretrieve(try_url, path.resolve(), reporthook=download_progress)
+                process_args.progress.close()
                 return Path(tmp.name)
             except Exception: # pylint: disable=broad-except
                 pass
     return None
+
+
+def download_progress(count, block_size, total_size):
+    QtCore.QCoreApplication.instance().processEvents()
+    p: QtWidgets.QProgressDialog = process_args.progress
+    p.setMaximum(total_size)
+    p.setValue(count * block_size)
 
 
 def main():
