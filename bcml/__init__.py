@@ -1193,12 +1193,19 @@ def process_args() -> Path:
                                         suffix='.bnp', delete=False) as tmp:
                     path = Path(tmp.name)
                 process_args.progress.open()
+                process_args.progress.canceled.connect(quit_download)
                 urllib.request.urlretrieve(try_url, path.resolve(), reporthook=download_progress)
                 process_args.progress.close()
                 return Path(tmp.name)
             except Exception: # pylint: disable=broad-except
-                pass
+                if hasattr(process_args, 'progress') and process_args.progress:
+                    process_args.progress.close()
     return None
+
+
+def quit_download():
+    del process_args.progress
+    download_progress = 1/0
 
 
 def download_progress(count, block_size, total_size):
