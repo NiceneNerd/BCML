@@ -603,24 +603,25 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
+    options['texts'] = {'user_only': False}
     logged_files = generate_logs(tmp_dir, options=options)
 
     print('Removing unnecessary files...')
     if (tmp_dir / 'logs' / 'map.yml').exists():
-        print('  Removing map units...')
+        print('Removing map units...')
         for file in [file for file in logged_files if isinstance(file, Path) and \
                            fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
             file.unlink()
     if [file for file in (tmp_dir / 'logs').glob('*texts*')]:
-        print('  Removing language bootup packs...')
+        print('Removing language bootup packs...')
         for bootup_lang in (tmp_dir / 'content' / 'Pack').glob('Bootup_*.pack'):
             bootup_lang.unlink()
     if (tmp_dir / 'logs' / 'actorinfo.yml').exists() and \
        (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').exists():
-        print('  Removing ActorInfo.product.sbyml...')
+        print('Removing ActorInfo.product.sbyml...')
         (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').unlink()
     if (tmp_dir / 'logs' / 'gamedata.yml').exists() or (tmp_dir / 'logs' / 'savedata.yml').exists():
-        print('  Removing gamedata sarcs...')
+        print('Removing gamedata sarcs...')
         with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as b_file:
             bsarc = sarc.read_file_and_make_sarc(b_file)
         csarc = sarc.make_writer_from_sarc(bsarc)
@@ -633,7 +634,7 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
             csarc.write(b_file)
 
     hashes = util.get_hash_table()
-    print('  Creating partial packs...')
+    print('Creating partial packs...')
     sarc_files = [file for file in list(
         tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
     if sarc_files:
@@ -657,14 +658,14 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
         if (tmp_dir / 'logs' / 'packs.log').exists():
             (tmp_dir / 'logs' / 'packs.log').unlink()
 
-    print('  Cleaning any junk files...')
+    print('Cleaning any junk files...')
     for file in tmp_dir.rglob('**/*'):
         if file.parent.stem == 'logs':
             continue
         if file.suffix in ['.yml', '.bak', '.tmp', '.old']:
             file.unlink()
 
-    print('  Removing blank folders...')
+    print('Removing blank folders...')
     for folder in reversed(list(tmp_dir.rglob('**/*'))):
         if folder.is_dir() and not list(folder.glob('*')):
             shutil.rmtree(folder)

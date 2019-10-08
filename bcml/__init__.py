@@ -1210,9 +1210,8 @@ def quit_download():
 
 def download_progress(count, block_size, total_size):
     QtCore.QCoreApplication.instance().processEvents()
-    p: QtWidgets.QProgressDialog = process_args.progress
-    p.setMaximum(total_size)
-    p.setValue(count * block_size)
+    process_args.progress.setMaximum(total_size)
+    process_args.progress.setValue(count * block_size)
 
 
 def main():

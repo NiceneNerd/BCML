@@ -582,18 +582,22 @@ class TextsMerger(mergers.Merger):
     """ A merger for game texts """
     NAME: str = 'texts'
 
-    def __init__(self):
-        super().__init__('texts merge', 'Merges changes to game texts', '', options={})
+    def __init__(self, user_only: bool = True):
+        super().__init__('texts merge', 'Merges changes to game texts', '', options={
+            'user_only': user_only
+        })
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         diffs = {}
         bootups = {util.get_file_language(file): file for file in modded_files
-                   if 'Bootup_' in str(file) and 'Graphics' not in str(file)}
+                   if 'Bootup_' in str(file) and 'Graphics' not in str(file) 
+                   and isinstance(file, Path)}
         if not bootups:
             return {}
         mod_langs = list(bootups.keys())
         lang_map = {}
-        for lang in LANGUAGES:
+        save_langs = LANGUAGES if not self._options['user_only'] else [util.get_settings()['lang']]
+        for lang in save_langs:
             if lang in mod_langs:
                 lang_map[lang] = lang
             elif lang[2:4] in [l[2:4] for l in mod_langs]:
@@ -601,8 +605,13 @@ class TextsMerger(mergers.Merger):
             else:
                 lang_map[lang] = [l for l in LANGUAGES if l in mod_langs][0]
         lang_diffs = {}
+        from io import StringIO
         for lang in set(lang_map.values()):
-            lang_diffs[lang] = get_text_mods_from_bootup(bootups[lang], lang=lang)[:2]
+            dict_diffs, added = get_text_mods_from_bootup(bootups[lang], lang=lang)[:2]
+            str_buf = StringIO()
+            yaml.dump(dict_diffs, str_buf, allow_unicode=True, encoding='utf-8')
+            lang_diffs[lang] = (str_buf.getvalue(), added)
+            del str_buf
         for u_lang, t_lang in lang_map.items():
             diffs[u_lang] = lang_diffs[t_lang]
         return diffs
@@ -613,7 +622,7 @@ class TextsMerger(mergers.Merger):
             diff_material = self.generate_diff(mod_dir, diff_material)
         for lang in diff_material:
             with Path(mod_dir / 'logs' / f'texts_{lang}.yml').open('w', encoding='utf-8') as t_file:
-                yaml.dump(diff_material[lang][0], t_file, allow_unicode=True)
+                t_file.write(diff_material[lang][0])
             text_sarc = diff_material[lang][1]
             if text_sarc is not None:
                 with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:

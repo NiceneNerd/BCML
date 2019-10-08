@@ -699,6 +699,7 @@ class ActorInfoMerger(mergers.Merger):
         except StopIteration:
             return {}
         actor_info = byml.Byml(util.decompress_file(str(actor_file))).parse()
+        print('Detecting modified actor info entries...')
         return get_modded_actors(actor_info)
 
     def log_diff(self, mod_dir: Path, diff_material: Union[dict, list]):
