@@ -208,7 +208,7 @@ def get_all_map_diffs() -> dict:
     yaml_util.add_constructors(loader)
     for mod in util.get_installed_mods():
         if (mod.path / 'logs' / 'map.yml').exists():
-            with (mod.path / 'logs' / 'map.yml').open('r') as y_file:
+            with (mod.path / 'logs' / 'map.yml').open('r', encoding='utf-8') as y_file:
                 map_yml = yaml.load(y_file, Loader=loader)
             for file, diff in map_yml.items():
                 a_map = Map(*file.split('_'))
