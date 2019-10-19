@@ -46,12 +46,15 @@ On first use, you will have to specify the directory where Cemu is installed and
 ## Updating BCML
 
 **Option 1: For Windows Installer Users**
+
 Download the new installer, and install it to the same location as your previous install.
 
 **Option 2: For PIP Installs**
+
 Run `pip install -U bcml`
 
 **Option 3: For Source Installs**
+
 1. Download the new source
 2. In the main folder, run `python setup.py install`
 
