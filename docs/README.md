@@ -12,11 +12,12 @@ A mod installer and manager for BoTW mods on Cemu
 The following `pip` packages, which will be *automatically installed*:
 * [`aamp`](https://pypi.org/project/aamp/)
 * [`byml`](https://pypi.org/project/byml/)
+* [`cython`](https://pypi.org/project/cython/)
+* [`libyaz0`](https://pypi.org/project/libyaz0/)
 * [`PySide2`](https://pypi.org/project/PySide2/)
 * [`pyYaml`](https://pypi.org/project/PyYAML/)
 * [`rstb`](https://pypi.org/project/rstb/)
 * [`sarc`](https://pypi.org/project/sarc/)
-* [`wszst-yaz0`](https://pypi.org/project/wszst-yaz0/)
 * [`xxhash`](https://pypi.org/project/xxhash/)
 
 ## Setup
@@ -25,7 +26,7 @@ There are three primary options for installing BCML.
 
 **Option 1: Easy Installer**
 1. Download the latest Windows setup executable release.
-2. Double click and install it like a normal program.
+2. Double click and install it like a normal program. (Note: I recommend choosing "Install just for me" to prevent permissions issues.)
 
 **Option 2: PIP** 
 1. Download and install Python. You **must** use the 64 bit version of Python 3.7 or later. The most recent download as of July 2019 is [here](https://www.python.org/ftp/python/3.7.4/python-3.7.4-amd64.exe). You also **must** choose the "Add to System PATH" option during installation.
@@ -36,15 +37,27 @@ There are three primary options for installing BCML.
 **Option 3: Install from Source**
 1. Download and install Python. You **must** use the 64 bit version of Python 3.7 or later. The most recent download as of July 2019 is [here](https://www.python.org/ftp/python/3.7.4/python-3.7.4-amd64.exe). You also **must** choose the "Add to System PATH" option during installation.
 2. Download and extract the source code for the latest BCML release or clone the repo.
-3. In the directory where you extracted the BCML source, run `python setup.py install`. Note that on Linux you may need to either run it as root or specify `--user`.
+3. In the directory where you extracted the BCML source, run `python setup.py install`.
 4. Run BCML using the command `bcml`
 5. (Optional) Create a shortcut to the BCML executable in Python's `Scripts` folder.
 
 On first use, you will have to specify the directory where Cemu is installed and the `content` directory of your BotW game dump. BCML also needs to know the location of Cemu's mlc folder for BotW, but by default it will detect this from your Cemu folder and BotW title ID. If this detection fails or you have another mlc folder you want to use, you will need to specify it manually.
 
+## Updating BCML
+
+**Option 1: For Windows Installer Users**
+Download the new installer, and install it to the same location as your previous install.
+
+**Option 2: For PIP Installs**
+Run `pip install -U bcml`
+
+**Option 3: For Source Installs**
+1. Download the new source
+2. In the main folder, run `python setup.py install`
+
 ## How to Use
 
-![BCML Preview](https://i.imgur.com/Xvuc53x.png)
+![BCML Preview](https://i.imgur.com/x3ILZvN.png)
 
 ### General Notes
 
