@@ -679,7 +679,8 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
     if not rules:
         rules = ConfigParser()
         rules.read(str(mod.path / 'rules.txt'))
-    url = str(rules['Definition']['url'])
+    if 'url' in rules['Definition']:
+        url = str(rules['Definition']['url'])
     if not list(mod.path.glob('thumbnail.*')):
         if 'image' not in rules['Definition']:
             if 'url' in rules['Definition'] and 'gamebanana.com' in url:
