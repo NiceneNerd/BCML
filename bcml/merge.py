@@ -43,7 +43,7 @@ def _aamp_diff(base: Union[ParameterIO, ParameterList],
             #diff_obj._crc32 = base_obj._crc32
             changed = False
             for param, value in obj.params.items():
-                if param not in base_obj.params or value != base_obj.params[param]:
+                if param not in base_obj.params or str(value) != str(base_obj.params[param]):
                     changed = True
                     diff_obj.params[param] = value
             if changed:
