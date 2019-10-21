@@ -23,7 +23,10 @@ from bcml.util import BcmlMod
 
 EXCLUDE_TEXTS = [
     'ErrorMessage',
-    'StaffRoll'
+    'StaffRoll',
+    'LayoutMsg/MessageTipsRunTime_00.msbt',
+    'LayoutMsg/OptionWindow_00.msbt',
+    'LayoutMsg/SystemWindow_00.msbt'
 ]
 
 LANGUAGES = [
@@ -82,6 +85,17 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
                 get_msbt_hashes.texthashes[lang][msbt] = xxhash.xxh32(
                     msg_pack.get_file_data(msbt)).hexdigest()
     return get_msbt_hashes.texthashes[lang]
+
+
+def get_msyt_hashes() -> dict:
+    if not hasattr(get_msyt_hashes, 'hashes'):
+        import json
+        get_msyt_hashes.hashes = json.loads(
+            (util.get_exec_dir() / 'data' / 'msyt' / 'msyt_hashes.json')\
+                .read_text(encoding='utf-8'),
+            encoding='utf-8'
+        )
+    return get_msyt_hashes.hashes
 
 
 def get_entry_hashes() -> dict:
@@ -273,16 +287,20 @@ def get_entry_hash(text: str) -> str:
 def threaded_compare_texts(msyt: Path, tmp_dir: Path, lang: str = 'USen') -> (str, dict):
     """Diffs texts in an MYST in a way suitable for multiprocessing"""
     rel_path = str(msyt.relative_to(tmp_dir)).replace('\\', '/')
+    if lang in ['USen', 'EUen']:
+        lang = 'XXen'
     try:
         with (tmp_dir / rel_path).open('r', encoding='utf-8') as mod_file:
-            mod_text = yaml.safe_load(mod_file)
+            contents = mod_file.read()
+            xhash = xxhash.xxh32(contents.encode('utf8')).hexdigest()
+            if xhash == get_msyt_hashes()[lang][rel_path]:
+                return rel_path, None
+            mod_text = yaml.safe_load(contents)
     except FileNotFoundError:
         return rel_path, None
     text_edits = {
         'entries': {}
     }
-    if lang in ['USen', 'EUen']:
-        lang = 'XXen'
     hashes = get_entry_hashes()[lang]
     for entry, text in mod_text['entries'].items():
         if entry not in hashes or hashes[entry] != get_entry_hash(text['contents']):
