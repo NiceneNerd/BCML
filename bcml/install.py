@@ -543,6 +543,8 @@ def refresh_merges(verbose: bool = False):
     :param verbose: Whether to display more detailed output, defaults to False.
     :type verbose: bool, optional
     """
+    print('Cleansing old merges...')
+    shutil.rmtree(util.get_master_modpack_dir())
     print('Refreshing merged mods...')
     for merger in mergers.sort_mergers([merger_class() for merger_class in mergers.get_mergers()]):
         merger.perform_merge()
