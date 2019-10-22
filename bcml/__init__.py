@@ -4,7 +4,6 @@
 # pylint: disable=invalid-name,missing-docstring,too-many-lines
 import os
 import platform
-import re
 import shutil
 import subprocess
 import sys
@@ -12,8 +11,6 @@ import threading
 import traceback
 import urllib.error
 import urllib.request
-import zipfile
-from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
 
