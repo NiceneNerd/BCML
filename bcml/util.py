@@ -167,7 +167,9 @@ def get_cemu_dir() -> Path:
     """ Gets the saved Cemu installation directory """
     cemu_dir = str(get_settings()['cemu_dir'])
     if not cemu_dir or not Path(cemu_dir).is_dir():
-        raise FileNotFoundError('The Cemu directory has moved or not been saved yet.')
+        err = FileNotFoundError('The Cemu directory has moved or not been saved yet.')
+        err.error_text = 'The Cemu directory has moved or not been saved yet.'
+        raise err
     return Path(cemu_dir)
 
 
@@ -182,8 +184,9 @@ def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
     game_dir = str(get_settings()['game_dir'])
     if not game_dir or not Path(game_dir).is_dir():
-        raise FileNotFoundError(
-            'The BotW game directory has has moved or not been saved yet.')
+        err = FileNotFoundError('The BotW game directory has has moved or not been saved yet.')
+        err.error_text = 'The BotW game directory has has moved or not been saved yet.'
+        raise err
     else:
         return Path(game_dir)
 
@@ -200,7 +203,10 @@ def set_game_dir(path: Path):
             from xml.dom import minidom
             set_path = get_cemu_dir() / 'settings.xml'
             if not set_path.exists():
-                raise FileNotFoundError('The Cemu settings file could not be found.')
+                err = FileNotFoundError('The Cemu settings file could not be found.')
+                err.error_text = 'The Cemu settings file could not be found. This usually means your Cemu directory '\
+                                 'is set incorrectly.'
+                raise err
             set_read = ''
             with set_path.open('r') as setfile:
                 for line in setfile:
@@ -212,15 +218,16 @@ def set_game_dir(path: Path):
         if mlc_path.exists():
             set_mlc_dir(mlc_path)
         else:
-            raise FileNotFoundError(
-                'The MLC directory could not be automatically located.')
+            raise FileNotFoundError('The MLC directory could not be automatically located.')
 
 
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings()['mlc_dir'])
     if not mlc_dir or not Path(mlc_dir).is_dir():
-        raise FileNotFoundError('The Cemu MLC directory has moved or not been saved yet.')
+        err = FileNotFoundError('The Cemu MLC directory has moved or not been saved yet.')
+        err.error_text = 'The Cemu MLC directory has moved or not been saved yet.'
+        raise err
     return Path(mlc_dir)
 
 
@@ -274,7 +281,11 @@ def get_update_dir() -> Path:
             get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
                 title_id[0] / title_id[1] / 'content'
         else:
-            raise FileNotFoundError('The Cemu update directory could not be found.')
+            err = FileNotFoundError('The Cemu update directory could not be found.')
+            err.error_text = ('The Cemu update directory could not be found. Usually, the correct location is somewhere '
+                              'in Cemu\'s MLC folder. This probably means that the MLC folder has not been correctly '
+                              'located, or that you have not installed the update files in Cemu.')
+            raise err
     return get_update_dir.update_dir
 
 
@@ -292,7 +303,11 @@ def get_aoc_dir() -> Path:
             get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
                 title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
         else:
-            raise FileNotFoundError('The Cemu aoc directory could not be found.')
+            err = FileNotFoundError('The Cemu aoc directory could not be found.')
+            err.error_text = ('The Cemu aoc directory could not be found. Usually, the correct location is somewhere '
+                              'in Cemu\'s MLC folder. This probably means that the MLC folder has not been correctly '
+                              'located, or that you have not installed the DLC files in Cemu.')
+            raise err
     return get_aoc_dir.aoc_dir
 
 

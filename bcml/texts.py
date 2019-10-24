@@ -79,7 +79,7 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
             with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
                 bootup_pack = sarc.read_file_and_make_sarc(b_file)
             msg_bytes = util.decompress(
-                bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
+                bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc').tobytes())
             msg_pack = sarc.SARC(msg_bytes)
             for msbt in msg_pack.list_files():
                 get_msbt_hashes.texthashes[lang][msbt] = xxhash.xxh32(
@@ -132,7 +132,8 @@ def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
     with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
         bootup_pack = sarc.read_file_and_make_sarc(b_file)
     msg_bytes = util.decompress(
-        bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
+        bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc').tobytes()
+    )
     msg_pack = sarc.SARC(msg_bytes)
     if not for_merge:
         merge_dir = tmp_dir / 'ref'
@@ -295,7 +296,14 @@ def threaded_compare_texts(msyt: Path, tmp_dir: Path, lang: str = 'USen') -> (st
             xhash = xxhash.xxh32(contents.encode('utf8')).hexdigest()
             if xhash == get_msyt_hashes()[lang][rel_path]:
                 return rel_path, None
-            mod_text = yaml.safe_load(contents)
+            import yaml.reader
+            try:
+                mod_text = yaml.safe_load(contents)
+            except yaml.reader.ReaderError:
+                err = ValueError(f'A character in {rel_path} could not be read')
+                err.error_text = (f'A character in {rel_path} could not be read. This probably means that the MSBT '
+                                  'file is damaged or corrupt. You may need to report this to the mod\'s creator.')
+                raise err
     except FileNotFoundError:
         return rel_path, None
     text_edits = {

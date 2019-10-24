@@ -46,7 +46,10 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
     """
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
-    aoc_dir = util.get_aoc_dir()
+    try:
+        aoc_dir = util.get_aoc_dir()
+    except FileNotFoundError:
+        force_vanilla = True
     map_bytes = None
     if force_vanilla:
         try:

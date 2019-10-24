@@ -98,6 +98,15 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
     if rstb_path.exists():
         rstb_path.unlink()
 
+    if (tmp_dir / 'aoc').exists:
+        try:
+            util.get_aoc_dir()
+        except FileNotFoundError as err:
+            err.error_text = ('This mod uses DLC files, but you do not appear to have the DLC '
+                              'installed. If you still want to use this mod, unpack it and '
+                              'remove the "aoc" folder.')
+            raise err
+
     aoc_field = tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         with aoc_field.open('rb') as a_file:
@@ -324,7 +333,9 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
                     (tmp_dir / 'logs' / merger.log_name()).unlink()
         else:
             generate_logs(tmp_dir=tmp_dir, verbose=verbose, options=options)
-    except Exception: # pylint: disable=broad-except
+    except Exception as e: # pylint: disable=broad-except
+        if hasattr(e, 'error_text'):
+            raise e
         clean_error = RuntimeError()
         try:
             name = mod_name

@@ -325,6 +325,7 @@ class DeepMerger(mergers.Merger):
                          'deepmerge.yml', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
+        print('Logging changes to AAMP files...')
         diffs = {}
         for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
             try:

@@ -145,8 +145,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 sys.exit(0)
         try:
             util.get_game_dir()
-            util.get_update_dir()
-            util.get_aoc_dir()
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self, 'Dump Location', 'BCML needs to know the location of your game dump. '
@@ -183,7 +181,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                             )
                             if mlc_folder:
                                 util.set_mlc_dir(Path(mlc_folder))
-                                util.set_game_dir(Path(folder))
+                                util.set_game_dir(Path(folder))                    
+                                util.get_update_dir()
+                                try:
+                                    util.get_aoc_dir()
+                                except FileNotFoundError:
+                                    pass
                             else:
                                 sys.exit(0)
                 else:
@@ -838,14 +841,12 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
 
     def GetResult(self):
         if self.exec_() == QtWidgets.QDialog.Accepted:
-            output = Path(
-                QFileDialog.getSaveFileName(
-                    self,
-                    'Save Your Mod',
-                    str(Path.home()),
-                    'Botw Nano Patch Mod (*.bnp);;7-Zip Archive (*.7z);;All Files (*)'
-                )[0]
-            )
+            output = QFileDialog.getSaveFileName(
+                self,
+                'Save Your Mod',
+                str(Path.home()),
+                'Botw Nano Patch Mod (*.bnp);;7-Zip Archive (*.7z);;All Files (*)'
+            )[0]
             if not output:
                 return None
             return {
@@ -855,7 +856,7 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
                 'url': self.txtUrl.text().strip(),
                 'folder': Path(self.txtFolder.text().strip()),
                 'options': self._options,
-                'output': output
+                'output': Path(output)
             }
 
 
@@ -1192,6 +1193,7 @@ def process_args() -> Path:
                 process_args.progress.open()
                 process_args.progress.canceled.connect(quit_download)
                 urllib.request.urlretrieve(try_url, path.resolve(), reporthook=download_progress)
+                del quit_download
                 process_args.progress.close()
                 return Path(tmp.name)
             except Exception: # pylint: disable=broad-except
