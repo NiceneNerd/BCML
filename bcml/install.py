@@ -563,6 +563,16 @@ def refresh_merges(verbose: bool = False):
 
 def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
     canon = util.get_canon_name(file.relative_to(tmp_dir))
+    try:
+        stock_file = util.get_game_file(file.relative_to(tmp_dir))
+    except FileNotFoundError:
+        return
+    with stock_file.open('rb') as old_file:
+        old_sarc = sarc.read_file_and_make_sarc(old_file)
+        if not old_sarc:
+            return
+        old_files = set(old_sarc.list_files())
+        del old_sarc
     if canon not in hashes:
         return
     with file.open('rb') as s_file:
@@ -576,9 +586,9 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         ext = Path(canon).suffix
         file_data = base_sarc.get_file_data(nest_file).tobytes()
         xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
-        if ext in ['.yml', '.bak']:
+        if ext in {'.yml', '.bak'}:
             continue
-        if canon not in hashes or (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
+        if nest_file not in old_files or (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
             can_delete = False
             new_sarc.add_file(nest_file, file_data)
     if can_delete:
