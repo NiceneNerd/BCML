@@ -283,7 +283,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
         try:
             new_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
         except ValueError:
-            new_map['Objs'].append(actor)
+            changes['add'].append(actor)
     stock_links = []
     if map_unit.type == 'Static' and changes['del']:
         for actor in new_map['Objs']:
@@ -291,7 +291,8 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
                 stock_links.extend([link['DestUnitHashId']
                                     for link in actor['LinksToObj']])
     if not no_del:
-        for map_del in changes['del']:
+        for map_del in sorted(changes['del'], key=lambda change: stock_hashes.index(change) \
+                              if change in stock_hashes else -1, reverse=True):
             if map_del in stock_hashes and map_del not in stock_links:
                 try:
                     new_map['Objs'].pop(stock_hashes.index(map_del))
