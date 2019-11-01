@@ -572,7 +572,6 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         if not old_sarc:
             return
         old_files = set(old_sarc.list_files())
-        del old_sarc
     if canon not in hashes:
         return
     with file.open('rb') as s_file:
@@ -584,13 +583,18 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
     for nest_file in base_sarc.list_files():
         canon = nest_file.replace('.s', '.')
         ext = Path(canon).suffix
-        file_data = base_sarc.get_file_data(nest_file).tobytes()
-        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
         if ext in {'.yml', '.bak'}:
             continue
-        if nest_file not in old_files or (xhash != hashes[canon] and ext not in util.AAMP_EXTS):
+        file_data = base_sarc.get_file_data(nest_file).tobytes()
+        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
+        if nest_file in old_files:
+            old_hash = xxhash.xxh32(
+                util.unyaz_if_needed(old_sarc.get_file_data(nest_file).tobytes())
+            ).hexdigest()
+        if nest_file not in old_files or (xhash != old_hash and ext not in util.AAMP_EXTS):
             can_delete = False
             new_sarc.add_file(nest_file, file_data)
+    del old_sarc
     if can_delete:
         del new_sarc
         file.unlink()
