@@ -13,7 +13,7 @@ if not compiled_path.exists():
 
 setup(
     name='bcml',
-    version='2.4.9',
+    version='2.5.0',
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',

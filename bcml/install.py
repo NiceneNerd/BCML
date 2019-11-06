@@ -370,7 +370,18 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
         print()
         print(f'Moving mod to {str(mod_dir)}...')
         if mod.is_file():
-            shutil.move(str(tmp_dir), str(mod_dir))
+            try:
+                shutil.move(str(tmp_dir), str(mod_dir))
+            except Exception: # pylint: disable=broad-except
+                try:
+                    shutil.copytree(str(tmp_dir), str(mod_dir))
+                    try:
+                        shutil.rmtree(str(tmp_dir))
+                    except Exception: # pylint: disable=broad-except
+                        pass
+                except Exception: # pylint: disable=broad-except
+                    raise OSError('BCML could not transfer your mod from the temp directory '
+                                       'to the BCML directory.')
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
 
@@ -630,6 +641,23 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
+    print('Packing loose files...')
+    pack_folders = sorted(
+        {d for d in tmp_dir.rglob('**/*') if d.is_dir() and d.suffix in util.SARC_EXTS},
+        key=lambda d: len(d.parts), reverse=True
+    )
+    for folder in pack_folders:
+        new_tmp: Path = folder.with_suffix(folder.suffix + '.tmp')
+        shutil.move(folder, new_tmp)
+        new_sarc = sarc.SARCWriter(be=True)
+        for file in {f for f in new_tmp.rglob('**/*') if f.is_file()}:
+            new_sarc.add_file(file.relative_to(new_tmp).as_posix(), file.read_bytes())
+        sarc_bytes = new_sarc.get_bytes()
+        if str(folder.suffix).startswith('.s') and folder.suffix != '.sarc':
+            sarc_bytes = libyaz0.compress(sarc_bytes, level=10)
+        folder.write_bytes(sarc_bytes)
+        shutil.rmtree(new_tmp)
+
     options['texts'] = {'user_only': False}
     logged_files = generate_logs(tmp_dir, options=options)
 
@@ -662,8 +690,7 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
 
     hashes = util.get_hash_table()
     print('Creating partial packs...')
-    sarc_files = [file for file in list(
-        tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+    sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
     if sarc_files:
         num_threads = min(len(sarc_files), cpu_count())
         pool = Pool(processes=num_threads)
@@ -671,16 +698,18 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
         pool.close()
         pool.join()
 
-        with (tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
-            final_packs = [file for file in list(
-                tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
-            if final_packs:
-                p_file.write('name,path\n')
-                for file in final_packs:
-                    p_file.write(
-                        f'{util.get_canon_name(file.relative_to(tmp_dir))},'
-                        f'{file.relative_to(tmp_dir)}\n'
-                    )
+        sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
+        if sarc_files:
+            with (tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
+                final_packs = [file for file in list(
+                    tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
+                if final_packs:
+                    p_file.write('name,path\n')
+                    for file in final_packs:
+                        p_file.write(
+                            f'{util.get_canon_name(file.relative_to(tmp_dir))},'
+                            f'{file.relative_to(tmp_dir)}\n'
+                        )
     else:
         if (tmp_dir / 'logs' / 'packs.log').exists():
             (tmp_dir / 'logs' / 'packs.log').unlink()
