@@ -282,7 +282,7 @@ def refresh_cemu_mods():
     settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
-def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge: bool = False,
+def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_merge: bool = False,
                 insert_priority: int = 0):
     """
     Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
@@ -319,7 +319,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
         return
 
     try:
-        rules = ConfigParser()
+        rules = util.RulesParser()
         rules.read(tmp_dir / 'rules.txt')
         mod_name = str(rules['Definition']['name']).strip(' "\'')
         print(f'Identified mod: {mod_name}')
@@ -360,7 +360,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
                 new_id = util.get_mod_id(existing_mod.name, priority_shifted)
                 new_path = util.get_modpack_dir() / new_id
                 shutil.move(str(existing_mod.path), str(new_path))
-                existing_mod_rules = ConfigParser()
+                existing_mod_rules = util.RulesParser()
                 existing_mod_rules.read(str(new_path / 'rules.txt'))
                 existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
                 with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
@@ -421,6 +421,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = {}, wait_merge
     else:
         try:
             print('Performing merges...')
+            if not options:
+                options = {}
             if 'disable' not in options:
                 options['disable'] = []
             for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
@@ -542,7 +544,7 @@ def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
 
             new_mod_id = util.get_mod_id(mod[0], mod[1])
             shutil.move(str(mod[2]), str(mod[2].parent / new_mod_id))
-            rules = ConfigParser()
+            rules = util.RulesParser()
             rules.read(str(mod.path.parent / new_mod_id / 'rules.txt'))
             rules['Definition']['fsPriority'] = str(mod[1])
             with (mod[2].parent / new_mod_id / 'rules.txt').open('w', encoding='utf-8') as r_file:
@@ -617,7 +619,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
                 new_sarc.write(s_file)
 
 
-def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
+def create_bnp_mod(mod: Path, output: Path, options: dict = None):
     """[summary]
     
     :param mod: [description]
@@ -658,6 +660,8 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = {}):
         folder.write_bytes(sarc_bytes)
         shutil.rmtree(new_tmp)
 
+    if not options:
+        options = {}
     options['texts'] = {'user_only': False}
     logged_files = generate_logs(tmp_dir, options=options)
 

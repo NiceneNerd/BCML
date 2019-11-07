@@ -11,11 +11,11 @@ import traceback
 import unicodedata
 import urllib.error
 import urllib.request
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 from PySide2.QtGui import QIcon, QPixmap
 
 import byml
@@ -662,7 +662,7 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
 
 def get_mod_info(rules_path: Path) -> BcmlMod:
     """ Gets the name and priority of a mod from its rules.txt """
-    rules: ConfigParser = ConfigParser()
+    rules: ConfigParser = RulesParser()
     rules.read(str(rules_path))
     name = str(rules['Definition']['name']).strip('" \'').replace('_', ' ')
     try:
@@ -692,7 +692,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
     :rtype: QPixmap
     """
     if not rules:
-        rules = ConfigParser()
+        rules = RulesParser()
         rules.read(str(mod.path / 'rules.txt'))
     if 'url' in rules['Definition']:
         url = str(rules['Definition']['url'])
@@ -912,3 +912,25 @@ def create_schema_handler():
                 else:
                     return
                 winreg.SetValueEx(key2, '', 0, winreg.REG_SZ, f'"{exec_path.resolve()}" "%1"')
+
+
+class RulesParser(ConfigParser):
+    def __init__(self):
+        ConfigParser.__init__(self, dict_type=MultiDict)
+
+    def write(self, fileobject):
+        from io import StringIO
+        buf = StringIO()
+        ConfigParser.write(self, buf)
+        config_str = re.sub(r'\[Preset[0-9]+\]', '[Preset]', buf.getvalue())
+        fileobject.write(config_str)
+
+
+class MultiDict(OrderedDict):
+    _unique = 0
+
+    def __setitem__(self, key, val):
+        if isinstance(val, dict) and key == 'Preset':
+            self._unique += 1
+            key += str(self._unique)
+        OrderedDict.__setitem__(self, key, val)

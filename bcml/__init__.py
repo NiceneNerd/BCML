@@ -242,7 +242,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         mod = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole)
 
         if mod not in self._mod_infos:
-            rules = ConfigParser()
+            rules = util.RulesParser()
             rules.read(str(mod.path / 'rules.txt'))
             font_met = QtGui.QFontMetrics(self.lblModInfo.font())
             path = str(mod.path)
@@ -486,7 +486,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for mod in mods_to_change:
                 new_path = util.get_modpack_dir() / util.get_mod_id(mod.name, mod.priority)
                 shutil.move(str(mod.path), str(new_path))
-                rules = ConfigParser()
+                rules = util.RulesParser()
                 rules.read(str(new_path / 'rules.txt'))
                 rules['Definition']['fsPriority'] = str(mod.priority)
                 with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
@@ -799,7 +799,7 @@ class PackageDialog(QtWidgets.QDialog, Ui_PackageDialog):
                 path = path.parent
             self.txtFolder.setText(str(path.resolve()))
             if (path / 'rules.txt').exists():
-                rules = ConfigParser()
+                rules = util.RulesParser()
                 rules.read(str(path / 'rules.txt'))
                 if 'name' in rules['Definition'] and not self.txtName.text():
                     self.txtName.setText(str(rules['Definition']['name']))
