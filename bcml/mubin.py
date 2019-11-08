@@ -183,8 +183,10 @@ def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
     if isinstance(base_map, Map):
         stock_map = True
         for obj in mod_map['Objs']:
-            if 'IsHardModeActor' in obj:
+            str_obj = str(obj)
+            if 'IsHardModeActor' in str_obj or 'AoC_HardMode_Enabled' in str_obj:
                 stock_map = False
+                break
         base_map = get_stock_map(base_map, force_vanilla=stock_map)
     base_hashes = [obj['HashId'] for obj in base_map['Objs']]
     mod_hashes = [obj['HashId'] for obj in mod_map['Objs']]
@@ -260,7 +262,7 @@ def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
 
 
 def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False,
-              verbose: bool = False) -> {}:
+              link_del: bool = False, verbose: bool = False) -> {}:
     """
     Merges changes to a mainfield map and returns the RSTB values
 
@@ -285,7 +287,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
         except ValueError:
             changes['add'].append(actor)
     stock_links = []
-    if map_unit.type == 'Static' and changes['del']:
+    if map_unit.type == 'Static' and changes['del'] and not link_del:
         for actor in new_map['Objs']:
             if 'LinksToObj' in actor:
                 stock_links.extend([link['DestUnitHashId']
@@ -336,7 +338,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
     }
 
 
-def merge_maps(no_del: bool = False, verbose: bool = False):
+def merge_maps(no_del: bool = False, link_del: bool = False, verbose: bool = False):
     """Merges all installed modifications to mainfield maps"""
     aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / \
         'Pack' / 'AocMainField.pack'
@@ -363,7 +365,7 @@ def merge_maps(no_del: bool = False, verbose: bool = False):
     num_threads = min(cpu_count() - 1, len(map_diffs))
     pool = Pool(processes=num_threads)
     rstb_results = pool.map(partial(merge_map, rstb_calc=rstb_calc, no_del=no_del,
-                                    verbose=verbose), list(map_diffs.items()))
+                                    link_del=link_del, verbose=verbose), list(map_diffs.items()))
     pool.close()
     pool.join()
     for result in rstb_results:
@@ -458,9 +460,9 @@ def merge_dungeonstatic(diffs: dict = None):
 class MapMerger(mergers.Merger):
     NAME: str = 'maps'
 
-    def __init__(self, no_del: bool = False):
+    def __init__(self, no_del: bool = False, link_del: bool = False):
         super().__init__('map merge', 'Merges changes to actors in mainfield map units',
-                         'map.yml', options={'no_del': no_del})
+                         'map.yml', options={'no_del': no_del, 'link_del': link_del})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
@@ -499,11 +501,12 @@ class MapMerger(mergers.Merger):
         return get_all_map_diffs()
 
     def perform_merge(self):
-        merge_maps(no_del=self._options['no_del'])
+        merge_maps(no_del=self._options['no_del'], link_del=self._options['link_del'])
 
     def get_checkbox_options(self):
         return [
-            ('no_del', 'Never remove stock actors from merged maps')
+            ('no_del', 'Never remove stock actors from merged maps'),
+            ('link_del', 'Allow deleting actors with links from merged maps')
         ]
 
 
