@@ -401,6 +401,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 partials[merger.NAME] = set()
                             partials[merger.NAME] |= set(merger.get_mod_affected(mod))
             for merger in mergers.sort_mergers(merges):
+                if merger.NAME in result['options']:
+                    merger.set_options(result['options'][merger.NAME])
                 if merger.NAME in partials:
                     merger.set_options({'only_these': partials[merger.NAME]})
                 merger.perform_merge()
