@@ -1177,36 +1177,53 @@ def uri_validator(x):
         return False
 
 
+def quit_download():
+    del process_args.progress
+    raise RuntimeError()
+
+
 def process_args() -> Path:
     try:
         if Path(sys.argv[1]).exists():
             return Path(sys.argv[1])
     except (WindowsError, OSError):
-        try_url = sys.argv[1].replace('bcml:', '')
-        if uri_validator(try_url) and 'gamebanana.com' in try_url:
-            process_args.progress = QtWidgets.QProgressDialog(
-                'Downloading requested mod...', 'Stop', 0, 0, None
-            )
-            from tempfile import NamedTemporaryFile
-            try:
-                with NamedTemporaryFile('wb', prefix='GameBanana',
-                                        suffix='.bnp', delete=False) as tmp:
-                    path = Path(tmp.name)
-                process_args.progress.open()
-                process_args.progress.canceled.connect(quit_download)
-                urllib.request.urlretrieve(try_url, path.resolve(), reporthook=download_progress)
-                del quit_download
-                process_args.progress.close()
-                return Path(tmp.name)
-            except Exception: # pylint: disable=broad-except
-                if hasattr(process_args, 'progress') and process_args.progress:
-                    process_args.progress.close()
+        if sys.argv[1].startswith('bcml:'):
+            try_url = sys.argv[1].replace('bcml:', '').replace('\\', '/')
+            if uri_validator(try_url) and 'gamebanana.com' in try_url:
+                process_args.progress = QtWidgets.QProgressDialog(
+                    'Downloading requested mod...', 'Stop', 0, 0, None
+                )
+                from tempfile import NamedTemporaryFile
+                try:
+                    with NamedTemporaryFile('wb', prefix='GameBanana_',
+                                            suffix='.bnp', delete=False) as tmp:
+                        path = Path(tmp.name)
+                    process_args.progress.open()
+                    process_args.progress.canceled.connect(quit_download)
+                    urllib.request.urlretrieve(try_url, path.resolve(), reporthook=download_progress)
+                    process_args.progress.canceled.disconnect()
+                    process_args.progress.cancel()
+                    return Path(tmp.name)
+                except RuntimeError:
+                    if hasattr(process_args, 'progress') and process_args.progress:
+                        process_args.progress.cancel()
+                except Exception as e: # pylint: disable=broad-except
+                    if hasattr(process_args, 'progress') and process_args.progress:
+                        process_args.progress.cancel()
+                    QtWidgets.QMessageBox.warning(
+                        None,
+                        'Error',
+                        f'Failed to download mod from <code>{try_url}</code>. '
+                        f'Error details:\n\n{str(e)}'
+                    )
+            else:
+                QtWidgets.QMessageBox.warning(
+                    None,
+                    'Error',
+                    f'The request download <code>{try_url}</code> does not appear to be a valid '
+                    'GameBanana URL.'
+                )
     return None
-
-
-def quit_download():
-    del process_args.progress
-    download_progress = 1/0
 
 
 def download_progress(count, block_size, total_size):
