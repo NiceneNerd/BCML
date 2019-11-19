@@ -114,6 +114,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnCemu.clicked.connect(self.CemuClicked)
         self.btnRemoveAll.clicked.connect(self.RemoveAllClicked)
         self.btnUninstall.clicked.connect(self.UninstallClicked)
+        self.btnDisableMod.clicked.connect(self.DisableModClicked)
+        self.btnEnableMod.clicked.connect(self.EnableModClicked)
         self.btnExplore.clicked.connect(self.ExploreClicked)
         self.btnPackage.clicked.connect(self.PackageClicked)
         self.btnSettings.clicked.connect(self.SettingsClicked)
@@ -209,12 +211,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def LoadMods(self):
         self.statusBar().showMessage('Loading mods...')
         self.listWidget.clear()
-        self._mods = sorted(util.get_installed_mods(), key=lambda imod: imod.priority,
+        self._mods = sorted(util.get_installed_mods(disabled=True), key=lambda imod: imod.priority,
                             reverse=not util.get_settings_bool('load_reverse'))
         for mod in self._mods:
             mod_item = QtWidgets.QListWidgetItem()
             mod_item.setText(mod.name)
             mod_item.setData(QtCore.Qt.UserRole, mod)
+            if util.is_mod_disabled(mod):
+                mod_item.setTextColor(QtGui.QColor(211, 47, 47))
             self.listWidget.addItem(mod_item)
         self._mod_infos = {}
         self.lblModInfo.linkActivated.connect(self.link)
@@ -243,32 +247,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         if mod not in self._mod_infos:
             rules = util.RulesParser()
-            rules.read(str(mod.path / 'rules.txt'))
+            if util.is_mod_disabled(mod):
+                rules.read(str(mod.path / 'rules.txt.disable'))
+            else:
+                rules.read(str(mod.path / 'rules.txt'))
             font_met = QtGui.QFontMetrics(self.lblModInfo.font())
             path = str(mod.path)
             while font_met.boundingRect(f'Path: {path}.....').width() >= self.lblModInfo.width():
                 path = path[:-1]
             changes = []
-            if rstable.get_mod_rstb_values(mod):
-                changes.append('RSTB')
-            if util.is_pack_mod(mod):
-                changes.append('packs')
-            if texts.get_modded_languages(mod.path):
-                changes.append('texts')
-                if 'RSTB' not in changes:
-                    changes.insert(0, 'RSTB')
-            if util.is_gamedata_mod(mod):
-                changes.append('game data')
-            if util.is_savedata_mod(mod):
-                changes.append('save data')
-            if util.is_actorinfo_mod(mod):
-                changes.append('actor info')
-            if util.is_eventinfo_mod(mod):
-                changes.append('event info')
-            if util.is_map_mod(mod):
-                changes.append('maps')
-            if util.is_deepmerge_mod(mod):
-                changes.append('deep merge')
+            for merger in {cls() for cls in mergers.get_mergers()}:
+                if merger.is_mod_logged(mod):
+                    changes.append(merger.NAME if not merger.NAME == 'rstb' else 'RSTB')
             mod_info = [
                 f'<b>Name</b>: {mod.name}',
                 f'<b>Priority:</b> {mod.priority}',
@@ -277,6 +267,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     str(rules["Definition"]["description"]).strip(' "\'')),
                 f'<b>Changes:</b> {", ".join(changes)}'
             ]
+            if util.is_mod_disabled(mod):
+                mod_info.insert(0, '<b><span style="color:#d32f2f">DISABLED</span></b>')
             if 'url' in rules['Definition']:
                 mod_info.insert(3, util.get_mod_link_meta(rules))
             try:
@@ -288,7 +280,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             mod_info, preview = self._mod_infos[mod]
 
-        self.lblModInfo.setText('<br><br>'.join(mod_info))
+        self.lblModInfo.setText(f'<p>{"</p><p>".join(mod_info)}</p>')
         self.lblImage.setFixedSize(
             256, 256 // (preview.width() / preview.height())
         )
@@ -299,12 +291,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.btnUninstall.setEnabled(True)
         if not self.btnExplore.isEnabled():
             self.btnExplore.setEnabled(True)
+        disabled = util.is_mod_disabled(mod)
+        self.btnEnableMod.setVisible(disabled)
+        self.btnDisableMod.setVisible(not disabled)
+        if not self.btnEnableMod.isEnabled():
+            self.btnEnableMod.setEnabled(True)
+        if not self.btnDisableMod.isEnabled():
+            self.btnDisableMod.setEnabled(True)
 
     def PerformOperation(self, func, *args, title: str = 'Operation In Progress'):
         self.btnInstall.setEnabled(False)
         self.btnRemerge.setEnabled(False)
         self.btnExport.setEnabled(False)
         self.btnUninstall.setEnabled(False)
+        self.btnEnableMod.setEnabled(False)
+        self.btnDisableMod.setEnabled(False)
         self.btnExplore.setEnabled(False)
         self.btnBackup.setEnabled(False)
         self.btnRestore.setEnabled(False)
@@ -611,17 +612,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def UninstallClicked(self):
         def uninstall(mods):
             all_mergers = [merger() for merger in mergers.get_mergers()]
-            remergers = set()
+            remergers = []
             partials = {}
             for mod in mods:
                 for merger in all_mergers:
                     if merger.is_mod_logged(mod):
-                        remergers.add(merger)
+                        if merger not in remergers:
+                            remergers.append(merger)
                         if merger.can_partial_remerge():
                             if merger.NAME not in partials:
                                 partials[merger.NAME] = set()
                             partials[merger.NAME] |= set(merger.get_mod_affected(mod))
-            for mod in mods:
+            for mod in sorted(mods, key=lambda m: m.priority, reverse=True):
                 install.uninstall_mod(mod, wait_merge=True)
             for merger in mergers.sort_mergers(remergers):
                 if merger.NAME in partials:
@@ -632,7 +634,73 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.listWidget.selectedItems():
             mods = [item.data(Qt.UserRole)
                     for item in self.listWidget.selectedItems()]
-            self.PerformOperation(uninstall, (mods))
+            if QtWidgets.QMessageBox.question(
+                self,
+                'Confirm Uninstall',
+                f'Are you sure you want to uninstall the selected {len(mods)} mod(s)?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            ) == QtWidgets.QMessageBox.Yes:
+                self.PerformOperation(uninstall, (mods))
+
+    def DisableModClicked(self):
+        def disable(mods):
+            all_mergers = [merger() for merger in mergers.get_mergers()]
+            remergers = []
+            partials = {}
+            for mod in mods:
+                for merger in all_mergers:
+                    if merger.is_mod_logged(mod):
+                        if merger not in remergers:
+                            remergers.append(merger)
+                        if merger.can_partial_remerge():
+                            if merger.NAME not in partials:
+                                partials[merger.NAME] = set()
+                            partials[merger.NAME] |= set(merger.get_mod_affected(mod))
+            for mod in mods:
+                install.disable_mod(mod, wait_merge=True)
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
+            install.refresh_cemu_mods()
+
+        if self.listWidget.selectedItems():
+            mods = [item.data(Qt.UserRole)
+                    for item in self.listWidget.selectedItems()]
+            if QtWidgets.QMessageBox.question(
+                self,
+                'Confirm Disable',
+                f'Are you sure you want to disable the selected {len(mods)} mod(s)?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            ) == QtWidgets.QMessageBox.Yes:
+                self.PerformOperation(disable, (mods))
+
+    def EnableModClicked(self):
+        def enable(mods):
+            all_mergers = [merger() for merger in mergers.get_mergers()]
+            remergers = []
+            partials = {}
+            for mod in mods:
+                for merger in all_mergers:
+                    if merger.is_mod_logged(mod):
+                        if merger not in remergers:
+                            remergers.append(merger)
+                        if merger.can_partial_remerge():
+                            if merger.NAME not in partials:
+                                partials[merger.NAME] = set()
+                            partials[merger.NAME] |= set(merger.get_mod_affected(mod))
+            for mod in mods:
+                install.enable_mod(mod, wait_merge=True)
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
+            install.refresh_cemu_mods()
+
+        if self.listWidget.selectedItems():
+            mods = [item.data(Qt.UserRole)
+                    for item in self.listWidget.selectedItems()]
+            self.PerformOperation(enable, (mods))
 
     def ExploreClicked(self):
         path = self.listWidget.selectedItems()[0].data(QtCore.Qt.UserRole).path

@@ -163,7 +163,8 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
     return byml.Byml(map_bytes).parse()
 
 
-def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
+def get_map_diff(base_map: Union[dict, Map], mod_map: dict, no_del: bool = False, 
+                 link_del: bool = False) -> dict:
     """
     Detects the changes made to a modded map unit.
 
@@ -189,6 +190,12 @@ def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
                 break
         base_map = get_stock_map(base_map, force_vanilla=stock_map)
     base_hashes = [obj['HashId'] for obj in base_map['Objs']]
+    base_links = set()
+    if not link_del:
+        for obj in base_map['Objs']:
+            if 'LinksToObj' in obj:
+                base_links.update({link['DestUnitHashId']
+                                    for link in obj['LinksToObj']})
     mod_hashes = [obj['HashId'] for obj in mod_map['Objs']]
     for obj in mod_map['Objs']:
         if obj['HashId'] not in base_hashes:
@@ -196,7 +203,8 @@ def get_map_diff(base_map: Union[dict, Map], mod_map: dict) -> dict:
         elif obj['HashId'] in base_hashes and\
              obj != base_map['Objs'][base_hashes.index(obj['HashId'])]:
             diffs['mod'][obj['HashId']] = deepcopy(obj)
-    diffs['del'] = [hash_id for hash_id in base_hashes if hash_id not in mod_hashes]
+    diffs['del'] = [hash_id for hash_id in base_hashes if hash_id not in mod_hashes and \
+                    not no_del and not (not link_del and hash_id in base_links)]
     return diffs
 
 
@@ -240,19 +248,25 @@ def get_all_map_diffs() -> dict:
     return c_diffs
 
 
-def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str]):
+def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
+                            link_del: bool = False):
     """Generates a dict log of modified mainfield maps"""
     diffs = {}
     modded_maps = consolidate_map_files(modded_mubins)
     for modded_map in modded_maps:
         diffs['_'.join(modded_map)] = get_map_diff(
-            modded_map, get_modded_map(modded_map, tmp_dir))
+            modded_map,
+            get_modded_map(modded_map, tmp_dir),
+            no_del=no_del,
+            link_del=link_del
+        )
     return diffs
 
 
-def log_modded_maps(tmp_dir: Path, modded_mubins: List[str]):
+def log_modded_maps(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
+                    link_del: bool = False):
     """Logs modified mainfield maps to a YAML document"""
-    diffs = generate_modded_map_log(tmp_dir, modded_mubins)
+    diffs = generate_modded_map_log(tmp_dir, modded_mubins, no_del=no_del, link_del=link_del)
     log_file: Path = tmp_dir / 'logs' / 'map.yml'
     log_file.parent.mkdir(parents=True, exist_ok=True)
     dumper = yaml.CSafeDumper
@@ -286,16 +300,10 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
             new_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
         except ValueError:
             changes['add'].append(actor)
-    stock_links = []
-    if map_unit.type == 'Static' and changes['del'] and not link_del:
-        for actor in new_map['Objs']:
-            if 'LinksToObj' in actor:
-                stock_links.extend([link['DestUnitHashId']
-                                    for link in actor['LinksToObj']])
     if not no_del:
         for map_del in sorted(changes['del'], key=lambda change: stock_hashes.index(change) \
                               if change in stock_hashes else -1, reverse=True):
-            if map_del in stock_hashes and map_del not in stock_links:
+            if map_del in stock_hashes:
                 try:
                     new_map['Objs'].pop(stock_hashes.index(map_del))
                 except IndexError:
@@ -468,7 +476,8 @@ class MapMerger(mergers.Merger):
         modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
                          file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name]
         if modded_mubins:
-            return generate_modded_map_log(mod_dir, modded_mubins)
+            return generate_modded_map_log(mod_dir, modded_mubins, no_del=self._options['no_del'], 
+                                           link_del=self._options['link_del'])
         else:
             return {}
 

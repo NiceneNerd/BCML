@@ -797,16 +797,18 @@ def get_mod_link_meta(rules: ConfigParser = None):
     return f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>'
 
 
-def get_installed_mods() -> []:
+def get_installed_mods(disabled: bool = False) -> []:
     """
     Gets all installed mods and their basic info
 
+    :param disabled: Whether to include disabled mods, defaults to False
+    :type disabled: bool, optional
     :returns: A list of mods with their names, priorities, and installed paths.
     :rtype: list of (str, int, class:`pathlib.Path`) )
     """
     mods = []
-    for rules in get_modpack_dir().glob('*/rules.txt'):
-        if rules.parent.stem == '9999_BCML':
+    for rules in get_modpack_dir().glob('*/rules.txt*'):
+        if rules.parent.stem == '9999_BCML' or (not disabled and rules.suffix == '.disable'):
             continue
         try:
             mod = get_mod_info(rules)
@@ -816,6 +818,10 @@ def get_installed_mods() -> []:
             continue
         mods.insert(mod.priority - 100, mod)
     return mods
+
+
+def is_mod_disabled(mod: BcmlMod) -> bool:
+    return (mod.path / 'rules.txt.disable').exists()
 
 
 def get_all_modded_files(only_loose: bool = False) -> dict:

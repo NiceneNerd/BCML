@@ -191,8 +191,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                 failure[file + '//' + failure] = sub_failures[failure]
             del sub_sarc
             new_bytes = new_sub_sarc.get_bytes()
-            new_sarc.add_file(
-                file, new_bytes if not yazd else util.compress(new_bytes))
+            new_sarc.add_file(file, new_bytes if not yazd else util.compress(new_bytes))
 
         elif isinstance(stuff, list):
             try:
@@ -203,9 +202,9 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                     aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                     del aamp_contents
                     new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
+                    cache_merged_aamp(file, new_bytes)
                 else:
-                    raise ValueError(
-                        'Wait, what the heck, this isn\'t an AAMP file?!')
+                    raise ValueError('Wait, what the heck, this isn\'t an AAMP file?!')
             except ValueError:
                 new_bytes = pack.get_file_data(file).tobytes()
                 print(f'Deep merging {file} failed. No changed were made.')
@@ -213,6 +212,12 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
             new_sarc.delete_file(file)
             new_sarc.add_file(file, new_bytes)
     return new_sarc, failures
+
+
+def cache_merged_aamp(file: str, data: bytes):
+    out = Path(util.get_master_modpack_dir() / 'logs' / 'dm' / file)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
 
 
 def get_merged_files() -> List[str]:
@@ -229,10 +234,6 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
     """Deep merges an individual file, suitable for multiprocessing"""
     file, stuff = item
     failures = {}
-    dumper = yaml.CDumper
-    yaml_util.add_representers(dumper)
-    loader = yaml.CSafeLoader
-    yaml_util.add_constructors(loader)
 
     base_file = util.get_game_file(file, file.startswith('aoc'))
     if (util.get_master_modpack_dir() / file).exists():
@@ -290,12 +291,16 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
         return
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'rstb.log').unlink()
-    if (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').exists():
-        (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log').unlink()
+    merge_log = (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log')
+    old_merges = []
+    if merge_log.exists():
+        if only_these:
+            old_merges = merge_log.read_text().splitlines()
+        merge_log.unlink()
+
 
     print('Loading deep merge data...')
     diffs = consolidate_diff_files(get_deepmerge_diffs(only_these=only_these))
-    #failures = {}
 
     print('Performing deep merge...')
     if not diffs:
@@ -310,11 +315,16 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
         bcml.rstable.generate_master_rstb()
 
     (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'logs' / 'deepmerge.log')\
-         .open('w', encoding='utf-8') as l_file:
+    with merge_log.open('w', encoding='utf-8') as l_file:
         for file_type in diffs:
             for file in diffs[file_type]:
                 l_file.write(f'{file}\n')
+                if only_these and file in old_merges:
+                    old_merges.remove(file)
+        if only_these:
+            for file in old_merges:
+                l_file.write(f'{file}\n')
+
 
 
 class DeepMerger(mergers.Merger):

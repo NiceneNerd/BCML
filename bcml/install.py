@@ -450,6 +450,48 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
     return output_mod
 
 
+def disable_mod(mod: BcmlMod, wait_merge: bool = False):
+    remergers = []
+    partials = {}
+    print(f'Disabling {mod.name}...')
+    for merger in [merger() for merger in mergers.get_mergers()]:
+        if merger.is_mod_logged(mod):
+            remergers.append(merger)
+            if merger.can_partial_remerge():
+                partials[merger.NAME] = merger.get_mod_affected(mod)
+    rules_path: Path = mod.path / 'rules.txt'
+    rules_path.rename(rules_path.with_suffix('.txt.disable'))
+    if not wait_merge:
+        print(f'Remerging affected files...')
+        for merger in remergers:
+            if merger.NAME in partials:
+                merger.set_options({'only_these': partials[merger.NAME]})
+            merger.perform_merge()
+    print(f'{mod.name} disabled')
+
+
+def enable_mod(mod: BcmlMod, wait_merge: bool = False):
+    print(f'Enabling {mod.name}...')
+    rules_path: Path = mod.path / 'rules.txt.disable'
+    rules_path.rename(rules_path.with_suffix(''))
+    # refresh_merges()
+    if not wait_merge:
+        print(f'Remerging affected files...')
+        remergers = []
+        partials = {}
+        for merger in [merger() for merger in mergers.get_mergers()]:
+            if merger.is_mod_logged(mod):
+                remergers.append(merger)
+                if merger.can_partial_remerge():
+                    partials[merger.NAME] = merger.get_mod_affected(mod)
+        for merger in remergers:
+            if merger.NAME in partials:
+                merger.set_options({'only_these': partials[merger.NAME]})
+            merger.perform_merge()
+    refresh_cemu_mods()
+    print(f'{mod.name} enabled')
+
+
 def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verbose: bool = False):
     """
     Uninstalls the mod currently installed at the specified path and updates merges as needed

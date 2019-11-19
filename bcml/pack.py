@@ -356,6 +356,13 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     new_sarc = sarc.SARCWriter(be=True)
     files_added = []
 
+    # for file in all_files:
+    #     dm_cache = util.get_master_modpack_dir() / 'logs' / 'dm' / file
+    #     if dm_cache.exists():
+    #         file_data = dm_cache.read_bytes()
+    #         new_sarc.add_file(file, file_data)
+    #         files_added.append(file)
+
     for opened_sarc in reversed(opened_sarcs):
         for file in [file for file in opened_sarc.list_files() if file not in files_added]:
             data = opened_sarc.get_file_data(file).tobytes()

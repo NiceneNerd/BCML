@@ -110,10 +110,9 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     :rtype: int
     """
     if not bootup_path:
-        installed_bootups = list(
-            util.get_modpack_dir().rglob('**/Pack/Bootup.pack'))
-        bootup_path = installed_bootups[len(installed_bootups) - 1] if installed_bootups \
-                      else util.get_game_file('Pack/Bootup.pack')
+        master_boot = util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+        bootup_path = master_boot if master_boot.exists() \
+            else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as b_file:
         bootup_pack = sarc.read_file_and_make_sarc(b_file)
     new_pack = sarc.make_writer_from_sarc(bootup_pack)

@@ -105,10 +105,10 @@ def get_mergers() -> List[Merger]:
 
     return [
         pack.PackMerger,
+        merge.DeepMerger,
         texts.TextsMerger,
         data.ActorInfoMerger,
         mubin.DungeonStaticMerger,
-        merge.DeepMerger,
         mubin.MapMerger,
         data.GameDataMerger,
         data.SaveDataMerger,
