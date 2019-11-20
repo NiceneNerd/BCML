@@ -332,9 +332,8 @@ def merge_installed_packs(no_injection: bool = False, only_these: List[str] = No
             print('Injecting merged event info into Bootup.pack...')
             util.inject_file_into_bootup(
                 'Event/EventInfo.product.sbyml',
-                libyaz0.compress(
-                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes(),
-                    level=10
+                util.compress(
+                    (util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml').read_bytes()
                 )
             )
 

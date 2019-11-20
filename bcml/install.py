@@ -698,7 +698,7 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
             new_sarc.add_file(file.relative_to(new_tmp).as_posix(), file.read_bytes())
         sarc_bytes = new_sarc.get_bytes()
         if str(folder.suffix).startswith('.s') and folder.suffix != '.sarc':
-            sarc_bytes = libyaz0.compress(sarc_bytes, level=10)
+            sarc_bytes = util.compress(sarc_bytes)
         folder.write_bytes(sarc_bytes)
         shutil.rmtree(new_tmp)
 

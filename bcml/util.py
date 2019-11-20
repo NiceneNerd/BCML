@@ -55,6 +55,8 @@ BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sb
 
 def decompress(data: bytes) -> bytes:
     try:
+        if get_settings_bool('wszst'):
+            raise ImportError()
         import libyaz0.yaz0_cy
         if isinstance(data, memoryview):
             data = data.tobytes()
@@ -66,10 +68,12 @@ def decompress(data: bytes) -> bytes:
 
 def compress(data: bytes) -> bytes:
     try:
+        if get_settings_bool('wszst'):
+            raise ImportError()
         import libyaz0.yaz0_cy
         if isinstance(data, memoryview):
             data = data.tobytes()
-        comp_data = libyaz0.yaz0_cy.CompressYaz(data, 9)
+        comp_data = libyaz0.yaz0_cy.CompressYaz(data, 10)
         result = bytearray(b'Yaz0')
         result += len(data).to_bytes(4, "big")
         result += int(0).to_bytes(4, "big")
@@ -78,7 +82,7 @@ def compress(data: bytes) -> bytes:
         return result
     except ImportError:
         import wszst_yaz0
-        return wszst_yaz0.compress(data, level=9)
+        return wszst_yaz0.compress(data, level=10)
 
 
 def get_exec_dir() -> Path:
@@ -134,6 +138,8 @@ def get_settings() -> {}:
                 'mlc_dir': '',
                 'site_meta': '',
                 'dark_theme': False,
+                'guess_merge': False,
+                'wszst': False,
                 'lang': ''
             }
             with settings_path.open('w', encoding='utf-8') as s_file:
@@ -153,7 +159,7 @@ def get_settings_bool(setting: str) -> bool:
 
 def set_settings_bool(setting: str, value: bool):
     """Sets the value of a boolean setting"""
-    get_settings()[setting] = str(value)
+    get_settings.settings_file['Settings'][setting] = str(value)
     save_settings()
 
 

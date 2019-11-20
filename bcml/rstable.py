@@ -180,8 +180,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         if isinstance(file, Path):
             ext = file.suffix
         else:
-            raise ValueError(
-                'AAMP extension must not be blank if passing file as bytes.')
+            raise ValueError('AAMP extension must not be blank if passing file as bytes.')
     ext = ext.replace('.s', '.')
     if ext == '.baiprog':
         if real_size <= 380:
@@ -289,6 +288,8 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 4
         else:
             return int(real_size * 3.5)
+    elif ext == '.bdmgparam':
+        return int(((-0.0018 * real_size) + 6.6273) * real_size) + 500
     else:
         return 0
 
@@ -397,6 +398,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
 def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
     calc = rstb.SizeCalculator()
     sizes = {}
+    guess = util.get_settings_bool('guess_merge')
     if isinstance(file, Path):
         with file.open('rb') as s_file:
             file = sarc.read_file_and_make_sarc(s_file)
@@ -406,17 +408,19 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
         canon = nest_file.replace('.s', '.')
         data = util.unyaz_if_needed(file.get_file_data(nest_file).tobytes())
         ext = Path(canon).suffix
-        if util.is_file_modded(canon, data) and ext not in RSTB_EXCLUDE_EXTS:
+        if util.is_file_modded(canon, data) and ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
             size = calc.calculate_file_size_with_ext(
                 data,
                 wiiu=True,
                 ext=ext
             )
-            # if size == 0:
-            #     if ext in util.AAMP_EXTS:
-            #         size = guess_aamp_size(data, ext)
-            #     elif ext in ['.bfres', '.sbfres']:
-            #         size = guess_bfres_size(data, canon)
+            if ext == '.bdmgparam':
+                size = 0
+            if size == 0 and guess:
+                if ext in util.AAMP_EXTS:
+                    size = guess_aamp_size(data, ext)
+                elif ext in ['.bfres', '.sbfres']:
+                    size = guess_bfres_size(data, canon)
             sizes[canon] = size
             if util.is_file_sarc(nest_file) and not nest_file.endswith('.ssarc'):
                 try:
@@ -432,16 +436,17 @@ def log_merged_files_rstb():
     print('Updating RSTB for merged files...')
     diffs = {}
     files = [item for item in util.get_master_modpack_dir().rglob('**/*') if item.is_file()]
+    guess = util.get_settings_bool('guess_merge')
     for file in files:
         if file.parent == 'logs':
             continue
         if file.suffix not in RSTB_EXCLUDE_EXTS and file.name not in RSTB_EXCLUDE_NAMES:
             size = calculate_size(file)
-            # if size == 0:
-            #     if file.suffix in util.AAMP_EXTS:
-            #         size = guess_aamp_size(file)
-            #     elif file.suffix in ['.bfres', '.sbfres']:
-            #         size = guess_bfres_size(file)
+            if size == 0 and guess:
+                if file.suffix in util.AAMP_EXTS:
+                    size = guess_aamp_size(file)
+                elif file.suffix in ['.bfres', '.sbfres']:
+                    size = guess_bfres_size(file)
             canon = util.get_canon_name(file.relative_to(util.get_master_modpack_dir()))
             if canon:
                 diffs[canon] = size
@@ -523,6 +528,8 @@ class RstbMerger(mergers.Merger):
                 if Path(canon).suffix not in RSTB_EXCLUDE_EXTS and\
                 Path(canon).name not in RSTB_EXCLUDE_NAMES:
                     size = calculate_size(file)
+                    if file.suffix == '.bdmgparam':
+                        size = 0
                     if size == 0 and self._options['guess']:
                         if file.suffix in util.AAMP_EXTS:
                             size = guess_aamp_size(file)
@@ -550,6 +557,8 @@ class RstbMerger(mergers.Merger):
                     wiiu=True,
                     ext=ext
                 )
+                if ext == '.bdmgparam':
+                    rstb_val = 0
                 if rstb_val == 0 and self._options['guess']:
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)

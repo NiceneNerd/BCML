@@ -947,6 +947,8 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
         self.txtGameDump.setText(str(util.get_game_dir()))
         self.txtMlc.setText(str(util.get_mlc_dir()))
         self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
+        self.chkGuessMerge.setChecked(util.get_settings_bool('guess_merge'))
+        self.chkWszst.setChecked(util.get_settings_bool('wszst'))
         self.drpLang.addItems(texts.LANGUAGES)
         self.drpLang.setCurrentText(util.get_settings()['lang'])
 
@@ -1001,6 +1003,8 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
                 QtWidgets.QApplication.instance().setStyleSheet(DARK_THEME)
             else:
                 QtWidgets.QApplication.instance().setStyleSheet('')
+        util.set_settings_bool('wszst', self.chkWszst.isChecked())
+        util.set_settings_bool('guess_merge', self.chkGuessMerge.isChecked())
         util.get_settings()['lang'] = self.drpLang.currentText()
         util.save_settings()
         return super().accept()
