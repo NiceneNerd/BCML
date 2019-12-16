@@ -1,7 +1,8 @@
 """Provides various utility functions for BCML operations"""
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-import csv
+#import csv
+import json
 import os
 import re
 import shutil
@@ -436,11 +437,8 @@ def get_master_modpack_dir() -> Path:
 def get_hash_table() -> {}:
     """ Returns a dict containing an xxHash table for BotW game files """
     if not hasattr(get_hash_table, 'table'):
-        get_hash_table.table = {}
-        with (get_exec_dir() / 'data' / 'hashtable.csv').open('r') as h_file:
-            rows = csv.reader(h_file)
-            for row in rows:
-                get_hash_table.table[row[0]] = row[1]
+        with (get_exec_dir() / 'data' / 'hashtable.json').open('r') as h_file:
+            get_hash_table.table = json.load(h_file)
     return get_hash_table.table
 
 
@@ -546,7 +544,7 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
     if name not in table:
         return count_new
     fhash = xxhash.xxh32(contents).hexdigest()
-    return not fhash == table[name]
+    return not fhash in table[name]
 
 
 def is_yaml_modded(entry, ref_list: dict, mod_list: dict) -> bool:

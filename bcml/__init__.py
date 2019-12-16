@@ -486,7 +486,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 if merger.NAME not in partials:
                                     partials[merger.NAME] = set()
                                 partials[merger.NAME] |= set(merger.get_mod_affected(mod))
-            for mod in mods_to_change:
+            for mod in sorted(mods_to_change, key=lambda m: m.priority, reverse=True):
                 new_path = util.get_modpack_dir() / util.get_mod_id(mod.name, mod.priority)
                 shutil.move(str(mod.path), str(new_path))
                 rules = util.RulesParser()
@@ -945,7 +945,10 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
 
         self.txtCemu.setText(str(util.get_cemu_dir()))
         self.txtGameDump.setText(str(util.get_game_dir()))
-        self.txtMlc.setText(str(util.get_mlc_dir()))
+        try:
+            self.txtMlc.setText(str(util.get_mlc_dir()))
+        except FileNotFoundError:
+            self.txtMlc.setText('')
         self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
         self.chkGuessMerge.setChecked(util.get_settings_bool('guess_merge'))
         self.chkWszst.setChecked(util.get_settings_bool('wszst'))
