@@ -1,7 +1,9 @@
-"""Provides various utility functions for BCML operations"""
+# pylint: disable=missing-docstring
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
+from dataclasses import dataclass
+import json
 import os
 import re
 import shutil
@@ -15,16 +17,17 @@ from collections import namedtuple, OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Union
-from PySide2.QtGui import QIcon, QPixmap
+from typing import Union, List
 
 import byml
 from byml import yaml_util
 import sarc
+import syaz0
 import xxhash
+from webview import Window
 import yaml
 
-BcmlMod = namedtuple('BcmlMod', 'name priority path')
+
 CREATE_NO_WINDOW = 0x08000000
 SARC_EXTS = {'.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats',
              '.ssarc', '.spack', '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats'}
@@ -53,36 +56,185 @@ BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sb
              '.sbgsvdata'}
 
 
-def decompress(data: bytes) -> bytes:
-    try:
-        if get_settings_bool('wszst'):
-            raise ImportError()
-        import libyaz0.yaz0_cy
-        if isinstance(data, memoryview):
-            data = data.tobytes()
-        return libyaz0.yaz0_cy.DecompressYaz(data)
-    except ImportError:
-        import wszst_yaz0
-        return wszst_yaz0.decompress(data)
+class BcmlMod:
+    priority: int
+    path: Path
+
+    def __init__(self, mod_path):
+        self.path = mod_path
+        self._info = json.loads(
+            (self.path / 'info.json').read_text('utf-8'),
+            encoding='utf-8'
+        )
+        self.priority = self._info['priority']
+
+    def __repr__(self):
+        return f"""BcmlMod(name="{
+            self.name
+        }", path="{
+            self.path.as_posix()
+        }", priority={self.priority})"""
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def to_json(self) -> dict:
+        return {
+            'name': self.name,
+            'priority': self.priority,
+            'path': str(self.path),
+            'disabled': (self.path / '.disabled').exists()
+        }
+
+    @staticmethod
+    def from_json(json: dict):
+        return BcmlMod(Path(json['path']))
+
+    @staticmethod
+    def from_info(info_path: Path):
+        return BcmlMod(info_path.parent)
+
+    @property
+    def name(self) -> str:
+        return self._info['name']
+
+    @property
+    def id(self) -> str:
+        return self._info['id']
+
+    @property
+    def description(self) -> str:
+        return self._info['description']
+
+    @property
+    def image(self) -> str:
+        return self._info['image']
+
+    @property
+    def url(self) -> str:
+        return self._info['url']
+
+    @property
+    def dependencies(self) -> List[str]:
+        return self._info['depedencies']
+
+    @property
+    def info_path(self):
+        return self.path / 'info.json'
+
+    @property
+    def disabled(self):
+        return (self.path / '.disabled').exists()
+
+    def _get_folder_id(self):
+        return f'{self.priority}_' + re.sub(
+            r'(?u)[^-\w.]', '', self.name.strip().replace(' ', '')
+        )
+
+    def _save_changes(self):
+        self.info_path.write_text(
+            json.dumps(self._info, ensure_ascii=False),
+            encoding='utf-8'
+        )
+
+    @property
+    def mergers(self) -> list:
+        from .mergers import get_mergers_for_mod
+        return get_mergers_for_mod(self)
+
+    def get_partials(self) -> dict:
+        partials = {}
+        for m in self.mergers:
+            if m.can_partial_remerge():
+                partials[m.NAME] = m.get_mod_affected(self)
+        return partials
 
 
-def compress(data: bytes) -> bytes:
-    try:
-        if get_settings_bool('wszst'):
-            raise ImportError()
-        import libyaz0.yaz0_cy
-        if isinstance(data, memoryview):
-            data = data.tobytes()
-        comp_data = libyaz0.yaz0_cy.CompressYaz(data, 10)
-        result = bytearray(b'Yaz0')
-        result += len(data).to_bytes(4, "big")
-        result += int(0).to_bytes(4, "big")
-        result += b'\0\0\0\0'
-        result += comp_data
-        return result
-    except ImportError:
-        import wszst_yaz0
-        return wszst_yaz0.compress(data, level=10)
+    def change_priority(self, priority):
+        self.priority = priority
+        self._info['priority'] = priority
+        self._save_changes()
+        self.path.rename(
+            self.path.parent.resolve() / self._get_folder_id()
+        )
+
+    def get_preview(self) -> Path:
+        try:
+            return self._preview
+        except AttributeError:
+            if not list(self.path.glob('thumbnail.*')):
+                if self.image:
+                    if self.url and 'gamebanana.com' in self.url:
+                        response = urllib.request.urlopen(self.url)
+                        rdata = response.read().decode()
+                        img_match = re.search(
+                            r'<meta property=\"og:image\" ?content=\"(.+?)\" />', rdata)
+                        if img_match:
+                            image_path = 'thumbnail.jfif'
+                            urllib.request.urlretrieve(
+                                img_match.group(1),
+                                str(self.path / image_path)
+                            )
+                        else:
+                            raise IndexError(
+                                f'Rule for {self.url} failed to find the remote preview'
+                            )
+                    else:
+                        raise KeyError(f'No preview image available')
+                else:
+                    image_path = self.image
+                    if image_path.startswith('http'):
+                        urllib.request.urlretrieve(
+                            image_path,
+                            str(self.path / ('thumbnail.' + image_path.split(".")[-1]))
+                        )
+                        image_path = 'thumbnail.' + image_path.split(".")[-1]
+                    if not os.path.isfile(str(self.path / image_path)):
+                        raise FileNotFoundError(
+                            f'Preview {image_path} specified in rules.txt not found')
+            else:
+                for thumb in self.path.glob('thumbnail.*'):
+                    image_path = thumb
+            self._preview = self.path / image_path
+            return self._preview
+
+        def uninstall(self, wait_merge: bool = False):
+            from bcml.install import uninstall_mod
+            uninstall_mod(self, wait_merge)
+
+
+decompress = syaz0.decompress
+compress = syaz0.compress
+
+
+def vprint(content):
+    if not isinstance(content, str):
+        try:
+            content = json.dumps(content, ensure_ascii=False, indent=4)
+        except TypeError:
+            from . import json_util
+            try:
+                content = json_util.aamp_to_json(content, pretty=True)
+            except TypeError:
+                try:
+                    content = json_util.byml_to_json(content, pretty=True)
+                except TypeError:
+                    from pprint import pformat
+                    content = pformat(content, compact=True, indent=4)
+    print(f'VERBOSE{content}')
+
+
+def timed(func):
+    def timed_function(*args, **kwargs):
+        from time import time_ns
+        start = time_ns()
+        res = func(*args, **kwargs)
+        vprint(f'{func.__qualname__} took {(time_ns() - start) / 1000000000} seconds')
+        return res
+    return timed_function
 
 
 def get_exec_dir() -> Path:
@@ -91,8 +243,11 @@ def get_exec_dir() -> Path:
 
 
 def get_data_dir() -> Path:
-    """ Gets BCML's local app data directory """
-    data_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'bcml'
+    import platform
+    if platform.system() == 'Windows':
+        data_dir = Path(os.path.expandvars('%LOCALAPPDATA%')) / 'bcml'
+    else:
+        data_dir = Path.home() / '.config' / 'bcml'
     if not data_dir.exists():
         data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
@@ -118,60 +273,49 @@ def clear_temp_dir():
             pass
 
 
-def get_icon(name: str) -> QIcon:
-    """ Gets the specified BCML tool icon """
-    icon = QIcon()
-    icon.addPixmap(QPixmap(str(get_exec_dir() / 'data' / f'{name}')))
-    return icon
-
-
-def get_settings() -> {}:
-    """ Gets the BCML settings as a dict """
-    if not hasattr(get_settings, 'settings_file'):
-        settings = ConfigParser()
-        settings_path = get_data_dir() / 'settings.ini'
-        if not settings_path.exists():
-            settings['Settings'] = {
-                'cemu_dir': '',
-                'game_dir': '',
-                'load_reverse': False,
-                'mlc_dir': '',
-                'site_meta': '',
-                'dark_theme': False,
-                'guess_merge': False,
-                'wszst': False,
-                'lang': ''
-            }
-            with settings_path.open('w', encoding='utf-8') as s_file:
-                settings.write(s_file)
-        else:
-            settings.read(str(settings_path))
-        get_settings.settings_file = settings
-    return get_settings.settings_file['Settings']
-
-
-def get_settings_bool(setting: str) -> bool:
-    """Gets the value of a boolean setting"""
-    if not setting in get_settings():
-        return False
-    return get_settings()[setting] == 'True'
-
-
-def set_settings_bool(setting: str, value: bool):
-    """Sets the value of a boolean setting"""
-    get_settings.settings_file['Settings'][setting] = str(value)
-    save_settings()
+def get_settings(name: str = '') -> {}:
+    try:    
+        if not hasattr(get_settings, 'settings'):
+            settings = {}
+            settings_path = get_data_dir() / 'settings.json'
+            if not settings_path.exists():
+                settings = {
+                    'cemu_dir': '',
+                    'game_dir': '',
+                    'update_dir': '',
+                    'dlc_dir': '',
+                    'load_reverse': False,
+                    'site_meta': '',
+                    'dark_theme': False,
+                    'guess_merge': False,
+                    'lang': '',
+                    'no_cemu': False,
+                    'wiiu': True
+                }
+                with settings_path.open('w', encoding='utf-8') as s_file:
+                    json.dump(settings, s_file)
+            else:
+                settings = json.loads(settings_path.read_text())
+            get_settings.settings = settings
+        if name:
+            return get_settings.settings.get(name, False)
+        return get_settings.settings
+    except Exception as e:
+        e.message = f"""Oops, BCML could not load its settings file. The error: {
+            getattr(e, 'message', '')
+        }"""
+        raise e
 
 
 def save_settings():
     """Saves changes made to settings"""
-    with (get_data_dir() / 'settings.ini').open('w', encoding='utf-8') as s_file:
-        get_settings.settings_file.write(s_file)
+    with (get_data_dir() / 'settings.json').open('w', encoding='utf-8') as s_file:
+        json.dump(get_settings.settings, s_file)
 
 
 def get_cemu_dir() -> Path:
     """ Gets the saved Cemu installation directory """
-    cemu_dir = str(get_settings()['cemu_dir'])
+    cemu_dir = str(get_settings('cemu_dir'))
     if not cemu_dir or not Path(cemu_dir).is_dir():
         err = FileNotFoundError('The Cemu directory has moved or not been saved yet.')
         err.error_text = 'The Cemu directory has moved or not been saved yet.'
@@ -188,7 +332,7 @@ def set_cemu_dir(path: Path):
 
 def get_game_dir() -> Path:
     """ Gets the saved Breath of the Wild game directory """
-    game_dir = str(get_settings()['game_dir'])
+    game_dir = str(get_settings('game_dir'))
     if not game_dir or not Path(game_dir).is_dir():
         err = FileNotFoundError('The BotW game directory has has moved or not been saved yet.')
         err.error_text = 'The BotW game directory has has moved or not been saved yet.'
@@ -229,7 +373,7 @@ def set_game_dir(path: Path):
 
 def get_mlc_dir() -> Path:
     """ Gets the saved Cemu mlc directory """
-    mlc_dir = str(get_settings()['mlc_dir'])
+    mlc_dir = str(get_settings('mlc_dir'))
     if not mlc_dir or not Path(mlc_dir).is_dir():
         err = FileNotFoundError('The Cemu MLC directory has moved or not been saved yet.')
         err.error_text = 'The Cemu MLC directory has moved or not been saved yet.'
@@ -258,11 +402,13 @@ def set_site_meta(site_meta):
     save_settings()
 
 
-def get_title_id() -> (str, str):
+def get_title_id(game_dir: Path = None) -> (str, str):
     """Gets the title ID of the BotW game dump"""
     if not hasattr(get_title_id, 'title_id'):
         title_id = '00050000101C9400'
-        with (get_game_dir().parent / 'code' / 'app.xml').open('r') as a_file:
+        if not game_dir:
+            game_dir = get_game_dir()
+        with (game_dir.parent / 'code' / 'app.xml').open('r') as a_file:
             for line in a_file:
                 title_match = re.search(
                     r'<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>', line)
@@ -273,56 +419,65 @@ def get_title_id() -> (str, str):
     return get_title_id.title_id
 
 
+def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
+    if not cemu_dir:
+        cemu_dir = get_cemu_dir()
+    mlc_dir = cemu_dir / 'mlc01' / 'usr' / 'title'
+    title_id = get_title_id(game_dir)
+    # First try the 1.15.11c mlc layout
+    if (mlc_dir / f'{title_id[0][0:7]}E' / title_id[1] / 'content').exists():
+        return mlc_dir / f'{title_id[0][0:7]}E' / title_id[1] / 'content'
+    # Then try the legacy layout
+    elif (mlc_dir / title_id[0] / title_id[1] / 'content').exists():
+        return mlc_dir / title_id[0] / title_id[1] / 'content'
+    return None
+
+
 def get_update_dir() -> Path:
     """ Gets the path to the game's update files in the Cemu mlc directory """
     if not hasattr(get_update_dir, 'update_dir'):
-        title_id = get_title_id()
-        # First try the 1.15.11c mlc layout
-        if (get_mlc_dir() / 'usr' / 'title' / f'{title_id[0][0:7]}E' / title_id[1] / 'content')\
-            .exists():
-            get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
-                f'{title_id[0][0:7]}E' / title_id[1] / 'content'
-        # Then try the legacy layout
-        elif (get_mlc_dir() / 'usr' / 'title' / title_id[0] / title_id[1] / 'content').exists():
-            get_update_dir.update_dir = get_mlc_dir() / 'usr' / 'title' / \
-                title_id[0] / title_id[1] / 'content'
-        else:
-            err = FileNotFoundError('The Cemu update directory could not be found.')
-            err.error_text = ('The Cemu update directory could not be found. Usually, the correct location is somewhere '
-                              'in Cemu\'s MLC folder. This probably means that the MLC folder has not been correctly '
-                              'located, or that you have not installed the update files in Cemu.')
-            raise err
+        try:
+            get_update_dir.update_dir = Path(get_settings('update_dir'))
+            if not get_update_dir.update_dir.exists():
+                raise FileNotFoundError()
+        except:
+            e = FileNotFoundError('The BOTW update directory has moved or has not been saved yet.')
+            e.error_text = ('The BOTW update directory has moved or has not been saved yet.')
+            raise e
     return get_update_dir.update_dir
+
+
+def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
+    if not cemu_dir:
+        cemu_dir = get_cemu_dir()
+    mlc_dir = cemu_dir / 'mlc01' / 'usr' / 'title'
+    title_id = get_title_id(game_dir)
+    # First try the 1.15.11c mlc layout
+    if (mlc_dir / f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010').exists():
+        return mlc_dir / f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010'
+    # Then try the legacy layout
+    elif (mlc_dir / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
+        return mlc_dir / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
+    return None
 
 
 def get_aoc_dir() -> Path:
     """ Gets the path to the game's aoc files in the Cemu mlc direcroy """
     if not hasattr(get_aoc_dir, 'aoc_dir'):
-        title_id = get_title_id()
-        mlc_title = get_mlc_dir() / 'usr' / 'title'
-        # First try the 1.15.11c mlc layout
-        if (mlc_title / f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010').exists():
-            get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
-                f'{title_id[0][0:7]}C' / title_id[1] / 'content' / '0010'
-        # Then try the legacy layout
-        elif (mlc_title / title_id[0] / title_id[1] / 'aoc' / 'content' / '0010').exists():
-            get_aoc_dir.aoc_dir = get_mlc_dir() / 'usr' / 'title' / \
-                title_id[0] / title_id[1] / 'aoc' / 'content' / '0010'
-        else:
-            err = FileNotFoundError('The Cemu aoc directory could not be found.')
-            err.error_text = ('The Cemu aoc directory could not be found. Usually, the correct location is somewhere '
-                              'in Cemu\'s MLC folder. This probably means that the MLC folder has not been correctly '
-                              'located, or that you have not installed the DLC files in Cemu.')
-            raise err
+        try:
+            get_aoc_dir.aoc_dir = Path(get_settings('aoc_dir'))
+            if not get_aoc_dir.aoc_dir.exists():
+                raise FileNotFoundError()
+        except:
+            e = FileNotFoundError('The BOTW DLC directory has moved or has not been saved yet.')
+            e.error_text = ('The BOTW DLC directory has moved or has not been saved yet.')
+            raise e
     return get_aoc_dir.aoc_dir
 
 
 def get_modpack_dir() -> Path:
     """ Gets the Cemu graphic pack directory for mods """
-    if 'Beta' not in get_bcml_version():
-        return get_cemu_dir() / 'graphicPacks' / 'BCML'
-    else:
-        return get_cemu_dir() / 'graphicPacks' / 'BCML_beta'
+    return get_data_dir() / 'mods'
 
 
 def get_util_dirs() -> tuple:
@@ -358,14 +513,6 @@ def get_bcml_version() -> str:
 
 
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
-    """
-    Gets the path to an original copy of a modded file from the game dump.
-
-    :param path: The relative path to the modded file.
-    :type path: Union[class:`pathlib.Path`, str]
-    :param aoc: Whether the file is part of add-on content (DLC)
-    :type aoc: bool, optional
-    """
     if str(path).startswith('content/') or str(path).startswith('content\\'):
         path = Path(str(path).replace('content/', '').replace('content\\', ''))
     if isinstance(path, str):
@@ -376,7 +523,7 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         aoc_dir = get_aoc_dir()
     except FileNotFoundError:
         aoc_dir = None
-    if 'aoc' in str(path) or aoc:
+    if 'aoc' in path.parts or aoc:
         if aoc_dir:
             path = Path(
                 path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
@@ -398,16 +545,6 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
 
 
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
-    """
-    Get the contents of a file nested inside one or more SARCs
-
-    :param file: A string containing the nested SARC path to the file
-    :type file: str
-    :param unyaz: Whether to decompress the file if yaz0 compressed, defaults to True
-    :type unyaz: bool, optional
-    :return: Returns the bytes to the file
-    :rtype: bytes
-    """
     nests = file.split('//')
     sarcs = []
     with open(nests[0], 'rb') as s_file:
@@ -426,7 +563,6 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
 
 
 def get_master_modpack_dir() -> Path:
-    """ Gets the directory for the BCML master graphicpack """
     master = get_modpack_dir() / '9999_BCML'
     if not (master / 'rules.txt').exists():
         create_bcml_graphicpack_if_needed()
@@ -434,20 +570,25 @@ def get_master_modpack_dir() -> Path:
 
 
 def get_hash_table() -> {}:
-    """ Returns a dict containing an xxHash table for BotW game files """
     if not hasattr(get_hash_table, 'table'):
-        get_hash_table.table = {}
-        with (get_exec_dir() / 'data' / 'hashtable.csv').open('r') as h_file:
-            rows = csv.reader(h_file)
-            for row in rows:
-                get_hash_table.table[row[0]] = row[1]
+        with (get_exec_dir() / 'data' / 'hashtable.json').open('r') as h_file:
+            get_hash_table.table = json.load(h_file)
     return get_hash_table.table
 
 
 def get_canon_name(file: str, allow_no_source: bool = False) -> str:
-    """ Gets the canonical path of a game file taken from an extracted graphic pack """
-    name = str(file).replace("\\", "/").replace('.s', '.')\
-        .replace('Content', 'content').replace('Aoc', 'aoc')
+    if isinstance(file, str):
+        file = Path(file)
+    name = file.as_posix()\
+        .replace("\\", "/")\
+        .replace('atmosphere/titles/01007EF00011E000/romfs', 'content')\
+        .replace('atmosphere/titles/01007EF00011E001/romfs', 'aoc/0010')\
+        .replace('atmosphere/titles/01007EF00011E002/romfs', 'aoc/0010')\
+        .replace('atmosphere/titles/01007EF00011F001/romfs', 'aoc/0010')\
+        .replace('atmosphere/titles/01007EF00011F002/romfs', 'aoc/0010')\
+        .replace('.s', '.')\
+        .replace('Content', 'content')\
+        .replace('Aoc', 'aoc')
     if 'aoc/' in name:
         return name.replace('aoc/content', 'aoc').replace('aoc', 'Aoc')
     elif 'content/' in name and '/aoc' not in name:
@@ -457,69 +598,17 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
 
 
 def get_mod_id(mod_name: str, priority: int) -> str:
-    """ Gets the ID for a mod from its name and priority """
     return f'{priority:04}_' + re.sub(r'(?u)[^-\w.]', '', mod_name.strip().replace(' ', ''))
 
 
 def get_mod_by_priority(priority: int) -> Union[Path, bool]:
-    """ Gets the path to the modpack installed with a given priority, or False if there is none """
     try:
         return list(get_modpack_dir().glob(f'{priority:04}*'))[0]
     except IndexError:
         return False
 
 
-def is_pack_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects pack merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'packs.log').exists()
-
-
-def is_gamedata_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects game data merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'gamedata.yml').exists()
-
-
-def is_savedata_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects save data merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'savedata.yml').exists()
-
-
-def is_actorinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects actor info merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'actorinfo.yml').exists()
-
-
-def is_eventinfo_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects event info merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'eventinfo.yml').exists()
-
-
-def is_map_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects map merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'map.yml').exists()
-
-
-def is_deepmerge_mod(mod: Union[Path, BcmlMod, str]) -> bool:
-    """ Checks whether a mod affects deep merging """
-    path = mod.path if isinstance(mod, BcmlMod) else Path(
-        mod) if isinstance(mod, str) else mod
-    return (path / 'logs' / 'deepmerge.yml').exists()
-
-
 def get_file_language(file: Union[Path, str]) -> str:
-    """ Extracts the game language of a file from its name """
     if isinstance(file, Path):
         file = str(file)
     lang_match = re.search(r'_([A-Z]{2}[a-z]{2})', file)
@@ -527,95 +616,18 @@ def get_file_language(file: Union[Path, str]) -> str:
 
 
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
-    """
-    Determines if a game file has been modified by checking the hash
-
-    :param name: Canonical path to the file being checked.
-    :type name: str
-    :param file: Bytes representing the file contents.
-    :type file: Union[bytes, Path]
-    :param count_new: Whether to count new files as modded, defaults to False
-    :type count_new: bool, optional
-    :returns: True if the file hash differs from the entry in the table or
-    if the entry does not exist, false if it matches the table entry.
-    :rtype: bool
-    """
     contents = file if isinstance(file, bytes) else \
         file.read_bytes() if isinstance(file, Path) else file.tobytes()
     table = get_hash_table()
     if name not in table:
         return count_new
     fhash = xxhash.xxh32(contents).hexdigest()
-    return not fhash == table[name]
-
-
-def is_yaml_modded(entry, ref_list: dict, mod_list: dict) -> bool:
-    """
-    Determines if a YAML object has been modified from the original
-
-    :param entry: The key of the YAML entry to compare.
-    :type entry: str
-    :param ref_list: The reference YAML dictionary.
-    :type ref_list: dict
-    :param mod_list: The modded YAML dictionary.
-    :type mod_list: dict
-    :returns: True if the normalized entry contents differs from the entry
-    in the reference document or if the entry does not exist, false if it
-    matches the reference entry.
-    :rtype: bool
-    """
-    mod_entry = unicodedata.normalize('NFC', mod_list['entries'][entry].__str__())
-    mod_entry = re.sub('[^0-9a-zA-Z]+', '', mod_entry)
-    try:
-        ref_entry = unicodedata.normalize('NFC', ref_list['entries'][entry].__str__())
-        ref_entry = re.sub('[^0-9a-zA-Z]+', '', ref_entry)
-    except KeyError:
-        return True
-    if not ref_entry == mod_entry:
-        return True
-    return False
-
-
-def byml_to_yml_dir(tmp_dir: Path, ext: str = '.byml'):
-    """ Converts BYML files in given temp dir to YAML """
-    dumper = yaml.CDumper
-    yaml_util.add_representers(dumper)
-    for data in tmp_dir.rglob(f'**/*{ext}'):
-        yml_data = byml.Byml(data.read_bytes())
-        with (data.with_name(data.stem + '.yml')).open('w', encoding='utf-8') as y_file:
-            yaml.dump(yml_data.parse(), y_file, Dumper=dumper,
-                      allow_unicode=True, encoding='utf-8')
-        data.unlink()
-
-
-def yml_to_byml_dir(tmp_dir: Path, ext: str = '.byml'):
-    """ Converts YAML files in given temp dir to BYML """
-    loader = yaml.CSafeLoader
-    yaml_util.add_constructors(loader)
-    for yml in tmp_dir.rglob('**/*.yml'):
-        with yml.open('r', encoding='utf-8') as y_file:
-            root = yaml.load(y_file, loader)
-        with (yml.with_name(yml.stem + ext)).open('wb') as b_file:
-            byml.Writer(root, True).write(b_file)
-        yml.unlink()
+    return not fhash in table[name]
 
 
 def is_file_sarc(path: str) -> bool:
-    """ Checks the file extension of a game file to tell if it is a SARC """
     ext = os.path.splitext(str(path))[1]
     return ext in SARC_EXTS
-
-
-def is_file_aamp(path: str) -> bool:
-    """ Checks the file extension of a game file to tell if it is an AAMP file """
-    ext = os.path.splitext(str(path))[1]
-    return ext in AAMP_EXTS
-
-
-def is_file_byml(path: str) -> bool:
-    """ Checks the file extension of a game file to tell if it is a BYML file """
-    ext = os.path.splitext(str(path))[1]
-    return ext in BYML_EXTS
 
 
 def decompress_file(file) -> bytes:
@@ -625,14 +637,6 @@ def decompress_file(file) -> bytes:
 
 
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
-    """
-    Detects by file extension if a file should be decompressed, and decompresses if needed
-
-    :param file_bytes: The bytes to potentially decompress.
-    :type file_bytes: bytes
-    :returns: Returns the bytes of the file, decompressed if necessary.
-    :rtype: bytes
-    """
     if file_bytes[0:4] == b'Yaz0':
         return decompress(file_bytes)
     else:
@@ -640,16 +644,6 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
 
 
 def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False):
-    """
-    Injects a file into the master BCML `Bootup.pack`
-
-    :param file: The path of the file to inject
-    :type file: str
-    :param data: The bytes of the file to inject
-    :type data: bytes
-    :param create_bootup: Whether to create `Bootup.pack` if it does not exist, defaults to False
-    :type create_bootup: bool, optional
-    """
     bootup_path = get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
     if bootup_path.exists() or create_bootup:
         if not bootup_path.exists():
@@ -666,37 +660,7 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
         raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
 
 
-def get_mod_info(rules_path: Path) -> BcmlMod:
-    """ Gets the name and priority of a mod from its rules.txt """
-    rules: ConfigParser = RulesParser()
-    rules.read(str(rules_path))
-    name = str(rules['Definition']['name']).strip('" \'').replace('_', ' ')
-    try:
-        priority = int(rules['Definition']['fsPriority'])
-    except KeyError:
-        error = KeyError(
-            f'Mod "{name}" contains no priority field. It may not have been installed completely.'
-        )
-        error.path = rules_path.parent
-        raise error
-    return BcmlMod(
-        name,
-        priority,
-        rules_path.parent
-    )
-
-
-def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
-    """
-    Gets the preview image of a given mod, if any, and caches it
-
-    :param mod: The mod to preview
-    :type mod: class:`bcml.util.BcmlMod`
-    :param rules: The contents of the mod's `rules.txt` file
-    :type rules: ConfigParser
-    :return: Returns the preview image for the mod as QPixmap
-    :rtype: QPixmap
-    """
+def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
     if not rules:
         rules = RulesParser()
         rules.read(str(mod.path / 'rules.txt'))
@@ -733,18 +697,10 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> QPixmap:
     else:
         for thumb in mod.path.glob('thumbnail.*'):
             image_path = thumb
-    return QPixmap(str(mod.path / image_path))
+    return mod.path / image_path
 
 
 def get_mod_link_meta(rules: ConfigParser = None):
-    """
-    Gets the link metadata for the URL field of a mod
-
-    :param rules: The contents of the mod's `rules.txt` file
-    :type rules: ConfigParser
-    :return: Returns an HTML link to the mod webpage
-    :rtype: str
-    """
     url = str(rules['Definition']['url'])
     mod_domain = ''
     if 'www.' in url:
@@ -755,8 +711,8 @@ def get_mod_link_meta(rules: ConfigParser = None):
     fetch_site_meta = True
     if 'site_meta' not in get_settings():
         set_site_meta('')
-    if len(get_settings()['site_meta'].split(';')) > 1:
-        for site_meta in get_settings()['site_meta'].split(';'):
+    if len(get_settings('site_meta').split(';')) > 1:
+        for site_meta in get_settings('site_meta').split(';'):
             if site_meta.split(':')[0] == mod_domain:
                 fetch_site_meta = False
                 site_name = site_meta.split(':')[1]
@@ -803,66 +759,16 @@ def get_mod_link_meta(rules: ConfigParser = None):
     return f'<b>Link: <a style="text-decoration: none;" href="{url}">{favicon} {site_name}</a></b>'
 
 
-def get_installed_mods(disabled: bool = False) -> []:
-    """
-    Gets all installed mods and their basic info
-
-    :param disabled: Whether to include disabled mods, defaults to False
-    :type disabled: bool, optional
-    :returns: A list of mods with their names, priorities, and installed paths.
-    :rtype: list of (str, int, class:`pathlib.Path`) )
-    """
-    mods = []
-    for rules in get_modpack_dir().glob('*/rules.txt*'):
-        if rules.parent.stem == '9999_BCML' or (not disabled and rules.suffix == '.disable'):
-            continue
-        try:
-            mod = get_mod_info(rules)
-        except KeyError as priority_error:
-            rules.unlink()
-            shutil.rmtree(str(priority_error.path), ignore_errors=True)
-            continue
-        mods.insert(mod.priority - 100, mod)
-    return mods
-
-
-def is_mod_disabled(mod: BcmlMod) -> bool:
-    return (mod.path / 'rules.txt.disable').exists()
-
-
-def get_all_modded_files(only_loose: bool = False) -> dict:
-    """
-    Gets all installed file modifications and the highest priority of each
-
-    :return: A dict of canonical paths and the priority of the highest modded version
-    :rtype: dict of str: int
-    """
-    modded_files = {}
-    for mod in get_installed_mods():
-        with (mod.path / 'logs' / 'rstb.log').open('r') as l_file:
-            csv_loop = csv.reader(l_file)
-            for row in csv_loop:
-                if row[0] == 'name' or (only_loose and '//' in row[2]):
-                    continue
-                modded_files[row[0]] = mod.priority
-    return modded_files
-
-
-def log_error():
-    """ Writes the most recent error traceback to the error log and prints the traceback text """
-    log_path = get_work_dir() / 'error.log'
-    error_log = traceback.format_exc()
-    with log_path.open('w', encoding='utf-8') as l_file:
-        l_file.write(error_log)
-    print('BCML has encountered an error. The details are as follows:')
-    print(error_log)
-    print(f'The error information has been saved to:\n  {str(log_path)}')
-    if sys.stdin.isatty():
-        sys.exit(1)
+def get_installed_mods(disabled: bool = False) -> List[BcmlMod]:
+    return sorted({
+        BcmlMod.from_info(info) for info in get_modpack_dir().glob('*/info.json') \
+            if not (info.parent.stem == '9999_BCML' and (
+                not disabled and (info.parent / '.disabled').exists()
+            ))
+    }, key=lambda mod: mod.priority)
 
 
 def update_bcml():
-    """ Updates BCML to the latest version """
     subprocess.call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'bcml'])
 
 
@@ -876,24 +782,13 @@ def create_bcml_graphicpack_if_needed():
             r_file.write('[Definition]\n'
                          'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n'
                          'name = BCML\n'
-                         'path = {BCML: DON\'T TOUCH}/Master BCML\n'
-                         'description = Auto-generated pack which merges RSTB changes and packs '
-                         'for other mods\n'
+                         'path = The Legend of Zelda: Breath of the Wild/Mods/BCML\n'
+                         'description = Complete pack of mods merged using BCML\n'
                          'version = 4\n'
                          'fsPriority = 9999')
 
 
 def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
-    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
-    updating only top-level keys, dict_merge recurses down into dicts nested
-    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
-    ``dct``.
-
-    :param dct: dict onto which the merge is executed
-    :param merge_dct: dct merged into dct
-    :param overwrite_lists: Whether to prevent duplicate items in lists, defaults to False
-    :return: None
-    """
     for k in merge_dct:
         if (k in dct and isinstance(dct[k], dict)
                 and isinstance(merge_dct[k], Mapping)):
@@ -909,21 +804,28 @@ def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
 
 
 def create_schema_handler():
-    import winreg
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\Classes\bcml') as key:
-        try:
-            winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Classes\bcml\shell\open\command',
-                           0, winreg.KEY_READ)
-        except (WindowsError, OSError):
-            winreg.SetValueEx(key, 'URL Protocol', 0, winreg.REG_SZ, '')
-            with winreg.CreateKey(key, r'shell\open\command') as key2:
-                if (Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe').exists():
-                    exec_path = Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe'
-                elif (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe'):
-                    exec_path = (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe')
-                else:
-                    return
-                winreg.SetValueEx(key2, '', 0, winreg.REG_SZ, f'"{exec_path.resolve()}" "%1"')
+    # pylint: disable=import-error,undefined-variable
+    import platform
+    if platform.system() == 'Windows':
+        import winreg
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\Classes\bcml') as key:
+            try:
+                winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r'Software\Classes\bcml\shell\open\command',
+                    0,
+                    winreg.KEY_READ
+                )
+            except (WindowsError, OSError):
+                winreg.SetValueEx(key, 'URL Protocol', 0, winreg.REG_SZ, '')
+                with winreg.CreateKey(key, r'shell\open\command') as key2:
+                    if (Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe').exists():
+                        exec_path = Path(os.__file__).parent.parent / 'Scripts' / 'bcml.exe'
+                    elif (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe').exists():
+                        exec_path = (Path(__file__).parent.parent.parent / 'bin' / 'bcml.exe')
+                    else:
+                        return
+                    winreg.SetValueEx(key2, '', 0, winreg.REG_SZ, f'"{exec_path.resolve()}" "%1"')
 
 
 class RulesParser(ConfigParser):
@@ -946,3 +848,25 @@ class MultiDict(OrderedDict):
             self._unique += 1
             key += str(self._unique)
         OrderedDict.__setitem__(self, key, val)
+
+
+class InstallError(Exception):
+    pass
+
+class MergeError(Exception):
+    pass
+
+
+class Messager:
+    def __init__(self, window: Window):
+        self.window = window
+        self.log = get_data_dir() / 'bcml.log'
+
+    def write(self, string: str):
+        from .__main__ import LOG
+        if string.strip('') not in {'', '\n'} and not string.startswith('VERBOSE'):
+            self.window.evaluate_js(f'window.onMsg(\'{string}\');')
+        with (self.log / 'bcml.log').open('a', encoding='utf-8') as log_file:
+            if string.startswith('VERBOSE'):
+                string = string[7:]
+            log_file.write(f'{string}\n')

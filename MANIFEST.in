@@ -1,3 +1,9 @@
 recursive-include docs/*.md
 recursive-include bcml/data *
 recursive-include bcml/helpers *
+recursive-include bcml/mergers *
+include bcml/assets/index.html
+include bcml/assets/logo-smaller.png
+recursive-include bcml/assets/css *.css
+recursive-include bcml/assets/icon *
+recursive-include bcml/assets/dist *.js

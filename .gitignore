@@ -108,6 +108,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+watcher.bat
+watcher.sh
 
 # Spyder project settings
 .spyderproject
@@ -188,5 +190,3 @@ typings/
 
 # dotenv environment variables file
 .env
-assets
-bcml/assets/

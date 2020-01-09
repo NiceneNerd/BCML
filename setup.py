@@ -1,19 +1,13 @@
 from setuptools import setup
 from pathlib import Path
+from bcml.__version__ import VERSION
 
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
 
-compiled_path = Path.home() / '.pyxbld' / 'lib.win-amd64-3.7' / 'libyaz0' /\
-                'yaz0_cy.cp37-win_amd64.pyd'
-if not compiled_path.exists():
-    compiled_path.parent.mkdir(parents=True, exist_ok=True)
-    import shutil
-    shutil.copy(Path() / 'bcml' / 'data' / 'yaz0_cy.cp37-win_amd64.pyd', compiled_path)
-
 setup(
     name='bcml',
-    version='2.6.1',
+    version=VERSION,
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',
@@ -24,26 +18,24 @@ setup(
     packages=['bcml'],
     entry_points={
         'gui_scripts': [
-            'bcml = bcml.__init__:main'
+            'bcml = bcml.__main__:main'
         ]
     },
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-        'Operating System :: Microsoft :: Windows',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 3 :: Only'
     ],
     python_requires='>=3.7',
     install_requires=[
-        'aamp>=1.3.0.post1',
+        'aamp>=1.4.0',
         'byml>=2.3.0.post1',
-        'cython>=0.29.13',
-        'libyaz0>=0.5',
-        'PySide2>=5.13.0',
+        'syaz0>=1.0.0rc4',
+        'pywebview>=3.1',
         'pyYaml>=5.1.1',
         'sarc>=2.0.1',
         'rstb>=1.1.2',
-        #'wszst-yaz0>=1.2.0.post1',
         'xxhash>=1.3.0'
     ]
 )

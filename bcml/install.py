@@ -3,24 +3,33 @@
 # Licensed under GPLv3+
 # pylint: disable=too-many-lines
 import datetime
+import json
 import os
 import shutil
 import subprocess
 import traceback
 from configparser import ConfigParser
+from dataclasses import astuple
 from fnmatch import fnmatch
 from functools import partial
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
-from typing import Union, List
+from platform import system
+from shutil import copy
+from typing import List, Union, Callable
 from xml.dom import minidom
 
 import sarc
-import libyaz0
 import xxhash
 
-from bcml import pack, texts, util, data, merge, rstable, mubin, events, mergers
+from bcml import util, mergers
+from bcml.mergers import data, events, merge, mubin, pack, rstable, texts
 from bcml.util import BcmlMod
+
+if system() == 'Windows':
+    ZPATH = str(util.get_exec_dir() / 'helpers' / '7z.exe')
+else:
+    ZPATH = str(util.get_exec_dir() / 'helpers' / '7z')
 
 
 def open_mod(path: Path) -> Path:
@@ -39,24 +48,30 @@ def open_mod(path: Path) -> Path:
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
     if path.suffix.lower() in formats:
-        x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
-                  'x', str(path), f'-o{str(tmpdir)}']
-        subprocess.run(x_args, stdout=subprocess.PIPE,
-                       stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+        x_args = [ZPATH, 'x', str(path), f'-o{str(tmpdir)}']
+        if system() == 'Windows':
+            subprocess.run(x_args, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+        else:
+            subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
         raise Exception('The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).')
     if not tmpdir.exists():
         raise Exception('No files were extracted.')
+
     rulesdir = tmpdir
-    found_rules = (rulesdir / 'rules.txt').exists()
-    if not found_rules:
+    if (rulesdir / 'info.json').exists():
+        return rulesdir
+    if not (rulesdir / 'rules.txt').exists():
         for subdir in tmpdir.rglob('*'):
             if (subdir / 'rules.txt').exists():
                 rulesdir = subdir
-                found_rules = True
                 break
-        if not found_rules:
+        else:
             raise FileNotFoundError(f'No rules.txt was found in "{path.name}".')
+    print('Looks like an older mod, let\'s upgrade it...')
+    from bcml import upgrade
+    upgrade.convert_old_mod(rulesdir, delete_old=True)
     return rulesdir
 
 
@@ -76,7 +91,7 @@ def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
         return (file_info[0], None)
 
 
-def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, str]]:
+def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
     """
     Detects all of the modified files in an extracted mod
 
@@ -84,8 +99,6 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
     :type tmp_dir: class:`pathlib.Path`
     :param deep_merge: Whether to log diffs for individual AAMP and BYML files, defaults to False
     :type deep_merge: bool, optional
-    :param verbose: Specifies whether to return more detailed output
-    :type verbose: bool, optional
     :returns: Returns a tuple with a dict of modified files and the RSTB entries, a list of changes,
     and (if deep merge) diffs of modded BYML and AAMP files
     :rtype: (dict of class:`pathlib.Path`: int, list of str, dict of str: str)
@@ -117,18 +130,15 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
         if file.is_file():
             canon = util.get_canon_name(file.relative_to(tmp_dir).as_posix())
             if canon is None:
-                if verbose:
-                    print(f'Ignored unknown file {file.relative_to(tmp_dir).as_posix()}')
+                util.vprint(f'Ignored unknown file {file.relative_to(tmp_dir).as_posix()}')
                 continue
             if util.is_file_modded(canon, file, True):
                 modded_files.append(file)
-                if verbose:
-                    print(f'Found modded file {canon}')
+                util.vprint(f'Found modded file {canon}')
             else:
                 if 'Aoc/0010/Map/MainField' in canon:
                     file.unlink()
-                if verbose:
-                    print(f'Ignored unmodded file {canon}')
+                util.vprint(f'Ignored unmodded file {canon}')
                 continue
     total = len(modded_files)
     print(f'Found {total} modified file{"s" if total > 1 else ""}')
@@ -137,10 +147,11 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
     sarc_files = [file for file in modded_files if file.suffix in util.SARC_EXTS]
     if sarc_files:
         print(f'Scanning files packed in SARCs...')
+        set_start_method('spawn', True)
         num_threads = min(len(sarc_files), cpu_count() - 1)
         pool = Pool(processes=num_threads)
         modded_sarc_files = pool.map(
-            partial(find_modded_sarc_files, tmp_dir=tmp_dir, verbose=verbose),
+            partial(find_modded_sarc_files, tmp_dir=tmp_dir),
             sarc_files
         )
         pool.close()
@@ -153,25 +164,7 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
 
 
 def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name: str = '',
-                           aoc: bool = False, verbose: bool = False) -> List[str]:
-    """
-    Detects all of the modified files in a SARC
-
-    :param mod_sarc: The SARC to scan for modded files.
-    :type mod_sarc: class:`sarc.SARC`
-    :param tmp_dir: The path to the base directory of the mod.
-    :type tmp_dir: class:`pathlib.Path`
-    :param name: The name of the SARC which contains the current SARC.
-    :type name: str
-    :param aoc: Specifies whether the SARC is DLC content, defaults to False.
-    :type aoc: bool, optional
-    :param nest_level: The depth to which the current SARC is nested in more SARCs, defaults to 0
-    :type nest_level: int, optional
-    :param deep_merge: Whether to log diffs for individual AAMP and BYML files, defaults to False
-    :type deep_merge: bool, optional
-    :param verbose: Specifies whether to return more detailed output
-    :type verbose: bool, optional
-    """
+                           aoc: bool = False) -> List[str]:
     if isinstance(mod_sarc, Path):
         if any(mod_sarc.name.startswith(exclude) for exclude in ['Bootup_']):
             return []
@@ -193,8 +186,7 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
             modded_files.append(
                 nest_path
             )
-            if verbose:
-                print(f'Found modded file {canon} in {str(name).replace("//", "/")}')
+            util.vprint(f'Found modded file {canon} in {str(name).replace("//", "/")}')
             if util.is_file_sarc(canon) and '.ssarc' not in file:
                 try:
                     nest_sarc = sarc.SARC(contents)
@@ -204,17 +196,15 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
                     nest_sarc,
                     name=nest_path,
                     tmp_dir=tmp_dir,
-                    aoc=aoc,
-                    verbose=verbose
+                    aoc=aoc
                 )
                 modded_files.extend(sub_mod_files)
         else:
-            if verbose:
-                print(f'Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
+            util.vprint(f'Ignored unmodded file {canon} in {str(name).replace("//", "/")}')
     return modded_files
 
 
-def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) -> List[Path]:
+def generate_logs(tmp_dir: Path, options: dict = None) -> List[Path]:
     """Analyzes a mod and generates BCML log files containing its changes"""
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
@@ -225,11 +215,15 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) ->
         }
     if 'disable' not in options:
         options['disable'] = []
+    util.vprint(options)
 
     print('Scanning for modified files...')
-    modded_files = find_modded_files(tmp_dir, verbose=verbose)
+    modded_files = find_modded_files(tmp_dir)
     if not modded_files:
-        raise RuntimeError('No modified files were found. Very unusual.')
+        raise RuntimeError(
+            'No modified files were found. Perhaps the mod has an incorrect folder layout.'
+        )
+    util.vprint(modded_files)
 
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
     for merger_class in [merger_class for merger_class in mergers.get_mergers() \
@@ -242,62 +236,52 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) ->
     return modded_files
 
 
-def refresh_cemu_mods():
-    """ Updates Cemu's enabled graphic packs """
-    setpath = util.get_cemu_dir() / 'settings.xml'
-    if not setpath.exists():
-        raise FileNotFoundError('The Cemu settings file could not be found.')
-    setread = ''
-    with setpath.open('r') as setfile:
-        for line in setfile:
-            setread += line.strip()
-    settings = minidom.parseString(setread)
-    try:
-        gpack = settings.getElementsByTagName('GraphicPack')[0]
-    except IndexError:
-        gpack = settings.createElement('GraphicPack')
-        settings.appendChild(gpack)
-    for entry in gpack.getElementsByTagName('Entry'):
-        if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-            gpack.removeChild(entry)
-    bcmlentry = settings.createElement('Entry')
-    entryfile = settings.createElement('filename')
-    entryfile.appendChild(settings.createTextNode(
-        f'graphicPacks\\BCML\\9999_BCML\\rules.txt'))
-    entrypreset = settings.createElement('preset')
-    entrypreset.appendChild(settings.createTextNode(''))
-    bcmlentry.appendChild(entryfile)
-    bcmlentry.appendChild(entrypreset)
-    gpack.appendChild(bcmlentry)
-    for mod in util.get_installed_mods():
-        modentry = settings.createElement('Entry')
-        entryfile = settings.createElement('filename')
-        entryfile.appendChild(settings.createTextNode(
-            f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'))
-        entrypreset = settings.createElement('preset')
-        entrypreset.appendChild(settings.createTextNode(''))
-        modentry.appendChild(entryfile)
-        modentry.appendChild(entrypreset)
-        gpack.appendChild(modentry)
-    settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
+def refresher(func: Callable) -> Callable:
+    def do_and_refresh(*args, **kwargs):
+        res = func(*args, **kwargs)
+        refresh_master_export()
+        return res
+    return do_and_refresh
 
 
-def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_merge: bool = False,
+def refresh_master_export():
+    """ Updates the master BCML exported graphic pack in Cemu """
+    print('Exporting merged mod pack...')
+    link_master_mod()
+    if not util.get_settings('no_cemu'):
+        setpath = util.get_cemu_dir() / 'settings.xml'
+        if not setpath.exists():
+            raise FileNotFoundError('The Cemu settings file could not be found.')
+        setread = ''
+        with setpath.open('r', encoding='utf-8') as setfile:
+            for line in setfile:
+                setread += line.strip()
+        settings = minidom.parseString(setread)
+        try:
+            gpack = settings.getElementsByTagName('GraphicPack')[0]
+        except IndexError:
+            gpack = settings.createElement('GraphicPack')
+            settings.appendChild(gpack)
+        has_bcml = False
+        for entry in gpack.getElementsByTagName('Entry'):
+            if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+                has_bcml = True
+        if not has_bcml:
+            bcmlentry = settings.createElement('Entry')
+            entryfile = settings.createElement('filename')
+            entryfile.appendChild(settings.createTextNode(
+                f'graphicPacks\\BreathOfTheWild_BCML\\rules.txt'))
+            entrypreset = settings.createElement('preset')
+            entrypreset.appendChild(settings.createTextNode(''))
+            bcmlentry.appendChild(entryfile)
+            bcmlentry.appendChild(entrypreset)
+            gpack.appendChild(bcmlentry)
+            settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
+
+
+@refresher
+def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
                 insert_priority: int = 0):
-    """
-    Installs a graphic pack mod, merging RSTB changes and optionally packs and texts
-
-    :param mod: Path to the mod to install. Must be a RAR, 7z, or ZIP archive or a graphicpack
-    directory containing a rules.txt file.
-    :type mod: class:`pathlib.Path`
-    :param verbose: Whether to display more detailed output, defaults to False.
-    :type verbose: bool, optional
-    :param wait_merge: Install mod and log changes, but wait to run merge manually,
-    defaults to False.
-    :type wait_merge: bool, optional
-    :param insert_priority: Insert mod(s) at priority specified, defaults to get_next_priority().
-    :type insert_priority: int
-    """
     if insert_priority == 0:
         insert_priority = get_next_priority()
     util.create_bcml_graphicpack_if_needed()
@@ -307,21 +291,26 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
         print('Extracting mod...')
         tmp_dir = open_mod(mod)
     elif mod.is_dir():
-        if (mod / 'rules.txt').exists():
-            print(f'Loading mod from {str(mod)}...')
-            tmp_dir = util.get_work_dir() / f'tmp_{mod.name}'
-            shutil.copytree(str(mod), str(tmp_dir))
-        else:
+        if not ((mod / 'rules.txt').exists() or (mod / 'info.json').exists()):
             print(f'Cannot open mod at {str(mod)}, no rules.txt found')
             return
+        print(f'Loading mod from {str(mod)}...')
+        tmp_dir = util.get_work_dir() / f'tmp_{mod.name}'
+        shutil.copytree(str(mod), str(tmp_dir))
+        if (mod / 'rules.txt').exists():
+            print('Upgrading old mod format...')
+            from . import upgrade
+            upgrade.convert_old_mod(mod, delete_old=True)
+            
     else:
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
     try:
-        rules = util.RulesParser()
-        rules.read(tmp_dir / 'rules.txt')
-        mod_name = str(rules['Definition']['name']).strip(' "\'')
+        rules = json.loads(
+            (tmp_dir / 'info.json').read_text('utf-8')
+        )
+        mod_name = rules['name'].strip(' \'"').replace('_', '')
         print(f'Identified mod: {mod_name}')
 
         logs = tmp_dir / 'logs'
@@ -329,10 +318,10 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
             print('This mod supports Quick Install! Loading changes...')
             for merger in [merger() for merger in mergers.get_mergers() \
                            if merger.NAME in options['disable']]:
-                if merger.is_mod_logged(BcmlMod('', 0, tmp_dir)):
-                    (tmp_dir / 'logs' / merger.log_name()).unlink()
+                if merger.is_mod_logged(BcmlMod(tmp_dir)):
+                    (tmp_dir / 'logs' / merger.log_name).unlink()
         else:
-            generate_logs(tmp_dir=tmp_dir, verbose=verbose, options=options)
+            generate_logs(tmp_dir=tmp_dir, options=options)
     except Exception as e: # pylint: disable=broad-except
         if hasattr(e, 'error_text'):
             raise e
@@ -367,7 +356,6 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
                     existing_mod_rules.write(r_file)
 
         mod_dir.parent.mkdir(parents=True, exist_ok=True)
-        print()
         print(f'Moving mod to {str(mod_dir)}...')
         if mod.is_file():
             try:
@@ -385,13 +373,13 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
 
-        rulepath = os.path.basename(rules['Definition']['path']).replace('"', '')
-        rules['Definition']['path'] = f'{{BCML: DON\'T TOUCH}}/{rulepath}'
-        rules['Definition']['fsPriority'] = str(priority)
-        with Path(mod_dir / 'rules.txt').open('w', encoding='utf-8') as r_file:
-            rules.write(r_file)
+        rules['priority'] = priority
+        (mod_dir / 'info.json').write_text(
+            json.dumps(rules, ensure_ascii=False),
+            encoding='utf-8'
+        )
 
-        output_mod = BcmlMod(mod_name, priority, mod_dir)
+        output_mod = BcmlMod(mod_dir)
         try:
             util.get_mod_link_meta(rules)
             util.get_mod_preview(output_mod, rules)
@@ -399,7 +387,6 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
             pass
 
         print(f'Enabling {mod_name} in Cemu...')
-        refresh_cemu_mods()
     except Exception: # pylint: disable=broad-except
         clean_error = RuntimeError()
         clean_error.error_text = (f'There was an error installing {mod_name}. '
@@ -431,7 +418,6 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
                     merger.set_options(options[merger.NAME])
                 if merger.is_mod_logged(output_mod):
                     merger.perform_merge()
-            print()
             print(f'{mod_name} installed successfully!')
         except Exception: # pylint: disable=broad-except
             clean_error = RuntimeError()
@@ -449,7 +435,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
             raise clean_error
     return output_mod
 
-
+@refresher
 def disable_mod(mod: BcmlMod, wait_merge: bool = False):
     remergers = []
     partials = {}
@@ -470,11 +456,11 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f'{mod.name} disabled')
 
 
+@refresher
 def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f'Enabling {mod.name}...')
     rules_path: Path = mod.path / 'rules.txt.disable'
     rules_path.rename(rules_path.with_suffix(''))
-    # refresh_merges()
     if not wait_merge:
         print(f'Remerging affected files...')
         remergers = []
@@ -488,131 +474,38 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
             if merger.NAME in partials:
                 merger.set_options({'only_these': partials[merger.NAME]})
             merger.perform_merge()
-    refresh_cemu_mods()
     print(f'{mod.name} enabled')
 
 
-def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verbose: bool = False):
-    """
-    Uninstalls the mod currently installed at the specified path and updates merges as needed
+@refresher
+def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
+    print(f'Uninstalling {mod.name}...')
+    partials = mod.get_partials()
+    remergers = set(mod.mergers)
+    shutil.rmtree(str(mod.path))
 
-    :param mod: The mod to remove, as a path or a BcmlMod.
-    :param wait_merge: Resort mods but don't remerge anything yet, defaults to False.
-    :type wait_merge: bool, optional
-    :param verbose: Whether to display more detailed output, defaults to False.
-    :type verbose: bool, optional
-    """
-    path = Path(mod) if isinstance(mod, str) else mod.path if isinstance(mod, BcmlMod) else mod
-    mod_name, mod_priority, _ = util.get_mod_info(path / 'rules.txt') \
-                                if not isinstance(mod, BcmlMod) else mod
-    print(f'Uninstalling {mod_name}...')
-    remergers = set()
-    partials = {}
-    for merger in [merger() for merger in mergers.get_mergers()]:
-        if merger.is_mod_logged(BcmlMod(mod_name, mod_priority, path)):
-            remergers.add(merger)
-            if merger.can_partial_remerge():
-                partials[merger.NAME] = merger.get_mod_affected(mod)
-
-    shutil.rmtree(str(path))
-    next_mod = util.get_mod_by_priority(mod_priority + 1)
-    if next_mod:
-        print('Adjusting mod priorities...')
-        change_mod_priority(next_mod, mod_priority,
-                            wait_merge=True, verbose=verbose)
-        print()
+    for fall_mod in [m for m in util.get_installed_mods() if m.priority > mod.priority]:
+        remergers |= set(fall_mod.mergers)
+        partials.update(fall_mod.get_partials())
+        fall_mod.change_priority(fall_mod.priority - 1)
 
     if not wait_merge:
         for merger in mergers.sort_mergers(remergers):
             if merger.NAME in partials:
                 merger.set_options({'only_these': partials[merger.NAME]})
             merger.perform_merge()
-    print(f'{mod_name} has been uninstalled.')
+
+    print(f'{mod.name} has been uninstalled.')
 
 
-def change_mod_priority(path: Path, new_priority: int, wait_merge: bool = False,
-                        verbose: bool = False):
-    """
-    Changes the priority of a mod
-
-    :param path: The path to the mod.
-    :type path: class:`pathlib.Path`
-    :param new_priority: The new priority of the mod.
-    :type new_priority: int
-    :param wait_merge: Resort priorities but don't remerge anything yet, defaults to False.
-    :type wait_merge: bool, optional
-    :param verbose: Whether to display more detailed output, defaults to False.
-    :type verbose: bool, optional
-    """
-    mod = util.get_mod_info(path / 'rules.txt')
-    print(
-        f'Changing priority of {mod.name} from {mod.priority} to {new_priority}...')
-    mods = util.get_installed_mods()
-    if new_priority > mods[len(mods) - 1][1]:
-        new_priority = len(mods) - 1
-    mods.remove(mod)
-    mods.insert(new_priority - 100, util.BcmlMod(mod.name, new_priority, path))
-
-    all_mergers = [merger() for merger in mergers.get_mergers()]
-    remergers = set()
-    partials = {}
-    for merger in all_mergers:
-        if merger.is_mod_logged(mod):
-            remergers.add(merger)
-            if merger.can_partial_remerge():
-                partials[merger.NAME] = set(merger.get_mod_affected(mod))
-
-    print('Resorting other affected mods...')
-    for mod in mods:
-        if mod.priority != (mods.index(mod) + 100):
-            adjusted_priority = mods.index(mod) + 100
-            mods.remove(mod)
-            mods.insert(adjusted_priority - 100,
-                        BcmlMod(mod.name, adjusted_priority, mod.path))
-            if verbose:
-                print(
-                    f'Changing priority of {mod.name} from'
-                    f'{mod.priority} to {adjusted_priority}...'
-                )
-    for mod in mods:
-        if not mod.path.stem.startswith(f'{mod.priority:04}'):
-            for merger in all_mergers:
-                if merger.is_mod_logged(mod):
-                    remergers.add(merger)
-                    if merger.can_partial_remerge():
-                        if merger.NAME not in partials:
-                            partials[merger.NAME] = set()
-                        partials[merger.NAME] |= set(merger.get_mod_affected(mod))
-
-            new_mod_id = util.get_mod_id(mod[0], mod[1])
-            shutil.move(str(mod[2]), str(mod[2].parent / new_mod_id))
-            rules = util.RulesParser()
-            rules.read(str(mod.path.parent / new_mod_id / 'rules.txt'))
-            rules['Definition']['fsPriority'] = str(mod[1])
-            with (mod[2].parent / new_mod_id / 'rules.txt').open('w', encoding='utf-8') as r_file:
-                rules.write(r_file)
-            refresh_cemu_mods()
-    if not wait_merge:
-        for merger in mergers.sort_mergers(remergers):
-            if merger.NAME in partials:
-                merger.set_options({'only_these': partials[merger.NAME]})
-            merger.perform_merge()
-    if wait_merge:
-        print('Mods resorted, will need to remerge later')
-    print('Finished updating mod priorities.')
-
-
-def refresh_merges(verbose: bool = False):
-    """
-    Runs RSTB, pack, and text merges together
-
-    :param verbose: Whether to display more detailed output, defaults to False.
-    :type verbose: bool, optional
-    """
+@refresher
+def refresh_merges():
     print('Cleansing old merges...')
     shutil.rmtree(util.get_master_modpack_dir())
     print('Refreshing merged mods...')
-    for merger in mergers.sort_mergers([merger_class() for merger_class in mergers.get_mergers()]):
+    for merger in mergers.sort_mergers(
+        [merger_class() for merger_class in mergers.get_mergers()]
+    ):
         merger.perform_merge()
 
 
@@ -633,7 +526,7 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         base_sarc = sarc.read_file_and_make_sarc(s_file)
     if not base_sarc:
         return
-    new_sarc = sarc.SARCWriter(True)
+    new_sarc = sarc.SARCWriter(util.get_settings('wiiu'))
     can_delete = True
     for nest_file in base_sarc.list_files():
         canon = nest_file.replace('.s', '.')
@@ -693,7 +586,7 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
     for folder in pack_folders:
         new_tmp: Path = folder.with_suffix(folder.suffix + '.tmp')
         shutil.move(folder, new_tmp)
-        new_sarc = sarc.SARCWriter(be=True)
+        new_sarc = sarc.SARCWriter(be=util.get_settings('wiiu'))
         for file in {f for f in new_tmp.rglob('**/*') if f.is_file()}:
             new_sarc.add_file(file.relative_to(new_tmp).as_posix(), file.read_bytes())
         sarc_bytes = new_sarc.get_bytes()
@@ -739,6 +632,7 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
     sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
     if sarc_files:
         num_threads = min(len(sarc_files), cpu_count())
+        set_start_method('spawn', True)
         pool = Pool(processes=num_threads)
         pool.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
         pool.close()
@@ -773,10 +667,12 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
             shutil.rmtree(folder)
 
     print(f'Saving output file to {str(output)}...')
-    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
-              'a', str(output), f'{str(tmp_dir / "*")}']
-    subprocess.run(x_args, stdout=subprocess.PIPE,
-                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    x_args = [ZPATH, 'a', str(output), f'{str(tmp_dir / "*")}']
+    if system() == 'Windows':
+        subprocess.run(x_args, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    else:
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print('Conversion complete.')
 
 
@@ -793,13 +689,16 @@ def create_backup(name: str = ''):
         name = f'BCML_Backup_{datetime.datetime.now().strftime("%Y-%m-%d")}'
     else:
         name = re.sub(r'(?u)[^-\w.]', '', name.strip().replace(' ', '_'))
-    output = util.get_cemu_dir() / 'bcml_backups' / f'{name}.7z'
+    num_mods = len([d for d in util.get_modpack_dir().glob('*') if d.is_dir()])
+    output = util.get_cemu_dir() / 'bcml_backups' / f'{name}---{num_mods - 1}.7z'
     output.parent.mkdir(parents=True, exist_ok=True)
     print(f'Saving backup {name}...')
-    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
-              'a', str(output), f'{str(util.get_modpack_dir() / "*")}']
-    subprocess.run(x_args, stdout=subprocess.PIPE,
-                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    x_args = [ZPATH, 'a', str(output), f'{str(util.get_modpack_dir() / "*")}']
+    if system() == 'Windows':
+        subprocess.run(x_args, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    else:
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f'Backup "{name}" created')
 
 
@@ -816,19 +715,22 @@ def restore_backup(backup: Union[str, Path]):
     :type backup: Union[str, Path]
     """
     if isinstance(backup, str):
-        backup = util.get_cemu_dir() / 'bcml_backups' / f'{backup}.7z'
+        backup = Path(backup)
     if not backup.exists():
         raise FileNotFoundError(f'The backup "{backup.name}" does not exist.')
     print('Clearing installed mods...')
     for folder in [item for item in util.get_modpack_dir().glob('*') if item.is_dir()]:
         shutil.rmtree(str(folder))
     print('Extracting backup...')
-    x_args = [str(util.get_exec_dir() / 'helpers' / '7z.exe'),
+    x_args = [ZPATH,
               'x', str(backup), f'-o{str(util.get_modpack_dir())}']
-    subprocess.run(x_args, stdout=subprocess.PIPE,
-                   stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    if system() == 'Windows':
+        subprocess.run(x_args, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+    else:
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print('Re-enabling mods in Cemu...')
-    refresh_cemu_mods()
+    refresh_master_export()
     print(f'Backup "{backup.name}" restored')
 
 
@@ -846,6 +748,7 @@ def link_master_mod(output: Path = None):
         str(util.get_master_modpack_dir() / 'rules.txt'),
         str(output / 'rules.txt')
     )
+    link_or_copy = os.link
     for mod_folder in mod_folders:
         for item in mod_folder.rglob('**/*'):
             rel_path = item.relative_to(mod_folder)
@@ -856,7 +759,10 @@ def link_master_mod(output: Path = None):
             if item.is_dir():
                 (output / rel_path).mkdir(parents=True, exist_ok=True)
             elif item.is_file():
-                os.link(
-                    str(item),
-                    str(output / rel_path)
-                )
+                try:
+                    link_or_copy(
+                        str(item),
+                        str(output / rel_path)
+                    )
+                except OSError:
+                    from shutil import copyfile as link_or_copy
