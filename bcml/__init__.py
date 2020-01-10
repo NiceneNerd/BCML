@@ -490,7 +490,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 new_path = util.get_modpack_dir() / util.get_mod_id(mod.name, mod.priority)
                 shutil.move(str(mod.path), str(new_path))
                 rules_name = 'rules.txt'
-                if not os.path.isfile(str(new_path / rules_name)):
+                if not Path(str(new_path / rules_name)).exists():
                     rules_name = f'{rules_name}.disable'
                 rules = util.RulesParser()
                 rules.read(str(new_path / rules_name))
