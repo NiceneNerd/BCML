@@ -170,7 +170,7 @@ class Mods extends React.Component {
                             .catch(this.showError);
                     }
                 );
-            if (action == "enable") task();
+            if (["enable", "update"].includes(action)) task();
             else
                 this.confirm(
                     `Are you sure you want to ${action} ${mod.name}?`,

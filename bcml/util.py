@@ -465,7 +465,7 @@ def get_aoc_dir() -> Path:
     """ Gets the path to the game's aoc files in the Cemu mlc direcroy """
     if not hasattr(get_aoc_dir, 'aoc_dir'):
         try:
-            get_aoc_dir.aoc_dir = Path(get_settings('aoc_dir'))
+            get_aoc_dir.aoc_dir = Path(get_settings('dlc_dir'))
             if not get_aoc_dir.aoc_dir.exists():
                 raise FileNotFoundError()
         except:
@@ -866,7 +866,7 @@ class Messager:
         from .__main__ import LOG
         if string.strip('') not in {'', '\n'} and not string.startswith('VERBOSE'):
             self.window.evaluate_js(f'window.onMsg(\'{string}\');')
-        with (self.log / 'bcml.log').open('a', encoding='utf-8') as log_file:
+        with LOG.open('a', encoding='utf-8') as log_file:
             if string.startswith('VERBOSE'):
                 string = string[7:]
             log_file.write(f'{string}\n')

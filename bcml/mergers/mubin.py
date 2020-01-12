@@ -22,7 +22,7 @@ Map = namedtuple('Map', 'section type')
 
 def consolidate_map_files(modded_maps: List[str]) -> List[Map]:
     return sorted({
-        Map(*(Path(path).stem.split('_'))) for path in modded_maps if not path.startswith('_')
+        Map(*(Path(path).stem.split('_'))) for path in modded_maps if not path.stem.startswith('_')
     })
 
 

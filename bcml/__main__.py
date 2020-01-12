@@ -146,7 +146,7 @@ class Api:
                 'Packaged mods (*.bnp;*.7z;*.zip;*.rar)',
                 'Mod meta (*.txt;*.json)'
             ),
-            allow_multiple=True
+            allow_multiple=True if not 'multiple' in params else params['multiple']
         ) or []
     
     def get_options(self, params):
@@ -185,6 +185,27 @@ class Api:
             print('Install complete')
         except Exception as e:
             raise MergeError(e)
+
+    def update_mod(self, params):
+        try:
+            update_file = self.file_pick({'multiple': False})[0]
+        except IndexError:
+            return
+        from shutil import rmtree
+        mod = BcmlMod.from_json(params['mod'])
+        if (mod.path / 'options.json').exists():
+            options = json.loads(
+                (mod.path / 'options.json').read_text(),
+                encoding='utf-8'
+            )
+        else:
+            options = {}
+        rmtree(mod.path)
+        install.install_mod(
+            Path(update_file),
+            insert_priority=mod.priority,
+            options=options, wait_merge=False
+        )
 
     @win_or_lose
     def uninstall_all(self, params):
@@ -234,6 +255,8 @@ class Api:
             install.disable_mod(mod)
         elif action == 'uninstall':
             install.uninstall_mod(mod)
+        elif action == 'update':
+            self.update_mod(params)
 
     def explore(self, params):
         from platform import system

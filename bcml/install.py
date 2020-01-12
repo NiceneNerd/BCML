@@ -265,8 +265,8 @@ def refresh_master_export():
         has_bcml = False
         for entry in gpack.getElementsByTagName('Entry'):
             if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-                has_bcml = True
-        if not has_bcml:
+                break
+        else:
             bcmlentry = settings.createElement('Entry')
             entryfile = settings.createElement('filename')
             entryfile.appendChild(settings.createTextNode(
@@ -376,6 +376,10 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
         rules['priority'] = priority
         (mod_dir / 'info.json').write_text(
             json.dumps(rules, ensure_ascii=False),
+            encoding='utf-8'
+        )
+        (mod_dir / 'options.json').write_text(
+            json.dumps(options, ensure_ascii=False),
             encoding='utf-8'
         )
 
