@@ -489,10 +489,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for mod in sorted(mods_to_change, key=lambda m: m.priority, reverse=True):
                 new_path = util.get_modpack_dir() / util.get_mod_id(mod.name, mod.priority)
                 shutil.move(str(mod.path), str(new_path))
+                rules_name = 'rules.txt'
+                if not Path(str(new_path / rules_name)).exists():
+                    rules_name = f'{rules_name}.disable'
                 rules = util.RulesParser()
-                rules.read(str(new_path / 'rules.txt'))
+                rules.read(str(new_path / rules_name))
                 rules['Definition']['fsPriority'] = str(mod.priority)
-                with (new_path / 'rules.txt').open('w', encoding='utf-8') as rf:
+                with (new_path / rules_name).open('w', encoding='utf-8') as rf:
                     rules.write(rf)
             for merger in mergers.sort_mergers(remergers):
                 if merger.NAME in partials:
