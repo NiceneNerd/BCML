@@ -16,7 +16,7 @@ import rstb
 from rstb import ResourceSizeTable
 from rstb.util import read_rstb
 import sarc
-import libyaz0
+import syaz0
 
 from bcml import util, install, mergers
 from bcml.util import BcmlMod
@@ -90,11 +90,15 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
     :return: Returns an estimated RSTB value
     :rtype: int
     """
-    real_bytes = file if isinstance(file, bytes) else file.read_bytes()
-    if real_bytes[0:4] == b'Yaz0':
-        real_bytes = util.decompress(real_bytes)
-    real_size = len(real_bytes)
-    del real_bytes
+    if isinstance(file, bytes):
+        real_size = len(file)
+        del file
+    else:
+        if file.suffix.startswith('.s'):
+            with file.open('rb') as f:
+                real_size = syaz0.get_header(f.read(16))
+        else:
+            real_size = file.stat().st_size
     if name == '':
         if isinstance(file, Path):
             name = file.name
@@ -171,11 +175,15 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
     :type name: str, optional
     :return: Returns an estimated RSTB value
     :rtype: int"""
-    real_bytes = file if isinstance(file, bytes) else file.read_bytes()
-    if real_bytes[0:4] == b'Yaz0':
-        real_bytes = util.decompress(real_bytes)
-    real_size = len(real_bytes)
-    del real_bytes
+    if isinstance(file, bytes):
+        real_size = len(file)
+        del file
+    else:
+        if file.suffix.startswith('.s'):
+            with file.open('rb') as f:
+                real_size = syaz0.get_header(f.read(16))
+        else:
+            real_size = file.stat().st_size
     if ext == '':
         if isinstance(file, Path):
             ext = file.suffix

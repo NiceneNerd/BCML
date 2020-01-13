@@ -1225,22 +1225,6 @@ DARK_THEME = """
     }
 """
 
-def libyaz_load():
-    try:
-        import libyaz0.yaz0_cy
-    except ImportError:
-        compiled_path = Path.home() / '.pyxbld' / 'lib.win-amd64-3.7' / 'libyaz0' /\
-                        'yaz0_cy.cp37-win_amd64.pyd'
-        if not compiled_path.exists():
-            compiled_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(util.get_exec_dir() / 'data' / 'yaz0_cy.cp37-win_amd64.pyd', compiled_path)
-            if 'pkgs' in list(util.get_exec_dir().glob('../*')):
-                shutil.copy(
-                    util.get_exec_dir() / 'data' / 'yaz0_cy.cp37-win_amd64.pyd',
-                    util.get_exec_dir() / 'pkgs' / 'libyaz0' / 'yaz0_cy.cp37-win_amd64.pyd'
-                )
-            import libyaz0.yaz0_cy
-
 # Main
 
 def uri_validator(x):
@@ -1310,7 +1294,6 @@ def download_progress(count, block_size, total_size):
 def main():
     util.clear_temp_dir()
     util.create_schema_handler()
-    libyaz_load()
     app = QtWidgets.QApplication([])
     ver = platform.python_version_tuple()
     if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):

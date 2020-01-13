@@ -22,6 +22,7 @@ from PySide2.QtGui import QIcon, QPixmap
 import byml
 from byml import yaml_util
 import sarc
+import syaz0
 import xxhash
 import yaml
 
@@ -54,36 +55,8 @@ BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sb
              '.sbgsvdata'}
 
 
-def decompress(data: bytes) -> bytes:
-    try:
-        if get_settings_bool('wszst'):
-            raise ImportError()
-        import libyaz0.yaz0_cy
-        if isinstance(data, memoryview):
-            data = data.tobytes()
-        return libyaz0.yaz0_cy.DecompressYaz(data)
-    except ImportError:
-        import wszst_yaz0
-        return wszst_yaz0.decompress(data)
-
-
-def compress(data: bytes) -> bytes:
-    try:
-        if get_settings_bool('wszst'):
-            raise ImportError()
-        import libyaz0.yaz0_cy
-        if isinstance(data, memoryview):
-            data = data.tobytes()
-        comp_data = libyaz0.yaz0_cy.CompressYaz(data, 10)
-        result = bytearray(b'Yaz0')
-        result += len(data).to_bytes(4, "big")
-        result += int(0).to_bytes(4, "big")
-        result += b'\0\0\0\0'
-        result += comp_data
-        return result
-    except ImportError:
-        import wszst_yaz0
-        return wszst_yaz0.compress(data, level=10)
+decompress = syaz0.decompress
+compress = syaz0.compress
 
 
 def get_exec_dir() -> Path:
