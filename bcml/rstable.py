@@ -245,7 +245,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 4.05)
     elif ext == '.bas':
-        real_size *= 1.1
+        real_size *= int(1.05)
         if real_size < 100:
             return real_size * 20
         elif 100 < real_size <= 200:
