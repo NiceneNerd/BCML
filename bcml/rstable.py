@@ -86,7 +86,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
     else:
         if file.suffix.startswith('.s'):
             with file.open('rb') as f:
-                real_size = syaz0.get_header(f.read(16))
+                real_size = syaz0.get_header(f.read(16)).uncompressed_size
         else:
             real_size = file.stat().st_size
     if name == '':
@@ -161,7 +161,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
     else:
         if file.suffix.startswith('.s'):
             with file.open('rb') as f:
-                real_size = syaz0.get_header(f.read(16))
+                real_size = syaz0.get_header(f.read(16)).uncompressed_size
         else:
             real_size = file.stat().st_size
     if ext == '':
