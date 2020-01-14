@@ -80,16 +80,6 @@ def set_size(entry: str, size: int):
 
 
 def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
-    """
-    Attempts to estimate a proper RSTB value for a BFRES file
-
-    :param file: The file to estimate, either as a path or bytes
-    :type file: Union[class:`pathlib.Path`, bytes]
-    :param name: The name of the file, needed when passing as bytes, defaults to ''
-    :type name: str, optional
-    :return: Returns an estimated RSTB value
-    :rtype: int
-    """
     if isinstance(file, bytes):
         real_size = len(file)
         del file
@@ -165,16 +155,6 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
 
 
 def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
-    """
-    Attempts to estimate a proper RSTB value for an AAMP file. Will only attempt for the following
-    kinds: .baiprog, .bgparamlist, .bdrop, .bshop, .bxml, .brecipe, otherwise will return 0.
-
-    :param file: The file to estimate, either as a path or bytes
-    :type file: Union[class:`pathlib.Path`, bytes]
-    :param name: The name of the file, needed when passing as bytes, defaults to ''
-    :type name: str, optional
-    :return: Returns an estimated RSTB value
-    :rtype: int"""
     if isinstance(file, bytes):
         real_size = len(file)
         del file
@@ -265,6 +245,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 4.05)
     elif ext == '.bas':
+        real_size *= 1.1
         if real_size < 100:
             return real_size * 20
         elif 100 < real_size <= 200:
@@ -282,6 +263,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 4.5)
     elif ext == '.baslist':
+        real_size *= 1.1
         if real_size < 100:
             return real_size * 15
         elif 100 < real_size <= 200:

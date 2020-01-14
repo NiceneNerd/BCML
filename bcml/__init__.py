@@ -155,12 +155,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 'base game in installed, not update or DLC data.')
             folder = '/'
             while not (Path(folder).parent / 'code' / 'app.xml').exists():
-                folder = QFileDialog.getExistingDirectory(
-                    self, 'Select Game Dump Directory')
+                folder = QFileDialog.getExistingDirectory(self, 'Select Game Dump Directory')
                 if folder:
-                    if (Path(folder) / 'content').exists():
-                        folder = str(Path(folder) / 'content')
-                    if not (Path(folder).parent / 'code' / 'app.xml').exists():
+                    folder = Path(folder)
+                    if (folder / 'content').exists():
+                        folder = folder / 'content'
+                    if not (folder.parent / 'code' / 'app.xml').exists():
                         QtWidgets.QMessageBox.warning(
                             self,
                             'Error',
@@ -169,7 +169,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                         )
                     else:
                         try:
-                            util.set_game_dir(Path(folder))
+                            util.set_game_dir(folder)
                         except FileNotFoundError:
                             QtWidgets.QMessageBox.information(
                                 self,
@@ -193,6 +193,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                                 sys.exit(0)
                 else:
                     sys.exit(0)
+        try:
+            util.get_update_dir()
+        except FileNotFoundError:
+            QtWidgets.QMessageBox.warning(
+                self, 'Dump Location', 'BCML could not locate your game\'s update data. Usually,  '
+                'this means that either the game dump folder or the MLC folder is not correctly set'
+                '. Please go to your BCML settings and confirm the correct location of both '
+                'folders. You will not be able to install any mods until this is corrected')
         if 'lang' not in util.get_settings() or not util.get_settings()['lang']:
             lang, okay = QtWidgets.QInputDialog.getItem(
                 self,
@@ -954,7 +962,6 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
             self.txtMlc.setText('')
         self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
         self.chkGuessMerge.setChecked(util.get_settings_bool('guess_merge'))
-        self.chkWszst.setChecked(util.get_settings_bool('wszst'))
         self.drpLang.addItems(texts.LANGUAGES)
         self.drpLang.setCurrentText(util.get_settings()['lang'])
 
@@ -1009,7 +1016,6 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
                 QtWidgets.QApplication.instance().setStyleSheet(DARK_THEME)
             else:
                 QtWidgets.QApplication.instance().setStyleSheet('')
-        util.set_settings_bool('wszst', self.chkWszst.isChecked())
         util.set_settings_bool('guess_merge', self.chkGuessMerge.isChecked())
         util.get_settings()['lang'] = self.drpLang.currentText()
         util.save_settings()

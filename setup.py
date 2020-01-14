@@ -4,9 +4,11 @@ from pathlib import Path
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
 
+from bcml.__version__ import VERSION
+
 setup(
     name='bcml',
-    version='2.7.1',
+    version=VERSION,
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',
@@ -18,6 +20,9 @@ setup(
     entry_points={
         'gui_scripts': [
             'bcml = bcml.__init__:main'
+        ],
+        'console_scripts': [
+            'bcml-debug = bcml.__init__:main'
         ]
     },
     classifiers=[
@@ -26,15 +31,15 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python :: 3 :: Only'
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.6',
     install_requires=[
         'aamp>=1.4.0',
-        'byml>=2.3.0.post1',
-        'syaz0>=1.0.0rc4',
+        'byml>=2.3.1',
+        'syaz0>=1.0.1',
         'PySide2>=5.13.0',
         'pyYaml>=5.1.1',
-        'sarc>=2.0.1',
-        'rstb>=1.1.2',
+        'sarc>=2.0.3',
+        'rstb>=1.1.3',
         'xxhash>=1.3.0'
     ]
 )

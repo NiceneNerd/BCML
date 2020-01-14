@@ -14,7 +14,6 @@ from typing import List, Union
 import rstb
 import rstb.util
 import sarc
-import libyaz0
 import xxhash
 import yaml
 

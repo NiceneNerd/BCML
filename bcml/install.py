@@ -16,7 +16,6 @@ from typing import Union, List
 from xml.dom import minidom
 
 import sarc
-import libyaz0
 import xxhash
 
 from bcml import pack, texts, util, data, merge, rstable, mubin, events, mergers

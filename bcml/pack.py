@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import List, Union
 
 import sarc
-import libyaz0
 import xxhash
 
 from bcml import data, util, mergers

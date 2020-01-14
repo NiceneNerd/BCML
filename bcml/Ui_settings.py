@@ -75,9 +75,6 @@ class Ui_SettingsDialog(object):
         self.chkGuessMerge = QtWidgets.QCheckBox(SettingsDialog)
         self.chkGuessMerge.setObjectName("chkGuessMerge")
         self.verticalLayout.addWidget(self.chkGuessMerge)
-        self.chkWszst = QtWidgets.QCheckBox(SettingsDialog)
-        self.chkWszst.setObjectName("chkWszst")
-        self.verticalLayout.addWidget(self.chkWszst)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.buttonBox = QtWidgets.QDialogButtonBox(SettingsDialog)
@@ -102,5 +99,4 @@ class Ui_SettingsDialog(object):
         self.label_4.setText(QtWidgets.QApplication.translate("SettingsDialog", "Game Language", None, -1))
         self.chkDark.setText(QtWidgets.QApplication.translate("SettingsDialog", "Use dark theme", None, -1))
         self.chkGuessMerge.setText(QtWidgets.QApplication.translate("SettingsDialog", "Estimate RSTB values for merged files", None, -1))
-        self.chkWszst.setText(QtWidgets.QApplication.translate("SettingsDialog", "Use wszst-yaz0 instead of libyaz0", None, -1))
 

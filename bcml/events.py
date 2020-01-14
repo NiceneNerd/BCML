@@ -9,7 +9,6 @@ import byml
 from byml import yaml_util
 import rstb
 import sarc
-import libyaz0
 from bcml import util, rstable, mergers
 
 
