@@ -22,7 +22,7 @@ from xml.dom import minidom
 import sarc
 import xxhash
 
-from bcml import util, mergers
+from bcml import util, mergers, dev
 from bcml.mergers import data, events, merge, mubin, pack, rstable, texts
 from bcml.util import BcmlMod
 
@@ -33,14 +33,6 @@ else:
 
 
 def open_mod(path: Path) -> Path:
-    """
-    Extracts a provided mod and returns the root path of the graphicpack inside
-
-    :param path: The path to the mod archive.
-    :type path: class:`pathlib.Path`
-    :returns: The path to the extracted root of the mod where the rules.txt file is found.
-    :rtype: class:`pathlib.Path`
-    """
     if isinstance(path, str):
         path = Path(path)
     tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh32(str(path)).hexdigest()}'
@@ -50,12 +42,18 @@ def open_mod(path: Path) -> Path:
     if path.suffix.lower() in formats:
         x_args = [ZPATH, 'x', str(path), f'-o{str(tmpdir)}']
         if system() == 'Windows':
-            subprocess.run(x_args, stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+            subprocess.run(
+                x_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=util.CREATE_NO_WINDOW
+            )
         else:
             subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
-        raise Exception('The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).')
+        err = ValueError()
+        err.error_text = 'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).'
+        raise err
     if not tmpdir.exists():
         raise Exception('No files were extracted.')
 
@@ -68,7 +66,14 @@ def open_mod(path: Path) -> Path:
                 rulesdir = subdir
                 break
         else:
-            raise FileNotFoundError(f'No rules.txt was found in "{path.name}".')
+            err = FileNotFoundError(f'No meta file was found in "{path.name}".')
+            err.error_text = (
+                'No <code>info.json</code> or <code>rules.txt</code> file was found in '
+                f'"{path.stem}". This could mean the mod is in an old or unsupported format. For '
+                'information on converting mods, see <a href="https://gamebanana.com/tuts/12493">'
+                'this tutorial</a>.'
+            )
+            raise err
     print('Looks like an older mod, let\'s upgrade it...')
     from bcml import upgrade
     upgrade.convert_old_mod(rulesdir, delete_old=True)
@@ -76,54 +81,33 @@ def open_mod(path: Path) -> Path:
 
 
 def get_next_priority() -> int:
-    """ Gets the next available mod priority """
     i = 100
     while list(util.get_modpack_dir().glob(f'{i:04}_*')):
         i += 1
     return i
 
 
-def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
-    """An interface for using a multiprocessing pool with `get_aamp_diff()`"""
-    try:
-        return (file_info[0], merge.get_aamp_diff(file_info[1], tmp_dir))
-    except FileNotFoundError:
-        return (file_info[0], None)
-
-
 def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
-    """
-    Detects all of the modified files in an extracted mod
-
-    :param tmp_dir: The path to the base directory of the mod.
-    :type tmp_dir: class:`pathlib.Path`
-    :param deep_merge: Whether to log diffs for individual AAMP and BYML files, defaults to False
-    :type deep_merge: bool, optional
-    :returns: Returns a tuple with a dict of modified files and the RSTB entries, a list of changes,
-    and (if deep merge) diffs of modded BYML and AAMP files
-    :rtype: (dict of class:`pathlib.Path`: int, list of str, dict of str: str)
-    """
     modded_files = []
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
-    rstb_path = tmp_dir / 'content' / 'System' / 'Resource' /\
-                'ResourceSizeTable.product.srsizetable'
+    rstb_path = tmp_dir / util.get_content_path() / 'System' / 'Resource' /\
+        'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
         rstb_path.unlink()
 
-    if (tmp_dir / 'aoc').exists:
+    if (tmp_dir / util.get_dlc_path()).exists:
         try:
             util.get_aoc_dir()
         except FileNotFoundError as err:
-            err.error_text = ('This mod uses DLC files, but you do not appear to have the DLC '
-                              'installed. If you still want to use this mod, unpack it and '
-                              'remove the "aoc" folder.')
+            err.error_text = ('This mod uses DLC files, but BCML cannot locate the DLC folder in '
+                              'your game dump.')
             raise err
 
-    aoc_field = tmp_dir / 'aoc' / '0010' / 'Pack' / 'AocMainField.pack'
+    aoc_field = tmp_dir / util.get_dlc_path() / '0010' / 'Pack' / 'AocMainField.pack'
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         with aoc_field.open('rb') as a_file:
-            sarc.read_file_and_make_sarc(a_file).extract_to_dir(str(tmp_dir / 'aoc' / '0010'))
+            sarc.read_file_and_make_sarc(a_file).extract_to_dir(str(tmp_dir / util.get_dlc_path() / '0010'))
         aoc_field.write_bytes(b'')
 
     for file in tmp_dir.rglob('**/*'):
@@ -169,7 +153,7 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
         if any(mod_sarc.name.startswith(exclude) for exclude in ['Bootup_']):
             return []
         name = str(mod_sarc.relative_to(tmp_dir))
-        aoc = 'aoc' in mod_sarc.parts or 'Aoc' in mod_sarc.parts
+        aoc = util.get_dlc_path() in mod_sarc.parts or 'Aoc' in mod_sarc.parts
         with mod_sarc.open('rb') as s_file:
             mod_sarc = sarc.read_file_and_make_sarc(s_file)
         if not mod_sarc:
@@ -205,7 +189,6 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
 
 
 def generate_logs(tmp_dir: Path, options: dict = None) -> List[Path]:
-    """Analyzes a mod and generates BCML log files containing its changes"""
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
     if not options:
@@ -220,9 +203,12 @@ def generate_logs(tmp_dir: Path, options: dict = None) -> List[Path]:
     print('Scanning for modified files...')
     modded_files = find_modded_files(tmp_dir)
     if not modded_files:
-        raise RuntimeError(
-            'No modified files were found. Perhaps the mod has an incorrect folder layout.'
+        err = RuntimeError('No modified files were found.')
+        err.error_text = (
+            'No modified files were found. This probably means this mod is not in a supported '
+            'format.'
         )
+        raise err
     util.vprint(modded_files)
 
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
@@ -245,7 +231,6 @@ def refresher(func: Callable) -> Callable:
 
 
 def refresh_master_export():
-    """ Updates the master BCML exported graphic pack in Cemu """
     print('Exporting merged mod pack...')
     link_master_mod()
     if not util.get_settings('no_cemu'):
@@ -368,8 +353,12 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
                     except Exception: # pylint: disable=broad-except
                         pass
                 except Exception: # pylint: disable=broad-except
-                    raise OSError('BCML could not transfer your mod from the temp directory '
-                                       'to the BCML directory.')
+                    err = OSError()
+                    err.error_text = (
+                        'BCML could not transfer your mod from the temp directory to the BCML'
+                        ' directory.'
+                    )
+                    raise err
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
 
@@ -513,211 +502,34 @@ def refresh_merges():
         merger.perform_merge()
 
 
-def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
-    canon = util.get_canon_name(file.relative_to(tmp_dir))
-    try:
-        stock_file = util.get_game_file(file.relative_to(tmp_dir))
-    except FileNotFoundError:
-        return
-    with stock_file.open('rb') as old_file:
-        old_sarc = sarc.read_file_and_make_sarc(old_file)
-        if not old_sarc:
-            return
-        old_files = set(old_sarc.list_files())
-    if canon not in hashes:
-        return
-    with file.open('rb') as s_file:
-        base_sarc = sarc.read_file_and_make_sarc(s_file)
-    if not base_sarc:
-        return
-    new_sarc = sarc.SARCWriter(util.get_settings('wiiu'))
-    can_delete = True
-    for nest_file in base_sarc.list_files():
-        canon = nest_file.replace('.s', '.')
-        ext = Path(canon).suffix
-        if ext in {'.yml', '.bak'}:
-            continue
-        file_data = base_sarc.get_file_data(nest_file).tobytes()
-        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
-        if nest_file in old_files:
-            old_hash = xxhash.xxh32(
-                util.unyaz_if_needed(old_sarc.get_file_data(nest_file).tobytes())
-            ).hexdigest()
-        if nest_file not in old_files or (xhash != old_hash and ext not in util.AAMP_EXTS):
-            can_delete = False
-            new_sarc.add_file(nest_file, file_data)
-    del old_sarc
-    if can_delete:
-        del new_sarc
-        file.unlink()
-    else:
-        with file.open('wb') as s_file:
-            if file.suffix.startswith('.s') and file.suffix != '.ssarc':
-                s_file.write(util.compress(new_sarc.get_bytes()))
-            else:
-                new_sarc.write(s_file)
-
-
-def create_bnp_mod(mod: Path, output: Path, options: dict = None):
-    """[summary]
-    
-    :param mod: [description]
-    :type mod: Path
-    :param output: [description]
-    :type output: Path
-    :param options: [description], defaults to {}
-    :type options: dict, optional
-    """
-    if isinstance(mod, str):
-        mod = Path(mod)
-    if mod.is_file():
-        print('Extracting mod...')
-        tmp_dir: Path = open_mod(mod)
-    elif mod.is_dir():
-        print(f'Loading mod from {str(mod)}...')
-        tmp_dir: Path = util.get_work_dir() / \
-            f'tmp_{xxhash.xxh32(str(mod)).hexdigest()}'
-        shutil.copytree(str(mod), str(tmp_dir))
-    else:
-        print(f'Error: {str(mod)} is neither a valid file nor a directory')
-        return
-
-    print('Packing loose files...')
-    pack_folders = sorted(
-        {d for d in tmp_dir.rglob('**/*') if d.is_dir() and d.suffix in util.SARC_EXTS},
-        key=lambda d: len(d.parts), reverse=True
-    )
-    for folder in pack_folders:
-        new_tmp: Path = folder.with_suffix(folder.suffix + '.tmp')
-        shutil.move(folder, new_tmp)
-        new_sarc = sarc.SARCWriter(be=util.get_settings('wiiu'))
-        for file in {f for f in new_tmp.rglob('**/*') if f.is_file()}:
-            new_sarc.add_file(file.relative_to(new_tmp).as_posix(), file.read_bytes())
-        sarc_bytes = new_sarc.get_bytes()
-        if str(folder.suffix).startswith('.s') and folder.suffix != '.sarc':
-            sarc_bytes = util.compress(sarc_bytes)
-        folder.write_bytes(sarc_bytes)
-        shutil.rmtree(new_tmp)
-
-    if not options:
-        options = {}
-    options['texts'] = {'user_only': False}
-    logged_files = generate_logs(tmp_dir, options=options)
-
-    print('Removing unnecessary files...')
-    if (tmp_dir / 'logs' / 'map.yml').exists():
-        print('Removing map units...')
-        for file in [file for file in logged_files if isinstance(file, Path) and \
-                           fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
-            file.unlink()
-    if [file for file in (tmp_dir / 'logs').glob('*texts*')]:
-        print('Removing language bootup packs...')
-        for bootup_lang in (tmp_dir / 'content' / 'Pack').glob('Bootup_*.pack'):
-            bootup_lang.unlink()
-    if (tmp_dir / 'logs' / 'actorinfo.yml').exists() and \
-       (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').exists():
-        print('Removing ActorInfo.product.sbyml...')
-        (tmp_dir / 'content' / 'Actor' / 'ActorInfo.product.sbyml').unlink()
-    if (tmp_dir / 'logs' / 'gamedata.yml').exists() or (tmp_dir / 'logs' / 'savedata.yml').exists():
-        print('Removing gamedata sarcs...')
-        with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as b_file:
-            bsarc = sarc.read_file_and_make_sarc(b_file)
-        csarc = sarc.make_writer_from_sarc(bsarc)
-        bsarc_files = list(bsarc.list_files())
-        if 'GameData/gamedata.ssarc' in bsarc_files:
-            csarc.delete_file('GameData/gamedata.ssarc')
-        if 'GameData/savedataformat.ssarc' in bsarc_files:
-            csarc.delete_file('GameData/savedataformat.ssarc')
-        with (tmp_dir / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
-            csarc.write(b_file)
-
-    hashes = util.get_hash_table()
-    print('Creating partial packs...')
-    sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
-    if sarc_files:
-        num_threads = min(len(sarc_files), cpu_count())
-        set_start_method('spawn', True)
-        pool = Pool(processes=num_threads)
-        pool.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
-        pool.close()
-        pool.join()
-
-        sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
-        if sarc_files:
-            with (tmp_dir / 'logs' / 'packs.log').open('w', encoding='utf-8') as p_file:
-                final_packs = [file for file in list(
-                    tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS]
-                if final_packs:
-                    p_file.write('name,path\n')
-                    for file in final_packs:
-                        p_file.write(
-                            f'{util.get_canon_name(file.relative_to(tmp_dir))},'
-                            f'{file.relative_to(tmp_dir)}\n'
-                        )
-    else:
-        if (tmp_dir / 'logs' / 'packs.log').exists():
-            (tmp_dir / 'logs' / 'packs.log').unlink()
-
-    print('Cleaning any junk files...')
-    for file in tmp_dir.rglob('**/*'):
-        if file.parent.stem == 'logs':
-            continue
-        if file.suffix in ['.yml', '.bak', '.tmp', '.old']:
-            file.unlink()
-
-    print('Removing blank folders...')
-    for folder in reversed(list(tmp_dir.rglob('**/*'))):
-        if folder.is_dir() and not list(folder.glob('*')):
-            shutil.rmtree(folder)
-
-    print(f'Saving output file to {str(output)}...')
-    x_args = [ZPATH, 'a', str(output), f'{str(tmp_dir / "*")}']
-    if system() == 'Windows':
-        subprocess.run(x_args, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
-    else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print('Conversion complete.')
-
-
 def create_backup(name: str = ''):
-    """
-    Creates a backup of the current mod installations. Saves it as a 7z file in
-    `CEMU_DIR/bcml_backups`.
-
-    :param name: The name to give the backup, defaults to "BCML_Backup_YYYY-MM-DD"
-    :type name: str, optional
-    """
     import re
     if not name:
         name = f'BCML_Backup_{datetime.datetime.now().strftime("%Y-%m-%d")}'
     else:
         name = re.sub(r'(?u)[^-\w.]', '', name.strip().replace(' ', '_'))
     num_mods = len([d for d in util.get_modpack_dir().glob('*') if d.is_dir()])
-    output = util.get_cemu_dir() / 'bcml_backups' / f'{name}---{num_mods - 1}.7z'
+    output = util.get_data_dir() / 'backups' / f'{name}---{num_mods - 1}.7z'
     output.parent.mkdir(parents=True, exist_ok=True)
     print(f'Saving backup {name}...')
     x_args = [ZPATH, 'a', str(output), f'{str(util.get_modpack_dir() / "*")}']
     if system() == 'Windows':
-        subprocess.run(x_args, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+        subprocess.run(
+            x_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=util.CREATE_NO_WINDOW
+        )
     else:
         subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f'Backup "{name}" created')
 
 
 def get_backups() -> List[Path]:
-    """ Gets a list of BCML mod configuration backups """
-    return list((util.get_cemu_dir() / 'bcml_backups').glob('*.7z'))
+    return list((util.get_data_dir() / 'backups').glob('*.7z'))
 
 
 def restore_backup(backup: Union[str, Path]):
-    """
-    Restores a BCML mod configuration backup
-
-    :param backup: The backup to restore, either by name or by path
-    :type backup: Union[str, Path]
-    """
     if isinstance(backup, str):
         backup = Path(backup)
     if not backup.exists():
@@ -726,8 +538,7 @@ def restore_backup(backup: Union[str, Path]):
     for folder in [item for item in util.get_modpack_dir().glob('*') if item.is_dir()]:
         shutil.rmtree(str(folder))
     print('Extracting backup...')
-    x_args = [ZPATH,
-              'x', str(backup), f'-o{str(util.get_modpack_dir())}']
+    x_args = [ZPATH, 'x', str(backup), f'-o{str(util.get_modpack_dir())}']
     if system() == 'Windows':
         subprocess.run(x_args, stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
@@ -770,3 +581,50 @@ def link_master_mod(output: Path = None):
                     )
                 except OSError:
                     from shutil import copyfile as link_or_copy
+
+
+def export(output: Path):
+    import subprocess
+    from shutil import rmtree
+    print('Loading files...')
+    tmp_dir = util.get_work_dir() / 'tmp_export'
+    if tmp_dir.drive != util.get_modpack_dir().drive:
+        tmp_dir = Path(util.get_modpack_dir().drive) / 'tmp_bcml_export'
+    link_master_mod(tmp_dir)
+    print('Adding rules.txt...')
+    rules_path = tmp_dir / 'rules.txt'
+    mods = util.get_installed_mods()
+    with rules_path.open('w', encoding='utf-8') as rules:
+        rules.writelines([
+            '[Definition]\n',
+            'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
+            'name = Exported BCML Mod\n',
+            'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
+            f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
+            'version = 4\n'
+        ])
+    if output.suffix == '.bnp' or output.name.endswith('.bnp.7z'):
+        print('Exporting BNP...')
+        dev.create_bnp_mod(
+            mod=tmp_dir,
+            output=output,
+            options={'rstb':{'guess':True}}
+        )
+    else:
+        print('Exporting as graphic pack mod...')
+        x_args = [ZPATH,
+                    'a', str(output), f'{str(tmp_dir / "*")}']
+        if os.name == 'nt':
+            subprocess.run(
+                x_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=util.CREATE_NO_WINDOW
+            )
+        else:
+            subprocess.run(
+                x_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+    rmtree(str(tmp_dir))

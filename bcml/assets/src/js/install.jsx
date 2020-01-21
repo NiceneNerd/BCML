@@ -89,7 +89,7 @@ class InstallModal extends React.Component {
                                             </i>
                                         </div>
                                         <div className="flex-grow-1">
-                                            {mod.split("\\").slice(-1)[0]}
+                                            {mod.split(/[\\\/]/).slice(-1)[0]}
                                         </div>
                                         <div className="rem-mod">
                                             <a

@@ -1,8 +1,20 @@
-import { Button, Dropdown, Fade, Tab, Tabs } from "react-bootstrap";
+import {
+    Badge,
+    Button,
+    Dropdown,
+    Fade,
+    Modal,
+    OverlayTrigger,
+    Tab,
+    Tabs,
+    Tooltip
+} from "react-bootstrap";
 
 import DevTools from "./devtools.jsx";
 import Settings from "./settings.jsx";
 import Mods from "./mods.jsx";
+import BackupModal from "./backup.jsx";
+import ProgressModal from "./progress.jsx";
 import React from "react";
 
 class BcmlRoot extends React.Component {
@@ -12,8 +24,25 @@ class BcmlRoot extends React.Component {
             mods: [],
             settingsLoaded: false,
             settingsValid: false,
-            savingSettings: false
+            savingSettings: false,
+            showDone: false,
+            showBackups: false,
+            showError: false,
+            errorText: "",
+            showProgress: false,
+            progressStatus: "",
+            progressTitle: "",
+            showConfirm: false,
+            confirmText: "",
+            confirmCallback: () => {}
         };
+        this.handleBackups = this.handleBackups.bind(this);
+        this.handleInstall = this.handleInstall.bind(this);
+        this.saveSettings = this.saveSettings.bind(this);
+        this.showError = this.showError.bind(this);
+        this.confirm = this.confirm.bind(this);
+        this.refreshMods = this.refreshMods.bind(this);
+        this.export = this.export.bind(this);
     }
 
     saveSettings(settings) {
@@ -29,8 +58,133 @@ class BcmlRoot extends React.Component {
         );
     }
 
+    confirm(message, callback) {
+        this.setState({
+            showConfirm: true,
+            confirmText: message,
+            confirmCallback: yesNo =>
+                this.setState({ showConfirm: false }, () =>
+                    yesNo ? callback() : null
+                )
+        });
+    }
+
+    showError(errorText) {
+        if (typeof errorText !== String) {
+            if (errorText.error_text) {
+                errorText = errorText.error;
+            } else {
+                errorText = unescape(
+                    errorText.error
+                        .toString()
+                        .replace(/\\\\/g, "\\")
+                        .replace(/\\n/g, "\n")
+                        .replace(/\\\"/g, '"')
+                        .replace('Error: "', "")
+                );
+                errorText = `Oops, ran into an error. Details:<pre class="scroller">${unescape(
+                    errorText
+                )}</pre>`;
+            }
+        }
+        this.setState({
+            showProgress: false,
+            showError: true,
+            errorText
+        });
+    }
+
+    handleInstall(mods, options) {
+        this.setState(
+            {
+                showProgress: true,
+                progressTitle: "Installing Mod" + (mods.length > 1 ? "s" : "")
+            },
+            () => {
+                pywebview.api
+                    .install_mod({ mods, options })
+                    .then(res => {
+                        if (!res.success) {
+                            throw res;
+                        }
+                        this.setState(
+                            { showProgress: false, showDone: true },
+                            () => this.refreshMods()
+                        );
+                    })
+                    .catch(this.showError);
+            }
+        );
+    }
+
+    handleBackups(backup, operation) {
+        let progressTitle;
+        let action;
+        if (operation == "create") {
+            progressTitle = "Creating Backup";
+            action = pywebview.api.create_backup;
+        } else if (operation == "restore") {
+            progressTitle = `Restoring ${backup.name}`;
+            action = pywebview.api.restore_backup;
+            backup = backup.path;
+        } else {
+            progressTitle = `Deleting ${backup.name}`;
+            action = pywebview.api.delete_backup;
+            backup = backup.path;
+        }
+        const task = () =>
+            this.setState(
+                {
+                    showProgress: operation == "delete" ? false : true,
+                    showBackups: operation == "delete" ? true : false,
+                    progressTitle
+                },
+                () =>
+                    action({ backup })
+                        .then(res => {
+                            if (!res.success) {
+                                throw res;
+                            }
+                            this.setState(
+                                { showProgress: false, showDone: true },
+                                () => {
+                                    this.backupRef.current.refreshBackups();
+                                    if (operation == "restore")
+                                        this.props.onRefresh();
+                                }
+                            );
+                        })
+                        .catch(this.showError)
+            );
+        if (operation == "delete")
+            this.confirm("Are you sure you want to delete this backup?", task);
+        else task();
+    }
+
+    export() {
+        this.setState(
+            {
+                showProgress: true,
+                progressTitle: "Exporting Mods..."
+            },
+            () => {
+                pywebview.api
+                    .export()
+                    .then(res => {
+                        if (!res.succes) throw res;
+
+                        this.setState({ showProgress: false, showDone: true });
+                    })
+                    .catch(this.showError);
+            }
+        );
+    }
+
     componentDidMount() {
         this.setState({ mods: this.props.mods });
+        window.onMsg = msg => {
+            this.setState({ progressStatus: msg });
+        };
     }
 
     refreshMods() {
@@ -48,21 +202,31 @@ class BcmlRoot extends React.Component {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        <Dropdown.Item href="#/action-1">Remerge</Dropdown.Item>
-                        <Dropdown.Item href="#/action-2">
-                            Another action
-                        </Dropdown.Item>
-                        <Dropdown.Item href="#/action-3">
-                            Something else
-                        </Dropdown.Item>
+                        <OverlayTrigger
+                            overlay={
+                                <Tooltip>
+                                    Exports all installed mods to a single
+                                    modpack, either as a BNP or a plain format.
+                                </Tooltip>
+                            }
+                            placement={"left"}>
+                            <Dropdown.Item onClick={this.export}>
+                                Export
+                            </Dropdown.Item>
+                        </OverlayTrigger>
+                        <Dropdown.Item>About</Dropdown.Item>
                     </Dropdown.Menu>
                 </Dropdown>
                 <Tabs id="tabs" mountOnEnter transition={Fade}>
                     <Tab eventKey="mod-list" title="Mods">
                         <Mods
                             mods={this.state.mods}
-                            onRefresh={this.refreshMods.bind(this)}
+                            onRefresh={this.refreshMods}
                             onChange={mods => this.setState({ mods })}
+                            onError={this.showError}
+                            onConfirm={this.confirm}
+                            onInstall={this.handleInstall}
+                            onState={this.setState.bind(this)}
                         />
                     </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">
@@ -76,7 +240,7 @@ class BcmlRoot extends React.Component {
                                     savingSettings: false
                                 })
                             }
-                            onSubmit={this.saveSettings.bind(this)}
+                            onSubmit={this.saveSettings}
                         />
                         <Button
                             className="fab"
@@ -87,9 +251,101 @@ class BcmlRoot extends React.Component {
                         </Button>
                     </Tab>
                 </Tabs>
+                <ProgressModal
+                    show={this.state.showProgress}
+                    title={this.state.progressTitle}
+                    status={this.state.progressStatus}
+                />
+                <DoneDialog
+                    show={this.state.showDone}
+                    onClose={() => this.setState({ showDone: false })}
+                />
+                <ErrorDialog
+                    show={this.state.showError}
+                    error={this.state.errorText}
+                    onClose={() => this.setState({ showError: false })}
+                />
+                <ConfirmDialog
+                    show={this.state.showConfirm}
+                    message={this.state.confirmText}
+                    onClose={this.state.confirmCallback.bind(this)}
+                />
+                <BackupModal
+                    show={this.state.showBackups}
+                    ref={this.backupRef}
+                    onCreate={this.handleBackups}
+                    onRestore={this.handleBackups}
+                    onDelete={this.handleBackups}
+                    onClose={() => this.setState({ showBackups: false })}
+                />
             </React.Fragment>
         );
     }
 }
+
+const DoneDialog = props => {
+    return (
+        <Modal show={props.show} size="sm" centered>
+            <Modal.Header closeButton>
+                <Modal.Title>Done!</Modal.Title>
+            </Modal.Header>
+            <Modal.Footer>
+                <Button variant="primary" onClick={props.onClose}>
+                    OK
+                </Button>
+                <Button variant="secondary">Launch Game</Button>
+            </Modal.Footer>
+        </Modal>
+    );
+};
+
+const ErrorDialog = props => {
+    return (
+        <Modal show={props.show} centered>
+            <Modal.Header closeButton>
+                <Modal.Title>Error</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <div class="d-flex">
+                    <div className="p-1">
+                        <Badge variant="danger">
+                            <i className="material-icons">error</i>
+                        </Badge>
+                    </div>
+                    <div
+                        className="pl-2 flex-grow-1"
+                        style={{ minWidth: "0px" }}
+                        dangerouslySetInnerHTML={{
+                            __html: props.error.replace("\n", "<br>")
+                        }}></div>
+                </div>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="primary" onClick={props.onClose}>
+                    OK
+                </Button>
+            </Modal.Footer>
+        </Modal>
+    );
+};
+
+const ConfirmDialog = props => {
+    return (
+        <Modal show={props.show}>
+            <Modal.Header>
+                <Modal.Title>Please Confirm</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>{props.message}</Modal.Body>
+            <Modal.Footer>
+                <Button onClick={() => props.onClose(true)}>OK</Button>
+                <Button
+                    variant="secondary"
+                    onClick={() => props.onClose(false)}>
+                    Close
+                </Button>
+            </Modal.Footer>
+        </Modal>
+    );
+};
 
 export default BcmlRoot;

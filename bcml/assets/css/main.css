@@ -427,17 +427,17 @@ Fade {
     height: 100%;
 }
 
-.install-fab:active:hover,
+.fab:active:hover,
 .btn-nav:active:hover {
     background-color: #1068a4;
 }
 
-.install-fab:hover,
+.fab:hover,
 .btn-nav:hover {
     background-color: #439bd7;
 }
 
-.install-fab .material-icons,
+.fab .material-icons,
 .btn-nav .material-icons {
     margin: 0;
     position: absolute;

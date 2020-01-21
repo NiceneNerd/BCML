@@ -18,11 +18,14 @@ def win_or_lose(func):
     def status_run(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except:  # pylint: disable=bare-except
-            err = traceback.format_exc(limit=-5, chain=True)
+        except Exception as e:  # pylint: disable=bare-except
+            err = getattr(e, 'error_text', '') or traceback.format_exc(limit=-5, chain=True)
             with LOG.open('a') as log_file:
                 log_file.write(f'\n{err}\n')
-            return {'error': err}
+            return {
+                'error': err,
+                'error_text': hasattr(e, 'error_text')
+            }
         return {'success': True}
     return status_run
 
@@ -35,14 +38,18 @@ class Api:
         import platform
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            raise RuntimeError(
+            err = RuntimeError(
                 f'BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}'
             )
+            err.error_text = f'BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}'
+            raise err
         is_64bits = sys.maxsize > 2**32
         if not is_64bits:
-            raise RuntimeError(
+            err = RuntimeError(
                 'BCML requires 64 bit Python, but you appear to be running 32 bit.'
             )
+            err.error_text = 'BCML requires 64 bit Python, but you appear to be running 32 bit.'
+            raise err
         settings = util.get_settings()
         util.get_game_dir()
         util.get_update_dir()
@@ -141,6 +148,8 @@ class Api:
         )}]; window.loadMergers();""")
 
     def file_pick(self, params):
+        if not params:
+            params = {}
         return self.window.create_file_dialog(
             file_types=(
                 'Packaged mods (*.bnp;*.7z;*.zip;*.rar)',
@@ -168,7 +177,7 @@ class Api:
         ]
 
     @win_or_lose
-    def install(self, params):
+    def install_mod(self, params):
         mods = [
             install.install_mod(Path(m), options=params['options'], wait_merge=True) \
                 for m in params['mods']
@@ -290,6 +299,21 @@ class Api:
     @win_or_lose
     def delete_backup(self, params):
         Path(params['backup']).unlink()
+
+    @win_or_lose
+    def export(self, params):
+        out = self.window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            file_types=(
+                'BOTW Nano Patch (*.bnp)',
+                ('Graphic Pack' if self.get_settings('wiiu') else 'Atmosphere') + ' (*.zip)'
+            )
+        )
+        try:
+            output = Path(out[0])
+        except:
+            return
+        install.export(output)
 
 
 def main():

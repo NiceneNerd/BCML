@@ -118,7 +118,7 @@ def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> []:
     dlog = path / 'logs' / 'deepmerge.json'
     if not dlog.exists():
         return []
-    mod_diffs = json_util.json_to_aamp(
+    mod_diffs = json_util.json_diff_to_aamp(
         dlog.read_text('utf-8')
     )
     return [str(key) for key in mod_diffs.keys()]
@@ -162,7 +162,11 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                             aamp_contents = _aamp_merge(aamp_contents, change)
                         aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                     except:  # pylint: disable=bare-except
-                        raise RuntimeError(f'AAMP file {file} could be merged.')
+                        from bcml import json_util
+                        err = RuntimeError(f'AAMP file {file} could be merged.')
+                        err.error_text = f"""AAMP file {file} could be merged. Patch details:
+                            <pre class="scroller">{json_util.aamp_to_json(stuff)}</pre>"""
+                        raise err
                     del aamp_contents
                     new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
                     cache_merged_aamp(file, new_bytes)
@@ -170,7 +174,7 @@ def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
                     raise ValueError('Wait, what the heck, this isn\'t an AAMP file?!')
             except ValueError:
                 new_bytes = pack.get_file_data(file).tobytes()
-                print(f'Deep merging {file} failed. No changed were made.')
+                print(f'Deep merging {file} failed. No changes were made.')
 
             new_sarc.delete_file(file)
             new_sarc.add_file(file, new_bytes)
@@ -198,7 +202,7 @@ def threaded_merge(item) -> (str, dict):
     file, stuff = item
     failures = {}
 
-    base_file = util.get_game_file(file, file.startswith('aoc'))
+    base_file = util.get_game_file(file, file.startswith(util.get_dlc_path()))
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
     file_ext = os.path.splitext(file)[1]
@@ -225,7 +229,10 @@ def threaded_merge(item) -> (str, dict):
                         aamp_contents = _aamp_merge(aamp_contents, change)
                     aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                 except:  # pylint: disable=bare-except
-                    raise RuntimeError(f'AAMP file {file} could be merged.')
+                    err = RuntimeError(f'AAMP file {file} could be merged.')
+                    err.error_text = f"""AAMP file {file} could be merged. Patch details:
+                        <pre class="scroller">{json_util.aamp_to_json(stuff)}</pre>"""
+                    raise err
                 del aamp_contents
                 new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
             else:
@@ -284,7 +291,7 @@ class DeepMerger(mergers.Merger):
 
     def get_mod_diff(self, mod: Path):
         if self.is_mod_logged(mod):
-            return json_util.json_to_aamp(
+            return json_util.json_diff_to_aamp(
                 (mod / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:
@@ -294,7 +301,7 @@ class DeepMerger(mergers.Merger):
         aamp_diffs = {}
         for mod in [m for m in util.get_installed_mods() if self.is_mod_logged(m)]:
             with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as d_file:
-                mod_diffs = json_util.json_to_aamp(d_file.read())
+                mod_diffs = json_util.json_diff_to_aamp(d_file.read())
                 for file in [
                     diff for diff in mod_diffs if not (
                         'only_these' in self._options and diff not in self._options['only_these']

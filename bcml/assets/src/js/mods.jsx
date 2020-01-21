@@ -1,9 +1,7 @@
 import { Badge, Button, ButtonGroup, Dropdown, Modal } from "react-bootstrap";
 
-import BackupModal from "./backup.jsx";
 import InstallModal from "./install.jsx";
 import ModInfo from "./modinfo.jsx";
-import ProgressModal from "./progress.jsx";
 import React from "react";
 import SortSelect from "./sortselect.jsx";
 
@@ -12,19 +10,9 @@ class Mods extends React.Component {
         super();
         this.state = {
             selectedMods: [],
-            showDone: false,
-            showBackups: false,
-            showError: false,
-            errorText: "",
-            showInstall: false,
-            showProgress: false,
-            progressStatus: "",
-            progressTitle: "",
-            showConfirm: false,
-            confirmText: "",
-            confirmCallback: () => {},
             sortReverse: true,
             showHandle: false,
+            showInstall: false,
             mods: [],
             dirty: false,
             mergersReady: false
@@ -32,10 +20,7 @@ class Mods extends React.Component {
         window.loadMergers = () =>
             this.setState({ mergersReady: true }, this.sanityCheck);
         this.sanityCheck = this.sanityCheck.bind(this);
-        this.showError = this.showError.bind(this);
         this.handleAction = this.handleAction.bind(this);
-        this.handleBackups = this.handleBackups.bind(this);
-        this.handleInstall = this.handleInstall.bind(this);
         this.handleQueue = this.handleQueue.bind(this);
         this.applyQueue = this.applyQueue.bind(this);
         this.uninstallAll = this.uninstallAll.bind(this);
@@ -46,36 +31,22 @@ class Mods extends React.Component {
         pywebview.api
             .sanity_check()
             .then(res => {
-                if (!res.success) throw res.error;
+                if (!res.success) throw res;
             })
             .catch(err => {
-                this.showError(err);
+                this.props.onError(err);
                 window.location = "index.html?firstrun=true";
             });
     }
 
     componentDidMount() {
         this.setState({ mods: this.props.mods });
-        window.onMsg = msg => {
-            this.setState({ progressStatus: msg });
-        };
     }
 
     static getDerivedStateFromProps(nextProps, prevState) {
         if (JSON.stringify(nextProps.mods) != JSON.stringify(prevState.mods)) {
             return { mods: nextProps.mods };
         } else return null;
-    }
-
-    confirm(message, callback) {
-        this.setState({
-            showConfirm: true,
-            confirmText: message,
-            confirmCallback: yesNo =>
-                this.setState({ showConfirm: false }, () =>
-                    yesNo ? callback() : null
-                )
-        });
     }
 
     handleQueue(mods, options) {
@@ -94,51 +65,6 @@ class Mods extends React.Component {
         });
     }
 
-    showError(errorText) {
-        if (typeof errorText !== String) {
-            errorText = unescape(
-                errorText
-                    .toString()
-                    .replace(/\\\\/g, "\\")
-                    .replace(/\\n/g, "\n")
-                    .replace(/\\\"/g, '"')
-                    .replace('Error: "', "")
-            );
-            errorText = `Oops, ran into an error. Details:<pre class="scroller">${unescape(
-                errorText
-            )}</pre>`;
-        }
-        this.setState({
-            showProgress: false,
-            showError: true,
-            errorText
-        });
-    }
-
-    handleInstall(mods, options) {
-        this.setState(
-            {
-                showInstall: false,
-                showProgress: true,
-                progressTitle: "Installing Mod" + (mods.length > 1 ? "s" : "")
-            },
-            () => {
-                pywebview.api
-                    .install({ mods, options })
-                    .then(res => {
-                        if (!res.success) {
-                            throw res.error;
-                        }
-                        this.setState(
-                            { showProgress: false, showDone: true },
-                            () => this.props.onRefresh()
-                        );
-                    })
-                    .catch(this.showError);
-            }
-        );
-    }
-
     handleAction(mod, action) {
         if (action == "explore") {
             pywebview.api.explore({ mod: mod });
@@ -146,7 +72,7 @@ class Mods extends React.Component {
             let verb = action.replace(/^\w/, c => c.toUpperCase());
             if (verb.endsWith("e")) verb = verb.substring(0, verb.length - 1);
             const task = () =>
-                this.setState(
+                this.props.onState(
                     {
                         showProgress: true,
                         progressTitle: `${verb}ing ${mod.name}`
@@ -156,23 +82,24 @@ class Mods extends React.Component {
                             .mod_action({ mod, action })
                             .then(res => {
                                 if (!res.success) {
-                                    throw res.error;
+                                    throw res;
                                 }
-                                this.setState(
-                                    {
-                                        showProgress: false,
-                                        showDone: true,
-                                        selectedMods: []
-                                    },
-                                    () => this.props.onRefresh()
-                                );
+                                this.setState({ selectedMods: [] }, () => {
+                                    this.props.onState(
+                                        {
+                                            showProgress: false,
+                                            showDone: true
+                                        },
+                                        () => this.props.onRefresh()
+                                    );
+                                });
                             })
-                            .catch(this.showError);
+                            .catch(this.props.onError);
                     }
                 );
             if (["enable", "update"].includes(action)) task();
             else
-                this.confirm(
+                this.props.onConfirm(
                     `Are you sure you want to ${action} ${mod.name}?`,
                     task
                 );
@@ -180,75 +107,36 @@ class Mods extends React.Component {
     }
 
     handleRemerge(merger) {
-        this.setState(
+        this.props.onState(
             { showProgress: true, progressTitle: `Remerging ${merger}` },
             () => {
                 pywebview.api
                     .remerge({ name: merger })
                     .then(res => {
                         if (!res.success) {
-                            throw res.error;
+                            throw res;
                         }
-                        this.setState({
-                            showProgress: false,
-                            showDone: true,
-                            selectedMods: []
-                        });
+                        this.setState(
+                            {
+                                selectedMods: []
+                            },
+                            () =>
+                                this.props.onState({
+                                    showProgress: false,
+                                    showDone: true
+                                })
+                        );
                     })
-                    .catch(this.showError);
+                    .catch(this.props.onError);
             }
         );
     }
 
-    handleBackups(backup, operation) {
-        let progressTitle;
-        let action;
-        if (operation == "create") {
-            progressTitle = "Creating Backup";
-            action = pywebview.api.create_backup;
-        } else if (operation == "restore") {
-            progressTitle = `Restoring ${backup.name}`;
-            action = pywebview.api.restore_backup;
-            backup = backup.path;
-        } else {
-            progressTitle = `Deleting ${backup.name}`;
-            action = pywebview.api.delete_backup;
-            backup = backup.path;
-        }
-        const task = () =>
-            this.setState(
-                {
-                    showProgress: operation == "delete" ? false : true,
-                    showBackups: operation == "delete" ? true : false,
-                    progressTitle
-                },
-                () =>
-                    action({ backup })
-                        .then(res => {
-                            if (!res.success) {
-                                throw res.error;
-                            }
-                            this.setState(
-                                { showProgress: false, showDone: true },
-                                () => {
-                                    this.backupRef.current.refreshBackups();
-                                    if (operation == "restore")
-                                        this.props.onRefresh();
-                                }
-                            );
-                        })
-                        .catch(this.showError)
-            );
-        if (operation == "delete")
-            this.confirm("Are you sure you want to delete this backup?", task);
-        else task();
-    }
-
     uninstallAll() {
-        this.confirm(
+        this.props.onConfirm(
             "Are you sure you want to uninstall all of your mods?",
             () => {
-                this.setState(
+                this.props.onState(
                     {
                         showProgress: true,
                         progressTitle: "Uninstalling All Mods"
@@ -258,18 +146,20 @@ class Mods extends React.Component {
                             .uninstall_all()
                             .then(res => {
                                 if (!res.success) {
-                                    throw res.error;
+                                    throw res;
                                 }
-                                this.setState(
+                                this.props.onState(
                                     {
                                         showProgress: false,
-                                        showDone: true,
-                                        selectedMods: []
+                                        showDone: true
                                     },
-                                    () => this.props.onRefresh()
+                                    () => {
+                                        this.props.onRefresh();
+                                        this.setState({ selectedMods: [] });
+                                    }
                                 );
                             })
-                            .catch(this.showError);
+                            .catch(this.props.onError);
                     }
                 );
             }
@@ -277,7 +167,7 @@ class Mods extends React.Component {
     }
 
     applyQueue() {
-        this.setState(
+        this.props.onState(
             { showProgress: true, progressTitle: "Applying Changes" },
             async () => {
                 let installs = [];
@@ -298,20 +188,23 @@ class Mods extends React.Component {
                 pywebview.api
                     .apply_queue({ installs, moves })
                     .then(res => {
-                        if (!res.success) throw res.error;
+                        if (!res.success) throw res;
 
-                        this.setState(
-                            {
-                                showProgress: false,
-                                showDone: true,
-                                showHandle: false,
-                                selectedMods: [],
-                                dirty: false
-                            },
-                            () => this.props.onRefresh()
+                        this.props.onState(
+                            { showProgress: false, showDone: true },
+                            () => {
+                                this.setState(
+                                    {
+                                        showHandle: false,
+                                        selectedMods: [],
+                                        dirty: false
+                                    },
+                                    () => this.props.onRefresh()
+                                );
+                            }
                         );
                     })
-                    .catch(this.showError);
+                    .catch(this.props.onError);
             }
         );
     }
@@ -459,105 +352,17 @@ class Mods extends React.Component {
                 </a>
                 <InstallModal
                     show={this.state.showInstall}
-                    onInstall={this.handleInstall}
+                    onInstall={(mods, options) => {
+                        this.setState({ showInstall: false }, () =>
+                            this.props.onInstall(mods, options)
+                        );
+                    }}
                     onQueue={this.handleQueue}
                     onClose={() => this.setState({ showInstall: false })}
-                />
-                <ProgressModal
-                    show={this.state.showProgress}
-                    title={this.state.progressTitle}
-                    status={this.state.progressStatus}
-                />
-                <DoneDialog
-                    show={this.state.showDone}
-                    onClose={() => this.setState({ showDone: false })}
-                />
-                <ErrorDialog
-                    show={this.state.showError}
-                    error={this.state.errorText}
-                    onClose={() => this.setState({ showError: false })}
-                />
-                <ConfirmDialog
-                    show={this.state.showConfirm}
-                    message={this.state.confirmText}
-                    onClose={this.state.confirmCallback.bind(this)}
-                />
-                <BackupModal
-                    show={this.state.showBackups}
-                    ref={this.backupRef}
-                    onCreate={this.handleBackups}
-                    onRestore={this.handleBackups}
-                    onDelete={this.handleBackups}
-                    onClose={() => this.setState({ showBackups: false })}
                 />
             </React.Fragment>
         );
     }
 }
-
-const DoneDialog = props => {
-    return (
-        <Modal show={props.show} size="sm" centered>
-            <Modal.Header closeButton>
-                <Modal.Title>Done!</Modal.Title>
-            </Modal.Header>
-            <Modal.Footer>
-                <Button variant="primary" onClick={props.onClose}>
-                    OK
-                </Button>
-                <Button variant="secondary">Launch Game</Button>
-            </Modal.Footer>
-        </Modal>
-    );
-};
-
-const ErrorDialog = props => {
-    return (
-        <Modal show={props.show} centered>
-            <Modal.Header closeButton>
-                <Modal.Title>Error</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <div class="d-flex">
-                    <div className="p-1">
-                        <Badge variant="danger">
-                            <i className="material-icons">error</i>
-                        </Badge>
-                    </div>
-                    <div
-                        className="pl-2 flex-grow-1"
-                        style={{ minWidth: "0px" }}
-                        dangerouslySetInnerHTML={{
-                            __html: props.error.replace("\n", "<br>")
-                        }}></div>
-                </div>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="primary" onClick={props.onClose}>
-                    OK
-                </Button>
-            </Modal.Footer>
-        </Modal>
-    );
-};
-
-const ConfirmDialog = props => {
-    return (
-        <Modal show={props.show}>
-            <Modal.Header>
-                <Modal.Title>Please Confirm</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>{props.message}</Modal.Body>
-            <Modal.Footer>
-                <Button onClick={() => props.onClose(true)}>OK</Button>
-                <Button
-                    variant="secondary"
-                    onClick={() => props.onClose(false)}>
-                    Close
-                </Button>
-            </Modal.Footer>
-        </Modal>
-    );
-};
 
 export default Mods;

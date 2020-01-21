@@ -3,6 +3,7 @@
 # Licensed under GPLv3+
 import csv
 from dataclasses import dataclass
+from functools import lru_cache
 import json
 import os
 import re
@@ -194,7 +195,8 @@ class BcmlMod:
                         image_path = 'thumbnail.' + image_path.split(".")[-1]
                     if not os.path.isfile(str(self.path / image_path)):
                         raise FileNotFoundError(
-                            f'Preview {image_path} specified in rules.txt not found')
+                            f'Preview {image_path} specified in rules.txt not found'
+                        )
             else:
                 for thumb in self.path.glob('thumbnail.*'):
                     image_path = thumb
@@ -236,12 +238,11 @@ def timed(func):
         return res
     return timed_function
 
-
+@lru_cache(None)
 def get_exec_dir() -> Path:
-    """ Gets the root BCML directory """
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
-
+@lru_cache(None)
 def get_data_dir() -> Path:
     import platform
     if platform.system() == 'Windows':
@@ -252,9 +253,8 @@ def get_data_dir() -> Path:
         data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 
-
+@lru_cache(None)
 def get_work_dir() -> Path:
-    """ Gets the BCML internal working directory """
     work_dir = get_data_dir() / 'work_dir'
     if not work_dir.exists():
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -308,13 +308,11 @@ def get_settings(name: str = '') -> {}:
 
 
 def save_settings():
-    """Saves changes made to settings"""
     with (get_data_dir() / 'settings.json').open('w', encoding='utf-8') as s_file:
         json.dump(get_settings.settings, s_file)
 
 
 def get_cemu_dir() -> Path:
-    """ Gets the saved Cemu installation directory """
     cemu_dir = str(get_settings('cemu_dir'))
     if not cemu_dir or not Path(cemu_dir).is_dir():
         err = FileNotFoundError('The Cemu directory has moved or not been saved yet.')
@@ -324,14 +322,12 @@ def get_cemu_dir() -> Path:
 
 
 def set_cemu_dir(path: Path):
-    """ Sets the saved Cemu installation directory """
     settings = get_settings()
     settings['cemu_dir'] = str(path.resolve())
     save_settings()
 
 
 def get_game_dir() -> Path:
-    """ Gets the saved Breath of the Wild game directory """
     game_dir = str(get_settings('game_dir'))
     if not game_dir or not Path(game_dir).is_dir():
         err = FileNotFoundError('The BotW game directory has has moved or not been saved yet.')
@@ -342,7 +338,6 @@ def get_game_dir() -> Path:
 
 
 def set_game_dir(path: Path):
-    """ Sets the saved Breath of the Wild game directory """
     settings = get_settings()
     settings['game_dir'] = str(path.resolve())
     save_settings()
@@ -372,7 +367,6 @@ def set_game_dir(path: Path):
 
 
 def get_mlc_dir() -> Path:
-    """ Gets the saved Cemu mlc directory """
     mlc_dir = str(get_settings('mlc_dir'))
     if not mlc_dir or not Path(mlc_dir).is_dir():
         err = FileNotFoundError('The Cemu MLC directory has moved or not been saved yet.')
@@ -382,7 +376,6 @@ def get_mlc_dir() -> Path:
 
 
 def set_mlc_dir(path: Path):
-    """ Sets the saved Cemu mlc directory """
     settings = get_settings()
     settings['mlc_dir'] = str(path.resolve())
     save_settings()
@@ -393,7 +386,6 @@ def set_mlc_dir(path: Path):
 
 
 def set_site_meta(site_meta):
-    """ Caches site meta from url's specified in mods rules.txt """
     settings = get_settings()
     if not 'site_meta' in settings:
         settings['site_meta'] = ''
@@ -401,9 +393,8 @@ def set_site_meta(site_meta):
         settings['site_meta'] = str(settings['site_meta'] + f'{site_meta};')
     save_settings()
 
-
+@lru_cache(None)
 def get_title_id(game_dir: Path = None) -> (str, str):
-    """Gets the title ID of the BotW game dump"""
     if not hasattr(get_title_id, 'title_id'):
         title_id = '00050000101C9400'
         if not game_dir:
@@ -432,19 +423,20 @@ def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
         return mlc_dir / title_id[0] / title_id[1] / 'content'
     return None
 
-
+@lru_cache(None)
 def get_update_dir() -> Path:
-    """ Gets the path to the game's update files in the Cemu mlc directory """
-    if not hasattr(get_update_dir, 'update_dir'):
-        try:
-            get_update_dir.update_dir = Path(get_settings('update_dir'))
-            if not get_update_dir.update_dir.exists():
-                raise FileNotFoundError()
-        except:
-            e = FileNotFoundError('The BOTW update directory has moved or has not been saved yet.')
-            e.error_text = ('The BOTW update directory has moved or has not been saved yet.')
-            raise e
-    return get_update_dir.update_dir
+    try:
+        update_str = get_settings('update_dir')
+        if not update_str:
+            raise FileNotFoundError()
+        update_dir = Path(update_str)
+        if not update_dir.exists():
+            raise FileNotFoundError()
+    except:
+        e = FileNotFoundError('The BOTW update directory has moved or has not been saved yet.')
+        e.error_text = ('The BOTW update directory has moved or has not been saved yet.')
+        raise e
+    return update_dir
 
 
 def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
@@ -462,56 +454,34 @@ def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
 
 
 def get_aoc_dir() -> Path:
-    """ Gets the path to the game's aoc files in the Cemu mlc direcroy """
-    if not hasattr(get_aoc_dir, 'aoc_dir'):
-        try:
-            get_aoc_dir.aoc_dir = Path(get_settings('dlc_dir'))
-            if not get_aoc_dir.aoc_dir.exists():
-                raise FileNotFoundError()
-        except:
-            e = FileNotFoundError('The BOTW DLC directory has moved or has not been saved yet.')
-            e.error_text = ('The BOTW DLC directory has moved or has not been saved yet.')
-            raise e
-    return get_aoc_dir.aoc_dir
+    try:
+        dlc_str = get_settings('dlc_dir')
+        if not dlc_str:
+            raise FileNotFoundError()
+        aoc_dir = Path(dlc_str)
+        if not aoc_dir.exists():
+            raise FileNotFoundError()
+    except:
+        e = FileNotFoundError('The BOTW DLC directory has moved or has not been saved yet.')
+        e.error_text = ('The BOTW DLC directory has moved or has not been saved yet.')
+        raise e
+    return aoc_dir
 
 
+def get_content_path() -> str:
+    return 'content' if get_settings('wiiu') else 'atmosphere/titles/01007EF00011E000/romfs'
+
+
+def get_dlc_path() -> str:
+    return 'aoc' if get_settings('wiiu') else 'atmosphere/titles/01007EF00011F001/romfs'
+
+
+@lru_cache(None)
 def get_modpack_dir() -> Path:
-    """ Gets the Cemu graphic pack directory for mods """
     return get_data_dir() / 'mods'
 
 
-def get_util_dirs() -> tuple:
-    """
-    Gets the primary directories BCML uses
-
-    :returns: A tuple containing the root BCML directory, the BCML working
-    directory, the Cemu installation directory, and the Cemu graphicPacks
-    directory.
-    :rtype: (class:`pathlib.Path`, class:`pathlib.Path`, class:`pathlib.Path`,
-            class:`pathlib.Path`)
-    """
-    return get_exec_dir(), get_work_dir(), get_cemu_dir(), get_modpack_dir()
-
-
-def get_botw_dirs() -> tuple:
-    """
-    Gets the directories the BotW game files
-
-    :returns: A tuple containing the main BotW directory, the update directoy,
-    and the aoc directory.
-    :rtype: (class:`pathlib.Path`, class:`pathlib.Path`, class:`pathlib.Path`)
-    """
-    return get_game_dir(), get_update_dir(), get_aoc_dir()
-
-
-def get_bcml_version() -> str:
-    """Gets the version string for the installed copy of BCML"""
-    with (get_exec_dir() / 'data' / 'version.txt').open('r') as s_file:
-        setup_text = s_file.read()
-    ver_match = re.search(r"version='([0-9]+\.[0-9]+(\.[0-9]+)?)'", setup_text)
-    return ver_match.group(1) + (' Beta' if 'Beta' in setup_text else '')
-
-
+@lru_cache(None)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).startswith('content/') or str(path).startswith('content\\'):
         path = Path(str(path).replace('content/', '').replace('content\\', ''))
@@ -544,6 +514,7 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         raise FileNotFoundError(f'File {str(path)} was not found in game dump.')
 
 
+@lru_cache(None)
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
     nests = file.split('//')
     sarcs = []
@@ -562,6 +533,7 @@ def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
     return file_bytes
 
 
+@lru_cache(None)
 def get_master_modpack_dir() -> Path:
     master = get_modpack_dir() / '9999_BCML'
     if not (master / 'rules.txt').exists():
@@ -569,13 +541,13 @@ def get_master_modpack_dir() -> Path:
     return master
 
 
+@lru_cache(None)
 def get_hash_table() -> {}:
-    if not hasattr(get_hash_table, 'table'):
-        with (get_exec_dir() / 'data' / 'hashtable.json').open('r') as h_file:
-            get_hash_table.table = json.load(h_file)
-    return get_hash_table.table
+    with (get_exec_dir() / 'data' / 'hashtable.json').open('r') as h_file:
+        return json.load(h_file)
 
 
+@lru_cache(None)
 def get_canon_name(file: str, allow_no_source: bool = False) -> str:
     if isinstance(file, str):
         file = Path(file)
@@ -597,6 +569,7 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
         return name
 
 
+@lru_cache(None)
 def get_mod_id(mod_name: str, priority: int) -> str:
     return f'{priority:04}_' + re.sub(r'(?u)[^-\w.]', '', mod_name.strip().replace(' ', ''))
 
@@ -608,6 +581,7 @@ def get_mod_by_priority(priority: int) -> Union[Path, bool]:
         return False
 
 
+@lru_cache(None)
 def get_file_language(file: Union[Path, str]) -> str:
     if isinstance(file, Path):
         file = str(file)
@@ -625,6 +599,7 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
     return not fhash in table[name]
 
 
+@lru_cache(None)
 def is_file_sarc(path: str) -> bool:
     ext = os.path.splitext(str(path))[1]
     return ext in SARC_EXTS
@@ -660,6 +635,7 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
         raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
 
 
+@lru_cache(None)
 def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
     if not rules:
         rules = RulesParser()

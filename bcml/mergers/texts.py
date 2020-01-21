@@ -515,7 +515,7 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     util.vprint(text_mods)
     if not text_mods:
         print('No text merging necessary.')
-        old_path = util.get_master_modpack_dir() / 'content' / 'Pack' / \
+        old_path = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / \
             f'Bootup_{lang}.pack'
         if old_path.exists():
             old_path.unlink()
@@ -552,7 +552,7 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
 
     print(f'Creating new Bootup_{lang}.pack...')
     tmp_boot_path = bootup_from_msbts(lang)[0]
-    merged_boot_path = util.get_modpack_dir() / '9999_BCML' / 'content' / \
+    merged_boot_path = util.get_modpack_dir() / '9999_BCML' / util.get_content_path() / \
         'Pack' / f'Bootup_{lang}.pack'
     if merged_boot_path.exists():
         util.vprint(f'  Removing old Bootup_{lang}.pack...')
@@ -560,7 +560,7 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     merged_boot_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(str(tmp_boot_path), str(merged_boot_path))
 
-    rstb_path = util.get_modpack_dir() / '9999_BCML' / 'content' / 'System' / 'Resource' /\
+    rstb_path = util.get_modpack_dir() / '9999_BCML' / util.get_content_path() / 'System' / 'Resource' /\
                                          'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
         table: rstb.ResourceSizeTable = rstb.util.read_rstb(

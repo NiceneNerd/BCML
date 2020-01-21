@@ -52,7 +52,7 @@ class EventInfoMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
-            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             event_info = byml.Byml(
                 util.decompress(

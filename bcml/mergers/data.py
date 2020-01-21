@@ -81,7 +81,7 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     :rtype: int
     """
     if not bootup_path:
-        master_boot = util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+        master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as b_file:
@@ -91,9 +91,9 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
     gamedata_bytes = bgdata.get_bytes()
     new_pack.add_file('GameData/gamedata.ssarc',
                       util.compress(gamedata_bytes))
-    (util.get_master_modpack_dir() / 'content' /
+    (util.get_master_modpack_dir() / util.get_content_path() /
      'Pack').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
+    with (util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack').open('wb') as b_file:
         new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
 
@@ -110,7 +110,7 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     :rtype: int
     """
     if not bootup_path:
-        master_boot = util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+        master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
     with bootup_path.open('rb') as b_file:
@@ -120,8 +120,8 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
     savedata_bytes = bgsvdata.get_bytes()
     new_pack.add_file('GameData/savedataformat.ssarc',
                       util.compress(savedata_bytes))
-    (util.get_master_modpack_dir() / 'content' / 'Pack').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack').open('wb') as b_file:
+    (util.get_master_modpack_dir() / util.get_content_path() / 'Pack').mkdir(parents=True, exist_ok=True)
+    with (util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack').open('wb') as b_file:
         new_pack.write(b_file)
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
 
@@ -306,7 +306,7 @@ class GameDataMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
-            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_gamedata_entries(
                 sarc.SARC(
@@ -449,7 +449,7 @@ class SaveDataMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
-            with (mod_dir / 'content' / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
+            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
                 bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
             return get_modded_savedata_entries(
                 sarc.SARC(
@@ -648,7 +648,7 @@ class ActorInfoMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        actor_path = (util.get_master_modpack_dir() / 'content' /
+        actor_path = (util.get_master_modpack_dir() / util.get_content_path() /
                   'Actor' / 'ActorInfo.product.sbyml')
         print('Loading modded actor info...')
         modded_actors = self.consolidate_diffs(self.get_all_diffs())

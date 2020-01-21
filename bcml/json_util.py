@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass, field, is_dataclass
+from functools import lru_cache
 import json
 from typing import Union
 
@@ -10,7 +11,10 @@ import byml.byml as byml
 class DummyReader:
     _crc32_to_string_map: dict = {}
 DUMMY = DummyReader()
-_try_name = lambda idx, k, parent_crc32: _get_pstruct_name(DUMMY, idx, k, parent_crc32)
+
+@lru_cache(None)
+def _try_name(idx, k, parent_crc32):
+    return _get_pstruct_name(DUMMY, idx, k, parent_crc32)
 
 class AampJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -24,12 +28,12 @@ class AampJSONEncoder(json.JSONEncoder):
             return super().default(o)
 
     def encode_pio(self, pio: aamp.ParameterIO) -> dict:
-        return {
+        enc = {
             'type': pio.type,
-            'version': pio.version,
-            'lists': {_try_name(idx, k, pio._crc32): self.encode_plist(pl) for idx, (k, pl) in enumerate(pio.lists.items())},
-            'objects': {_try_name(idx, k, pio._crc32): self.encode_pobject(pobj) for idx, (k, pobj) in enumerate(pio.objects.items())},
+            'version': pio.version
         }
+        enc.update(self.encode_plist(pio))
+        return enc
 
     def encode_plist(self, plist: aamp.ParameterList) -> dict:
         return {
@@ -83,48 +87,54 @@ class AampJSONDecoder(json.JSONDecoder):
         if isinstance(o, aamp.ParameterObject):
             return o
         pobj = aamp.ParameterObject()
-        if o['params']:
-            for param, val in o['params'].items():
+        key_obj = o
+        if 'params' in o:
+            key_obj = o['params']
+        if key_obj:
+            for param, val in key_obj.items():
                 if param.isnumeric():
                     pobj.params[int(param)] = self._to_param(val)
                 else:
                     pobj.set_param(param, self._to_param(val))
         return pobj
 
+
+    def _set_list(self, name, plist, content):
+        if name.isnumeric():
+            plist.lists[int(name)] = self._to_plist(content)
+        else:
+            plist.set_list(name, self._to_plist(content))
+
+    def _set_obj(self,name, plist, content):
+        if name.isnumeric():
+            plist.objects[int(name)] = self._to_pobj(content)
+        else:
+            plist.set_object(name, self._to_pobj(content))
+
     def _to_plist(self, o) -> aamp.ParameterList:
         plist = aamp.ParameterList()
-        if isinstance(o, aamp.ParameterList):
-            return o
         if o['lists']:
-            for name, content in o['lists'].items():
-                if name.isnumeric():
-                    plist.lists[int(name)] = self._to_plist(content)
-                else:
-                    plist.set_list(name, self._to_plist(content))
+            [
+                self._set_list(name, plist, content) for name, content in o['lists'].items()
+            ]
         if o['objects']:
-            for name, content in o['objects'].items():
-                if content['params']:
-                    if name.isnumeric():
-                        plist.objects[int(name)] = self._to_pobj(content)
-                    else:
-                        plist.set_object(name, self._to_pobj(content))
+            [
+                self._set_obj(name, plist, content) for name, content in o['objects'].items() \
+                   if type(content) != aamp.ParameterObject
+            ]
         return plist
 
     def _to_pio(self, o) -> aamp.ParameterIO:
         pio = aamp.ParameterIO(o['type'], o['version'])
         if o['lists']:
-            for name, content in o['lists'].items():
-                if name.isnumeric():
-                    pio.lists[int(name)] = self._to_plist(content)
-                else:
-                    pio.set_list(name, self._to_plist(content))
+            [
+                self._set_list(name, pio, content) for name, content in o['lists'].items()
+            ]
         if o['objects']:
-            for name, content in o['objects'].items():
-                if content['params']:
-                    if name.isnumeric():
-                        pio.objects[int(name)] = self._to_pobj(content)
-                    else:
-                        pio.set_object(name, self._to_pobj(content))
+            [
+                self._set_obj(name, pio, content) for name, content in o['objects'].items() \
+                   if type(content) != aamp.ParameterObject
+            ]
         return pio
     
     def _to_param(self, o):
@@ -133,13 +143,13 @@ class AampJSONDecoder(json.JSONDecoder):
             param_type = getattr(parameters, o['_type'])
         except TypeError:
             return o
-        if is_dataclass(param_type):
+        if is_dataclass(param_type) and not param_type == parameters.Curve:
             return param_type(**o['value'])
         else:
             return param_type(o['value'])
 
 
-def json_to_aamp(data: Union[str, bytes]) -> dict:
+def json_diff_to_aamp(data: Union[str, bytes]) -> dict:
     if isinstance(data, bytes):
         data = data.decode(encoding='utf-8')
     json_data = json.loads(data, encoding='utf-8')
@@ -147,6 +157,12 @@ def json_to_aamp(data: Union[str, bytes]) -> dict:
     return {
         file: dec._to_plist(json_data[file]) for file in json_data
     }
+
+def json_to_aamp(data: Union[str, bytes]) -> aamp.ParameterIO:
+    if isinstance(data, bytes):
+        data = data.decode(encoding='utf-8')
+    return json.loads(data, encoding='utf-8', cls=AampJSONDecoder)
+    
 
 
 class BymlJSONEncoder(json.JSONEncoder):

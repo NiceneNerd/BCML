@@ -66,13 +66,13 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
     rules = RulesParser()
     rules.read(str(rules_path))
     info = {
-        'name': str(rules['Definition']['name']),
-        'description': str(rules['Definition'].get('description', '')),
-        'url': str(rules['Definition'].get('url', '')),
-        'image': str(rules['Definition'].get('image', '')),
+        'name': str(rules['Definition']['name']).strip('\"\' '),
+        'description': str(rules['Definition'].get('description', '')).strip('\"\' '),
+        'url': str(rules['Definition'].get('url', '')).strip('\"\' '),
+        'image': str(rules['Definition'].get('image', '')).strip('\"\' '),
         'version': 1.0,
         'dependencies': [],
-        'options': []
+        'options': {}
     }
     info['id'] = base64.urlsafe_b64encode(info['name'].encode('utf8')).decode('utf8')
     try:

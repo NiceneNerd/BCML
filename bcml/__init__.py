@@ -1,2 +1,2 @@
-DEBUG = False
-NO_CEF = True
+DEBUG = True
+NO_CEF = False

@@ -101,11 +101,11 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     map_bytes = None
-    aoc_dir = tmp_dir / 'aoc' / '0010' / 'content'
+    aoc_dir = tmp_dir / util.get_dlc_path() / '0010' / util.get_content_path()
     if not aoc_dir.exists():
-        aoc_dir = tmp_dir / 'aoc' / 'content' / '0010'
+        aoc_dir = tmp_dir / util.get_dlc_path() / util.get_content_path() / '0010'
         if not aoc_dir.exists():
-            aoc_dir = tmp_dir / 'aoc' / '0010'
+            aoc_dir = tmp_dir / util.get_dlc_path() / '0010'
     if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
         with (aoc_dir / 'Pack' / 'AocMainField.pack').open('rb') as s_file:
             map_pack = sarc.read_file_and_make_sarc(s_file)
@@ -119,11 +119,11 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
     if not map_bytes:
         if (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
             f'{map_unit.section}_{map_unit.type}.smubin').exists():
-            map_bytes = (tmp_dir / 'aoc' / '0010' / 'Map' / 'MainField' / map_unit.section /\
+            map_bytes = (tmp_dir / util.get_dlc_path() / '0010' / 'Map' / 'MainField' / map_unit.section /\
                          f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
-        elif (tmp_dir / 'content' / 'Map' / 'MainField' / map_unit.section /\
+        elif (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\
                 f'{map_unit.section}_{map_unit.type}.smubin').exists():
-            map_bytes = (tmp_dir / 'content' / 'Map' / 'MainField' / map_unit.section /\
+            map_bytes = (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\
                          f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
     if not map_bytes:
         raise FileNotFoundError(
@@ -213,7 +213,7 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
     )
     new_map['Objs'].sort(key=lambda actor: actor['HashId'])
 
-    aoc_out: Path = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \
+    aoc_out: Path = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / 'Map' / \
         'MainField' / map_unit.section / \
         f'{map_unit.section}_{map_unit.type}.smubin'
     aoc_out.parent.mkdir(parents=True, exist_ok=True)
@@ -221,15 +221,15 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
     aoc_out.write_bytes(util.compress(aoc_bytes))
     new_map['Objs'] = [obj for obj in new_map['Objs']
                        if not obj['UnitConfigName'].startswith('DLC')]
-    (util.get_master_modpack_dir() / 'content' / 'Map' /
+    (util.get_master_modpack_dir() / util.get_content_path() / 'Map' /
      'MainField' / map_unit.section).mkdir(parents=True, exist_ok=True)
-    base_out = util.get_master_modpack_dir() / 'content' / 'Map' / 'MainField' / \
+    base_out = util.get_master_modpack_dir() / util.get_content_path() / 'Map' / 'MainField' / \
         map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
     base_out.parent.mkdir(parents=True, exist_ok=True)
     base_bytes = byml.Writer(new_map, be=util.get_settings('wiiu')).get_bytes()
     base_out.write_bytes(util.compress(base_bytes))
     return {
-        'aoc': (
+        util.get_dlc_path(): (
             f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin',
             rstb_calc.calculate_file_size_with_ext(aoc_bytes, True, '.mubin')
         ),
@@ -297,7 +297,7 @@ def merge_dungeonstatic(diffs: dict = None):
                 new_static['StartPos'][base_dungeons.index(
                     dungeon)][key] = value
 
-    output_static = util.get_master_modpack_dir() / 'aoc' / '0010' / 'Map' / \
+    output_static = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / 'Map' / \
         'CDungeon' / 'Static.smubin'
     output_static.parent.mkdir(parents=True, exist_ok=True)
     output_static.write_bytes(
@@ -377,16 +377,16 @@ class MapMerger(mergers.Merger):
     def perform_merge(self):
         no_del = self._options['no_del']
         link_del = self._options['link_del']
-        aoc_pack = util.get_master_modpack_dir() / 'aoc' / '0010' / \
+        aoc_pack = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / \
             'Pack' / 'AocMainField.pack'
         if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
             print('Emptying AocMainField.pack...')
             aoc_pack.parent.mkdir(parents=True, exist_ok=True)
             aoc_pack.write_bytes(b'')
         shutil.rmtree(str(util.get_master_modpack_dir() /
-                        'aoc' / '0010' / 'Map' / 'MainField'), ignore_errors=True)
+                        util.get_dlc_path() / '0010' / 'Map' / 'MainField'), ignore_errors=True)
         shutil.rmtree(str(util.get_master_modpack_dir() /
-                        'content' / 'Map' / 'MainField'), ignore_errors=True)
+                        util.get_content_path() / 'Map' / 'MainField'), ignore_errors=True)
         log_path = util.get_master_modpack_dir() / 'logs' / 'map.log'
         if log_path.exists():
             log_path.unlink()
@@ -410,7 +410,7 @@ class MapMerger(mergers.Merger):
         pool.close()
         pool.join()
         for result in rstb_results:
-            rstb_vals[result['aoc'][0]] = result['aoc'][1]
+            rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
             rstb_vals[result['main'][0]] = result['main'][1]
 
         print('Adjusting RSTB...')
@@ -434,7 +434,7 @@ class DungeonStaticMerger(mergers.Merger):
                          'dstatic.json', options={})
     
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        dstatic_path = mod_dir / 'aoc' / '0010' / 'Map' / 'CDungeon' / 'Static.smubin'
+        dstatic_path = mod_dir / util.get_dlc_path() / '0010' / 'Map' / 'CDungeon' / 'Static.smubin'
         if dstatic_path.exists():
             return get_dungeonstatic_diff(dstatic_path)
         else:

@@ -63,7 +63,7 @@ def set_size(entry: str, size: int):
     :param size: The resource size
     :type size: int
     """
-    rstb_path = util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' /\
+    rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /\
                 'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
         table = read_rstb(rstb_path, be=util.get_settings('wiiu'))
@@ -475,7 +475,7 @@ def generate_master_rstb():
         if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
             table.delete_entry(f'Message/Msg_{lang}.product.sarc')
 
-    rstb_path = util.get_master_modpack_dir() / 'content' / 'System' / 'Resource' / \
+    rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' / \
                                                 'ResourceSizeTable.product.srsizetable'
     if not rstb_path.exists():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)

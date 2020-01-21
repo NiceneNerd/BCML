@@ -2,12 +2,17 @@ from setuptools import setup
 from pathlib import Path
 from bcml.__version__ import VERSION
 
+from setuptools_rust import Binding, RustExtension
+
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
 
 setup(
     name='bcml',
     version=VERSION,
+    rust_extensions=[
+        RustExtension('lib_bcml', 'Cargo.toml', binding=Binding.PyO3)
+    ],
     author='NiceneNerd',
     author_email='macadamiadaze@gmail.com',
     description='A mod manager for The Legend of Zelda: Breath of the Wild on Cemu',
@@ -37,5 +42,6 @@ setup(
         'sarc>=2.0.1',
         'rstb>=1.1.2',
         'xxhash>=1.3.0'
-    ]
+    ],
+    zip_safe=False
 )
