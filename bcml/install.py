@@ -264,54 +264,60 @@ def refresh_cemu_mods():
             break
     # Issue #33 - end Entry layout check
     for entry in gpack.getElementsByTagName('Entry'):
-    # Issue #33 - handle BCML node removal by Cemu version
+    # Issue #33 - handle BCML node by Cemu version
         if new_cemu_version:
             if 'BCML' in entry.getAttribute('filename'):
                 gpack.removeChild(entry)
         else:
             if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
                 gpack.removeChild(entry)
-    # Issue #33 - end BCML node removal
-    bcmlentry = settings.createElement('Entry')
-    # Issue #33 - handle new BCML node creation by Cemu version
     if new_cemu_version:
-        bcmlentry.setAttribute('filename', f'graphicPacks\\BCML\\9999_BCML\\rules.txt')
-        entrypresethead = settings.createElement('Preset')
-        entrypreset = settings.createElement('preset')
-        entrypreset.appendChild(settings.createTextNode(''))
-        entrypresethead.appendChild(entrypreset)
-        bcmlentry.appendChild(entrypresethead)
+        bcmlentry = create_settings_mod_node_cemu17plus(settings)
     else:
-        entryfile = settings.createElement('filename')
-        entryfile.appendChild(settings.createTextNode(
-            f'graphicPacks\\BCML\\9999_BCML\\rules.txt'))
-        entrypreset = settings.createElement('preset')
-        entrypreset.appendChild(settings.createTextNode(''))
-        bcmlentry.appendChild(entryfile)
-        bcmlentry.appendChild(entrypreset)
-    # Issue #33 - end new BCML node creation
+        bcmlentry = create_settings_mod_node_cemu17pre(settings)
+    # Issue #33 - end BCML node
     gpack.appendChild(bcmlentry)
     for mod in util.get_installed_mods():
-        modentry = settings.createElement('Entry')
-        # Issue #33 - handle new mod node creation by Cemu version
+        # Issue #33 - handle new mod nodes by Cemu version
         if new_cemu_version:
-            modentry.setAttribute('filename', f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt')
-            entrypresethead = settings.createElement('Preset')
-            entrypreset = settings.createElement('preset')
-            entrypreset.appendChild(settings.createTextNode(''))
-            entrypresethead.appendChild(entrypreset)
-            modentry.appendChild(entrypresethead)
+            modentry = create_settings_mod_node_cemu17plus(settings, mod)
         else:
-            entryfile = settings.createElement('filename')
-            entryfile.appendChild(settings.createTextNode(
-                f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'))
-            entrypreset = settings.createElement('preset')
-            entrypreset.appendChild(settings.createTextNode(''))
-            modentry.appendChild(entryfile)
-            modentry.appendChild(entrypreset)
-        # Issue #33 - end handling new mod node creation
+            modentry = create_settings_mod_node_cemu17pre(settings, mod)
+        # Issue #33 - end handling new mod nodes
         gpack.appendChild(modentry)
     settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
+
+
+# Issue #33 - break node creation out into functions for future readability
+def create_settings_mod_node_cemu17plus(settings, mod=None) -> minidom.Element:
+    if mod:
+        modpath = f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'
+    else:
+        modpath = f'graphicPacks\\BCML\\9999_BCML\\rules.txt'
+    modentry = settings.createElement('Entry')
+    modentry.setAttribute('filename', modpath)
+    entrypresethead = settings.createElement('Preset')
+    entrypreset = settings.createElement('preset')
+    entrypreset.appendChild(settings.createTextNode(''))
+    entrypresethead.appendChild(entrypreset)
+    modentry.appendChild(entrypresethead)
+    return modentry
+
+
+def create_settings_mod_node_cemu17pre(settings, mod=None) -> minidom.Element:
+    if mod:
+        modpath = f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'
+    else:
+        modpath = f'graphicPacks\\BCML\\9999_BCML\\rules.txt'
+    modentry = settings.createElement('Entry')
+    entryfile = settings.createElement('filename')
+    entryfile.appendChild(settings.createTextNode(modpath))
+    entrypreset = settings.createElement('preset')
+    entrypreset.appendChild(settings.createTextNode(''))
+    modentry.appendChild(entryfile)
+    modentry.appendChild(entrypreset)
+    return modentry
+# Issue #33 - end node creation functions
 
 
 def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_merge: bool = False,
