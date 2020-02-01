@@ -266,7 +266,7 @@ def refresh_cemu_mods():
     for entry in gpack.getElementsByTagName('Entry'):
     # Issue #33 - handle BCML node removal by Cemu version
         if new_cemu_version:
-            if 'BCML' in entry['filename']:
+            if 'BCML' in entry.getAttribute('filename'):
                 gpack.removeChild(entry)
         else:
             if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
@@ -275,7 +275,7 @@ def refresh_cemu_mods():
     bcmlentry = settings.createElement('Entry')
     # Issue #33 - handle new BCML node creation by Cemu version
     if new_cemu_version:
-        entryfile['filename'] = f'graphicPacks\\BCML\\9999_BCML\\rules.txt'
+        bcmlentry.setAttribute('filename', f'graphicPacks\\BCML\\9999_BCML\\rules.txt')
         entrypresethead = settings.createElement('Preset')
         entrypreset = settings.createElement('preset')
         entrypreset.appendChild(settings.createTextNode(''))
@@ -295,7 +295,7 @@ def refresh_cemu_mods():
         modentry = settings.createElement('Entry')
         # Issue #33 - handle new mod node creation by Cemu version
         if new_cemu_version:
-            entryfile['filename'] = f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'
+            modentry.setAttribute('filename', f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt')
             entrypresethead = settings.createElement('Preset')
             entrypreset = settings.createElement('preset')
             entrypreset.appendChild(settings.createTextNode(''))
