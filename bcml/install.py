@@ -256,29 +256,50 @@ def refresh_cemu_mods():
     except IndexError:
         gpack = settings.createElement('GraphicPack')
         settings.appendChild(gpack)
+    # Issue #33 - check for new cemu Entry layout
+    new_cemu_version = False
     for entry in gpack.getElementsByTagName('Entry'):
-        if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-            gpack.removeChild(entry)
-    bcmlentry = settings.createElement('Entry')
-    entryfile = settings.createElement('filename')
-    entryfile.appendChild(settings.createTextNode(
-        f'graphicPacks\\BCML\\9999_BCML\\rules.txt'))
-    entrypreset = settings.createElement('preset')
-    entrypreset.appendChild(settings.createTextNode(''))
-    bcmlentry.appendChild(entryfile)
-    bcmlentry.appendChild(entrypreset)
+        if len(entry.getElementsByTagName('filename')) == 0:
+            new_cemu_version = True
+            break
+    # Issue #33 - end Entry layout check
+    for entry in gpack.getElementsByTagName('Entry'):
+    # Issue #33 - handle BCML node by Cemu version
+        if new_cemu_version:
+            if 'BCML' in entry.getAttribute('filename'):
+                gpack.removeChild(entry)
+        else:
+            if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+                gpack.removeChild(entry)
+    bcmlentry = create_settings_mod_node(settings, new_cemu_version)
+    # Issue #33 - end BCML node
     gpack.appendChild(bcmlentry)
     for mod in util.get_installed_mods():
-        modentry = settings.createElement('Entry')
-        entryfile = settings.createElement('filename')
-        entryfile.appendChild(settings.createTextNode(
-            f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'))
-        entrypreset = settings.createElement('preset')
-        entrypreset.appendChild(settings.createTextNode(''))
-        modentry.appendChild(entryfile)
-        modentry.appendChild(entrypreset)
+        # Issue #33 - handle new mod nodes by Cemu version
+        modentry = create_settings_mod_node(settings, new_cemu_version, mod)
+        # Issue #33 - end handling new mod nodes
         gpack.appendChild(modentry)
     settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
+
+
+# Issue #33 - break node creation out into functions for future readability
+def create_settings_mod_node(settings, new_cemu: bool, mod=None) -> minidom.Element:
+    if mod:
+        modpath = f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'
+    else:
+        modpath = f'graphicPacks\\BCML\\9999_BCML\\rules.txt'
+    modentry = settings.createElement('Entry')
+    if new_cemu:
+        modentry.setAttribute('filename', modpath)
+    else:
+        entryfile = settings.createElement('filename')
+        entryfile.appendChild(settings.createTextNode(modpath))
+    entrypresethead = settings.createElement('Preset')
+    entrypreset = settings.createElement('preset')
+    entrypreset.appendChild(settings.createTextNode(''))
+    entrypresethead.appendChild(entrypreset)
+    modentry.appendChild(entrypresethead)
+    return modentry
 
 
 def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_merge: bool = False,
