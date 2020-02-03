@@ -276,14 +276,14 @@ def refresh_cemu_mods():
     gpack.appendChild(bcmlentry)
     for mod in util.get_installed_mods():
         # Issue #33 - handle new mod nodes by Cemu version
-        modentry = create_settings_mod_node(settings, mod, new_cemu_version)
+        modentry = create_settings_mod_node(settings, new_cemu_version, mod)
         # Issue #33 - end handling new mod nodes
         gpack.appendChild(modentry)
     settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
 # Issue #33 - break node creation out into functions for future readability
-def create_settings_mod_node(settings, mod=None, new_cemu: bool) -> minidom.Element:
+def create_settings_mod_node(settings, new_cemu: bool, mod=None) -> minidom.Element:
     if mod:
         modpath = f'graphicPacks\\BCML\\{mod.path.parts[-1]}\\rules.txt'
     else:
