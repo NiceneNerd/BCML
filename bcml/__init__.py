@@ -20,16 +20,19 @@ from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog
 
-from bcml import data, install, merge, pack, rstable, texts, util, mubin, events, mergers
-from bcml.Ui_about import Ui_AboutDialog
-from bcml.Ui_install import Ui_InstallDialog
-from bcml.Ui_main import Ui_MainWindow
-from bcml.Ui_progress import Ui_ProgressDialog
-from bcml.Ui_settings import Ui_SettingsDialog
-from bcml.Ui_package import Ui_PackageDialog
-from bcml.Ui_options import Ui_OptionsDialog
-from bcml.util import BcmlMod
-
+try:
+    from bcml import data, install, merge, pack, rstable, texts, util, mubin, events, mergers
+    from bcml.Ui_about import Ui_AboutDialog
+    from bcml.Ui_install import Ui_InstallDialog
+    from bcml.Ui_main import Ui_MainWindow
+    from bcml.Ui_progress import Ui_ProgressDialog
+    from bcml.Ui_settings import Ui_SettingsDialog
+    from bcml.Ui_package import Ui_PackageDialog
+    from bcml.Ui_options import Ui_OptionsDialog
+    from bcml.util import BcmlMod
+    uhoh = False
+except ImportError:
+    uhoh = True
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
@@ -1301,9 +1304,18 @@ def download_progress(count, block_size, total_size):
 
 
 def main():
+    app = QtWidgets.QApplication([])
+    if uhoh:
+        QtWidgets.QMessageBox.warning(
+            None,
+            'Error',
+            'BCML requires the latest 64 bit Visual C++ redistributable. Download it here: '
+            '<a href="https://aka.ms/vs/16/release/vc_redist.x64.exe">'
+            'https://aka.ms/vs/16/release/vc_redist.x64.exe</a>'
+        )
+        sys.exit(0)
     util.clear_temp_dir()
     util.create_schema_handler()
-    app = QtWidgets.QApplication([])
     ver = platform.python_version_tuple()
     if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
         QtWidgets.QMessageBox.warning(

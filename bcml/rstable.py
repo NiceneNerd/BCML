@@ -245,7 +245,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 4.05)
     elif ext == '.bas':
-        real_size *= int(1.05)
+        real_size = int(1.05 * real_size)
         if real_size < 100:
             return real_size * 20
         elif 100 < real_size <= 200:
@@ -263,7 +263,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 4.5)
     elif ext == '.baslist':
-        real_size *= 1.1
+        real_size = int(1.05 * real_size)
         if real_size < 100:
             return real_size * 15
         elif 100 < real_size <= 200:
@@ -597,14 +597,17 @@ class RstbMerger(mergers.Merger):
             for line in log.readlines()[1:]:
                 row = line.split(',')
                 name = row[0]
-                size = int(row[1])
+                try:
+                    size = int(row[1])
+                except ValueError:
+                    size = int(float(row[1]))
                 old_size = 0
                 if stock_rstb.is_in_table(name):
                     old_size = stock_rstb.get_size(name)
                 if (size == 0 and self._options['leave']) or \
                    (size < old_size and self._options['shrink']):
                     continue
-                diffs[row[0]] = int(row[1])
+                diffs[row[0]] = size
         return diffs
 
     def get_all_diffs(self):

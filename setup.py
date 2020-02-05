@@ -33,13 +33,13 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'aamp>=1.4.0',
+        'aamp>=1.4.1',
         'byml>=2.3.1',
         'syaz0>=1.0.1',
-        'PySide2>=5.13.0',
-        'pyYaml>=5.1.1',
+        'PySide2>=5.14.1',
+        'pyYaml>=5.3',
         'sarc>=2.0.3',
         'rstb>=1.1.3',
-        'xxhash>=1.3.0'
+        'xxhash>=1.4.3'
     ]
 )
