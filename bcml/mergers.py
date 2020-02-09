@@ -1,5 +1,6 @@
 """ Provides abstracted merging objects """
 from abc import ABCMeta
+from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 from bcml import util
@@ -14,9 +15,10 @@ class Merger(metaclass=ABCMeta):
     _description: str
     _log_name: str
     _options: dict
+    _pool: Pool
 
     def __init__(self, friendly_name: str, description: str, log_name: str,
-                 options: dict = None):
+                 options: dict = None, pool: Pool = None):
         self._friendly_name = friendly_name
         self._description = description
         self._log_name = log_name
@@ -24,6 +26,7 @@ class Merger(metaclass=ABCMeta):
             self._options = options
         else:
             self._options = {}
+        self._pool = pool
 
     def friendly_name(self) -> str:
         """ The name of this merger in the UI """
@@ -40,6 +43,9 @@ class Merger(metaclass=ABCMeta):
     def set_options(self, options: dict):
         """ Sets custom options for this merger """
         self._options = options
+
+    def set_pool(self, pool: Pool):
+        self._pool = pool
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         """ Detects changes made to a modded file or files from the base game """

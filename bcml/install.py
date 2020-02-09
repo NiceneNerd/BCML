@@ -75,7 +75,7 @@ def threaded_aamp_diffs(file_info: tuple, tmp_dir: Path):
         return (file_info[0], None)
 
 
-def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, str]]:
+def find_modded_files(tmp_dir: Path, verbose: bool = False, original_pool: Pool = None) -> List[Union[Path, str]]:
     """
     Detects all of the modified files in an extracted mod
 
@@ -137,16 +137,17 @@ def find_modded_files(tmp_dir: Path, verbose: bool = False) -> List[Union[Path, 
     if sarc_files:
         print(f'Scanning files packed in SARCs...')
         num_threads = min(len(sarc_files), cpu_count() - 1)
-        pool = Pool(processes=num_threads)
+        pool = original_pool or Pool(processes=num_threads)
         modded_sarc_files = pool.map(
             partial(find_modded_sarc_files, tmp_dir=tmp_dir, verbose=verbose),
             sarc_files
         )
-        pool.close()
-        pool.join()
         for files in modded_sarc_files:
             total += len(files)
             modded_files.extend(files)
+        if not original_pool:
+            pool.close()
+            pool.join()
         print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
     return modded_files
 
@@ -213,7 +214,7 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
     return modded_files
 
 
-def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) -> List[Path]:
+def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None, original_pool: Pool = None) -> List[Path]:
     """Analyzes a mod and generates BCML log files containing its changes"""
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
@@ -225,8 +226,9 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) ->
     if 'disable' not in options:
         options['disable'] = []
 
+    pool = original_pool or Pool(cpu_count())
     print('Scanning for modified files...')
-    modded_files = find_modded_files(tmp_dir, verbose=verbose)
+    modded_files = find_modded_files(tmp_dir, verbose=verbose, original_pool=original_pool)
     if not modded_files:
         raise RuntimeError('No modified files were found. Very unusual.')
 
@@ -234,10 +236,13 @@ def generate_logs(tmp_dir: Path, verbose: bool = False, options: dict = None) ->
     for merger_class in [merger_class for merger_class in mergers.get_mergers() \
                         if merger_class.NAME not in options['disable']]:
         merger = merger_class()
+        merger.set_pool(pool)
         if options is not None and merger.NAME in options:
             merger.set_options(options[merger.NAME])
         merger.log_diff(tmp_dir, modded_files)
-
+    if not original_pool:
+        pool.close()
+        pool.join()
     return modded_files
 
 
@@ -269,8 +274,11 @@ def refresh_cemu_mods():
             if 'BCML' in entry.getAttribute('filename'):
                 gpack.removeChild(entry)
         else:
-            if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-                gpack.removeChild(entry)
+            try:
+                if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+                    gpack.removeChild(entry)
+            except IndexError:
+                pass
     bcmlentry = create_settings_mod_node(settings, new_cemu_version)
     # Issue #33 - end BCML node
     gpack.appendChild(bcmlentry)
@@ -294,6 +302,7 @@ def create_settings_mod_node(settings, new_cemu: bool, mod=None) -> minidom.Elem
     else:
         entryfile = settings.createElement('filename')
         entryfile.appendChild(settings.createTextNode(modpath))
+        modentry.appendChild(entryfile)
     entrypresethead = settings.createElement('Preset')
     entrypreset = settings.createElement('preset')
     entrypreset.appendChild(settings.createTextNode(''))
@@ -338,6 +347,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
+    pool: Pool
     try:
         rules = util.RulesParser()
         rules.read(tmp_dir / 'rules.txt')
@@ -352,7 +362,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
                 if merger.is_mod_logged(BcmlMod('', 0, tmp_dir)):
                     (tmp_dir / 'logs' / merger.log_name()).unlink()
         else:
-            generate_logs(tmp_dir=tmp_dir, verbose=verbose, options=options)
+            pool = Pool(cpu_count())
+            generate_logs(tmp_dir=tmp_dir, verbose=verbose, options=options, original_pool=pool)
     except Exception as e: # pylint: disable=broad-except
         if hasattr(e, 'error_text'):
             raise e
@@ -447,6 +458,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
                 options['disable'] = []
             for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
                                                 if cls.NAME not in options['disable']]):
+                merger.set_pool(pool)
                 if merger.NAME in options:
                     merger.set_options(options[merger.NAME])
                 if merger.is_mod_logged(output_mod):
@@ -467,6 +479,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
             except FileNotFoundError:
                 pass
             raise clean_error
+    pool.close()
+    pool.join()
     return output_mod
 
 
@@ -543,10 +557,14 @@ def uninstall_mod(mod: Union[Path, BcmlMod, str], wait_merge: bool = False, verb
         print()
 
     if not wait_merge:
+        pool = Pool(cpu_count())
         for merger in mergers.sort_mergers(remergers):
+            merger.set_pool(pool)
             if merger.NAME in partials:
                 merger.set_options({'only_these': partials[merger.NAME]})
             merger.perform_merge()
+        pool.close()
+        pool.join()
     print(f'{mod_name} has been uninstalled.')
 
 
@@ -632,8 +650,12 @@ def refresh_merges(verbose: bool = False):
     print('Cleansing old merges...')
     shutil.rmtree(util.get_master_modpack_dir())
     print('Refreshing merged mods...')
+    pool = Pool(cpu_count())
     for merger in mergers.sort_mergers([merger_class() for merger_class in mergers.get_mergers()]):
+        merger.set_pool(pool)
         merger.perform_merge()
+    pool.close()
+    pool.join()
 
 
 def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
@@ -725,7 +747,8 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
     if not options:
         options = {}
     options['texts'] = {'user_only': False}
-    logged_files = generate_logs(tmp_dir, options=options)
+    pool = Pool(cpu_count())
+    logged_files = generate_logs(tmp_dir, options=options, original_pool=pool)
 
     print('Removing unnecessary files...')
     if (tmp_dir / 'logs' / 'map.yml').exists():
@@ -758,8 +781,6 @@ def create_bnp_mod(mod: Path, output: Path, options: dict = None):
     print('Creating partial packs...')
     sarc_files = {file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS}
     if sarc_files:
-        num_threads = min(len(sarc_files), cpu_count())
-        pool = Pool(processes=num_threads)
         pool.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
         pool.close()
         pool.join()

@@ -282,7 +282,8 @@ def threaded_merge(item, verbose: bool) -> (str, dict):
     return util.get_canon_name(file), failures
 
 
-def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[str] = None):
+def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[str] = None,
+               original_pool: multiprocessing.Pool = None):
     """Performs deep merge on all installed AAMP files"""
     mods = get_deepmerge_mods()
     if not mods:
@@ -305,10 +306,11 @@ def deep_merge(verbose: bool = False, wait_rstb: bool = False, only_these: List[
     if not diffs:
         return
     num_threads = min(multiprocessing.cpu_count(), len(diffs))
-    pool = multiprocessing.Pool(processes=num_threads)
+    pool = original_pool or multiprocessing.Pool(processes=num_threads)
     pool.map(partial(threaded_merge, verbose=verbose), diffs.items())
-    pool.close()
-    pool.join()
+    if not original_pool:
+        pool.close()
+        pool.join()
 
     if not wait_rstb:
         bcml.rstable.generate_master_rstb()
@@ -381,9 +383,13 @@ class DeepMerger(mergers.Merger):
 
     def perform_merge(self):
         if 'only_these' in self._options:
-            deep_merge(wait_rstb=True, only_these=self._options['only_these'])
+            deep_merge(
+                wait_rstb=True,
+                only_these=self._options['only_these'],
+                original_pool=self._pool
+            )
         else:
-            deep_merge(wait_rstb=True)
+            deep_merge(wait_rstb=True, original_pool=self._pool)
 
     def get_checkbox_options(self):
         return []

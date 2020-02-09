@@ -74,14 +74,16 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for opened_sarc in reversed(opened_sarcs):
         for file in [file for file in opened_sarc.list_files() if file not in files_added]:
             data = opened_sarc.get_file_data(file).tobytes()
-            if util.is_file_modded(file.replace('.s', '.'), data, count_new=True):
+            real_data = util.unyaz_if_needed(data)
+            if util.is_file_modded(file.replace('.s', '.'), real_data, count_new=True):
                 if not Path(file).suffix in util.SARC_EXTS:
+                    del real_data
                     new_sarc.add_file(file, data)
                     files_added.append(file)
                 else:
                     if file not in nested_sarcs:
                         nested_sarcs[file] = []
-                    nested_sarcs[file].append(util.unyaz_if_needed(data))
+                    nested_sarcs[file].append(real_data)
     for file, sarcs in nested_sarcs.items():
         merged_bytes = merge_sarcs(file, sarcs)[1]
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
@@ -113,8 +115,14 @@ class PackMerger(mergers.Merger):
     """ A merger for modified pack files """
     NAME: str = 'packs'
 
-    def __init__(self):
-        super().__init__('SARC pack merger', 'Merges modified files within SARCs', 'packs.log', {})
+    def __init__(self, pool: Pool = None):
+        super().__init__(
+            'SARC pack merger',
+            'Merges modified files within SARCs',
+            'packs.log',
+            {},
+            pool
+        )
 
     def can_partial_remerge(self):
         return True
@@ -187,11 +195,9 @@ class PackMerger(mergers.Merger):
             print('No SARC merging necessary')
             return
         num_threads = min(cpu_count(), len(sarcs))
-        pool = Pool(processes=num_threads)
+        pool = self._pool or Pool(processes=num_threads)
         print(f'Merging {len(sarcs)} SARC files...')
         results = pool.starmap(merge_sarcs, sarcs.items())
-        pool.close()
-        pool.join()
         for result in results:
             file, data = result
             output_path = util.get_master_modpack_dir() / file
@@ -199,6 +205,9 @@ class PackMerger(mergers.Merger):
             if output_path.suffix.startswith('.s'):
                 data = util.compress(data)
             output_path.write_bytes(data)
+        if not self._pool:
+            pool.close()
+            pool.join()
         print('Finished merging SARCs')
 
     def get_checkbox_options(self):

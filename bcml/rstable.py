@@ -326,7 +326,10 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
     }
     for change in changes:
         if zlib.crc32(change.encode()) in table.crc32_map:
-            newsize = int(changes[change]['size'])
+            try:
+                newsize = int(changes[change]['size'])
+            except ValueError:
+                newsize = int(float(changes[change]['size']))
             if newsize == 0:
                 if not changes[change]['leave']:
                     if change.endswith('.bas') or change.endswith('.baslist'):
@@ -421,7 +424,7 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
     return sizes
 
 
-def log_merged_files_rstb():
+def log_merged_files_rstb(original_pool: multiprocessing.Pool = None):
     """ Generates an RSTB log for the master BCML modpack containing merged files """
     print('Updating RSTB for merged files...')
     diffs = {}
@@ -444,12 +447,13 @@ def log_merged_files_rstb():
                   and file.suffix != '.ssarc']
     if sarc_files:
         num_threads = min(multiprocessing.cpu_count(), len(sarc_files))
-        pool = multiprocessing.Pool(processes=num_threads)
+        pool = original_pool or multiprocessing.Pool(processes=num_threads)
         results = pool.map(_get_sizes_in_sarc, sarc_files)
-        pool.close()
-        pool.join()
         for result in results:
             diffs.update(result)
+        if not original_pool:
+            pool.close()
+            pool.join()
     with (util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as log:
         log.write('name,size,path\n')
         for canon, size in diffs.items():
@@ -631,7 +635,7 @@ class RstbMerger(mergers.Merger):
 
     def perform_merge(self):
         print('Perfoming RSTB merge...')
-        log_merged_files_rstb()
+        log_merged_files_rstb(self._pool)
         generate_master_rstb()
 
     def perform_merge_2(self):

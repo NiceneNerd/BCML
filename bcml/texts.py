@@ -520,7 +520,7 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
 
 
 def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text',
-                verbose: bool = False):
+                verbose: bool = False, original_pool: multiprocessing.Pool = None):
     """
     Merges installed text mods and saves the new Bootup_XXxx.pack, fixing the RSTB if needed
 
@@ -558,15 +558,20 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     print('Merging modified text files...')
     modded_text_files = list(merge_dir.rglob('**/*.msyt'))
     num_threads = min(multiprocessing.cpu_count(), len(modded_text_files))
-    pool = multiprocessing.Pool(processes=num_threads)
+    pool = original_pool or multiprocessing.Pool(processes=num_threads)
     thread_merger = partial(
-        threaded_merge_texts, merge_dir=merge_dir, text_mods=text_mods, verbose=verbose)
+        threaded_merge_texts,
+        merge_dir=merge_dir,
+        text_mods=text_mods,
+        verbose=verbose
+    )
     results = pool.map(thread_merger, modded_text_files)
-    pool.close()
-    pool.join()
     for merge_count, rel_path in results:
         if merge_count > 0:
             print(f'  Merged {merge_count} versions of {rel_path}')
+    if not original_pool:
+        pool.close()
+        pool.join()
     print('Generating merged MSBTs...')
     msyt_to_msbt(tmp_dir)
 
@@ -702,4 +707,4 @@ class TextsMerger(mergers.Merger):
         return all_diffs
 
     def perform_merge(self):
-        merge_texts(util.get_settings()['lang'])
+        merge_texts(util.get_settings()['lang'], original_pool=self._pool)

@@ -152,7 +152,7 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
     return byml.Byml(game_dict[file]).parse()
 
 
-def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
+def consolidate_gamedata(gamedata: sarc.SARC, original_pool: Pool = None) -> {}:
     """
     Consolidates all game data in a game data SARC
 
@@ -160,7 +160,7 @@ def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
     :rtype: dict of str: list
     """
     data = {}
-    pool = Pool(processes=cpu_count())
+    pool = original_pool or Pool(processes=cpu_count())
     game_dict = {}
     for file in gamedata.list_files():
         game_dict[file] = gamedata.get_file_data(file).tobytes()
@@ -168,8 +168,9 @@ def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
         partial(_bgdata_from_bytes, game_dict=game_dict),
         gamedata.list_files()
     )
-    pool.close()
-    pool.join()
+    if not original_pool:
+        pool.close()
+        pool.join()
     del game_dict
     del gamedata
     for result in results:
@@ -190,7 +191,7 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     return {data_type: diffs}
 
 
-def get_modded_gamedata_entries(gamedata: sarc.SARC) -> {}:
+def get_modded_gamedata_entries(gamedata: sarc.SARC, original_pool: Pool = None) -> {}:
     """
     Gets all of the modified gamedata entries in a dict of modded gamedata contents.
 
@@ -199,20 +200,21 @@ def get_modded_gamedata_entries(gamedata: sarc.SARC) -> {}:
     :returns: Returns a dictionary with each data type and the modified entries for it.
     :rtype: dict of str: dict of str: dict
     """
-    stock_data = consolidate_gamedata(get_stock_gamedata())
-    mod_data = consolidate_gamedata(gamedata)
+    stock_data = consolidate_gamedata(get_stock_gamedata(), original_pool)
+    mod_data = consolidate_gamedata(gamedata, original_pool)
     diffs = {}
-    pool = Pool(cpu_count())
+    pool = original_pool or Pool(cpu_count())
     results = pool.map(
         partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data),
         list(mod_data.keys())
     )
-    pool.close()
-    pool.join()
     for result in results:
         _, entries = list(result.items())[0]
         if entries:
             diffs.update(result)
+    if not original_pool:
+        pool.close()
+        pool.join()
     return diffs
 
 
@@ -546,7 +548,8 @@ class GameDataMerger(mergers.Merger):
                     util.decompress(
                         bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
                     )
-                )
+                ),
+                original_pool=self._pool
             )
         else:
             return {}

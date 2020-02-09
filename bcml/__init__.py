@@ -441,9 +441,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def MergePacks_Clicked(self):
+        merger = pack.PackMerger()
         self.PerformOperation(
-            pack.merge_installed_packs,
-            (False, None, False, True),
+            pack.PackMerger.perform_merge,
+            (merger),
             title='Remerging Packs'
         )
 
