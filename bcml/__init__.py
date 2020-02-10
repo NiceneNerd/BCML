@@ -393,6 +393,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def InstallClicked(self, preload_mod: Path = None):
         def install_all(result: dict):
             mods = []
+            from multiprocessing import Pool, cpu_count
+            pool = Pool(cpu_count())
             for i, mod in enumerate(result['paths']):
                 mods.append(install.install_mod(
                     mod,
@@ -417,7 +419,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     merger.set_options(result['options'][merger.NAME])
                 if merger.NAME in partials:
                     merger.set_options({'only_these': partials[merger.NAME]})
+                merger.set_pool(pool)
                 merger.perform_merge()
+            pool.close()
+            pool.join()
 
         dialog = InstallDialog(self)
         if preload_mod:

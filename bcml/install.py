@@ -347,7 +347,7 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
-    pool: Pool
+    pool: Pool = None
     try:
         rules = util.RulesParser()
         rules.read(tmp_dir / 'rules.txt')
@@ -451,6 +451,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
         print('Mod installed, merge still pending...')
     else:
         try:
+            if not pool:
+                pool = Pool(cpu_count)
             print('Performing merges...')
             if not options:
                 options = {}
@@ -465,6 +467,8 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
                     merger.perform_merge()
             print()
             print(f'{mod_name} installed successfully!')
+            pool.close()
+            pool.join()
         except Exception: # pylint: disable=broad-except
             clean_error = RuntimeError()
             clean_error.error_text = (f'There was an error merging {mod_name}. '
@@ -479,8 +483,6 @@ def install_mod(mod: Path, verbose: bool = False, options: dict = None, wait_mer
             except FileNotFoundError:
                 pass
             raise clean_error
-    pool.close()
-    pool.join()
     return output_mod
 
 
