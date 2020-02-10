@@ -94,6 +94,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
             name = file.name
         else:
             raise ValueError('BFRES name must not be blank if passing file as bytes.')
+    real_size = int(1.05 * real_size)
     if '.Tex' in name:
         if real_size < 100:
             return real_size * 9
@@ -164,6 +165,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
                 real_size = syaz0.get_header(f.read(16)).uncompressed_size
         else:
             real_size = file.stat().st_size
+    real_size = int(real_size * 1.05)
     if ext == '':
         if isinstance(file, Path):
             ext = file.suffix
@@ -176,11 +178,11 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         elif 380 < real_size <= 400:
             return real_size * 6
         elif 400 < real_size <= 450:
-            return int(real_size * 5.5)
+            return int(real_size * 5.75)
         elif 450 < real_size <= 600:
-            return real_size * 5
+            return int(real_size * 5.25)
         elif 600 < real_size <= 1000:
-            return real_size * 4
+            return int(real_size * 4.5)
         elif 1000 < real_size <= 1750:
             return int(real_size * 3.5)
         else:
@@ -199,7 +201,9 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return real_size * 6
     elif ext == '.bdrop':
-        if real_size < 200:
+        if real_size < 150:
+            return max(1024, int(real_size * 10))
+        elif 150 < real_size <= 200:
             return int(real_size * 8.5)
         elif 200 < real_size <= 250:
             return real_size * 7
@@ -213,9 +217,9 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 4
     elif ext == '.bxml':
         if real_size < 350:
-            return real_size * 6
+            return real_size * 7
         elif 350 < real_size <= 450:
-            return real_size * 5
+            return real_size * 6
         elif 450 < real_size <= 550:
             return int(real_size * 4.5)
         elif 550 < real_size <= 650:
@@ -236,16 +240,18 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         else:
             return int(real_size * 6.5)
     elif ext == '.bshop':
-        if real_size < 200:
-            return int(real_size * 7.25)
+        if real_size < 150:
+            return max(1024, int(real_size * 10))
+        elif 150 < real_size <= 200:
+            return int(real_size * 7.5)
         elif 200 < real_size <= 400:
-            return real_size * 6
+            return int(real_size * 7)
         elif 400 < real_size <= 500:
-            return real_size * 5
+            return int(real_size * 6)
         else:
-            return int(real_size * 4.05)
+            return int(real_size * 5)
     elif ext == '.bas':
-        real_size = int(1.05 * real_size)
+        # real_size = int(1.05 * real_size)
         if real_size < 100:
             return real_size * 20
         elif 100 < real_size <= 200:
@@ -257,11 +263,11 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         elif 600 < real_size <= 1500:
             return real_size * 6
         elif 1500 < real_size <= 2000:
-            return int(real_size * 5.5)
+            return int(real_size * 5.75)
         elif 2000 < real_size <= 15000:
-            return real_size * 5
+            return int(real_size * 5.5)
         else:
-            return int(real_size * 4.5)
+            return int(real_size * 5)
     elif ext == '.baslist':
         real_size = int(1.05 * real_size)
         if real_size < 100:
@@ -344,12 +350,14 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
                     else:
                         table.delete_entry(change)
                         change_list.append(
-                            (f'{spaces}Deleted RSTB entry for {change}', True))
+                            (f'{spaces}Deleted RSTB entry for {change}', True)
+                        )
                         change_count['deleted'] += 1
                         continue
                 else:
                     change_list.append(
-                        (f'{spaces}Skipped deleting RSTB entry for {change}', True))
+                        (f'{spaces}Skipped deleting RSTB entry for {change}', True)
+                    )
                     continue
             oldsize = table.get_size(change)
             if newsize <= oldsize:
@@ -556,7 +564,7 @@ class RstbMerger(mergers.Merger):
                 )
                 if ext == '.bdmgparam':
                     rstb_val = 0
-                if rstb_val == 0 and self._options['guess']:
+                if rstb_val == 0 and (self._options['guess'] or ext in ['.bas', '.baslist']):
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)
                     elif ext in ['.bfres', '.sbfres']:
