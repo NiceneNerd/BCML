@@ -191,3 +191,4 @@ typings/
 .env
 assets
 bcml/assets/
+build.ps1

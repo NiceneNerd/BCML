@@ -371,7 +371,10 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> (ResourceSizeTable, L
                     (f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}', True))
                 change_count['updated'] += 1
         else:
-            newsize = int(changes[change]['size'])
+            try:
+                newsize = int(changes[change]['size'])
+            except ValueError:
+                newsize = int(float(changes[change]['size']))
             if newsize == 0:
                 change_list.append(
                     (f'{spaces}Could not calculate size for new entry {change}, skipped', True))
