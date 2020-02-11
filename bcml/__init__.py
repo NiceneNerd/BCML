@@ -970,7 +970,7 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
         except FileNotFoundError:
             self.txtMlc.setText('')
         self.chkDark.setChecked(util.get_settings_bool('dark_theme'))
-        self.chkGuessMerge.setChecked(util.get_settings_bool('guess_merge'))
+        self.chkGuessMerge.setChecked(not util.get_settings_bool('guess_merge'))
         self.drpLang.addItems(texts.LANGUAGES)
         self.drpLang.setCurrentText(util.get_settings()['lang'])
 
@@ -1025,7 +1025,7 @@ class SettingsDialog(QtWidgets.QDialog, Ui_SettingsDialog):
                 QtWidgets.QApplication.instance().setStyleSheet(DARK_THEME)
             else:
                 QtWidgets.QApplication.instance().setStyleSheet('')
-        util.set_settings_bool('guess_merge', self.chkGuessMerge.isChecked())
+        util.set_settings_bool('guess_merge', not self.chkGuessMerge.isChecked())
         util.get_settings()['lang'] = self.drpLang.currentText()
         util.save_settings()
         return super().accept()

@@ -98,5 +98,5 @@ class Ui_SettingsDialog(object):
         self.btnBrowseMlc.setText(QtWidgets.QApplication.translate("SettingsDialog", "Browse...", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("SettingsDialog", "Game Language", None, -1))
         self.chkDark.setText(QtWidgets.QApplication.translate("SettingsDialog", "Use dark theme", None, -1))
-        self.chkGuessMerge.setText(QtWidgets.QApplication.translate("SettingsDialog", "Estimate RSTB values for merged files", None, -1))
+        self.chkGuessMerge.setText(QtWidgets.QApplication.translate("SettingsDialog", "Disable RSTB estimates for merged files", None, -1))
 

@@ -112,7 +112,7 @@ def get_settings() -> {}:
                 'mlc_dir': '',
                 'site_meta': '',
                 'dark_theme': False,
-                'guess_merge': False,
+                'guess_merge': True,
                 'lang': ''
             }
             with settings_path.open('w', encoding='utf-8') as s_file:
