@@ -218,11 +218,13 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
         elif 250 < real_size <= 350:
             return real_size * 6
         elif 350 < real_size <= 450:
+            return int(real_size * 5.75)
+        elif 450 < real_size <= 600:
+            return int(real_size * 5.5)
+        elif 600 < real_size <= 850:
             return int(real_size * 5.25)
-        elif 450 < real_size <= 850:
-            return int(real_size * 4.5)
         else:
-            return real_size * 4
+            return int(real_size * 4.667)
     elif ext == '.bxml':
         if real_size < 350:
             return real_size * 7
@@ -523,11 +525,11 @@ class RstbMerger(mergers.Merger):
     """ A merger for the ResourceSizeTable.product.srsizetable """
     NAME: str = 'rstb'
 
-    def __init__(self, guess: bool = False, leave: bool = False, shrink: bool = False):
+    def __init__(self, guess: bool = True, leave: bool = False, shrink: bool = False):
         super().__init__('RSTB merge', 'Merges changes to ResourceSizeTable.product.srsizetable',
                          'rstb.log')
         self._options = {
-            'guess': guess,
+            'no_guess': not guess,
             'leave': leave,
             'shrink': shrink
         }
