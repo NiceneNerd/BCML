@@ -81,7 +81,10 @@ def set_size(entry: str, size: int):
 
 def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
     if isinstance(file, bytes):
-        real_size = len(file)
+        if file[0:4] == b'Yaz0':
+            real_size = syaz0.get_header(memoryview(file[0:16])).uncompressed_size
+        else:
+            real_size = len(file)
         del file
     else:
         if file.suffix.startswith('.s'):
@@ -94,11 +97,12 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
             name = file.name
         else:
             raise ValueError('BFRES name must not be blank if passing file as bytes.')
-    real_size = int(1.05 * real_size)
     if '.Tex' in name:
         if real_size < 100:
+            return real_size * 10
+        elif 100 < real_size <= 1500:
             return real_size * 9
-        elif 100 < real_size <= 2000:
+        elif 1500 < real_size <= 2000:
             return real_size * 7
         elif 2000 < real_size <= 3000:
             return real_size * 5
@@ -140,19 +144,23 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
         if real_size < 500:
             return real_size * 7
         elif 500 < real_size <= 750:
+            return real_size * 5
+        elif 750 < real_size <= 1250:
             return real_size * 4
-        elif 750 < real_size <= 2000:
-            return real_size * 3
+        elif 1250 < real_size <= 2000:
+            return int(real_size * 3.5)
         elif 2000 < real_size <= 400000:
-            return int(real_size * 1.75)
+            return int(real_size * 2.25)
         elif 400000 < real_size <= 600000:
-            return int(real_size * 1.7)
-        elif 600000 < real_size <= 1500000:
-            return int(real_size * 1.6)
+            return int(real_size * 2.1)
+        elif 600000 < real_size <= 1000000:
+            return int(real_size * 1.95)
+        elif 1000000 < real_size <= 1500000:
+            return int(real_size * 1.85)
         elif 1500000 < real_size <= 3000000:
-            return int(real_size * 1.5)
+            return int(real_size * 1.66)
         else:
-            return int(real_size * 1.25)
+            return int(real_size * 1.45)
 
 
 def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
