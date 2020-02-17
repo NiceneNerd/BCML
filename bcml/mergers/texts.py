@@ -159,7 +159,8 @@ def _msyt_file(file):
         subprocess.call([MSYT_PATH, 'export', str(file)])
 
 
-def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
+def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text',
+                 pool: multiprocessing.Pool = None):
     """ Converts MSBTs in given temp dir to MSYTs """
     if system() == 'Windows':
         subprocess.run(
@@ -172,16 +173,18 @@ def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
         '**/*.msbt') if not msbt.with_suffix('.msyt').exists()]
     if fix_msbts:
         print('Some MSBTs failed to convert. Trying again individually...')
-        multiprocessing.set_start_method('spawn', True)
-        pool = multiprocessing.Pool(processes=min(
+        if not pool:
+            multiprocessing.set_start_method('spawn', True)
+        p = pool or multiprocessing.Pool(processes=min(
             multiprocessing.cpu_count(), len(fix_msbts)))
-        pool.map(_msyt_file, fix_msbts)
-        pool.close()
-        pool.join()
+        p.map(_msyt_file, fix_msbts)
         fix_msbts = [
             msbt.as_posix() for msbt in tmp_dir.rglob('**/*.msbt') \
                 if not msbt.with_suffix('.msyt').exists()
         ]
+        if not pool:
+            p.close()
+            p.join()
     if fix_msbts:
         print(f'{len(fix_msbts)} MSBT files failed to convert. They will not be merged.')
         util.vprint(fix_msbts)
@@ -236,7 +239,8 @@ def write_msbt(msbt_info: tuple):
 
 
 def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
-                     tmp_dir: Path = util.get_work_dir() / 'tmp_text') -> (list, dict):
+                     tmp_dir: Path = util.get_work_dir() / 'tmp_text',
+                     pool: multiprocessing.Pool = None) -> (list, dict):
     hashes = get_msbt_hashes(lang)
     modded_msyts = []
     added_msbts = {}
@@ -252,11 +256,13 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
             write_msbts.append((tmp_dir / msbt, m_data.tobytes()))
             modded_msyts.append(msbt.replace('.msbt', '.msyt'))
     if write_msbts:
-        multiprocessing.set_start_method('spawn', True)
-        pool = multiprocessing.Pool()
-        pool.map(write_msbt, write_msbts)
-        pool.close()
-        pool.join()
+        if not pool:
+            multiprocessing.set_start_method('spawn', True)
+        p = pool or multiprocessing.Pool()
+        p.map(write_msbt, write_msbts)
+        if not pool:
+            p.close()
+            p.join()
     return modded_msyts, added_msbts
 
 
@@ -315,7 +321,7 @@ def threaded_compare_texts(msyt: Path, tmp_dir: Path, lang: str = 'USen') -> (st
 
 
 def get_modded_texts(modded_msyts: list, lang: str = 'USen', tmp_dir: Path = \
-                     util.get_work_dir() / 'tmp_text') -> dict:
+                     util.get_work_dir() / 'tmp_text', pool: multiprocessing.Pool = None) -> dict:
     """
     Builds a dictionary of all edited text entries in modded MSYTs
 
@@ -334,11 +340,10 @@ def get_modded_texts(modded_msyts: list, lang: str = 'USen', tmp_dir: Path = \
     num_threads = min(multiprocessing.cpu_count(), len(check_msyts))
     thread_checker = partial(threaded_compare_texts,
                              tmp_dir=tmp_dir, lang=lang)
-    multiprocessing.set_start_method('spawn', True)
-    pool = multiprocessing.Pool(processes=num_threads)
-    edit_results = pool.map(thread_checker, check_msyts)
-    pool.close()
-    pool.join()
+    if not pool:
+        multiprocessing.set_start_method('spawn', True)
+    p = pool or multiprocessing.Pool(processes=num_threads)
+    edit_results = p.map(thread_checker, check_msyts)
     for edit in edit_results:
         rel_path, edits = edit
         if edits is None:
@@ -346,11 +351,15 @@ def get_modded_texts(modded_msyts: list, lang: str = 'USen', tmp_dir: Path = \
             continue
         if edits['entries']:
             text_edits[rel_path] = edits
+    if not pool:
+        p.close()
+        p.join()
     return text_edits
 
 
 def get_text_mods_from_bootup(bootup_path: Union[Path, str],
-                              tmp_dir: Path = util.get_work_dir() / 'tmp_text', lang: str = ''):
+                              tmp_dir: Path = util.get_work_dir() / 'tmp_text', lang: str = '',
+                              pool: multiprocessing.Pool = None):
     if not lang:
         lang = util.get_file_language(bootup_path)
     print(f'Scanning text modifications for language {lang}...')
@@ -363,7 +372,7 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
     msg_sarc = sarc.SARC(msg_bytes)
     if not msg_sarc:
         print(f'Failed to open Msg_{lang}.product.ssarc, could not analyze texts')
-    modded_msyts, added_msbts = get_modded_msyts(msg_sarc, lang)
+    modded_msyts, added_msbts = get_modded_msyts(msg_sarc, lang, pool=pool)
     added_text_store = None
     if added_msbts:
         added_text_store = store_added_texts(added_msbts)
@@ -373,7 +382,7 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
     for added_text in added_msbts:
         util.vprint(f'{spaces}{spaces}{added_text} has been added')
 
-    problems = msbt_to_msyt()
+    problems = msbt_to_msyt(pool=pool)
     for problem in problems:
         msyt_name = problem.relative_to(tmp_dir).with_suffix('.msyt').as_posix()
         try:
@@ -381,7 +390,7 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
         except ValueError:
             pass
     util.vprint(f'{spaces}Scanning texts files for modified entries...')
-    modded_texts = get_modded_texts(modded_msyts, lang=lang)
+    modded_texts = get_modded_texts(modded_msyts, lang=lang, pool=pool)
     s_modded = 's' if len(modded_texts) != 1 else ''
     s_added = 's' if len(added_msbts) != 1 else ''
     print(f'Language {lang} has total {len(modded_texts)} modified text file{s_modded} and '
@@ -501,7 +510,8 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
     return merge_count, rel_path
 
 
-def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
+def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text',
+                pool: multiprocessing.Pool = None):
     """
     Merges installed text mods and saves the new Bootup_XXxx.pack, fixing the RSTB if needed
 
@@ -532,13 +542,15 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
 
     print('Merging modified text files...')
     modded_text_files = list(merge_dir.rglob('**/*.msyt'))
-    num_threads = min(multiprocessing.cpu_count(), len(modded_text_files))
-    multiprocessing.set_start_method('spawn', True)
-    pool = multiprocessing.Pool(processes=num_threads)
+    if not pool:
+        num_threads = min(multiprocessing.cpu_count(), len(modded_text_files))
+        multiprocessing.set_start_method('spawn', True)
+    p = pool or multiprocessing.Pool(processes=num_threads)
     thread_merger = partial(threaded_merge_texts, merge_dir=merge_dir, text_mods=text_mods)
-    pool.map(thread_merger, modded_text_files)
-    pool.close()
-    pool.join()
+    p.map(thread_merger, modded_text_files)
+    if not pool:
+        p.close()
+        p.join()
     print('Generating merged MSBTs...')
     msyt_to_msbt(tmp_dir)
 
@@ -603,7 +615,11 @@ class TextsMerger(mergers.Merger):
         lang_diffs = {}
         from io import StringIO
         for lang in set(lang_map.values()):
-            dict_diffs, added = get_text_mods_from_bootup(bootups[lang], lang=lang)[:2]
+            dict_diffs, added = get_text_mods_from_bootup(
+                bootups[lang],
+                lang=lang,
+                pool=self._pool
+            )[:2]
             str_buf = StringIO()
             json.dump(dict_diffs, str_buf, ensure_ascii=False)
             lang_diffs[lang] = (str_buf.getvalue(), added)
@@ -676,4 +692,4 @@ class TextsMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        merge_texts(util.get_settings('lang'))
+        merge_texts(util.get_settings('lang'), pool=self._pool)

@@ -5,6 +5,7 @@ import traceback
 import urllib
 from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
+from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 
 import webview
@@ -178,22 +179,30 @@ class Api:
 
     @win_or_lose
     def install_mod(self, params):
-        mods = [
-            install.install_mod(Path(m), options=params['options'], wait_merge=True) \
-                for m in params['mods']
-        ]
-        ms = {}
-        try:
-            for mod in mods:
-                for m in mergers.get_mergers_for_mod(mod):
-                    ms[m] = None if not m.can_partial_remerge() else m.get_mod_affected(mod)
-            for m in ms:
-                if ms[m] is not None:
-                    m.set_options({'only_these': ms[m]})
-                m.perform_merge()
-            print('Install complete')
-        except Exception as e:
-            raise MergeError(e)
+        set_start_method('spawn', True)
+        with Pool(cpu_count()) as pool:
+            mods = [
+                install.install_mod(
+                    Path(m),
+                    options=params['options'],
+                    wait_merge=True,
+                    pool=pool
+                ) \
+                    for m in params['mods']
+            ]
+            ms = {}
+            try:
+                for mod in mods:
+                    for m in mergers.get_mergers_for_mod(mod):
+                        ms[m] = None if not m.can_partial_remerge() else m.get_mod_affected(mod)
+                for m in ms:
+                    if ms[m] is not None:
+                        m.set_options({'only_these': ms[m]})
+                    m.set_pool(pool)
+                    m.perform_merge()
+                print('Install complete')
+            except Exception as e:
+                raise MergeError(e)
 
     def update_mod(self, params):
         try:
@@ -238,20 +247,23 @@ class Api:
                     wait_merge=True
                 )
             )
-        print('Remerging where needed...')
-        all_mergers = [merger() for merger in mergers.get_mergers()]
-        remergers = set()
-        partials = {}
-        for mod in mods:
-            for merger in all_mergers:
-                if merger.is_mod_logged(mod):
-                    remergers.add(merger)
-                    if merger.can_partial_remerge():
-                        partials[merger.NAME] = set(merger.get_mod_affected(mod))
-        for merger in mergers.sort_mergers(remergers):
-            if merger.NAME in partials:
-                merger.set_options({'only_these': partials[merger.NAME]})
-            merger.perform_merge()
+        set_start_method('spawn', True)
+        with Pool(cpu_count()) as pool:
+            print('Remerging where needed...')
+            all_mergers = [merger() for merger in mergers.get_mergers()]
+            remergers = set()
+            partials = {}
+            for mod in mods:
+                for merger in all_mergers:
+                    if merger.is_mod_logged(mod):
+                        remergers.add(merger)
+                        if merger.can_partial_remerge():
+                            partials[merger.NAME] = set(merger.get_mod_affected(mod))
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.set_pool(pool)
+                merger.perform_merge()
         install.refresh_master_export()
 
     @win_or_lose

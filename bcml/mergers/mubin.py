@@ -399,19 +399,21 @@ class MapMerger(mergers.Merger):
         rstb_vals = {}
         rstb_calc = rstb.SizeCalculator()
         print('Merging modded map units...')
-        num_threads = min(cpu_count() - 1, len(map_diffs))
 
-        set_start_method('spawn', True)
-        pool = Pool(processes=num_threads)
+        if not self._pool:
+            num_threads = min(cpu_count() - 1, len(map_diffs))
+            set_start_method('spawn', True)
+        pool = self._pool or Pool(processes=num_threads)
         rstb_results = pool.map(
             partial(merge_map, rstb_calc=rstb_calc, no_del=no_del, link_del=link_del),
             list(map_diffs.items())
         )
-        pool.close()
-        pool.join()
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
             rstb_vals[result['main'][0]] = result['main'][1]
+        if not self._pool:
+            pool.close()
+            pool.join()
 
         print('Adjusting RSTB...')
         with log_path.open('w', encoding='utf-8') as l_file:

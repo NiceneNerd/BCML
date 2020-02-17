@@ -1,5 +1,6 @@
 """ Provides abstracted merging objects """
 from abc import ABCMeta
+from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 from bcml import util
@@ -14,12 +15,14 @@ class Merger(metaclass=ABCMeta):
     _description: str
     _log_name: str
     _options: dict
+    _pool: Pool
 
     def __init__(self, friendly_name: str, description: str, log_name: str,
                  options: dict = None):
         self._friendly_name = friendly_name
         self._description = description
         self._log_name = log_name
+        self._pool = None
         if options:
             self._options = options
         else:
@@ -39,6 +42,10 @@ class Merger(metaclass=ABCMeta):
     def log_name(self) -> str:
         """ The name of the log file created by this merger """
         return self._log_name
+
+    def set_pool(self, pool: Pool):
+        """ Sets the multiprocessing Pool to use when merging """
+        self._pool = pool
 
     def set_options(self, options: dict):
         """ Sets custom options for this merger """

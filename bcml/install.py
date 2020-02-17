@@ -36,7 +36,7 @@ def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
     tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh32(str(path)).hexdigest()}'
-    formats = ['.rar', '.zip', '.7z', '.bnp']
+    formats = {'.rar', '.zip', '.7z', '.bnp'}
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
     if path.suffix.lower() in formats:
@@ -188,7 +188,7 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
     return modded_files
 
 
-def generate_logs(tmp_dir: Path, options: dict = None) -> List[Path]:
+def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> List[Path]:
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
     if not options:
@@ -211,14 +211,18 @@ def generate_logs(tmp_dir: Path, options: dict = None) -> List[Path]:
         raise err
     util.vprint(modded_files)
 
+    p = pool or Pool(cpu_count())
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
     for merger_class in [merger_class for merger_class in mergers.get_mergers() \
                         if merger_class.NAME not in options['disable']]:
         merger = merger_class()
         if options is not None and merger.NAME in options:
             merger.set_options(options[merger.NAME])
+        merger.set_pool(p)
         merger.log_diff(tmp_dir, modded_files)
-
+    if not pool:
+        p.close()
+        p.join()
     return modded_files
 
 
@@ -247,26 +251,37 @@ def refresh_master_export():
         except IndexError:
             gpack = settings.createElement('GraphicPack')
             settings.appendChild(gpack)
-        has_bcml = False
+        new_cemu = True
+        entry: minidom.Element
         for entry in gpack.getElementsByTagName('Entry'):
-            if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
-                break
+            if new_cemu and entry.getElementsByTagName('filename'):
+                new_cemu = False
+            try:
+                if 'BCML' in entry.getElementsByTagName('filename')[0].childNodes[0].data:
+                    break
+            except IndexError:
+                if 'BCML' in entry.getAttribute('filename'):
+                    break
         else:
             bcmlentry = settings.createElement('Entry')
-            entryfile = settings.createElement('filename')
-            entryfile.appendChild(settings.createTextNode(
-                f'graphicPacks\\BreathOfTheWild_BCML\\rules.txt'))
+            if new_cemu:
+                bcmlentry.setAttribute('filename', f'graphicPacks\\BreathOfTheWild_BCML\\rules.txt')
+            else:
+                entryfile = settings.createElement('filename')
+                entryfile.appendChild(
+                    settings.createTextNode(f'graphicPacks\\BreathOfTheWild_BCML\\rules.txt')
+                )
+                bcmlentry.appendChild(entryfile)
             entrypreset = settings.createElement('preset')
             entrypreset.appendChild(settings.createTextNode(''))
-            bcmlentry.appendChild(entryfile)
             bcmlentry.appendChild(entrypreset)
             gpack.appendChild(bcmlentry)
             settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
 @refresher
-def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
-                insert_priority: int = 0):
+def install_mod(mod: Path, options: dict = None, wait_merge: bool = False, 
+                pool: Pool = None, insert_priority: int = 0):
     if insert_priority == 0:
         insert_priority = get_next_priority()
     util.create_bcml_graphicpack_if_needed()
@@ -291,6 +306,7 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
+    p: Pool = None
     try:
         rules = json.loads(
             (tmp_dir / 'info.json').read_text('utf-8')
@@ -306,7 +322,8 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
                     (tmp_dir / 'logs' / merger.log_name).unlink()
         else:
-            generate_logs(tmp_dir=tmp_dir, options=options)
+            p = pool or Pool(cpu_count())
+            generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
     except Exception as e: # pylint: disable=broad-except
         if hasattr(e, 'error_text'):
             raise e
@@ -405,11 +422,14 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
                 options = {}
             if 'disable' not in options:
                 options['disable'] = []
+            if not p:
+                p = pool or Pool(cpu_count())
             for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
                                                 if cls.NAME not in options['disable']]):
                 if merger.NAME in options:
                     merger.set_options(options[merger.NAME])
                 if merger.is_mod_logged(output_mod):
+                    merger.set_pool(p)
                     merger.perform_merge()
             print(f'{mod_name} installed successfully!')
         except Exception: # pylint: disable=broad-except
@@ -426,6 +446,9 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
             except FileNotFoundError:
                 pass
             raise clean_error
+    if p and not pool:
+        p.close()
+        p.join()
     return output_mod
 
 @refresher
@@ -494,12 +517,15 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
 @refresher
 def refresh_merges():
     print('Cleansing old merges...')
-    shutil.rmtree(util.get_master_modpack_dir())
+    shutil.rmtree(util.get_master_modpack_dir(), True)
     print('Refreshing merged mods...')
-    for merger in mergers.sort_mergers(
-        [merger_class() for merger_class in mergers.get_mergers()]
-    ):
-        merger.perform_merge()
+    set_start_method('spawn', True)
+    with Pool(cpu_count()) as pool:
+        for merger in mergers.sort_mergers(
+            [merger_class() for merger_class in mergers.get_mergers()]
+        ):
+            merger.set_pool(pool)
+            merger.perform_merge()
 
 
 def create_backup(name: str = ''):
@@ -607,6 +633,7 @@ def export(output: Path):
         print('Exporting BNP...')
         dev.create_bnp_mod(
             mod=tmp_dir,
+            meta={},
             output=output,
             options={'rstb':{'guess':True}}
         )

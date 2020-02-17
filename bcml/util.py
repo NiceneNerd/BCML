@@ -22,6 +22,7 @@ from typing import Union, List
 
 import byml
 from byml import yaml_util
+import oead
 import sarc
 import syaz0
 import xxhash
@@ -31,7 +32,8 @@ import yaml
 
 CREATE_NO_WINDOW = 0x08000000
 SARC_EXTS = {'.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats',
-             '.ssarc', '.spack', '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats'}
+             '.ssarc', '.spack', '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats',
+             '.sblarc', '.blarc'}
 AAMP_EXTS = {'.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr',
              '.baglclwd', '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof',
              '.baglenv', '.sbaglenv', '.baglenvset', '.sbaglenvset', '.baglfila', '.sbaglfila',
@@ -208,8 +210,8 @@ class BcmlMod:
             uninstall_mod(self, wait_merge)
 
 
-decompress = syaz0.decompress
-compress = syaz0.compress
+decompress = oead.yaz0.decompress
+compress = oead.yaz0.compress
 
 
 def vprint(content):
@@ -287,7 +289,7 @@ def get_settings(name: str = '') -> {}:
                     'load_reverse': False,
                     'site_meta': '',
                     'dark_theme': False,
-                    'guess_merge': False,
+                    'no_guess': False,
                     'lang': '',
                     'no_cemu': False,
                     'wiiu': True
@@ -766,11 +768,11 @@ def create_bcml_graphicpack_if_needed():
 
 def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
     for k in merge_dct:
-        if (k in dct and isinstance(dct[k], dict)
-                and isinstance(merge_dct[k], Mapping)):
+        if (k in dct and (isinstance(dct[k], dict) or isinstance(dct[k], oead.byml.Hash))
+                and (isinstance(merge_dct[k], Mapping) or isinstance(merge_dct[k], oead.byml.Hash))):
             dict_merge(dct[k], merge_dct[k])
-        elif (k in dct and isinstance(dct[k], list)
-              and isinstance(merge_dct[k], list)):
+        elif (k in dct and (isinstance(dct[k], list) or isinstance(dct[k], oead.byml.Array))
+              and (isinstance(merge_dct[k], list) or isinstance(merge_dct[k], oead.byml.Array))):
             if overwrite_lists:
                 dct[k] = merge_dct[k]
             else:

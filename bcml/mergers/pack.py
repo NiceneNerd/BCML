@@ -155,12 +155,11 @@ class PackMerger(mergers.Merger):
         if not sarcs:
             print('No SARC merging necessary')
             return
-        num_threads = min(cpu_count(), len(sarcs))
-        pool = Pool(processes=num_threads)
         print(f'Merging {len(sarcs)} SARC files...')
+        if not self._pool:
+            num_threads = min(cpu_count(), len(sarcs))
+        pool = self._pool or Pool(processes=num_threads)
         results = pool.starmap(merge_sarcs, sarcs.items())
-        pool.close()
-        pool.join()
         for result in results:
             file, data = result
             output_path = util.get_master_modpack_dir() / file
@@ -168,6 +167,9 @@ class PackMerger(mergers.Merger):
             if output_path.suffix.startswith('.s'):
                 data = util.compress(data)
             output_path.write_bytes(data)
+        if not self._pool:
+            pool.close()
+            pool.join()
         print('Finished merging SARCs')
 
     def get_checkbox_options(self):

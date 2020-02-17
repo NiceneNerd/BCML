@@ -12,7 +12,6 @@ import byml
 import sarc
 import xxhash
 import yaml
-import lib_bcml
 
 from . import util, install, json_util
 
@@ -48,7 +47,7 @@ def _yml_to_aamp(file: Path):
     file.unlink()
 
 
-def _pack_sarcs(tmp_dir: Path, hashes: dict):
+def _pack_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
     sarc_folders = {
         d for d in tmp_dir.rglob('**/*') if (
             d.is_dir() and not 'options' in d.relative_to(tmp_dir).parts\
@@ -56,28 +55,19 @@ def _pack_sarcs(tmp_dir: Path, hashes: dict):
         )
     }
     if sarc_folders:
-        num_threads = min(len(sarc_folders), cpu_count())
-        pool = Pool(processes=num_threads)
         pool.map(
             partial(_pack_sarc, hashes=hashes, tmp_dir=tmp_dir),
             sarc_folders
         )
-        pool.close()
-        pool.join()
-        del pool
     pack_folders = {
         d for d in tmp_dir.rglob('**/*') if d.is_dir() \
             and not 'options' in d.relative_to(tmp_dir).parts and d.suffix == '.pack'
     }
     if pack_folders:
-        num_threads = min(len(pack_folders), cpu_count())
-        pool = Pool(processes=num_threads)
         pool.map(
             partial(_pack_sarc, hashes=hashes, tmp_dir=tmp_dir),
             pack_folders
         )
-        pool.close()
-        pool.join()
 
 def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
     packed = sarc.SARCWriter(util.get_settings('wiiu'))
@@ -129,18 +119,14 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
         )
 
 
-def _clean_sarcs(tmp_dir: Path, hashes: dict):
+def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
     sarc_files = {
         file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS \
             and 'options' not in file.relative_to(tmp_dir).parts
     }
     if sarc_files:
         print('Creating partial packs...')
-        num_threads = min(len(sarc_files), cpu_count())
-        pool = Pool(processes=num_threads)
         pool.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
-        pool.close()
-        pool.join()
 
     sarc_files = {
         file for file in tmp_dir.rglob('**/*') if file.suffix in util.SARC_EXTS \
@@ -281,44 +267,42 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         encoding='utf-8'
     )
 
-    yml_files = {f for f in tmp_dir.glob('**/*.yml')}
-    if yml_files:
-        print('Compiling YAML documents...')
-        p = Pool(
-            min(len(yml_files, cpu_count()))
-        )
-        p.map(_do_yml, yml_files)
-
     set_start_method('spawn', True)
-    hashes = util.get_hash_table()
-    print('Packing SARCs...')
-    _pack_sarcs(tmp_dir, hashes)
-    for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
-        _pack_sarcs(d, hashes)
+    with Pool(cpu_count()) as pool:
+        yml_files = {f for f in tmp_dir.glob('**/*.yml')}
+        if yml_files:
+            print('Compiling YAML documents...')
+            pool.map(_do_yml, yml_files)
 
-    for o in tmp_dir.glob('options/*'):
-        for file in {
-            f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(tmp_dir)).exists()
-        }:
-            xh1 = xxhash.xxh32_hexdigest((tmp_dir / file.relative_to(o)).read_bytes())
-            xh2 = xxhash.xxh32_hexdigest(file.read_bytes())
-            if xh1 == xh2:
-                file.unlink()
+        hashes = util.get_hash_table()
+        print('Packing SARCs...')
+        _pack_sarcs(tmp_dir, hashes, pool)
+        for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
+            _pack_sarcs(d, hashes, pool)
 
-    if not options:
-        options = {
-            'disable': [],
-            'options': {}
-        }
-    options['texts'] = {'user_only': False}
-    
-    _make_bnp_logs(tmp_dir, options)
-    for o in tmp_dir.glob('options/*'):
-        _make_bnp_logs(o, options)
+        for o in tmp_dir.glob('options/*'):
+            for file in {
+                f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(tmp_dir)).exists()
+            }:
+                xh1 = xxhash.xxh32_hexdigest((tmp_dir / file.relative_to(o)).read_bytes())
+                xh2 = xxhash.xxh32_hexdigest(file.read_bytes())
+                if xh1 == xh2:
+                    file.unlink()
 
-    _clean_sarcs(tmp_dir, hashes)
-    for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
-        _clean_sarcs(d, hashes)
+        if not options:
+            options = {
+                'disable': [],
+                'options': {}
+            }
+        options['texts'] = {'user_only': False}
+        
+        _make_bnp_logs(tmp_dir, options)
+        for o in tmp_dir.glob('options/*'):
+            _make_bnp_logs(o, options)
+
+        _clean_sarcs(tmp_dir, hashes, pool)
+        for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
+            _clean_sarcs(d, hashes, pool)
 
     print('Cleaning any junk files...')
     for file in {f for f in tmp_dir.rglob('**/*') if f.is_file()}:

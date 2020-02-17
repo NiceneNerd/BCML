@@ -50,7 +50,7 @@ def convert_old_settings():
         'update_dir': str(update_dir or ""),
         'dlc_dir': str(dlc_dir or ""),
         'site_meta': old_settings['Settings']['site_meta'],
-        'guess_merge': old_settings['Settings']['guess_merge'] == 'True',
+        'no_guess': old_settings['Settings']['guess_merge'] == 'False',
         'lang': old_settings['Settings']['lang'],
         'no_cemu': False,
         'wiiu': True
@@ -99,7 +99,7 @@ def convert_old_logs(mod_dir: Path, delete_old: bool = False):
                 encoding='utf-8'
             )
         else:
-            _convert_byml_log(log)
+            pass#_convert_byml_log(log)
         if delete_old:
             log.unlink()
 
@@ -134,14 +134,22 @@ def _convert_pack_log(mod: Path):
 
 
 def _convert_aamp_log(log: Path):
-    if not hasattr(_convert_aamp_log, 'loader'):
-        _convert_aamp_log.loader = yaml.CSafeLoader
-        ayu.register_constructors(_convert_aamp_log.loader)
-    log_yaml = yaml.load(
-        log.read_text('utf-8'),
-        Loader=_convert_aamp_log.loader
-    )
-    log.with_suffix('.json').write_text(
-        json_util.aamp_to_json(log_yaml),
+    loader = yaml.CLoader
+    ayu.register_constructors(loader)
+    doc = yaml.load(log.read_text('utf-8'), Loader=loader)
+    from aamp import ParameterIO, ParameterObject, ParameterList, Writer
+    pio = ParameterIO('log', 0)
+    root = ParameterList()
+    for file, plist in doc.items():
+        root.set_list(file, plist)
+    pio.set_list('param_root', root)
+    file_table = ParameterObject()
+    for i, f in enumerate(doc):
+        file_table.set_param(f'File{i}', f)
+    root.set_object('FileTable', file_table)
+    from oead import aamp
+    pio = aamp.ParameterIO.from_binary(Writer(pio).get_bytes())
+    log.write_text(
+        pio.to_text(),
         encoding='utf-8'
     )

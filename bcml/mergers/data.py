@@ -1,6 +1,5 @@
 """
-Provides functions to diff and merge various kinds of BotW data, including gamedata, savedata, and
-actorinfo.
+Provides functions to diff and merge BOTW gamedat and savedata.
 """
 # Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
@@ -15,6 +14,7 @@ from typing import List, Union
 
 import byml
 from byml import yaml_util
+import oead
 import rstb
 import rstb.util
 import sarc
@@ -27,7 +27,6 @@ from bcml.util import BcmlMod
 
 
 def get_stock_gamedata() -> sarc.SARC:
-    """ Gets the contents of the unmodded gamedata.sarc """
     if not hasattr(get_stock_gamedata, 'gamedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
@@ -37,7 +36,6 @@ def get_stock_gamedata() -> sarc.SARC:
 
 
 def get_stock_savedata() -> sarc.SARC:
-    """ Gets the contents of the unmodded savedataformat.sarc """
     if not hasattr(get_stock_savedata, 'savedata'):
         with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
             bootup = sarc.read_file_and_make_sarc(b_file)
@@ -48,7 +46,6 @@ def get_stock_savedata() -> sarc.SARC:
 
 
 def get_gamedata_hashes() -> {}:
-    """ Gets a hash table for the unmodded contents of gamedata.sarc """
     if not hasattr(get_gamedata_hashes, 'gamedata_hashes'):
         get_gamedata_hashes.gamedata_hashes = {}
         gamedata = get_stock_gamedata()
@@ -59,7 +56,6 @@ def get_gamedata_hashes() -> {}:
 
 
 def get_savedata_hashes() -> {}:
-    """ Gets a hash table for the unmodded contents of savedataformat.sarc """
     if not hasattr(get_savedata_hashes, 'savedata_hashes'):
         get_savedata_hashes.savedata_hashes = {}
         savedata = get_stock_savedata()
@@ -70,16 +66,6 @@ def get_savedata_hashes() -> {}:
 
 
 def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = None) -> int:
-    """
-    Packs a gamedata SARC into Bootup.pack and returns the RSTB size of the new gamedata.sarc
-
-    :param bgdata: A SARCWriter for the new gamedata
-    :type bgdata: class:`sarc.SARCWriter`
-    :param bootup_path: Path to the Bootup.pack to update, defaults to a master BCML copy
-    :type bootup_path: class:`pathlib.Path`, optional
-    :returns: Returns the RSTB size of the new gamedata.sarc
-    :rtype: int
-    """
     if not bootup_path:
         master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
@@ -99,16 +85,6 @@ def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = Non
 
 
 def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = None) -> int:
-    """
-    Packs a savedata SARC into Bootup.pack and returns the RSTB size of the new savedataformat.sarc
-
-    :param bgsvdata: A SARCWriter for the new savedata
-    :type bgsvdata: class:`sarc.SARCWriter`
-    :param bootup_path: Path to the Bootup.pack to update, defaults to a master BCML copy
-    :type bootup_path: class:`pathlib.Path`, optional
-    :returns: Returns the RSTB size of the new savedataformat.sarc
-    :rtype: int
-    """
     if not bootup_path:
         master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
@@ -127,14 +103,6 @@ def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = N
 
 
 def is_savedata_modded(savedata: sarc.SARC) -> {}:
-    """
-    Detects if any .bgsvdata file has been modified.
-
-    :param savedata: The saveformatdata.sarc to check for modification.
-    :type savedata: class:`sarc.SARC`
-    :returns: Returns True if any .bgsvdata in the given savedataformat.sarc has been modified.
-    :rtype: bool
-    """
     hashes = get_savedata_hashes()
     sv_files = sorted(savedata.list_files())
     fix_slash = '/' if not sv_files[0].startswith('/') else ''
@@ -153,16 +121,10 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
     return byml.Byml(game_dict[file]).parse()
 
 
-def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
-    """
-    Consolidates all game data in a game data SARC
-
-    :return: Returns a dict of all game data entries in a SARC
-    :rtype: dict of str: list
-    """
+def consolidate_gamedata(gamedata: sarc.SARC, pool: Pool) -> {}:
     data = {}
     set_start_method('spawn', True)
-    pool = Pool(processes=cpu_count())
+    p = pool or Pool(processes=cpu_count())
     game_dict = {}
     for file in gamedata.list_files():
         game_dict[file] = gamedata.get_file_data(file).tobytes()
@@ -170,19 +132,17 @@ def consolidate_gamedata(gamedata: sarc.SARC) -> {}:
         partial(_bgdata_from_bytes, game_dict=game_dict),
         gamedata.list_files()
     )
-    pool.close()
-    pool.join()
     del game_dict
     del gamedata
     for result in results:
         util.dict_merge(data, result)
+    if not pool:
+        p.close()
+        p.join()
     return data
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
-    """
-    Logs the changes of a certain data type made to modded gamedata
-    """
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
     diffs = {}
     for entry in mod_data[data_type]:
@@ -192,42 +152,27 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     return {data_type: diffs}
 
 
-def get_modded_gamedata_entries(gamedata: sarc.SARC) -> {}:
-    """
-    Gets all of the modified gamedata entries in a dict of modded gamedata contents.
-
-    :param modded_bgdata: A dict of modified .bgdata files and their contents.
-    :type modded_bgdata: dict
-    :returns: Returns a dictionary with each data type and the modified entries for it.
-    :rtype: dict of str: dict of str: dict
-    """
-    stock_data = consolidate_gamedata(get_stock_gamedata())
-    mod_data = consolidate_gamedata(gamedata)
-    diffs = {}
+def get_modded_gamedata_entries(gamedata: sarc.SARC, pool: Pool = None) -> {}:
     set_start_method('spawn', True)
-    pool = Pool(cpu_count())
+    p = pool or Pool(cpu_count())
+    stock_data = consolidate_gamedata(get_stock_gamedata(), p)
+    mod_data = consolidate_gamedata(gamedata, p)
+    diffs = {}
     results = pool.map(
         partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data),
         list(mod_data.keys())
     )
-    pool.close()
-    pool.join()
     for result in results:
         _, entries = list(result.items())[0]
         if entries:
             diffs.update(result)
+    if not pool:
+        p.close()
+        p.join()
     return diffs
 
 
 def get_modded_savedata_entries(savedata: sarc.SARC) -> []:
-    """
-    Gets all of the modified savedata entries in a dict of modded savedata contents.
-
-    :param savedata: The saveformatdata.sarc to search for modded entries.
-    :type savedata: class:`sarc.SARC`
-    :return: Returns a list of modified savedata entries.
-    :rtype: list
-    """
     ref_savedata = get_stock_savedata()
     ref_hashes = []
     new_entries = []
@@ -242,56 +187,15 @@ def get_modded_savedata_entries(savedata: sarc.SARC) -> []:
 
 
 def get_gamedata_mods() -> List[BcmlMod]:
-    """ Gets a list of all installed mods that modify gamedata """
     gdata_mods = [mod for mod in util.get_installed_mods() if (
         mod.path / 'logs' / 'gamedata.yml').exists()]
     return sorted(gdata_mods, key=lambda mod: mod.priority)
 
 
 def get_savedata_mods() -> List[BcmlMod]:
-    """ Gets a list of all installed mods that modify save data """
     sdata_mods = [mod for mod in util.get_installed_mods() if (
         mod.path / 'logs' / 'savedata.yml').exists()]
     return sorted(sdata_mods, key=lambda mod: mod.priority)
-
-
-def get_stock_actorinfo() -> dict:
-    """ Gets the unmodded contents of ActorInfo.product.sbyml """
-    actorinfo = util.get_game_file('Actor/ActorInfo.product.sbyml')
-    with actorinfo.open('rb') as a_file:
-        return byml.Byml(util.decompress(a_file.read())).parse()
-
-
-def get_modded_actors(actorinfo: dict) -> dict:
-    """
-    Gets new or changed actors in modded ActorInfo data and their hashes
-
-    :param actorinfo: A dict representing the contents of ActorInfo.product.sbyml
-    :type actorinfo: dict
-    :return: Returns a dict of actor hashes and their associated actor info
-    :rtype: dict of int: dict
-    """
-    stock_actors = get_stock_actorinfo()
-    modded_actors = {}
-    for actor in actorinfo['Actors']:
-        actor_hash = zlib.crc32(actor['name'].encode())
-        if actor_hash not in stock_actors['Hashes']:
-            modded_actors[actor_hash] = actor
-        elif actor != stock_actors['Actors'][stock_actors['Hashes'].index(actor_hash)]:
-            stock_actor = stock_actors['Actors'][stock_actors['Hashes'].index(
-                actor_hash)]
-            modded_actors[actor_hash] = {}
-            for key, value in actor.items():
-                if key not in stock_actor or value != stock_actor[key]:
-                    modded_actors[actor_hash][key] = value
-    return modded_actors
-
-
-def get_actorinfo_mods() -> List[BcmlMod]:
-    """ Gets a list of all installed mods that modify ActorInfo.product.sbyml """
-    actor_mods = [mod for mod in util.get_installed_mods()\
-                  if (mod.path / 'logs' / 'actorinfo.yml').exists()]
-    return sorted(actor_mods, key=lambda mod: mod.priority)
 
 
 class GameDataMerger(mergers.Merger):
@@ -313,7 +217,8 @@ class GameDataMerger(mergers.Merger):
                     util.decompress(
                         bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
                     )
-                )
+                ),
+                pool=self._pool
             )
         else:
             return {}
@@ -596,96 +501,3 @@ class SaveDataMerger(mergers.Merger):
             )
         else:
             return
-
-
-class ActorInfoMerger(mergers.Merger):
-    NAME: str = 'actors'
-
-    def __init__(self):
-        super().__init__('actor info', 'Merges changes to ActorInfo.product.byml',
-                         'actorinfo.json', {})
-
-    def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        try:
-            actor_file = next(iter([file for file in modded_files \
-                               if Path(file).name == 'ActorInfo.product.sbyml']))
-        except StopIteration:
-            return {}
-        actor_info = byml.Byml(util.decompress_file(str(actor_file))).parse()
-        print('Detecting modified actor info entries...')
-        return get_modded_actors(actor_info)
-
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, list]):
-        if isinstance(diff_material, List):
-            diff_material = self.generate_diff(Path, diff_material)
-        if diff_material:
-            (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
-                encoding='utf-8'
-            )
-
-    def get_mod_diff(self, mod: BcmlMod):
-        if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
-                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
-            )
-        else:
-            return {}
-
-    def get_all_diffs(self):
-        diffs = []
-        for mod in util.get_installed_mods(): 
-            diffs.append(self.get_mod_diff(mod))
-        return diffs
-
-    def consolidate_diffs(self, diffs: list):
-        all_diffs = {}
-        for diff in diffs:
-            util.dict_merge(all_diffs, diff, overwrite_lists=True)
-        util.vprint('All actor info diffs:')
-        util.vprint(all_diffs)
-        return all_diffs
-
-    @util.timed
-    def perform_merge(self):
-        actor_path = (util.get_master_modpack_dir() / util.get_content_path() /
-                  'Actor' / 'ActorInfo.product.sbyml')
-        print('Loading modded actor info...')
-        modded_actors = self.consolidate_diffs(self.get_all_diffs())
-        if not modded_actors:
-            print('No actor info merging necessary.')
-            if actor_path.exists():
-                actor_path.unlink()
-            return
-
-        print('Loading unmodded actor info...')
-        actorinfo = get_stock_actorinfo()
-
-        print('Merging changes...')
-        for actor_hash, actor_info in modded_actors.items():
-            if isinstance(actor_hash, str):
-                actor_hash = int(actor_hash)
-            if actor_hash in actorinfo['Hashes']:
-                idx = actorinfo['Hashes'].index(actor_hash)
-                util.dict_merge(actorinfo['Actors'][idx],
-                                actor_info, overwrite_lists=True)
-            else:
-                actorinfo['Hashes'].append(actor_hash)
-                actorinfo['Actors'].append(actor_info)
-
-        print('Sorting new actor info...')
-        actorinfo['Hashes'].sort()
-        actorinfo['Hashes'] = list(map(lambda x: byml.Int(
-            x) if x < 2147483648 else byml.UInt(x), actorinfo['Hashes']))
-        actorinfo['Actors'].sort(
-            key=lambda x: zlib.crc32(x['name'].encode('utf-8')))
-
-        print('Saving new actor info...')
-        buf = BytesIO()
-        byml.Writer(actorinfo, util.get_settings('wiiu')).write(buf)
-        actor_path.parent.mkdir(parents=True, exist_ok=True)
-        actor_path.write_bytes(util.compress(buf.getvalue()))
-        print('Actor info merged successfully')
-
-    def get_checkbox_options(self):
-        return []

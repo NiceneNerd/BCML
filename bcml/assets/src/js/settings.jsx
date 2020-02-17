@@ -20,7 +20,7 @@ class Settings extends React.Component {
             update_dir: "",
             dlc_dir: "",
             site_meta: "",
-            guess_merge: false,
+            no_guess: false,
             lang: "",
             no_cemu: false,
             wiiu: true,
@@ -57,7 +57,10 @@ class Settings extends React.Component {
         try {
             e.persist();
         } catch (error) {}
-        this.setState({ [e.target.id]: e.target.value });
+        this.setState({
+            [e.target.id]:
+                e.target.type != "checkbox" ? e.target.value : e.target.checked
+        });
     }
 
     render() {
@@ -223,25 +226,25 @@ class Settings extends React.Component {
                                 <Form.Check
                                     type="checkbox"
                                     label="Use BCML without a Cemu installation"
-                                    value={this.state.no_cemu}
+                                    checked={this.state.no_cemu}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>
                         </Form.Group>
-                        <Form.Group controlId="guess_merge">
+                        <Form.Group controlId="no_guess">
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        Attempt to estimate proper RSTB values
-                                        for merged AAMP files. Otherwise the
-                                        entries will be deleted.
+                                        Don't estimate proper RSTB values for
+                                        merged files. Deletes entries which
+                                        cannot be calculated instead.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
                                 <Form.Check
                                     type="checkbox"
-                                    label="Use RSTB estimation on merged files"
-                                    value={this.state.guess_merge}
+                                    label="Disable RSTB estimation on merged files"
+                                    checked={this.state.no_guess}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>
@@ -258,10 +261,10 @@ class Settings extends React.Component {
                                 <Form.Check
                                     type="checkbox"
                                     label="Use Switch mode"
-                                    value={!this.state.wiiu}
+                                    checked={!this.state.wiiu}
                                     onChange={e =>
                                         this.setState({
-                                            wiiu: !e.target.value,
+                                            wiiu: !e.target.checked,
                                             no_cemu: true
                                         })
                                     }
@@ -275,7 +278,10 @@ class Settings extends React.Component {
     }
 
     componentDidMount() {
-        pywebview.api.get_settings().then(settings => this.setState(settings));
+        pywebview.api.get_settings().then(settings => {
+            console.log(settings);
+            this.setState({ ...settings }, () => console.log(this.state));
+        });
     }
 }
 

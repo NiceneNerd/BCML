@@ -13,6 +13,7 @@ import aamp
 import aamp.converters
 from aamp.parameters import ParameterList, ParameterIO, ParameterObject
 import aamp.yaml_util
+import oead
 import sarc
 from byml import yaml_util
 
@@ -262,7 +263,7 @@ class DeepMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__('AAMP files', 'Merges changes within arbitrary AAMP files',
-                         'deepmerge.json', options={})
+                         'deepmerge.yml', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         print('Logging changes to AAMP files...')
@@ -289,27 +290,36 @@ class DeepMerger(mergers.Merger):
     def get_mod_affected(self, mod):
         return get_mod_deepmerge_files(mod)
 
-    def get_mod_diff(self, mod: Path):
+    def get_mod_diff(self, mod: BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_diff_to_aamp(
-                (mod / 'logs' / self._log_name).read_text(encoding='utf-8')
-            )
+            # return json_util.json_diff_to_aamp(
+            #     (mod / 'logs' / self._log_name).read_text(encoding='utf-8')
+            # )
+            pio = aamp.Reader(
+                bytes(oead.aamp.ParameterIO.from_text(
+                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+                ).to_binary())
+            ).parse()
+            return {
+                file: pio.list('param_root').list(file) \
+                    for i, file in pio.list('param_root').object('FileTable').params.items()
+            }
         else:
-            return {}
+            return None
 
     def get_all_diffs(self):
         aamp_diffs = {}
         for mod in [m for m in util.get_installed_mods() if self.is_mod_logged(m)]:
-            with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as d_file:
-                mod_diffs = json_util.json_diff_to_aamp(d_file.read())
-                for file in [
-                    diff for diff in mod_diffs if not (
-                        'only_these' in self._options and diff not in self._options['only_these']
-                    )
-                ]:
-                    if file not in aamp_diffs:
-                        aamp_diffs[file] = []
-                    aamp_diffs[file].append(mod_diffs[file])
+            # with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as d_file:
+            mod_diffs =  self.get_mod_diff(mod)#json_util.json_diff_to_aamp(d_file.read())
+            for file in [
+                diff for diff in mod_diffs if not (
+                    'only_these' in self._options and diff not in self._options['only_these']
+                )
+            ]:
+                if file not in aamp_diffs:
+                    aamp_diffs[file] = []
+                aamp_diffs[file].append(mod_diffs[file])
         return aamp_diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -318,6 +328,7 @@ class DeepMerger(mergers.Merger):
             nest = reduce(lambda res, cur: {cur: res}, reversed(
                 file.split("//")), diff_list)
             util.dict_merge(consolidated_diffs, nest)
+        util.vprint(consolidated_diffs)
         return consolidated_diffs
 
     def perform_merge(self):
@@ -336,12 +347,14 @@ class DeepMerger(mergers.Merger):
             merge_log.unlink()
 
         print('Performing deep merge...')
-        num_threads = min(multiprocessing.cpu_count(), len(diffs))
-        multiprocessing.set_start_method('spawn', True)
-        pool = multiprocessing.Pool(processes=num_threads)
+        if not self._pool:
+            num_threads = min(multiprocessing.cpu_count(), len(diffs))
+            multiprocessing.set_start_method('spawn', True)
+        pool = self._pool or multiprocessing.Pool(processes=num_threads)
         pool.map(partial(threaded_merge), diffs.items())
-        pool.close()
-        pool.join()
+        if not self._pool:
+            pool.close()
+            pool.join()
 
         (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
         with merge_log.open('w', encoding='utf-8') as l_file:

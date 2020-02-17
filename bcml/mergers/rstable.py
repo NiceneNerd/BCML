@@ -376,7 +376,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
 def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
     calc = rstb.SizeCalculator()
     sizes = {}
-    guess = util.get_settings('guess_merge')
+    no_guess = util.get_settings('no_guess')
     if isinstance(file, Path):
         with file.open('rb') as s_file:
             file = sarc.read_file_and_make_sarc(s_file)
@@ -396,7 +396,7 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
             )
             if ext == '.bdmgparam':
                 size = 0
-            if size == 0 and guess:
+            if size == 0 and not no_guess:
                 if ext in util.AAMP_EXTS:
                     size = guess_aamp_size(data, ext)
                 elif ext in {'.bfres', '.sbfres'}:
@@ -413,7 +413,7 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
     return sizes
 
 
-def log_merged_files_rstb():
+def log_merged_files_rstb(pool: multiprocessing.Pool = None):
     """ Generates an RSTB log for the master BCML modpack containing merged files """
     print('Updating RSTB for merged files...')
     diffs = {}
@@ -421,11 +421,11 @@ def log_merged_files_rstb():
         f for f in util.get_master_modpack_dir().rglob('**/*') \
             if f.is_file() and f.parent != 'logs'
     }
-    guess = util.get_settings('guess_merge')
+    no_guess = util.get_settings('no_guess')
     for file in files:
         if not (file.suffix in RSTB_EXCLUDE_EXTS or file.name in RSTB_EXCLUDE_NAMES):
             size = calculate_size(file)
-            if size == 0 and guess:
+            if size == 0 and not no_guess:
                 if file.suffix in util.AAMP_EXTS:
                     size = guess_aamp_size(file)
                 elif file.suffix in ['.bfres', '.sbfres']:
@@ -435,14 +435,16 @@ def log_merged_files_rstb():
                 diffs[canon] = size
     sarc_files = {f for f in files if f.suffix in util.SARC_EXTS and f.suffix != '.ssarc'}
     if sarc_files:
-        multiprocessing.set_start_method('spawn', True)
-        num_threads = min(multiprocessing.cpu_count(), len(sarc_files))
-        pool = multiprocessing.Pool(processes=num_threads)
-        results = pool.map(_get_sizes_in_sarc, sarc_files)
-        pool.close()
-        pool.join()
+        if not pool:
+            multiprocessing.set_start_method('spawn', True)
+            num_threads = min(multiprocessing.cpu_count(), len(sarc_files))
+        p = pool or multiprocessing.Pool(processes=num_threads)
+        results = p.map(_get_sizes_in_sarc, sarc_files)
         for result in results:
             diffs.update(result)
+        if not pool:
+            p.close()
+            p.join()
     with (util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as log:
         log.write('name,size,path\n')
         for canon, size in diffs.items():
