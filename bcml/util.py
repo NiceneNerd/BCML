@@ -118,7 +118,8 @@ def get_settings() -> {}:
             with settings_path.open('w', encoding='utf-8') as s_file:
                 settings.write(s_file)
         else:
-            settings.read(str(settings_path))
+            with settings_path.open('r', encoding='utf-8') as s_file:
+                settings.read_file(s_file)
         get_settings.settings_file = settings
     return get_settings.settings_file['Settings']
 

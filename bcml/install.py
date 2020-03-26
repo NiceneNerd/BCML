@@ -247,7 +247,7 @@ def refresh_cemu_mods():
     if not setpath.exists():
         raise FileNotFoundError('The Cemu settings file could not be found.')
     setread = ''
-    with setpath.open('r') as setfile:
+    with setpath.open('r', encoding='utf-8') as setfile:
         for line in setfile:
             setread += line.strip()
     settings = minidom.parseString(setread)
