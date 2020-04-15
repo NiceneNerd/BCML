@@ -1,5 +1,5 @@
 """Provides functions for diffing and merging BotW game text files"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import copy
 import csv
@@ -14,9 +14,9 @@ from pathlib import Path
 from platform import system
 from typing import List, Union
 
+import oead
 import rstb
 import rstb.util
-import sarc
 import xxhash
 
 from bcml import mergers, util
@@ -61,14 +61,6 @@ def get_user_languages() -> set:
 
 
 def get_msbt_hashes(lang: str = 'USen') -> {}:
-    """
-    Gets the MSBT hash table for the given language, or US English by default
-
-    :param lang: The game language to use, defaults to USen.
-    :type lang: str, optional
-    :returns: A dictionary of MSBT files and their vanilla hashes.
-    :rtype: dict of str: str
-    """
     if not hasattr(get_msbt_hashes, 'texthashes'):
         get_msbt_hashes.texthashes = {}
     if lang not in get_msbt_hashes.texthashes:
@@ -82,14 +74,15 @@ def get_msbt_hashes(lang: str = 'USen') -> {}:
                     get_msbt_hashes.texthashes[lang][row[0]] = row[1]
         elif util.get_game_file(f'Pack/Bootup_{lang}.pack').exists():
             get_msbt_hashes.texthashes[lang] = {}
-            with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
-                bootup_pack = sarc.read_file_and_make_sarc(b_file)
+            bootup_pack = oead.Sarc(
+                util.get_game_file(f'Pack/Bootup_{lang}.pack').read_bytes()
+            )
             msg_bytes = util.decompress(
-                bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc').tobytes())
-            msg_pack = sarc.SARC(msg_bytes)
-            for msbt in msg_pack.list_files():
-                get_msbt_hashes.texthashes[lang][msbt] = xxhash.xxh32(
-                    msg_pack.get_file_data(msbt)).hexdigest()
+                bootup_pack.get_file(f'Message/Msg_{lang}.product.ssarc').data
+            )
+            msg_pack = oead.Sarc(msg_bytes)
+            for msbt in msg_pack.get_files():
+                get_msbt_hashes.texthashes[lang][msbt.name] = xxhash.xxh32(msbt.data).hexdigest()
     return get_msbt_hashes.texthashes[lang]
 
 
@@ -121,32 +114,26 @@ def get_entry_hashes() -> dict:
 
 def extract_ref_msyts(lang: str = 'USen', for_merge: bool = False,
                       tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
-    """
-    Extracts the reference MSYT texts for the given language to a temp dir
-
-    :param lang: The game language to use, defaults to USen.
-    :type lang: str, optional
-    :param for_merge: Whether the output is to be merged (or as reference), defaults to False
-    :type for_merge: bool
-    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's working
-    directory.
-    :type tmp_dir: class:`pathlib.Path`, optional
-    """
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    with util.get_game_file(f'Pack/Bootup_{lang}.pack').open('rb') as b_file:
-        bootup_pack = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = util.decompress(
-        bootup_pack.get_file_data(f'Message/Msg_{lang}.product.ssarc').tobytes()
+    bootup_pack = oead.Sarc(
+        util.get_game_file(f'Pack/Bootup_{lang}.pack').read_bytes()
     )
-    msg_pack = sarc.SARC(msg_bytes)
+    msg_bytes = util.decompress(
+        bootup_pack.get_file(f'Message/Msg_{lang}.product.ssarc').data
+    )
+    msg_pack = oead.Sarc(msg_bytes)
     if not for_merge:
         merge_dir = tmp_dir / 'ref'
     else:
         merge_dir = tmp_dir / 'merged'
-    msg_pack.extract_to_dir(str(merge_dir))
+    for file in msg_pack.get_files():
+        ex_file = merge_dir / file.name
+        ex_file.parent.mkdir(parents=True, exist_ok=True)
+        ex_file.write_bytes(file.data)
     msbt_to_msyt(merge_dir)
+    del msg_pack
 
 
 def _msyt_file(file):
@@ -213,47 +200,44 @@ def msyt_to_msbt(tmp_dir: Path = util.get_work_dir() / 'tmp_text'):
 def bootup_from_msbts(lang: str = 'USen',
                       msbt_dir: Path = util.get_work_dir() / 'tmp_text' / 'merged') -> (Path, int):
     new_boot_path = msbt_dir.parent / f'Bootup_{lang}.pack'
-    with new_boot_path.open('wb') as new_boot:
-        s_msg = sarc.SARCWriter(util.get_settings('wiiu'))
-        for new_msbt in msbt_dir.rglob('**/*.msbt'):
-            with new_msbt.open('rb') as f_new:
-                s_msg.add_file(str(new_msbt.relative_to(msbt_dir)
-                                   ).replace('\\', '/'), f_new.read())
-        new_msg_stream = io.BytesIO()
-        s_msg.write(new_msg_stream)
-        unyaz_bytes = new_msg_stream.getvalue()
-        rsize = rstb.SizeCalculator().calculate_file_size_with_ext(unyaz_bytes, True, '.sarc')
-        new_msg_bytes = util.compress(unyaz_bytes)
-        s_boot = sarc.SARCWriter(util.get_settings('wiiu'))
-        s_boot.add_file(f'Message/Msg_{lang}.product.ssarc', new_msg_bytes)
-        s_boot.write(new_boot)
+    s_msg = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
+    for new_msbt in msbt_dir.rglob('**/*.msbt'):
+        s_msg.files[str(new_msbt.relative_to(msbt_dir)).replace('\\', '/')] = new_msbt.read_bytes()
+    unyaz_bytes = bytes(s_msg.write()[1])
+    rsize = rstb.SizeCalculator().calculate_file_size_with_ext(unyaz_bytes, True, '.sarc')
+    new_msg_bytes = util.compress(unyaz_bytes)
+    s_boot = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
+    s_boot.files[f'Message/Msg_{lang}.product.ssarc'] = new_msg_bytes
+    new_boot_path.write_bytes(s_boot.write()[1])
     return new_boot_path, rsize
 
 
 def write_msbt(msbt_info: tuple):
     msbt_path, msbt_data = msbt_info
     msbt_path.parent.mkdir(parents=True, exist_ok=True)
-    with msbt_path.open(mode='wb') as f_msbt:
-        f_msbt.write(msbt_data)
+    msbt_path.write_bytes(msbt_data)
     return None
 
 
-def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
+def get_modded_msyts(msg_sarc: oead.Sarc, lang: str = 'USen',
                      tmp_dir: Path = util.get_work_dir() / 'tmp_text',
                      pool: multiprocessing.Pool = None) -> (list, dict):
     hashes = get_msbt_hashes(lang)
     modded_msyts = []
     added_msbts = {}
     write_msbts = []
-    for msbt in msg_sarc.list_files():
+    for msbt, m_data in [(f.name, bytes(f.data)) for f in msg_sarc.get_files()]:
         if any(exclusion in msbt for exclusion in EXCLUDE_TEXTS):
             continue
-        m_data = msg_sarc.get_file_data(msbt)
         m_hash = xxhash.xxh32(m_data).hexdigest()
         if msbt not in hashes:
             added_msbts[msbt] = m_data
         elif m_hash != hashes[msbt]:
-            write_msbts.append((tmp_dir / msbt, m_data.tobytes()))
+            write_msbts.append((tmp_dir / msbt, m_data))
             modded_msyts.append(msbt.replace('.msbt', '.msyt'))
     if write_msbts:
         if not pool:
@@ -266,22 +250,16 @@ def get_modded_msyts(msg_sarc: sarc.SARC, lang: str = 'USen',
     return modded_msyts, added_msbts
 
 
-def store_added_texts(new_texts: dict) -> sarc.SARCWriter:
-    """ Creates a SARC to store mod-original MSBTs """
-    text_sarc = sarc.SARCWriter(util.get_settings('wiiu'))
+def store_added_texts(new_texts: dict) -> oead.SarcWriter:
+    text_sarc = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
     for msbt in new_texts:
-        text_sarc.add_file(msbt, new_texts[msbt])
+        text_sarc.files[msbt] = oead.Bytes(new_texts[msbt])
     return text_sarc
     
 
 def get_entry_hash(text: str) -> str:
-    """Hashes the contents of a game text entry
-
-    :param text: The text to hash
-    :type text: str
-    :return: The xxh32 hash of the text as a hex string
-    :rtype: str
-    """
     if isinstance(text, list):
         text = str(text)
     import re
@@ -366,12 +344,14 @@ def get_text_mods_from_bootup(bootup_path: Union[Path, str],
     spaces = '  '
 
     util.vprint(f'{spaces}Identifying modified text files...')
-    with open(bootup_path, 'rb') as b_file:
-        bootup_sarc = sarc.read_file_and_make_sarc(b_file)
-    msg_bytes = util.decompress(bootup_sarc.get_file_data(f'Message/Msg_{lang}.product.ssarc'))
-    msg_sarc = sarc.SARC(msg_bytes)
-    if not msg_sarc:
+    
+    try:
+        bootup_sarc = oead.Sarc(bootup_path.read_bytes())
+        msg_bytes = util.decompress(bootup_sarc.get_file(f'Message/Msg_{lang}.product.ssarc').data)
+        msg_sarc = oead.Sarc(msg_bytes)
+    except (ValueError, RuntimeError, oead.InvalidDataError, KeyError):
         print(f'Failed to open Msg_{lang}.product.ssarc, could not analyze texts')
+        return
     modded_msyts, added_msbts = get_modded_msyts(msg_sarc, lang, pool=pool)
     added_text_store = None
     if added_msbts:
@@ -450,7 +430,7 @@ def get_modded_languages(mod: Path) -> []:
     return text_langs
 
 
-def get_added_text_mods(lang: str = 'USen') -> List[sarc.SARC]:
+def get_added_text_mods(lang: str = 'USen') -> List[oead.Sarc]:
     """
     Gets a list containing all mod-original texts installed
     """
@@ -459,8 +439,7 @@ def get_added_text_mods(lang: str = 'USen') -> List[sarc.SARC]:
     for mod in [mod for mod in util.get_installed_mods() if tm.is_mod_logged(mod)]:
         l = match_language(lang, mod.path / 'logs')
         try:
-            with (mod.path / 'logs' / f'newtexts_{l}.sarc').open('rb') as s_file:
-                textmods.append(sarc.read_file_and_make_sarc(s_file))
+            textmods.append(oead.Sarc((mod.path / 'logs' / f'newtexts_{l}.sarc').read_bytes()))
         except FileNotFoundError:
             pass
     return textmods
@@ -512,14 +491,6 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
 
 def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_text',
                 pool: multiprocessing.Pool = None):
-    """
-    Merges installed text mods and saves the new Bootup_XXxx.pack, fixing the RSTB if needed
-
-    :param lang: The game language to use, defaults to USen.
-    :type lang: str, optional
-    :param tmp_dir: The temp directory to extract to, defaults to "tmp_text" in BCML's work dir.
-    :type tmp_dir: class:`pathlib.Path`, optional
-    """
     print(f'Loading text mods for language {lang}...')
     text_mods = get_modded_text_entries(lang)
     util.vprint(text_mods)
@@ -558,9 +529,9 @@ def merge_texts(lang: str = 'USen', tmp_dir: Path = util.get_work_dir() / 'tmp_t
     if added_texts:
         print('Adding mod-original MSBTs...')
         for added_text in added_texts:
-            for msbt in added_text.list_files():
-                Path(merge_dir / msbt).parent.mkdir(parents=True, exist_ok=True)
-                Path(merge_dir / msbt).write_bytes(added_text.get_file_data(msbt).tobytes())
+            for msbt in added_text.get_files():
+                Path(merge_dir / msbt.name).parent.mkdir(parents=True, exist_ok=True)
+                Path(merge_dir / msbt.name).write_bytes(msbt.data)
 
     print(f'Creating new Bootup_{lang}.pack...')
     tmp_boot_path = bootup_from_msbts(lang)[0]
@@ -629,7 +600,7 @@ class TextsMerger(mergers.Merger):
         return diffs
 
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         for lang in diff_material:
@@ -637,8 +608,9 @@ class TextsMerger(mergers.Merger):
                 t_file.write(diff_material[lang][0])
             text_sarc = diff_material[lang][1]
             if text_sarc is not None:
-                with Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').open('wb') as s_file:
-                    text_sarc.write(s_file)
+                Path(mod_dir / 'logs' / f'newtexts_{lang}.sarc').write_bytes(
+                    text_sarc.write()[1]
+                )
 
     def is_mod_logged(self, mod: BcmlMod):
         return bool(
@@ -657,8 +629,7 @@ class TextsMerger(mergers.Merger):
             lang = util.get_file_language(file)
             if not lang in diff:
                 diff[lang] = {}
-            with file.open('rb') as t_sarc:
-                diff[lang]['add'] = sarc.read_file_and_make_sarc(t_sarc)
+            diff[lang]['add'] = oead.Sarc(file.read_bytes())
         return diff
 
     def get_all_diffs(self):

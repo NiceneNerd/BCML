@@ -1,5 +1,5 @@
 """Provides features for installing, creating, and mananging BCML mods"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 # pylint: disable=too-many-lines
 import datetime
@@ -19,7 +19,7 @@ from shutil import copy
 from typing import List, Union, Callable
 from xml.dom import minidom
 
-import sarc
+import oead
 import xxhash
 
 from bcml import util, mergers, dev
@@ -106,8 +106,11 @@ def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
 
     aoc_field = tmp_dir / util.get_dlc_path() / '0010' / 'Pack' / 'AocMainField.pack'
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
-        with aoc_field.open('rb') as a_file:
-            sarc.read_file_and_make_sarc(a_file).extract_to_dir(str(tmp_dir / util.get_dlc_path() / '0010'))
+        aoc_pack = oead.Sarc(aoc_field.read_bytes())
+        for file in aoc_pack.get_files():
+            ex_out = tmp_dir / util.get_dlc_path() / '0010' / file.name
+            ex_out.parent.mkdir(parents=True, exist_ok=True)
+            ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b'')
 
     for file in tmp_dir.rglob('**/*'):
@@ -147,23 +150,24 @@ def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
     return modded_files
 
 
-def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name: str = '',
+def find_modded_sarc_files(mod_sarc: Union[Path, oead.Sarc], tmp_dir: Path, name: str = '',
                            aoc: bool = False) -> List[str]:
     if isinstance(mod_sarc, Path):
         if any(mod_sarc.name.startswith(exclude) for exclude in ['Bootup_']):
             return []
         name = str(mod_sarc.relative_to(tmp_dir))
         aoc = util.get_dlc_path() in mod_sarc.parts or 'Aoc' in mod_sarc.parts
-        with mod_sarc.open('rb') as s_file:
-            mod_sarc = sarc.read_file_and_make_sarc(s_file)
-        if not mod_sarc:
+        try:
+            mod_sarc = oead.Sarc(
+                util.unyaz_if_needed(mod_sarc.read_bytes())
+            )
+        except (RuntimeError, ValueError, oead.InvalidDataError):
             return []
     modded_files = []
-    for file in mod_sarc.list_files():
+    for file, contents in [(f.name, bytes(f.data)) for f in mod_sarc.get_files()]:
         canon = file.replace('.s', '.')
         if aoc:
             canon = 'Aoc/0010/' + canon
-        contents = mod_sarc.get_file_data(file).tobytes()
         contents = util.unyaz_if_needed(contents)
         nest_path = str(name).replace('\\', '/') + '//' + file
         if util.is_file_modded(canon, contents, True):
@@ -173,7 +177,7 @@ def find_modded_sarc_files(mod_sarc: Union[Path, sarc.SARC], tmp_dir: Path, name
             util.vprint(f'Found modded file {canon} in {str(name).replace("//", "/")}')
             if util.is_file_sarc(canon) and '.ssarc' not in file:
                 try:
-                    nest_sarc = sarc.SARC(contents)
+                    nest_sarc = oead.Sarc(contents)
                 except ValueError:
                     continue
                 sub_mod_files = find_modded_sarc_files(
@@ -654,4 +658,4 @@ def export(output: Path):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
-    rmtree(str(tmp_dir))
+    rmtree(str(tmp_dir), True)

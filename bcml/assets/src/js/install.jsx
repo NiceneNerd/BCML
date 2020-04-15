@@ -12,14 +12,15 @@ class InstallModal extends React.Component {
             mods: [],
             options: {
                 disable: [],
-                options: {}
-            }
+                options: {},
+            },
         };
+        this.setOptions = this.setOptions.bind(this);
     }
 
     browse() {
-        pywebview.api.file_pick().then(file =>
-            this.setState(prev => {
+        pywebview.api.file_pick().then((file) =>
+            this.setState((prev) => {
                 const mods = prev.mods;
                 for (const mod of file) {
                     if (!mods.includes(mod)) {
@@ -36,12 +37,16 @@ class InstallModal extends React.Component {
         this.resetDialog();
     }
 
+    setOptions(options) {
+        this.setState({ options: options });
+    }
+
     resetDialog() {
         this.setState({ mods: [], options: { disable: [], options: {} } });
     }
 
     removeMod(mod) {
-        this.setState(prevState => {
+        this.setState((prevState) => {
             let mods = prevState.mods;
             mods.splice(mods.indexOf(mod), 1);
             return { mods };
@@ -73,12 +78,12 @@ class InstallModal extends React.Component {
                             </strong>
                             <ReactSortable
                                 id="install-queue"
-                                onChange={order => {
+                                onChange={(order) => {
                                     this.setState({ mods: order });
                                 }}
                                 tag="div"
                                 handle="mod-handle">
-                                {this.state.mods.map(mod => (
+                                {this.state.mods.map((mod) => (
                                     <div
                                         key={mod}
                                         className="d-flex flex-row"
@@ -111,9 +116,13 @@ class InstallModal extends React.Component {
                     <OverlayTrigger
                         placement="right"
                         trigger="click"
-                        onHide={options => this.setState({ options })}
-                        options={this.state.options || null}
-                        overlay={props => <OptionsDialog {...props} />}>
+                        options={this.state.options}
+                        overlay={(props) => (
+                            <OptionsDialog
+                                {...props}
+                                onHide={this.setOptions}
+                            />
+                        )}>
                         <Button variant="info" title="Advanced Options">
                             <i
                                 className="material-icons"

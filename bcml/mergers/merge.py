@@ -1,5 +1,5 @@
 """Provides functions for diffing and merging AAMP files"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 
 import multiprocessing
@@ -14,11 +14,9 @@ import aamp.converters
 from aamp.parameters import ParameterList, ParameterIO, ParameterObject
 import aamp.yaml_util
 import oead
-import sarc
-from byml import yaml_util
 
 import bcml.mergers.rstable
-from bcml import util, install, mergers, json_util
+from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
 
@@ -113,72 +111,44 @@ def get_deepmerge_mods() -> List[BcmlMod]:
     return sorted(dmods, key=lambda mod: mod.priority)
 
 
-def get_mod_deepmerge_files(mod: Union[Path, str, BcmlMod]) -> []:
-    """ Gets a list of files logged for deep merge in a given mod """
-    path = mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
-    dlog = path / 'logs' / 'deepmerge.json'
-    if not dlog.exists():
-        return []
-    mod_diffs = json_util.json_diff_to_aamp(
-        dlog.read_text('utf-8')
-    )
-    return [str(key) for key in mod_diffs.keys()]
-
-
-def nested_patch(pack: sarc.SARC, nest: dict) -> (sarc.SARCWriter, dict):
-    """
-    Recursively patches deep merge files in a SARC
-
-    :param pack: The SARC in which to recursively patch.
-    :type pack: class:`sarc.SARC`
-    :param nest: A dict of nested patches to apply.
-    :type nest: dict
-    :return: Returns a new SARC with patches applied and a dict of any failed patches.
-    :rtype: (class:`sarc.SARCWriter`, dict, dict)
-    """
-    new_sarc = sarc.make_writer_from_sarc(pack)
+def nested_patch(pack: oead.Sarc, nest: dict) -> (oead.SarcWriter, dict):
+    new_sarc = oead.SarcWriter.from_sarc(pack)
     failures = {}
 
     for file, stuff in nest.items():
-        file_bytes = pack.get_file_data(file).tobytes()
+        file_bytes = pack.get_file(file).data
         yazd = file_bytes[0:4] == b'Yaz0'
         file_bytes = util.decompress(file_bytes) if yazd else file_bytes
 
         if isinstance(stuff, dict):
-            sub_sarc = sarc.SARC(file_bytes)
-            new_sarc.delete_file(file)
+            sub_sarc = oead.Sarc(file_bytes)
             new_sub_sarc, sub_failures = nested_patch(sub_sarc, stuff)
             for failure in sub_failures:
                 failure[file + '//' + failure] = sub_failures[failure]
             del sub_sarc
-            new_bytes = new_sub_sarc.get_bytes()
-            new_sarc.add_file(file, new_bytes if not yazd else util.compress(new_bytes))
+            new_bytes = bytes(new_sub_sarc.write()[1])
+            new_sarc.files[file] = new_bytes if not yazd else util.compress(new_bytes)
 
         elif isinstance(stuff, list):
             try:
                 if file_bytes[0:4] == b'AAMP':
-                    aamp_contents = aamp.Reader(file_bytes).parse()
+                    aamp_contents = aamp.Reader(bytes(file_bytes)).parse()
                     try:
                         for change in stuff:
                             aamp_contents = _aamp_merge(aamp_contents, change)
                         aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                     except:  # pylint: disable=bare-except
-                        from bcml import json_util
-                        err = RuntimeError(f'AAMP file {file} could be merged.')
-                        err.error_text = f"""AAMP file {file} could be merged. Patch details:
-                            <pre class="scroller">{json_util.aamp_to_json(stuff)}</pre>"""
-                        raise err
+                        raise RuntimeError(f'AAMP file {file} could be merged.')
                     del aamp_contents
                     new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
                     cache_merged_aamp(file, new_bytes)
                 else:
                     raise ValueError('Wait, what the heck, this isn\'t an AAMP file?!')
             except ValueError:
-                new_bytes = pack.get_file_data(file).tobytes()
+                new_bytes = pack.get_file(file).data
                 print(f'Deep merging {file} failed. No changes were made.')
 
-            new_sarc.delete_file(file)
-            new_sarc.add_file(file, new_bytes)
+            new_sarc.files[file] = oead.Bytes(new_bytes)
     return new_sarc, failures
 
 
@@ -215,9 +185,9 @@ def threaded_merge(item) -> (str, dict):
     magic = file_bytes[0:4]
 
     if magic == b'SARC':
-        new_sarc, sub_failures = nested_patch(sarc.SARC(file_bytes), stuff)
+        new_sarc, sub_failures = nested_patch(oead.Sarc(file_bytes), stuff)
         del file_bytes
-        new_bytes = new_sarc.get_bytes()
+        new_bytes = bytes(new_sarc.write()[1])
         for failure, contents in sub_failures.items():
             print(f'Some patches to {failure} failed to apply.')
             failures[failure] = contents
@@ -230,10 +200,7 @@ def threaded_merge(item) -> (str, dict):
                         aamp_contents = _aamp_merge(aamp_contents, change)
                     aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
                 except:  # pylint: disable=bare-except
-                    err = RuntimeError(f'AAMP file {file} could be merged.')
-                    err.error_text = f"""AAMP file {file} could be merged. Patch details:
-                        <pre class="scroller">{json_util.aamp_to_json(stuff)}</pre>"""
-                    raise err
+                    raise RuntimeError(f'AAMP file {file} could be merged.')
                 del aamp_contents
                 new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
             else:
@@ -275,12 +242,24 @@ class DeepMerger(mergers.Merger):
                 continue
         return diffs
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
+            from aamp import ParameterIO, ParameterObject, ParameterList, Writer
+            pio = ParameterIO('log', 0)
+            root = ParameterList()
+            for file, plist in diff_material.items():
+                root.set_list(file, plist)
+            pio.set_list('param_root', root)
+            file_table = ParameterObject()
+            for i, f in enumerate(diff_material):
+                file_table.set_param(f'File{i}', f)
+            root.set_object('FileTable', file_table)
+            from oead import aamp
+            pio = aamp.ParameterIO.from_binary(Writer(pio).get_bytes())
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.aamp_to_json(diff_material),
+                pio.to_text(),
                 encoding='utf-8'
             )
 
@@ -288,18 +267,14 @@ class DeepMerger(mergers.Merger):
         return True
 
     def get_mod_affected(self, mod):
-        return get_mod_deepmerge_files(mod)
+        return self.get_mod_diff().keys()
 
     def get_mod_diff(self, mod: BcmlMod):
         if self.is_mod_logged(mod):
-            # return json_util.json_diff_to_aamp(
-            #     (mod / 'logs' / self._log_name).read_text(encoding='utf-8')
-            # )
-            pio = aamp.Reader(
-                bytes(oead.aamp.ParameterIO.from_text(
-                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
-                ).to_binary())
-            ).parse()
+            yml = oead.aamp.ParameterIO.from_text(
+                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+            )
+            pio = aamp.Reader(bytes(yml.to_binary())).parse()
             return {
                 file: pio.list('param_root').list(file) \
                     for i, file in pio.list('param_root').object('FileTable').params.items()
@@ -310,8 +285,7 @@ class DeepMerger(mergers.Merger):
     def get_all_diffs(self):
         aamp_diffs = {}
         for mod in [m for m in util.get_installed_mods() if self.is_mod_logged(m)]:
-            # with (mod.path / 'logs' / self._log_name).open('r', encoding='utf-8') as d_file:
-            mod_diffs =  self.get_mod_diff(mod)#json_util.json_diff_to_aamp(d_file.read())
+            mod_diffs =  self.get_mod_diff(mod)
             for file in [
                 diff for diff in mod_diffs if not (
                     'only_these' in self._options and diff not in self._options['only_these']

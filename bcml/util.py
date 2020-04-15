@@ -1,5 +1,5 @@
 # pylint: disable=missing-docstring
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
 from dataclasses import dataclass
@@ -20,14 +20,9 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import Union, List
 
-import byml
-from byml import yaml_util
 import oead
-import sarc
-import syaz0
 import xxhash
 from webview import Window
-import yaml
 
 
 CREATE_NO_WINDOW = 0x08000000
@@ -215,19 +210,17 @@ compress = oead.yaz0.compress
 
 
 def vprint(content):
+    from . import DEBUG
+    if not DEBUG:
+        return
     if not isinstance(content, str):
-        try:
-            content = json.dumps(content, ensure_ascii=False, indent=4)
-        except TypeError:
-            from . import json_util
-            try:
-                content = json_util.aamp_to_json(content, pretty=True)
-            except TypeError:
-                try:
-                    content = json_util.byml_to_json(content, pretty=True)
-                except TypeError:
-                    from pprint import pformat
-                    content = pformat(content, compact=True, indent=4)
+        if isinstance(content, oead.byml.Hash) or isinstance(content, oead.byml.Array):
+            print(oead.byml.to_text(content))
+        elif isinstance(content, oead.aamp.ParameterIO):
+            print(content.to_text())
+        else:
+            from pprint import pformat
+            content = pformat(content, compact=True, indent=4)
     print(f'VERBOSE{content}')
 
 
@@ -516,21 +509,27 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         raise FileNotFoundError(f'File {str(path)} was not found in game dump.')
 
 
-@lru_cache(None)
+@lru_cache(10)
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
     nests = file.split('//')
     sarcs = []
-    with open(nests[0], 'rb') as s_file:
-        sarcs.append(sarc.read_file_and_make_sarc(s_file))
+    sarcs.append(
+        oead.Sarc(unyaz_if_needed(Path(nests[0]).read_bytes()))
+    )
     i = 1
     while i < len(nests) - 1:
         sarc_bytes = unyaz_if_needed(
-            sarcs[i - 1].get_file_data(nests[i]).tobytes())
-        sarcs.append(sarc.SARC(sarc_bytes))
+            sarcs[i - 1].get_file(nests[i]).data
+        )
+        sarcs.append(
+            oead.Sarc(sarc_bytes)
+        )
         i += 1
-    file_bytes = sarcs[-1].get_file_data(nests[-1]).tobytes()
+    file_bytes = sarcs[-1].get_file(nests[-1]).data
     if file_bytes[0:4] == b'Yaz0' and unyaz:
         file_bytes = decompress(file_bytes)
+    else:
+        file_bytes = bytes(file_bytes)
     del sarcs
     return file_bytes
 
@@ -593,7 +592,7 @@ def get_file_language(file: Union[Path, str]) -> str:
 
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
     contents = file if isinstance(file, bytes) else \
-        file.read_bytes() if isinstance(file, Path) else file.tobytes()
+        file.read_bytes() if isinstance(file, Path) else bytes(file)
     table = get_hash_table()
     if name not in table:
         return count_new
@@ -626,13 +625,10 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
         if not bootup_path.exists():
             bootup_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(get_game_file('Pack/Bootup.pack'), bootup_path)
-        with bootup_path.open('rb') as b_file:
-            old_bootup = sarc.read_file_and_make_sarc(b_file)
-            new_bootup = sarc.make_writer_from_sarc(old_bootup)
-        if file in old_bootup.list_files():
-            new_bootup.delete_file(file)
-        new_bootup.add_file(file, data)
-        bootup_path.write_bytes(new_bootup.get_bytes())
+        old_bootup = oead.Sarc(bootup_path.read_bytes())
+        new_bootup = oead.SarcWriter.from_sarc(old_bootup)
+        new_bootup.files[file] = data
+        bootup_path.write_bytes(new_bootup.write()[1])
     else:
         raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
 

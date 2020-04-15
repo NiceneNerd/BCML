@@ -1,5 +1,5 @@
 """Provides functions for diffing and merging SARC packs"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import io
 import json
@@ -9,7 +9,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from typing import List, Union
 
-import sarc
+import oead
 import xxhash
 
 from bcml import data, util, mergers
@@ -17,43 +17,46 @@ from bcml.util import BcmlMod
 
 
 def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
-    opened_sarcs: List[sarc.SARC] = []
+    opened_sarcs: List[oead.Sarc] = []
     if isinstance(sarcs[0], Path):
         for i, sarc_path in enumerate(sarcs):
             sarcs[i] = sarc_path.read_bytes()
     for sarc_bytes in sarcs:
         sarc_bytes = util.unyaz_if_needed(sarc_bytes)
         try:
-            opened_sarcs.append(sarc.SARC(sarc_bytes))
-        except ValueError:
+            opened_sarcs.append(oead.Sarc(sarc_bytes))
+        except (ValueError, RuntimeError, oead.InvalidDataError):
             continue
 
-    all_files = {key for open_sarc in opened_sarcs for key in open_sarc.list_files()}
+    all_files = {file.name for open_sarc in opened_sarcs for file in open_sarc.get_files()}
     nested_sarcs = {}
-    new_sarc = sarc.SARCWriter(be=util.get_settings('wiiu'))
+    new_sarc = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
     files_added = []
 
     for opened_sarc in reversed(opened_sarcs):
-        for file in [file for file in opened_sarc.list_files() if file not in files_added]:
-            data = opened_sarc.get_file_data(file).tobytes()
-            if util.is_file_modded(file.replace('.s', '.'), data, count_new=True):
-                if not Path(file).suffix in util.SARC_EXTS:
-                    new_sarc.add_file(file, data)
-                    files_added.append(file)
+        for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
+            data = oead.Bytes(file.data)
+            if util.is_file_modded(file.name.replace('.s', '.'), data, count_new=True):
+                if not Path(file.name).suffix in util.SARC_EXTS:
+                    new_sarc.files[file.name] = data
+                    files_added.append(file.name)
                 else:
-                    if file not in nested_sarcs:
-                        nested_sarcs[file] = []
-                    nested_sarcs[file].append(util.unyaz_if_needed(data))
+                    if file.name not in nested_sarcs:
+                        nested_sarcs[file.name] = []
+                    nested_sarcs[file.name].append(util.unyaz_if_needed(data))
     for file, sarcs in nested_sarcs.items():
         merged_bytes = merge_sarcs(file, sarcs)[1]
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
             merged_bytes = util.compress(merged_bytes)
-        new_sarc.add_file(file, merged_bytes)
+        new_sarc.files[file] = merged_bytes
         files_added.append(file)
     for file in [file for file in all_files if file not in files_added]:
-        for opened_sarc in [open_sarc for open_sarc in opened_sarcs \
-                            if file in open_sarc.list_files()]:
-            new_sarc.add_file(file, opened_sarc.get_file_data(file).tobytes())
+        for opened_sarc in [open_sarc for open_sarc in opened_sarcs if (
+                file in [f.name for f in open_sarc.get_files()]
+            )]:
+            new_sarc.files[file] = oead.Bytes(opened_sarc.get_file(file).data)
             break
 
     if 'Bootup.pack' in file_name:
@@ -62,13 +65,9 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
             if not inject:
                 continue
             file, data = inject
-            try:
-                new_sarc.delete_file(file)
-            except KeyError:
-                pass
-            new_sarc.add_file(file, data)
+            new_sarc.files[file] = data
 
-    return (file_name, new_sarc.get_bytes())
+    return (file_name, bytes(new_sarc.write()[1]))
 
 
 class PackMerger(mergers.Merger):
@@ -93,7 +92,7 @@ class PackMerger(mergers.Merger):
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         (mod_dir / 'logs' / self._log_name).write_text(

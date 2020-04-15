@@ -109,7 +109,7 @@ class Settings extends React.Component {
                                         The folder containing the base game
                                         files for BOTW, without the update or
                                         DLC files. The last folder should be
-                                        "content", e.g.
+                                        "content" or "romfs", e.g.
                                         <br />
                                         <code>
                                             C:\Games\The Legend of Zelda Breath
@@ -132,7 +132,11 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.update_dir}
                                 onChange={this.handleChange}
-                                isValid={this.state.update_dir != ""}
+                                isValid={
+                                    this.state.update_dir != "" ||
+                                    !this.state.wiiu
+                                }
+                                disabled={!this.state.wiiu}
                                 overlay={
                                     <Tooltip>
                                         The folder containing the update files
@@ -219,7 +223,7 @@ class Settings extends React.Component {
                                         be careful about getting the right
                                         directories for update and DLC files.
                                         You will be able to merge installed mods
-                                        wiht Export.
+                                        with Export.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -279,8 +283,7 @@ class Settings extends React.Component {
 
     componentDidMount() {
         pywebview.api.get_settings().then(settings => {
-            console.log(settings);
-            this.setState({ ...settings }, () => console.log(this.state));
+            this.setState({ ...settings });
         });
     }
 }

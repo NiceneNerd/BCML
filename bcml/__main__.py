@@ -35,7 +35,7 @@ class Api:
     window: webview.Window
 
     @win_or_lose
-    def sanity_check(self, params):
+    def sanity_check(self):
         import platform
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
@@ -57,7 +57,7 @@ class Api:
         if not settings['no_cemu']:
             util.get_cemu_dir()
 
-    def get_folder(self, params):
+    def get_folder(self):
         return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
@@ -75,14 +75,14 @@ class Api:
             elif params['type'] == 'dlc_dir':
                 return (p / 'Pack' / 'AocMainField.pack').exists()
 
-    def get_settings(self, params):
+    def get_settings(self):
         return util.get_settings()
 
     def save_settings(self, params):
         util.get_settings.settings = params['settings']
         util.save_settings()
 
-    def old_settings(self, params):
+    def old_settings(self):
         old = util.get_data_dir() / 'settings.ini'
         if old.exists():
             try:    
@@ -104,17 +104,17 @@ class Api:
                 'message': 'No old settings found.'
             }
 
-    def get_old_mods(self, params):
+    def get_old_mods(self):
         return len({
             d for d in (util.get_cemu_dir() / 'graphicPacks' / 'BCML').glob('*') if d.is_dir()
         })
     
     @win_or_lose
-    def convert_old_mods(self, params):
+    def convert_old_mods(self):
         upgrade.convert_old_mods()
 
     @win_or_lose
-    def delete_old_mods(self, params):
+    def delete_old_mods(self):
         from shutil import rmtree
         rmtree(util.get_cemu_dir() / 'graphicPacks' / 'BCML')
 
@@ -148,7 +148,7 @@ class Api:
             [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
         )}]; window.loadMergers();""")
 
-    def file_pick(self, params):
+    def file_pick(self, params = None):
         if not params:
             params = {}
         return self.window.create_file_dialog(
@@ -159,7 +159,7 @@ class Api:
             allow_multiple=True if not 'multiple' in params else params['multiple']
         ) or []
     
-    def get_options(self, params):
+    def get_options(self):
         opts = []
         for m in mergers.get_mergers():
             m = m()
@@ -170,7 +170,7 @@ class Api:
             })
         return opts
 
-    def get_backups(self, params):
+    def get_backups(self):
         return [
             {'name': b[0][0], 'num': b[0][1], 'path': b[1]} for b in [
                 (b.stem.split('---'), str(b)) for b in install.get_backups()
@@ -179,6 +179,7 @@ class Api:
 
     @win_or_lose
     def install_mod(self, params):
+        util.vprint(params)
         set_start_method('spawn', True)
         with Pool(cpu_count()) as pool:
             mods = [
@@ -226,7 +227,7 @@ class Api:
         )
 
     @win_or_lose
-    def uninstall_all(self, params):
+    def uninstall_all(self):
         from shutil import rmtree
         [rmtree(d) for d in util.get_modpack_dir().glob('*') if d.is_dir()]
 
@@ -313,18 +314,15 @@ class Api:
         Path(params['backup']).unlink()
 
     @win_or_lose
-    def export(self, params):
+    def export(self):
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG,
             file_types=(
                 'BOTW Nano Patch (*.bnp)',
-                ('Graphic Pack' if self.get_settings('wiiu') else 'Atmosphere') + ' (*.zip)'
+                ('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere') + ' (*.zip)'
             )
         )
-        try:
-            output = Path(out[0])
-        except:
-            return
+        output = Path(out[0])
         install.export(output)
 
 

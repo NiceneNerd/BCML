@@ -1,5 +1,5 @@
 """Provides functions for diffing and merging the BotW Resource Size Table"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import csv
 import io
@@ -12,10 +12,10 @@ from functools import partial
 from pathlib import Path
 from typing import List, Union
 
+import oead
 import rstb
 from rstb import ResourceSizeTable
 from rstb.util import read_rstb
-import sarc
 
 from bcml import util, install, mergers
 from bcml.util import BcmlMod
@@ -26,7 +26,6 @@ RSTB_EXCLUDE_NAMES = ['ActorInfo.product.byml']
 
 
 def get_stock_rstb() -> rstb.ResourceSizeTable:
-    """ Gets the unmodified RSTB """
     if not hasattr(get_stock_rstb, 'table'):
         get_stock_rstb.table = read_rstb(
             str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')),
@@ -36,12 +35,6 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
 
 
 def calculate_size(path: Path) -> int:
-    """
-    Calculates the resource size value for the given file
-
-    :returns: The proper RSTB value for the file if it can be calculated, otherwise 0.
-    :rtype: int
-    """
     if not hasattr(calculate_size, 'rstb_calc'):
         calculate_size.rstb_calc = rstb.SizeCalculator()
     try:
@@ -55,14 +48,6 @@ def calculate_size(path: Path) -> int:
 
 
 def set_size(entry: str, size: int):
-    """
-    Sets the size of a resource in the current master RSTB
-
-    :param entry: The resource to set
-    :type entry: str
-    :param size: The resource size
-    :type size: int
-    """
     rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /\
                 'ResourceSizeTable.product.srsizetable'
     if rstb_path.exists():
@@ -79,16 +64,6 @@ def set_size(entry: str, size: int):
 
 
 def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
-    """
-    Attempts to estimate a proper RSTB value for a BFRES file
-
-    :param file: The file to estimate, either as a path or bytes
-    :type file: Union[class:`pathlib.Path`, bytes]
-    :param name: The name of the file, needed when passing as bytes, defaults to ''
-    :type name: str, optional
-    :return: Returns an estimated RSTB value
-    :rtype: int
-    """
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b'Yaz0':
         real_bytes = util.decompress(real_bytes)
@@ -160,17 +135,10 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
 
 
 def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
-    """
-    Attempts to estimate a proper RSTB value for an AAMP file. Will only attempt for the following
-    kinds: .baiprog, .bgparamlist, .bdrop, .bshop, .bxml, .brecipe, otherwise will return 0.
-
-    :param file: The file to estimate, either as a path or bytes
-    :type file: Union[class:`pathlib.Path`, bytes]
-    :param name: The name of the file, needed when passing as bytes, defaults to ''
-    :type name: str, optional
-    :return: Returns an estimated RSTB value
-    :rtype: int"""
-    real_bytes = file if isinstance(file, bytes) else file.read_bytes()
+    real_bytes = (
+        file if isinstance(file, bytes) else file.tobytes() \
+            if isinstance(file, memoryview) else file.read_bytes()
+    )
     if real_bytes[0:4] == b'Yaz0':
         real_bytes = util.decompress(real_bytes)
     real_size = int(len(real_bytes) * 1.05)
@@ -359,7 +327,10 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
                 util.vprint(f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}')
                 change_count['updated'] += 1
         else:
-            newsize = int(changes[change]['size'])
+            try:
+                newsize = int(changes[change]['size'])
+            except ValueError:
+                newsize = int(float(changes[change]['size']))
             if newsize == 0:
                 util.vprint(f'{spaces}Could not calculate size for new entry {change}, skipped')
                 continue
@@ -373,18 +344,17 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
     return table
 
 
-def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
+def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
     calc = rstb.SizeCalculator()
     sizes = {}
     no_guess = util.get_settings('no_guess')
     if isinstance(file, Path):
-        with file.open('rb') as s_file:
-            file = sarc.read_file_and_make_sarc(s_file)
-        if not file:
+        try:
+            file = oead.Sarc(file.read_bytes())
+        except (RuntimeError, oead.InvalidDataError):
             return {}
-    for nest_file in file.list_files():
+    for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace('.s', '.')
-        data = file.get_file_data(nest_file).tobytes()
         if data[0:4] == b'Yaz0':
             data = util.decompress(data)
         ext = Path(canon).suffix
@@ -404,7 +374,7 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
             sizes[canon] = size
             if ext in util.SARC_EXTS and not nest_file.endswith('sarc'):
                 try:
-                    nest_sarc = sarc.SARC(data)
+                    nest_sarc = oead.Sarc(data)
                 except ValueError:
                     continue
                 sizes.update(_get_sizes_in_sarc(nest_sarc))
@@ -414,7 +384,6 @@ def _get_sizes_in_sarc(file: Union[Path, sarc.SARC]) -> {}:
 
 
 def log_merged_files_rstb(pool: multiprocessing.Pool = None):
-    """ Generates an RSTB log for the master BCML modpack containing merged files """
     print('Updating RSTB for merged files...')
     diffs = {}
     files = {
@@ -451,7 +420,6 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
             log.write(f'{canon},{size},//\n')
 
 def generate_master_rstb():
-    """Merges all installed RSTB modifications"""
     print('Merging RSTB changes...')
     if (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').exists():
         (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').unlink()
@@ -526,18 +494,18 @@ class RstbMerger(mergers.Merger):
                 parts = file.split('//')
                 name = parts[-1]
                 if parts[0] not in open_sarcs:
-                    with (mod_dir / parts[0]).open('rb') as s_file:
-                        open_sarcs[parts[0]] = sarc.read_file_and_make_sarc(s_file)
+                    open_sarcs[parts[0]] = oead.Sarc(
+                        util.unyaz_if_needed((mod_dir / parts[0]).read_bytes())
+                    )
                 for part in parts[1:-1]:
                     if part not in open_sarcs:
-                        open_sarcs[part] = sarc.SARC(
+                        open_sarcs[part] = oead.Sarc(
                             util.unyaz_if_needed(
-                                open_sarcs[parts[parts.index(part) - 1]]\
-                                    .get_file_data(part).tobytes()
+                                open_sarcs[parts[parts.index(part) - 1]].get_file(part).data
                             )
                         )
                 ext = Path(name).suffix
-                data = util.unyaz_if_needed(open_sarcs[parts[-2]].get_file_data(name).tobytes())
+                data = util.unyaz_if_needed(open_sarcs[parts[-2]].get_file(name).data)
                 rstb_val = rstb.SizeCalculator().calculate_file_size_with_ext(
                     data,
                     wiiu=util.get_settings('wiiu'),
@@ -555,7 +523,7 @@ class RstbMerger(mergers.Merger):
             del open_sarc
         return rstb_diff
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         diffs = {}
         if isinstance(diff_material, dict):
             diffs = diff_material

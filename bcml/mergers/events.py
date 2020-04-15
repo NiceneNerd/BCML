@@ -1,45 +1,35 @@
 """Provides features for diffing and merging EventInfo.product.sbyml """
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-from copy import deepcopy
 from pathlib import Path
 from typing import List, Union
 
-import byml
-from byml import yaml_util
+import oead
 import rstb
-import sarc
-from bcml import util, mergers, json_util
+from bcml import util, mergers
 from bcml.util import BcmlMod
 from bcml.mergers import rstable
 
 
-def get_stock_eventinfo() -> {}:
-    """ Gets the contents of the stock `EventInfo.product.sbyml` """
+def get_stock_eventinfo() -> oead.byml.Hash:
     if not hasattr(get_stock_eventinfo, 'event_info'):
-        get_stock_eventinfo.event_info = byml.Byml(
-            util.get_nested_file_bytes(
-                str(util.get_game_file('Pack/Bootup.pack')) + '//Event/EventInfo.product.sbyml',
-                unyaz=True
+        get_stock_eventinfo.event_info = oead.byml.to_text(
+            oead.byml.from_binary(
+                util.get_nested_file_bytes(
+                    str(util.get_game_file('Pack/Bootup.pack')) + '//Event/EventInfo.product.sbyml',
+                    unyaz=True
+                )
             )
-        ).parse()
-    return deepcopy(get_stock_eventinfo.event_info)
+        )
+    return oead.byml.from_text(get_stock_eventinfo.event_info)
 
-def get_modded_events(event_info: dict) -> {}:
-    """
-    Gets a dict of new or modified event entries in an `EventInfo.product.sbyml` file
-
-    :param eventinfo: The contents of the modded event info file to diff
-    :type eventinfo: dict
-    :returns: Returns a dict of new or modified event entries
-    :rtype: dict
-    """
+def get_modded_events(event_info: oead.byml.Hash) -> oead.byml.Hash:
     stock_events = get_stock_eventinfo()
-    modded_events = {}
+    modded_events = oead.byml.Hash()
     for event, data in event_info.items():
         if event not in stock_events or\
            stock_events[event] != data:
-            modded_events[event] = deepcopy(data)
+            modded_events[event] = data
     return modded_events
 
 
@@ -48,33 +38,34 @@ class EventInfoMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__('event info', 'Merges changes to EventInfo.product.byml',
-                         'eventinfo.json', options={})
+                         'eventinfo.yml', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
-            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
-                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
-            event_info = byml.Byml(
+            bootup_sarc = oead.Sarc(
+                (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
+            )
+            event_info = oead.byml.from_binary(
                 util.decompress(
-                    bootup_sarc.get_file_data('Event/EventInfo.product.sbyml').tobytes()
+                    bootup_sarc.get_file('Event/EventInfo.product.sbyml').data
                 )
-            ).parse()
+            )
             return get_modded_events(event_info)
         else:
             return {}
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
+                oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
 
     def get_mod_diff(self, mod: BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
+            return oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:
@@ -87,7 +78,7 @@ class EventInfoMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = {}
+        all_diffs = oead.byml.Hash()
         for diff in diffs:
             all_diffs.update(diff)
         return all_diffs
@@ -107,7 +98,8 @@ class EventInfoMerger(mergers.Merger):
                 event_merge_log.unlink()
                 try:
                     stock_eventinfo = util.get_nested_file_bytes(
-                        str(util.get_game_file('Pack/Bootup.pack')) + '//Event/EventInfo.product.sbyml',
+                        (str(util.get_game_file('Pack/Bootup.pack')) +
+                            '//Event/EventInfo.product.sbyml'),
                         unyaz=False
                     )
                     util.inject_file_into_bootup(
@@ -126,7 +118,7 @@ class EventInfoMerger(mergers.Merger):
             new_events[event] = data
 
         print('Writing new event info...')
-        event_bytes = byml.Writer(new_events, be=util.get_settings('wiiu')).get_bytes()
+        event_bytes = oead.byml.to_binary(new_events, big_endian=util.get_settings('wiiu'))
         util.inject_file_into_bootup(
             'Event/EventInfo.product.sbyml',
             util.compress(event_bytes),

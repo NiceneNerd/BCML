@@ -1,188 +1,174 @@
 """
 Provides functions to diff and merge BOTW gamedat and savedata.
 """
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import zlib
 from copy import deepcopy
-from functools import partial
+from functools import partial, lru_cache
 from io import BytesIO
 from math import ceil
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from typing import List, Union
 
-import byml
-from byml import yaml_util
 import oead
 import rstb
 import rstb.util
-import sarc
 import xxhash
-import yaml
 
-from bcml import util, mergers, json_util
+from bcml import util, mergers
 from bcml.mergers import rstable
 from bcml.util import BcmlMod
 
 
-def get_stock_gamedata() -> sarc.SARC:
-    if not hasattr(get_stock_gamedata, 'gamedata'):
-        with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
-            bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_gamedata.gamedata = sarc.SARC(util.decompress(
-            bootup.get_file_data('GameData/gamedata.ssarc')))
-    return get_stock_gamedata.gamedata
+@lru_cache(None)
+def get_stock_gamedata() -> oead.Sarc:
+    bootup = oead.Sarc(util.get_game_file('Pack/Bootup.pack').read_bytes())
+    return oead.Sarc(
+        util.decompress(
+            bootup.get_file('GameData/gamedata.ssarc').data
+        )
+    )
 
 
-def get_stock_savedata() -> sarc.SARC:
-    if not hasattr(get_stock_savedata, 'savedata'):
-        with util.get_game_file('Pack/Bootup.pack').open('rb') as b_file:
-            bootup = sarc.read_file_and_make_sarc(b_file)
-        get_stock_savedata.savedata = sarc.SARC(util.decompress(
-            bootup.get_file_data('GameData/savedataformat.ssarc')
-        ))
-    return get_stock_savedata.savedata
+@lru_cache(None)
+def get_stock_savedata() -> oead.Sarc:
+    bootup = oead.Sarc(util.get_game_file('Pack/Bootup.pack').read_bytes())
+    return oead.Sarc(
+        util.decompress(
+            bootup.get_file('GameData/savedataformat.ssarc').data
+        )
+    )
 
 
+@lru_cache(None)
 def get_gamedata_hashes() -> {}:
-    if not hasattr(get_gamedata_hashes, 'gamedata_hashes'):
-        get_gamedata_hashes.gamedata_hashes = {}
-        gamedata = get_stock_gamedata()
-        for file in gamedata.list_files():
-            get_gamedata_hashes.gamedata_hashes[file] = xxhash.xxh32(
-                gamedata.get_file_data(file)).hexdigest()
-    return get_gamedata_hashes.gamedata_hashes
+    gamedata = get_stock_gamedata()
+    return {
+        file.name: xxhash.xxh32_hexdigest(file.data) for file in gamedata.get_files()
+    }
 
 
+@lru_cache(None)
 def get_savedata_hashes() -> {}:
-    if not hasattr(get_savedata_hashes, 'savedata_hashes'):
-        get_savedata_hashes.savedata_hashes = {}
-        savedata = get_stock_savedata()
-        for file in savedata.list_files():
-            get_savedata_hashes.savedata_hashes[file] = xxhash.xxh32(
-                savedata.get_file_data(file)).hexdigest()
-    return get_savedata_hashes.savedata_hashes
+    savedata = get_stock_savedata()
+    return {
+        file.name: xxhash.xxh32_hexdigest(file.data) for file in savedata.get_files()
+    }
 
 
-def inject_gamedata_into_bootup(bgdata: sarc.SARCWriter, bootup_path: Path = None) -> int:
+def inject_gamedata_into_bootup(bgdata: oead.SarcWriter, bootup_path: Path = None) -> int:
     if not bootup_path:
         master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
-    with bootup_path.open('rb') as b_file:
-        bootup_pack = sarc.read_file_and_make_sarc(b_file)
-    new_pack = sarc.make_writer_from_sarc(bootup_pack)
-    new_pack.delete_file('GameData/gamedata.ssarc')
-    gamedata_bytes = bgdata.get_bytes()
-    new_pack.add_file('GameData/gamedata.ssarc',
-                      util.compress(gamedata_bytes))
-    (util.get_master_modpack_dir() / util.get_content_path() /
-     'Pack').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack').open('wb') as b_file:
-        new_pack.write(b_file)
+    bootup_pack = oead.Sarc(bootup_path.read_bytes())
+    new_pack = oead.SarcWriter.from_sarc(bootup_pack)
+    gamedata_bytes = bgdata.write()[1]
+    new_pack.files['GameData/gamedata.ssarc'] = util.compress(gamedata_bytes)
+    ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack')
+        .mkdir(parents=True, exist_ok=True))
+    ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
+        .write_bytes(new_pack.write()[1]))
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
 
 
-def inject_savedata_into_bootup(bgsvdata: sarc.SARCWriter, bootup_path: Path = None) -> int:
+def inject_savedata_into_bootup(bgsvdata: oead.SarcWriter, bootup_path: Path = None) -> int:
     if not bootup_path:
         master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
         bootup_path = master_boot if master_boot.exists() \
             else util.get_game_file('Pack/Bootup.pack')
-    with bootup_path.open('rb') as b_file:
-        bootup_pack = sarc.read_file_and_make_sarc(b_file)
-    new_pack = sarc.make_writer_from_sarc(bootup_pack)
-    new_pack.delete_file('GameData/savedataformat.ssarc')
-    savedata_bytes = bgsvdata.get_bytes()
-    new_pack.add_file('GameData/savedataformat.ssarc',
-                      util.compress(savedata_bytes))
-    (util.get_master_modpack_dir() / util.get_content_path() / 'Pack').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack').open('wb') as b_file:
-        new_pack.write(b_file)
+    bootup_pack = oead.Sarc(bootup_path.read_bytes())
+    new_pack = oead.SarcWriter.from_sarc(bootup_pack)
+    savedata_bytes = bgsvdata.write()[1]
+    new_pack.files['GameData/savedataformat.ssarc'] = util.compress(savedata_bytes)
+    ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack')
+        .mkdir(parents=True, exist_ok=True))
+    ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
+        .write_bytes(new_pack.write()[1]))
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
 
 
-def is_savedata_modded(savedata: sarc.SARC) -> {}:
+def is_savedata_modded(savedata: oead.Sarc) -> {}:
     hashes = get_savedata_hashes()
-    sv_files = sorted(savedata.list_files())
-    fix_slash = '/' if not sv_files[0].startswith('/') else ''
+    sv_files = sorted(savedata.get_files(), key=lambda file: file.name)
+    fix_slash = '/' if not sv_files[0].name.startswith('/') else ''
     modded = False
     for svdata in sv_files[0:-2]:
-        svdata_bytes = savedata.get_file_data(svdata).tobytes()
-        svdata_hash = xxhash.xxh32(svdata_bytes).hexdigest()
-        del svdata_bytes
+        svdata_hash = xxhash.xxh32_hexdigest(svdata.data)
         if not modded:
             modded = fix_slash + \
-                svdata not in hashes or svdata_hash != hashes[fix_slash + svdata]
+                svdata.name not in hashes or svdata_hash != hashes[fix_slash + svdata.name]
     return modded
 
 
 def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
-    return byml.Byml(game_dict[file]).parse()
+    return oead.byml.to_text(oead.byml.from_binary(game_dict[file]))
 
 
-def consolidate_gamedata(gamedata: sarc.SARC, pool: Pool) -> {}:
+def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     data = {}
     set_start_method('spawn', True)
     p = pool or Pool(processes=cpu_count())
     game_dict = {}
-    for file in gamedata.list_files():
-        game_dict[file] = gamedata.get_file_data(file).tobytes()
+    for file in gamedata.get_files():
+        game_dict[file.name] = bytes(file.data)
     results = pool.map(
         partial(_bgdata_from_bytes, game_dict=game_dict),
-        gamedata.list_files()
+        [f.name for f in gamedata.get_files()]
     )
     del game_dict
     del gamedata
     for result in results:
-        util.dict_merge(data, result)
+        util.dict_merge(data, oead.byml.from_text(result))
     if not pool:
         p.close()
         p.join()
+    util.vprint(data)
     return data
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
-    diffs = {}
+    diffs = oead.byml.Hash()
     for entry in mod_data[data_type]:
         if entry['DataName'] not in stock_entries \
            or entry != stock_data[data_type][stock_entries.index(entry['DataName'])]:
-            diffs[entry['DataName']] = deepcopy(entry)
-    return {data_type: diffs}
+            diffs[entry['DataName']] = entry
+    return oead.byml.Hash({data_type: diffs})
 
 
-def get_modded_gamedata_entries(gamedata: sarc.SARC, pool: Pool = None) -> {}:
+def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     set_start_method('spawn', True)
     p = pool or Pool(cpu_count())
     stock_data = consolidate_gamedata(get_stock_gamedata(), p)
     mod_data = consolidate_gamedata(gamedata, p)
-    diffs = {}
-    results = pool.map(
-        partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data),
-        list(mod_data.keys())
-    )
-    for result in results:
-        _, entries = list(result.items())[0]
-        if entries:
-            diffs.update(result)
     if not pool:
         p.close()
         p.join()
-    return diffs
+    diffs = {}
+    for key in mod_data.keys():
+        diffs.update(
+            diff_gamedata_type(key, mod_data, stock_data)
+        )
+    return oead.byml.Hash(diffs)
 
 
-def get_modded_savedata_entries(savedata: sarc.SARC) -> []:
-    ref_savedata = get_stock_savedata()
-    ref_hashes = []
-    new_entries = []
-    for file in sorted(ref_savedata.list_files())[0:-2]:
-        for item in byml.Byml(ref_savedata.get_file_data(file).tobytes()).parse()['file_list'][1]:
-            ref_hashes.append(item['HashValue'])
-    for file in sorted(savedata.list_files())[0:-2]:
-        for item in byml.Byml(savedata.get_file_data(file).tobytes()).parse()['file_list'][1]:
-            if item['HashValue'] not in ref_hashes:
-                new_entries.append(item)
+def get_modded_savedata_entries(savedata: oead.Sarc) -> []:
+    ref_savedata = get_stock_savedata().get_files()
+    ref_hashes = set()
+    new_entries = oead.byml.Array()
+    for file in sorted(ref_savedata, key=lambda f: f.name)[0:-2]:
+        ref_hashes |= {
+            int(item['HashValue']) for item in oead.byml.from_binary(file.data)['file_list'][1]
+        }
+    for file in sorted(savedata.get_files(), key=lambda f: f.name,)[0:-2]:
+        new_entries.extend(
+            { item for item in oead.byml.from_binary(file.data)['file_list'][1] if (
+                int(item['HashValue']) not in ref_hashes
+            ) }
+        )
     return new_entries
 
 
@@ -205,17 +191,20 @@ class GameDataMerger(mergers.Merger):
         super().__init__(
             'game data',
             'Merges changes to gamedata.sarc',
-            'gamedata.json', options={}
+            'gamedata.yml', options={}
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
-            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
-                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            bootup_sarc = oead.Sarc(
+                util.unyaz_if_needed(
+                    (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
+                )
+            )
             return get_modded_gamedata_entries(
-                sarc.SARC(
+                oead.Sarc(
                     util.decompress(
-                        bootup_sarc.get_file_data('GameData/gamedata.ssarc').tobytes()
+                        bootup_sarc.get_file('GameData/gamedata.ssarc').data
                     )
                 ),
                 pool=self._pool
@@ -223,18 +212,18 @@ class GameDataMerger(mergers.Merger):
         else:
             return {}
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
-            diff_material = self.generate_diff(mod_dir, diff_material)
+            diff_material: oead.byml.Hash = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
+                oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
 
     def get_mod_diff(self, mod: BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
+            return oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:
@@ -278,8 +267,8 @@ class GameDataMerger(mergers.Merger):
 
         print('Loading stock gamedata...')
         gamedata = get_stock_gamedata()
-        for yml in gamedata.list_files():
-            base_yml = byml.Byml(gamedata.get_file_data(yml).tobytes()).parse()
+        for yml in gamedata.get_files():
+            base_yml = oead.byml.from_binary(yml.data)
             for data_type in base_yml:
                 if data_type not in merged_entries:
                     merged_entries[data_type] = []
@@ -291,8 +280,7 @@ class GameDataMerger(mergers.Merger):
                 for entry in [entry for entry in merged_entries[data_type]
                             if entry['DataName'] in modded_entries[data_type]]:
                     i = merged_entries[data_type].index(entry)
-                    merged_entries[data_type][i] = deepcopy(
-                        modded_entries[data_type][entry['DataName']])
+                    merged_entries[data_type][i] = modded_entries[data_type][entry['DataName']]
                 print(f'Merged modified {data_type} entries')
 
         for data_type in modded_entries:
@@ -302,23 +290,24 @@ class GameDataMerger(mergers.Merger):
             print(f'Merged new {data_type} entries')
 
         print('Creating and injecting new gamedata.sarc...')
-        new_gamedata = sarc.SARCWriter(util.get_settings('wiiu'))
+        new_gamedata = oead.SarcWriter(
+            endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+        )
         for data_type in merged_entries:
             num_files = ceil(len(merged_entries[data_type]) / 4096)
             for i in range(num_files):
                 end_pos = (i+1) * 4096
                 if end_pos > len(merged_entries[data_type]):
                     end_pos = len(merged_entries[data_type])
-                buf = BytesIO()
-                byml.Writer(
-                    {data_type: merged_entries[data_type][i*4096:end_pos]},
-                    be=util.get_settings('wiiu')
-                ).write(buf)
-                new_gamedata.add_file(f'/{data_type}_{i}.bgdata', buf.getvalue())
+                new_gamedata.files[f'/{data_type}_{i}.bgdata'] = oead.byml.to_binary(
+                    oead.byml.Hash({data_type: merged_entries[data_type][i*4096:end_pos]}),
+                    big_endian=util.get_settings('wiiu')
+                )
         bootup_rstb = inject_gamedata_into_bootup(new_gamedata)
         (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-        with (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').open('wb') as g_file:
-            new_gamedata.write(g_file)
+        (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').write_bytes(
+            new_gamedata.write()[1]
+        )
 
         print('Updating RSTB...')
         rstable.set_size('GameData/gamedata.sarc', bootup_rstb)
@@ -350,16 +339,19 @@ class SaveDataMerger(mergers.Merger):
     NAME: str = 'savedata'
 
     def __init__(self):
-        super().__init__('save data', 'Merge changes to savedataformat.ssarc', 'savedata.json')
+        super().__init__('save data', 'Merge changes to savedataformat.ssarc', 'savedata.yml')
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if 'content/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
-            with (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as bootup_file:
-                bootup_sarc = sarc.read_file_and_make_sarc(bootup_file)
+            bootup_sarc = oead.Sarc(
+                util.unyaz_if_needed(
+                    (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
+                )
+            )
             return get_modded_savedata_entries(
-                sarc.SARC(
+                oead.Sarc(
                     util.decompress(
-                        bootup_sarc.get_file_data('GameData/savedataformat.ssarc').tobytes()
+                        bootup_sarc.get_file('GameData/savedataformat.ssarc').data
                     )
                 )
             )
@@ -367,17 +359,17 @@ class SaveDataMerger(mergers.Merger):
             return []
 
     def log_diff(self, mod_dir: Path, diff_material):
-        if isinstance(diff_material[0], Path):
-            diff_material = self.generate_diff(mod_dir, diff_material)
+        if isinstance(diff_material, List):
+            diff_material: oead.byml.Array = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
+                oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
 
     def get_mod_diff(self, mod: BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
+            return oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:
@@ -390,13 +382,14 @@ class SaveDataMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = []
-        hashes = []
+        all_diffs = oead.byml.Array()
+        hashes = set()
         for diff in reversed(diffs):
-            for entry in diff:
-                if entry['HashValue'] not in hashes:
-                    all_diffs.append(entry)
-                    hashes.append(entry['HashValue'])
+            diff_entries = [
+                entry for entry in diff if int(entry['HashValue']) not in hashes
+            ]
+            all_diffs.extend(diff_entries)
+            hashes |= {int(entry['HashValue']) for entry in diff_entries}
         util.vprint('All savedata diffs:')
         util.vprint(all_diffs)
         return all_diffs
@@ -424,59 +417,57 @@ class SaveDataMerger(mergers.Merger):
 
         savedata = get_stock_savedata()
         merged_entries = []
-        save_files = sorted(savedata.list_files())[0:-2]
+        save_files = sorted(savedata.get_files(), key=lambda f: f.name)[0:-2]
 
         print('Loading stock savedata...')
         for file in save_files:
             merged_entries.extend(
-                byml.Byml(savedata.get_file_data(file).tobytes()).parse()['file_list'][1]
+                oead.byml.from_binary(file.data)['file_list'][1]
             )
 
         print('Merging changes...')
         merged_entries.extend(new_entries)
         merged_entries.sort(key=lambda x: x['HashValue'])
 
-        special_bgsv = [
-            savedata.get_file_data('/saveformat_6.bgsvdata').tobytes(),
-            savedata.get_file_data('/saveformat_7.bgsvdata').tobytes(),
-        ]
-
         print('Creating and injecting new savedataformat.sarc...')
-        new_savedata = sarc.SARCWriter(util.get_settings('wiiu'))
+        new_savedata = oead.SarcWriter(
+            endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+        )
         num_files = ceil(len(merged_entries) / 8192)
         for i in range(num_files):
             end_pos = (i+1) * 8192
             if end_pos > len(merged_entries):
                 end_pos = len(merged_entries)
-            buf = BytesIO()
-            byml.Writer(
-                {
-                    'file_list': [
+            data = oead.byml.to_binary(
+                oead.byml.Hash({
+                    'file_list': oead.byml.Array([
                         {
                             'IsCommon': False,
                             'IsCommonAtSameAccount': False,
                             'IsSaveSecureCode': True,
                             'file_name': 'game_data.sav'
                         },
-                        merged_entries[i*8192:end_pos]
-                    ],
-                    'save_info': [
+                        oead.byml.Array(merged_entries[i*8192:end_pos])
+                    ]),
+                    'save_info': oead.byml.Array([
                         {
-                            'directory_num': byml.Int(8),
+                            'directory_num': oead.S32(8),
                             'is_build_machine': True,
-                            'revision': byml.Int(18203)
+                            'revision': oead.S32(18203)
                         }
-                    ]
-                },
-                util.get_settings('wiiu')
-            ).write(buf)
-            new_savedata.add_file(f'/saveformat_{i}.bgsvdata', buf.getvalue())
-        new_savedata.add_file(f'/saveformat_{num_files}.bgsvdata', special_bgsv[0])
-        new_savedata.add_file(f'/saveformat_{num_files + 1}.bgsvdata', special_bgsv[1])
+                    ])
+                }),
+                big_endian=util.get_settings('wiiu')
+            )
+            new_savedata.files[f'/saveformat_{i}.bgsvdata'] = data
+        new_savedata.files[f'/saveformat_{num_files}.bgsvdata'] =\
+            oead.Bytes(savedata.get_file('/saveformat_6.bgsvdata').data)
+        new_savedata.files[f'/saveformat_{num_files + 1}.bgsvdata'] =\
+            oead.Bytes(savedata.get_file('/saveformat_7.bgsvdata').data)
         bootup_rstb = inject_savedata_into_bootup(new_savedata)
         (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-        with (util.get_master_modpack_dir() / 'logs' / 'savedata.sarc').open('wb') as s_file:
-            new_savedata.write(s_file)
+        ((util.get_master_modpack_dir() / 'logs' / 'savedata.sarc')
+            .write_bytes(new_savedata.write()[1]))
 
         print('Updating RSTB...')
         rstable.set_size('GameData/savedataformat.sarc', bootup_rstb)

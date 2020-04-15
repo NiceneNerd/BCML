@@ -1,15 +1,21 @@
 import React from "react";
+import { Col, Row } from "react-bootstrap";
 
 class DevTools extends React.Component {
     constructor() {
         super();
         this.state = {
-            someKey: "someValue"
+            someKey: "someValue",
         };
     }
 
     render() {
-        return <p>BCML developer tools</p>;
+        return (
+            <Row>
+                <Col xs={8}>BNP Creator</Col>
+                <Col xs={4}>Other tools</Col>
+            </Row>
+        );
     }
 }
 

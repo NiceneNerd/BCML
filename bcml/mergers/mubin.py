@@ -1,5 +1,5 @@
 """Handles diffing and merging map files"""
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import shutil
 from collections import namedtuple
@@ -9,13 +9,11 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from typing import Union, List
 
-import byml
-from byml import yaml_util
+import oead
 import rstb
 import rstb.util
-import sarc
 
-from bcml import util, mergers, json_util
+from bcml import util, mergers
 
 Map = namedtuple('Map', 'section type')
 
@@ -26,7 +24,7 @@ def consolidate_map_files(modded_maps: List[str]) -> List[Map]:
     })
 
 
-def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> dict:
+def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> oead.byml.Hash:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     try:
@@ -47,29 +45,24 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
                 )
             map_bytes = map_path.read_bytes()
         except FileNotFoundError:
-            with util.get_game_file('Pack/TitleBG.pack').open('rb') \
-                  as s_file:
-                title_pack = sarc.read_file_and_make_sarc(s_file)
-            if title_pack:
-                try:
-                    map_bytes = title_pack.get_file_data(
+            try:
+                title_pack = oead.Sarc(util.get_game_file('Pack/TitleBG.pack').read_bytes())
+                map_bytes = (title_pack
+                    .get_file(
                         f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
-                        '.smubin'
-                    ).tobytes()
-                except KeyError:
-                    map_bytes = None
+                        '.smubin').data)
+            except (KeyError, RuntimeError):
+                map_bytes = None
     else:
         if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
-            with (aoc_dir / 'Pack' / 'AocMainField.pack').open('rb') as s_file:
-                map_pack = sarc.read_file_and_make_sarc(s_file)
-            if map_pack:
-                try:
-                    map_bytes = map_pack.get_file_data(
-                        f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
-                        '.smubin'
-                    ).tobytes()
-                except KeyError:
-                    map_bytes = None
+            try:
+                map_pack = oead.Sarc((aoc_dir / 'Pack' / 'AocMainField.pack').read_bytes())
+                map_bytes = map_pack.get_file(
+                    f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
+                    '.smubin'
+                ).data
+            except (KeyError, RuntimeError):
+                map_bytes = None
         if not map_bytes:
             map_path = f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
             try:
@@ -78,26 +71,23 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> d
                 try:
                     map_bytes = util.get_game_file(map_path).read_bytes()
                 except FileNotFoundError:
-                    with util.get_game_file('Pack/TitleBG.pack').open('rb') \
-                        as s_file:
-                        title_pack = sarc.read_file_and_make_sarc(s_file)
-                    if title_pack:
-                        try:
-                            map_bytes = title_pack.get_file_data(
-                                f'Map/MainField/{map_unit.section}/'
-                                f'{map_unit.section}_{map_unit.type}.smubin'
-                            ).tobytes()
-                        except KeyError:
-                            map_bytes = None
+                    try:
+                        title_pack = oead.Sarc(util.get_game_file('Pack/TitleBG.pack').read_bytes())
+                        map_bytes = bytes(title_pack.get_file(
+                            f'Map/MainField/{map_unit.section}/'
+                            f'{map_unit.section}_{map_unit.type}.smubin'
+                        ).data)
+                    except (KeyError, RuntimeError):
+                        map_bytes = None
     if not map_bytes:
         raise FileNotFoundError(
             f'The stock map file {map_unit.section}_{map_unit.type}.smubin could not be found.'
         )
     map_bytes = util.decompress(map_bytes)
-    return byml.Byml(map_bytes).parse()
+    return oead.byml.from_binary(map_bytes)
 
 
-def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
+def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     map_bytes = None
@@ -107,14 +97,16 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
         if not aoc_dir.exists():
             aoc_dir = tmp_dir / util.get_dlc_path() / '0010'
     if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
-        with (aoc_dir / 'Pack' / 'AocMainField.pack').open('rb') as s_file:
-            map_pack = sarc.read_file_and_make_sarc(s_file)
-        if map_pack:
+        try:
+            map_pack = oead.Sarc((aoc_dir / 'Pack' / 'AocMainField.pack').read_bytes())
+        except (RuntimeError, ValueError, oead.InvalidDataError):
+            pass
+        else:
             try:
-                map_bytes = map_pack.get_file_data(
+                map_bytes = bytes(map_pack.get_file(
                     f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
-                ).tobytes()
-            except KeyError:
+                ).data)
+            except AttributeError:
                 pass
     if not map_bytes:
         if (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
@@ -131,47 +123,48 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> dict:
             'could not be found.'
         )
     map_bytes = util.decompress(map_bytes)
-    return byml.Byml(map_bytes).parse()
+    return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(base_map: Union[dict, Map], mod_map: dict, no_del: bool = False, 
-                 link_del: bool = False) -> dict:
-    diffs = {
-        'add': [],
-        'mod': {},
-        'del': []
-    }
+def get_map_diff(base_map: Union[oead.byml.Hash, Map], mod_map: oead.byml.Hash, no_del: bool = False, 
+                 link_del: bool = False) -> oead.byml.Hash:
+    diffs = oead.byml.Hash({
+        'add': oead.byml.Array(),
+        'mod': oead.byml.Hash(),
+        'del': oead.byml.Array()
+    })
     if isinstance(base_map, Map):
         stock_map = True
         for obj in mod_map['Objs']:
-            str_obj = str(obj)
+            str_obj = oead.byml.to_text(obj)
             if 'IsHardModeActor' in str_obj or 'AoC_HardMode_Enabled' in str_obj:
                 stock_map = False
                 break
         base_map = get_stock_map(base_map, force_vanilla=stock_map)
-    base_hashes = [obj['HashId'] for obj in base_map['Objs']]
+    base_hashes = [int(obj['HashId']) for obj in base_map['Objs']]
     base_links = set()
     if not link_del:
         for obj in base_map['Objs']:
             if 'LinksToObj' in obj:
-                base_links.update({link['DestUnitHashId']
-                                    for link in obj['LinksToObj']})
-    mod_hashes = [obj['HashId'] for obj in mod_map['Objs']]
+                base_links |= {
+                    int(link['DestUnitHashId']) for link in obj['LinksToObj']
+                }
+    mod_hashes = [int(obj['HashId']) for obj in mod_map['Objs']]
     for obj in mod_map['Objs']:
-        if obj['HashId'] not in base_hashes:
+        if int(obj['HashId']) not in base_hashes:
             diffs['add'].append(obj)
-        elif obj['HashId'] in base_hashes and\
-             obj != base_map['Objs'][base_hashes.index(obj['HashId'])]:
-            diffs['mod'][obj['HashId']] = deepcopy(obj)
-    diffs['del'] = [hash_id for hash_id in base_hashes if hash_id not in mod_hashes and \
-                    not no_del and not (not link_del and hash_id in base_links)]
+        elif int(obj['HashId']) in base_hashes and\
+             obj != base_map['Objs'][base_hashes.index(int(obj['HashId']))]:
+            diffs['mod'][str(obj['HashId'])] = obj
+    diffs['del'].extend([oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes and \
+                    not no_del and not (not link_del and hash_id in base_links)])
     return diffs
 
 
 def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
-                            link_del: bool = False):
+                            link_del: bool = False) -> oead.byml.Hash:
     """Generates a dict log of modified mainfield maps"""
-    diffs = {}
+    diffs = oead.byml.Hash()
     modded_maps = consolidate_map_files(modded_mubins)
     for modded_map in modded_maps:
         diffs['_'.join(modded_map)] = get_map_diff(
@@ -185,13 +178,13 @@ def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: boo
 
 def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False,
               link_del: bool = False) -> {}:
-    map_unit, changes = map_pair
+    map_unit, changes = map_pair[0], oead.byml.from_text(map_pair[1])
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
-    stock_hashes = [obj['HashId'] for obj in new_map['Objs']]
+    stock_hashes = [int(obj['HashId']) for obj in new_map['Objs']]
     for hash_id, actor in changes['mod'].items():
         try:
-            new_map['Objs'][stock_hashes.index(hash_id)] = deepcopy(actor)
+            new_map['Objs'][stock_hashes.index(int(hash_id))] = actor
         except ValueError:
             changes['add'].append(actor)
     if not no_del:
@@ -203,30 +196,30 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
                 except IndexError:
                     try:
                         obj_to_delete = next(
-                            iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
+                            iter([actor for actor in new_map['Objs'] if int(actor['HashId']) == map_del])
                         )
                         new_map['Objs'].remove(obj_to_delete)
                     except (StopIteration, ValueError):
                         print(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
-        [change for change in changes['add'] if change['HashId'] not in stock_hashes]
+        [change for change in changes['add'] if int(change['HashId']) not in stock_hashes]
     )
-    new_map['Objs'].sort(key=lambda actor: actor['HashId'])
+    new_map['Objs'] = sorted(new_map['Objs'], key=lambda actor: int(actor['HashId']))
 
     aoc_out: Path = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / 'Map' / \
         'MainField' / map_unit.section / \
         f'{map_unit.section}_{map_unit.type}.smubin'
     aoc_out.parent.mkdir(parents=True, exist_ok=True)
-    aoc_bytes = byml.Writer(new_map, be=util.get_settings('wiiu')).get_bytes()
+    aoc_bytes = oead.byml.to_binary(new_map, big_endian=util.get_settings('wiiu'))
     aoc_out.write_bytes(util.compress(aoc_bytes))
     new_map['Objs'] = [obj for obj in new_map['Objs']
-                       if not obj['UnitConfigName'].startswith('DLC')]
+                       if not str(obj['UnitConfigName']).startswith('DLC')]
     (util.get_master_modpack_dir() / util.get_content_path() / 'Map' /
      'MainField' / map_unit.section).mkdir(parents=True, exist_ok=True)
     base_out = util.get_master_modpack_dir() / util.get_content_path() / 'Map' / 'MainField' / \
         map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
     base_out.parent.mkdir(parents=True, exist_ok=True)
-    base_bytes = byml.Writer(new_map, be=util.get_settings('wiiu')).get_bytes()
+    base_bytes = oead.byml.to_binary(new_map, big_endian=util.get_settings('wiiu'))
     base_out.write_bytes(util.compress(base_bytes))
     return {
         util.get_dlc_path(): (
@@ -250,21 +243,21 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     """
     base_file = util.get_game_file(
         'aoc/0010/Map/CDungeon/Static.smubin', aoc=True)
-    base_pos = byml.Byml(
+    base_pos = oead.byml.from_binary(
         util.decompress_file(str(base_file))
-    ).parse()['StartPos']
+    )['StartPos']
 
-    mod_pos = byml.Byml(
+    mod_pos = oead.byml.from_binary(
         util.decompress_file(str(file))
-    ).parse()['StartPos']
+    )['StartPos']
 
-    base_dungeons = [dungeon['Map'] for dungeon in base_pos]
+    base_dungeons = [str(dungeon['Map']) for dungeon in base_pos]
     diffs = {}
     for dungeon in mod_pos:
-        if dungeon['Map'] not in base_dungeons:
+        if str(dungeon['Map']) not in base_dungeons:
             diffs[dungeon['Map']] = dungeon
         else:
-            base_dungeon = base_pos[base_dungeons.index(dungeon['Map'])]
+            base_dungeon = base_pos[base_dungeons.index(str(dungeon['Map']))]
             if dungeon['Rotate'] != base_dungeon['Rotate']:
                 diffs[dungeon['Map']] = {
                     'Rotate': dungeon['Rotate']
@@ -282,13 +275,13 @@ def merge_dungeonstatic(diffs: dict = None):
     if not diffs:
         return
 
-    new_static = byml.Byml(
+    new_static = oead.byml.from_binary(
         util.decompress_file(
             str(util.get_game_file('aoc/0010/Map/CDungeon/Static.smubin'))
         )
-    ).parse()
+    )
 
-    base_dungeons = [dungeon['Map'] for dungeon in new_static['StartPos']]
+    base_dungeons = [str(dungeon['Map']) for dungeon in new_static['StartPos']]
     for dungeon, diff in diffs.items():
         if dungeon not in base_dungeons:
             new_static['StartPos'].append(diff)
@@ -301,7 +294,7 @@ def merge_dungeonstatic(diffs: dict = None):
         'CDungeon' / 'Static.smubin'
     output_static.parent.mkdir(parents=True, exist_ok=True)
     output_static.write_bytes(
-        util.compress(byml.Writer(new_static, util.get_settings('wiiu')).get_bytes())
+        util.compress(oead.byml.to_binary(new_static, big_endian=util.get_settings('wiiu')))
     )
 
 
@@ -310,7 +303,7 @@ class MapMerger(mergers.Merger):
 
     def __init__(self, no_del: bool = False, link_del: bool = False):
         super().__init__('maps', 'Merges changes to actors in mainfield map units',
-                         'map.json', options={'no_del': no_del, 'link_del': link_del})
+                         'map.yml', options={'no_del': no_del, 'link_del': link_del})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
@@ -321,18 +314,18 @@ class MapMerger(mergers.Merger):
         else:
             return {}
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
+                oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
+            return oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:
@@ -362,7 +355,7 @@ class MapMerger(mergers.Merger):
             }
             for mod in mods:
                 for hash_id, actor in mod['mod'].items():
-                    c_diffs[file]['mod'][hash_id] = deepcopy(actor)
+                    c_diffs[file]['mod'][hash_id] = actor
             add_hashes = []
             for mod in reversed(mods):
                 for actor in mod['add']:
@@ -406,7 +399,7 @@ class MapMerger(mergers.Merger):
         pool = self._pool or Pool(processes=num_threads)
         rstb_results = pool.map(
             partial(merge_map, rstb_calc=rstb_calc, no_del=no_del, link_del=link_del),
-            list(map_diffs.items())
+            [(key, oead.byml.to_text(value)) for key, value in map_diffs.items()]
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
@@ -433,7 +426,7 @@ class DungeonStaticMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__('shrine entrances', 'Merges changes to shrine entrance coordinates',
-                         'dstatic.json', options={})
+                         'dstatic.yml', options={})
     
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         dstatic_path = mod_dir / util.get_dlc_path() / '0010' / 'Map' / 'CDungeon' / 'Static.smubin'
@@ -442,18 +435,18 @@ class DungeonStaticMerger(mergers.Merger):
         else:
             return {}
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / 'logs' / self._log_name).write_text(
-                json_util.byml_to_json(diff_material),
+                oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
         if self.is_mod_logged(mod):
-            return json_util.json_to_byml(
+            return oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
         else:

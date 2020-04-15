@@ -30,12 +30,9 @@ setup(
     python_requires='>=3.7',
     install_requires=[
         'aamp>=1.4.0',
-        'byml>=2.3.0.post1',
-        # 'syaz0>=1.0.0rc4',
-        'oead>=0.10.0',
+        'oead>=1.0.0',
         'pywebview>=3.1',
         'pyYaml>=5.1.1',
-        'sarc>=2.0.1',
         'rstb>=1.1.2',
         'xxhash>=1.3.0'
     ],

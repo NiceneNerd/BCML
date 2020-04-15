@@ -8,25 +8,22 @@ import subprocess
 
 import aamp
 from aamp import yaml_util
-import byml
-import sarc
+import oead
 import xxhash
 import yaml
 
-from . import util, install, json_util
+from . import util, install
 
 EXCLUDE_EXTS = {'.yml', '.yaml', '.bak', '.txt', '.json', '.old'}
 
 
 def _yml_to_byml(file: Path):
-    data = byml.Writer(
-        json_util.json_to_byml(
-            lib_bcml.byml_yaml_to_json(
-                file.read_text('utf-8')
-            )
+    data = oead.byml.to_binary(
+        oead.byml.from_text(
+            file.read_text('utf-8')
         ),
-        be=util.get_settings('wiiu')
-    ).get_bytes()
+        big_endian=util.get_settings('wiiu')
+    )
     out = file.with_suffix('')
     out.write_bytes(
         data if not out.suffix.startswith('.s') else util.compress(data)
@@ -36,13 +33,7 @@ def _yml_to_byml(file: Path):
 
 def _yml_to_aamp(file: Path):
     file.with_suffix('').write_bytes(
-        aamp.Writer(
-            json_util.json_to_aamp(
-                lib_bcml.aamp_yaml_to_json(
-                    file.read_text('utf-8')
-                )
-            )
-        )
+        oead.aamp.ParameterIO.from_text(file.read_text('utf-8')).to_binary()
     )
     file.unlink()
 
@@ -70,7 +61,9 @@ def _pack_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
         )
 
 def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
-    packed = sarc.SARCWriter(util.get_settings('wiiu'))
+    packed = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
     try:
         canon = util.get_canon_name(
             folder.relative_to(tmp_dir).as_posix(),
@@ -79,17 +72,16 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
         if canon not in hashes:
             raise FileNotFoundError('File not in game dump')
         stock_file = util.get_game_file(folder.relative_to(tmp_dir))
-        with stock_file.open('rb') as old_file:
-            old_sarc = sarc.read_file_and_make_sarc(old_file)
-            if not old_sarc:
-                raise ValueError('Cannot open file from game dump')
-            old_files = set(old_sarc.list_files())
+        try:
+            old_sarc = oead.Sarc(
+                util.unyaz_if_needed(stock_file.read_bytes())
+            )
+        except (RuntimeError, ValueError, oead.InvalidDataError):
+            raise ValueError('Cannot open file from game dump')
+        old_files = {f.name for f in old_sarc.get_files()}
     except (FileNotFoundError, ValueError):
         for file in {f for f in folder.rglob('**/*') if f.is_file()}:
-            packed.add_file(
-                file.relative_to(folder).as_posix(),
-                file.read_bytes()
-            )
+            packed.files[file.relative_to(folder).as_posix()] = file.read_bytes()
     else:
         for file in {
             f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
@@ -100,18 +92,18 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
             if file_name in old_files:
                 old_hash = xxhash.xxh32(
                     util.unyaz_if_needed(
-                        old_sarc.get_file_data(file_name).tobytes()
+                        old_sarc.get_file(file_name).data
                     )
                 ).hexdigest()
             if file_name not in old_files or (
                 xhash != old_hash and file.suffix not in util.AAMP_EXTS
             ):
-                packed.add_file(file_name, file_data)
+                packed.files[file_name] = file_data
     finally:
         shutil.rmtree(folder)
-        if not packed._files:  # pylint: disable=no-member
+        if not packed.files:
             return
-        sarc_bytes = packed.get_bytes()
+        sarc_bytes = packed.write()[1]
         folder.write_bytes(
             util.compress(sarc_bytes) if (
                 folder.suffix.startswith('.s') and not folder.suffix == '.sarc'
@@ -158,43 +150,45 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         stock_file = util.get_game_file(file.relative_to(tmp_dir))
     except FileNotFoundError:
         return
-    with stock_file.open('rb') as old_file:
-        old_sarc = sarc.read_file_and_make_sarc(old_file)
-        if not old_sarc:
-            return
-        old_files = set(old_sarc.list_files())
+    try:
+        old_sarc = oead.Sarc(util.unyaz_if_needed(stock_file.read_bytes()))
+    except (RuntimeError, ValueError, oead.InvalidDataError):
+        return
+    old_files = {f.name for f in old_sarc.get_files()}
     if canon not in hashes:
         return
-    with file.open('rb') as s_file:
-        base_sarc = sarc.read_file_and_make_sarc(s_file)
-    if not base_sarc:
+    try:
+        base_sarc = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+    except (RuntimeError, ValueError, oead.InvalidDataError):
         return
-    new_sarc = sarc.SARCWriter(util.get_settings('wiiu'))
+    new_sarc = oead.SarcWriter(
+        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+    )
     can_delete = True
-    for nest_file in base_sarc.list_files():
+    for nest_file, file_data in [(f.name, f.data) for f in base_sarc.get_files()]:
         canon = nest_file.replace('.s', '.')
         ext = Path(canon).suffix
         if ext in {'.yml', '.bak'}:
             continue
-        file_data = base_sarc.get_file_data(nest_file).tobytes()
         xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
         if nest_file in old_files:
             old_hash = xxhash.xxh32(
-                util.unyaz_if_needed(old_sarc.get_file_data(nest_file).tobytes())
+                util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
             ).hexdigest()
         if nest_file not in old_files or (xhash != old_hash and ext not in util.AAMP_EXTS):
             can_delete = False
-            new_sarc.add_file(nest_file, file_data)
+            new_sarc.files[nest_file] = oead.Bytes(file_data)
     del old_sarc
     if can_delete:
         del new_sarc
         file.unlink()
     else:
-        with file.open('wb') as s_file:
-            if file.suffix.startswith('.s') and file.suffix != '.ssarc':
-                s_file.write(util.compress(new_sarc.get_bytes()))
-            else:
-                new_sarc.write(s_file)
+        write_bytes = new_sarc.write()[1]
+        file.write_bytes(
+            write_bytes if not (
+                file.suffix.startswith('.s') and file.suffix != '.ssarc'
+            ) else util.compress(write_bytes)
+        )
 
 
 def _do_yml(file: Path):
@@ -212,7 +206,7 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
 
     print('Removing unnecessary files...')
 
-    if (tmp_dir / 'logs' / 'map.json').exists():
+    if (tmp_dir / 'logs' / 'map.yml').exists():
         print('Removing map units...')
         for file in [file for file in logged_files if isinstance(file, Path) and \
                            fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
@@ -223,23 +217,23 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         for bootup_lang in (tmp_dir / util.get_content_path() / 'Pack').glob('Bootup_*.pack'):
             bootup_lang.unlink()
 
-    if (tmp_dir / 'logs' / 'actorinfo.json').exists() and \
+    if (tmp_dir / 'logs' / 'actorinfo.yml').exists() and \
        (tmp_dir / util.get_content_path() / 'Actor' / 'ActorInfo.product.sbyml').exists():
         print('Removing ActorInfo.product.sbyml...')
         (tmp_dir / util.get_content_path() / 'Actor' / 'ActorInfo.product.sbyml').unlink()
 
-    if (tmp_dir / 'logs' / 'gamedata.json').exists() or (tmp_dir / 'logs' / 'savedata.yml').exists():
+    if (tmp_dir / 'logs' / 'gamedata.yml').exists() or (tmp_dir / 'logs' / 'savedata.yml').exists():
         print('Removing gamedata sarcs...')
-        with (tmp_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('rb') as b_file:
-            bsarc = sarc.read_file_and_make_sarc(b_file)
-        csarc = sarc.make_writer_from_sarc(bsarc)
-        bsarc_files = list(bsarc.list_files())
+        bsarc = oead.Sarc(
+            (tmp_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
+        )
+        csarc = oead.SarcWriter.from_sarc(bsarc)
+        bsarc_files = {f.name for f in bsarc.get_files()}
         if 'GameData/gamedata.ssarc' in bsarc_files:
-            csarc.delete_file('GameData/gamedata.ssarc')
+            del csarc.files['GameData/gamedata.ssarc']
         if 'GameData/savedataformat.ssarc' in bsarc_files:
-            csarc.delete_file('GameData/savedataformat.ssarc')
-        with (tmp_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').open('wb') as b_file:
-            csarc.write(b_file)
+            del csarc.files['GameData/savedataformat.ssarc']
+        (tmp_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').write_bytes(csarc.write()[1])
 
 
 def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):

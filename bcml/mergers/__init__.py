@@ -55,7 +55,7 @@ class Merger(metaclass=ABCMeta):
         """ Detects changes made to a modded file or files from the base game """
         raise NotImplementedError
 
-    def log_diff(self, mod_dir: Path, diff_material: Union[dict, List[Path]]):
+    def log_diff(self, mod_dir: Path, diff_material):
         """ Saves generated diffs to a log file """
         raise NotImplementedError
 
@@ -113,13 +113,13 @@ class Merger(metaclass=ABCMeta):
 def get_mergers() -> List[Merger]:
     """ Retrieves all available types of mod mergers """
 
-    from bcml.mergers import pack, texts, merge, data, mubin, events, rstable
+    from bcml.mergers import pack, texts, merge, data, mubin, events, rstable, actors
 
     return [
         pack.PackMerger,
         merge.DeepMerger,
         texts.TextsMerger,
-        data.ActorInfoMerger,
+        actors.ActorInfoMerger,
         mubin.DungeonStaticMerger,
         mubin.MapMerger,
         data.GameDataMerger,

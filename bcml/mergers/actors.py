@@ -1,4 +1,4 @@
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
+# Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 import zlib
 from copy import deepcopy
@@ -9,16 +9,12 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from typing import List, Union
 
-import byml
-from byml import yaml_util
 import oead
 import rstb
 import rstb.util
-import sarc
 import xxhash
-import yaml
 
-from bcml import util, mergers, json_util
+from bcml import util, mergers
 from bcml.mergers import rstable
 from bcml.util import BcmlMod
 

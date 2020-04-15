@@ -4,8 +4,7 @@ import json
 
 import yaml
 from aamp import yaml_util as ayu
-from byml import yaml_util as byu
-from bcml import util, json_util
+from bcml import util
 
 def convert_old_mods():
     import shutil
@@ -99,22 +98,9 @@ def convert_old_logs(mod_dir: Path, delete_old: bool = False):
                 encoding='utf-8'
             )
         else:
-            pass#_convert_byml_log(log)
+            pass
         if delete_old:
             log.unlink()
-
-def _convert_byml_log(log: Path):
-    if not hasattr(_convert_byml_log, 'loader'):
-        _convert_byml_log.loader = yaml.CSafeLoader
-        byu.add_constructors(_convert_byml_log.loader)
-    log_yaml = yaml.load(
-        log.read_text('utf-8'),
-        Loader=_convert_byml_log.loader
-    )
-    log.with_suffix('.json').write_text(
-        json_util.byml_to_json(log_yaml),
-        encoding='utf-8'
-    )
 
 
 def _convert_pack_log(mod: Path):

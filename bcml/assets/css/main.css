@@ -493,8 +493,12 @@ Fade {
     background-color: #2f3136;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.19), 0 4px 4px rgba(0, 0, 0, 0.23);
     max-height: 50vh;
-    max-width: fit-content;
+    min-width: fit-content;
     overflow: auto;
+}
+
+.options.popover .popover-body {
+    min-width: fit-content;
 }
 
 /* Utilities */
