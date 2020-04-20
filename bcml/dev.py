@@ -276,7 +276,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
         for o in tmp_dir.glob('options/*'):
             for file in {
-                f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(tmp_dir)).exists()
+                f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(o)).exists()
             }:
                 xh1 = xxhash.xxh32_hexdigest((tmp_dir / file.relative_to(o)).read_bytes())
                 xh2 = xxhash.xxh32_hexdigest(file.read_bytes())
@@ -302,7 +302,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
     for file in {f for f in tmp_dir.rglob('**/*') if f.is_file()}:
         if 'logs' in file.parts:
             continue
-        if file.suffix in ['.yml', '.json', '.bak', '.tmp', '.old'] and file.stem != 'info':
+        if file.suffix in {'.yml', '.json', '.bak', '.tmp', '.old'} and file.stem != 'info':
             file.unlink()
 
     print('Removing blank folders...')

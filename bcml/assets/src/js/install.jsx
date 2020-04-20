@@ -12,15 +12,15 @@ class InstallModal extends React.Component {
             mods: [],
             options: {
                 disable: [],
-                options: {},
-            },
+                options: {}
+            }
         };
         this.setOptions = this.setOptions.bind(this);
     }
 
     browse() {
-        pywebview.api.file_pick().then((file) =>
-            this.setState((prev) => {
+        pywebview.api.file_pick().then(file =>
+            this.setState(prev => {
                 const mods = prev.mods;
                 for (const mod of file) {
                     if (!mods.includes(mod)) {
@@ -46,7 +46,7 @@ class InstallModal extends React.Component {
     }
 
     removeMod(mod) {
-        this.setState((prevState) => {
+        this.setState(prevState => {
             let mods = prevState.mods;
             mods.splice(mods.indexOf(mod), 1);
             return { mods };
@@ -78,12 +78,12 @@ class InstallModal extends React.Component {
                             </strong>
                             <ReactSortable
                                 id="install-queue"
-                                onChange={(order) => {
+                                onChange={order => {
                                     this.setState({ mods: order });
                                 }}
                                 tag="div"
                                 handle="mod-handle">
-                                {this.state.mods.map((mod) => (
+                                {this.state.mods.map(mod => (
                                     <div
                                         key={mod}
                                         className="d-flex flex-row"
@@ -117,7 +117,7 @@ class InstallModal extends React.Component {
                         placement="right"
                         trigger="click"
                         options={this.state.options}
-                        overlay={(props) => (
+                        overlay={props => (
                             <OptionsDialog
                                 {...props}
                                 onHide={this.setOptions}
@@ -133,16 +133,9 @@ class InstallModal extends React.Component {
                     </OverlayTrigger>
                     <div className="flex-grow-1">{""}</div>
                     <Button
-                        variant="success"
-                        onClick={() => {
-                            this.props.onInstall(
-                                this.state.mods,
-                                this.state.options
-                            );
-                            this.resetDialog();
-                        }}
-                        disabled={!this.state.mods.length}>
-                        Install
+                        variant="secondary"
+                        onClick={this.handleClose.bind(this)}>
+                        Close
                     </Button>
                     <Button
                         variant="primary"
@@ -157,9 +150,16 @@ class InstallModal extends React.Component {
                         Queue
                     </Button>
                     <Button
-                        variant="secondary"
-                        onClick={this.handleClose.bind(this)}>
-                        Close
+                        variant="success"
+                        onClick={() => {
+                            this.props.onInstall(
+                                this.state.mods,
+                                this.state.options
+                            );
+                            this.resetDialog();
+                        }}
+                        disabled={!this.state.mods.length}>
+                        Install
                     </Button>
                 </Modal.Footer>
             </Modal>

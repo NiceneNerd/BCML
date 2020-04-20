@@ -10,7 +10,7 @@ from pathlib import Path
 
 import webview
 
-from . import DEBUG, NO_CEF, install, mergers, upgrade, util
+from . import DEBUG, NO_CEF, install, dev, mergers, upgrade, util
 from .util import BcmlMod, Messager, InstallError, MergeError
 
 LOG = util.get_data_dir() / 'bcml.log'
@@ -144,9 +144,12 @@ class Api:
         }
 
     def get_mergers(self):
-        self.window.evaluate_js(f"""window.mergers = [{','.join(
-            [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
-        )}]; window.loadMergers();""")
+        try:
+            self.window.evaluate_js(f"""window.mergers = [{','.join(
+                [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
+            )}]; window.loadMergers();""")
+        except webview.WebViewException:
+            sys.exit()
 
     def file_pick(self, params = None):
         if not params:
@@ -177,6 +180,14 @@ class Api:
             ]
         ]
 
+    def check_mod_options(self, params):
+        metas = {
+            mod: install.extract_mod_meta(Path(mod)) for mod in params['mods'] if mod.endswith('.bnp')
+        }
+        return {
+            mod: meta for mod, meta in metas.items() if meta['options']
+        }
+
     @win_or_lose
     def install_mod(self, params):
         util.vprint(params)
@@ -186,10 +197,10 @@ class Api:
                 install.install_mod(
                     Path(m),
                     options=params['options'],
+                    selects=params['selects'][m],
                     wait_merge=True,
                     pool=pool
-                ) \
-                    for m in params['mods']
+                ) for m in params['mods']
             ]
             ms = {}
             try:
@@ -325,6 +336,31 @@ class Api:
         output = Path(out[0])
         install.export(output)
 
+    def get_option_folders(self, params):
+        try:
+            return [
+                d.name for d in Path(params['mod']).glob('options/*') if d.is_dir()
+            ]
+        except FileNotFoundError:
+            return []
+
+    @win_or_lose
+    def create_bnp(self, params):
+        out = self.window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            file_types=tuple(['BOTW Nano Patch (*.bnp)'])
+        )
+        meta = params.copy()
+        del meta['folder']
+        meta['options'] = params['selects']
+        del meta['selects']
+        dev.create_bnp_mod(
+            mod=Path(params['folder']),
+            output=Path(out[0]),
+            meta=meta,
+            options=params['options']
+        )
+
 
 def main():
     try:
@@ -343,7 +379,7 @@ def main():
             )
         )
         url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
-        w, h = 800, 600
+        w, h = 907, 680
     else:
         url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
         w, h = 750, 600

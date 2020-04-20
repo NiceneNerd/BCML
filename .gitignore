@@ -191,5 +191,6 @@ typings/
 # dotenv environment variables file
 .env
 test.py
+/test
 tmp.*
 Cargo.lock

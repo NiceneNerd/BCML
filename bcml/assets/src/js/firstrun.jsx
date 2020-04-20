@@ -196,7 +196,7 @@ class FirstRun extends React.Component {
                                     them. (Note that ignoring them is not
                                     recommended.)
                                 </p>
-                                <div class="d-flex mb-2">
+                                <div className="d-flex mb-2">
                                     <Button
                                         variant="success"
                                         size="sm"

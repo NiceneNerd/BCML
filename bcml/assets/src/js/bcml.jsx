@@ -7,7 +7,7 @@ import {
     OverlayTrigger,
     Tab,
     Tabs,
-    Tooltip,
+    Tooltip
 } from "react-bootstrap";
 
 import DevTools from "./devtools.jsx";
@@ -34,7 +34,7 @@ class BcmlRoot extends React.Component {
             progressTitle: "",
             showConfirm: false,
             confirmText: "",
-            confirmCallback: () => {},
+            confirmCallback: () => {}
         };
         this.handleBackups = this.handleBackups.bind(this);
         this.handleInstall = this.handleInstall.bind(this);
@@ -45,10 +45,14 @@ class BcmlRoot extends React.Component {
         this.export = this.export.bind(this);
     }
 
+    componentDidCatch(error) {
+        this.showError(error);
+    }
+
     saveSettings(settings) {
         this.setState({ settingsValid: true, savingSettings: false }, () =>
             pywebview.api.save_settings({ settings }).then(() =>
-                pywebview.api.get_old_mods().then((num) => {
+                pywebview.api.get_old_mods().then(num => {
                     this.setState({ oldMods: num });
                     if (num > 0) {
                         this.pageCount = 5;
@@ -62,10 +66,10 @@ class BcmlRoot extends React.Component {
         this.setState({
             showConfirm: true,
             confirmText: message,
-            confirmCallback: (yesNo) =>
+            confirmCallback: yesNo =>
                 this.setState({ showConfirm: false }, () =>
                     yesNo ? callback() : null
-                ),
+                )
         });
     }
 
@@ -82,7 +86,7 @@ class BcmlRoot extends React.Component {
                         .replace(/\\\"/g, '"')
                         .replace('Error: "', "")
                 );
-                errorText = `Oops, ran into an error. Details:<pre class="scroller">${unescape(
+                errorText = `Oops, ran into an error. Details:<pre className="scroller">${unescape(
                     errorText
                 )}</pre>`;
             }
@@ -90,20 +94,21 @@ class BcmlRoot extends React.Component {
         this.setState({
             showProgress: false,
             showError: true,
-            errorText,
+            errorText
         });
     }
 
-    handleInstall(mods, options) {
+    async handleInstall(mods, options) {
+        const selects = await pywebview.api.check_mod_options({ mods });
         this.setState(
             {
                 showProgress: true,
-                progressTitle: "Installing Mod" + (mods.length > 1 ? "s" : ""),
+                progressTitle: "Installing Mod" + (mods.length > 1 ? "s" : "")
             },
             () => {
                 pywebview.api
-                    .install_mod({ mods, options })
-                    .then((res) => {
+                    .install_mod({ mods, options, selects })
+                    .then(res => {
                         if (!res.success) {
                             throw res;
                         }
@@ -137,11 +142,11 @@ class BcmlRoot extends React.Component {
                 {
                     showProgress: operation == "delete" ? false : true,
                     showBackups: operation == "delete" ? true : false,
-                    progressTitle,
+                    progressTitle
                 },
                 () =>
                     action({ backup })
-                        .then((res) => {
+                        .then(res => {
                             if (!res.success) {
                                 throw res;
                             }
@@ -165,12 +170,12 @@ class BcmlRoot extends React.Component {
         this.setState(
             {
                 showProgress: true,
-                progressTitle: "Exporting Mods...",
+                progressTitle: "Exporting Mods..."
             },
             () => {
                 pywebview.api
                     .export()
-                    .then((res) => {
+                    .then(res => {
                         if (!res.success) throw res;
 
                         this.setState({ showProgress: false, showDone: true });
@@ -182,13 +187,13 @@ class BcmlRoot extends React.Component {
 
     componentDidMount() {
         this.setState({ mods: this.props.mods });
-        window.onMsg = (msg) => {
+        window.onMsg = msg => {
             this.setState({ progressStatus: msg });
         };
     }
 
     refreshMods() {
-        pywebview.api.get_mods({ disabled: true }).then((mods) => {
+        pywebview.api.get_mods({ disabled: true }).then(mods => {
             this.setState({ mods });
         });
     }
@@ -222,22 +227,25 @@ class BcmlRoot extends React.Component {
                         <Mods
                             mods={this.state.mods}
                             onRefresh={this.refreshMods}
-                            onChange={(mods) => this.setState({ mods })}
-                            onError={this.showError}
                             onConfirm={this.confirm}
+                            onChange={mods => this.setState({ mods })}
                             onInstall={this.handleInstall}
+                            onError={this.showError}
                             onState={this.setState.bind(this)}
                         />
                     </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">
-                        <DevTools />
+                        <DevTools
+                            onError={this.showError}
+                            onState={this.setState.bind(this)}
+                        />
                     </Tab>
                     <Tab eventKey="settings" title="Settings" className="p-2">
                         <Settings
                             saving={this.state.savingSettings}
                             onFail={() =>
                                 this.setState({
-                                    savingSettings: false,
+                                    savingSettings: false
                                 })
                             }
                             onSubmit={this.saveSettings}
@@ -283,7 +291,7 @@ class BcmlRoot extends React.Component {
     }
 }
 
-const DoneDialog = (props) => {
+const DoneDialog = props => {
     return (
         <Modal show={props.show} size="sm" centered>
             <Modal.Header closeButton>
@@ -299,14 +307,14 @@ const DoneDialog = (props) => {
     );
 };
 
-const ErrorDialog = (props) => {
+const ErrorDialog = props => {
     return (
         <Modal show={props.show} centered>
             <Modal.Header closeButton>
                 <Modal.Title>Error</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <div class="d-flex">
+                <div className="d-flex">
                     <div className="p-1">
                         <Badge variant="danger">
                             <i className="material-icons">error</i>
@@ -316,7 +324,7 @@ const ErrorDialog = (props) => {
                         className="pl-2 flex-grow-1"
                         style={{ minWidth: "0px" }}
                         dangerouslySetInnerHTML={{
-                            __html: props.error.replace("\n", "<br>"),
+                            __html: props.error.replace("\n", "<br>")
                         }}></div>
                 </div>
             </Modal.Body>
@@ -329,7 +337,7 @@ const ErrorDialog = (props) => {
     );
 };
 
-const ConfirmDialog = (props) => {
+const ConfirmDialog = props => {
     return (
         <Modal show={props.show}>
             <Modal.Header>

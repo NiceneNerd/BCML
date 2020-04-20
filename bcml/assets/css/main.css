@@ -78,13 +78,13 @@ body,
     flex-direction: column;
 }
 
-nav {
+#root nav {
     background-color: #111;
     height: 32px;
 }
 
-.nav,
-.nav-tabs .nav-link {
+#root .nav,
+#root .nav-tabs .nav-link {
     border: 0;
 }
 
@@ -175,7 +175,6 @@ nav {
     background-color: transparent;
     color: #e0e0e0;
     padding: 0.25em 0.5em;
-    font-size: 0.9em;
     text-align: left;
     overflow-x: auto;
     min-height: fit-content;
@@ -501,6 +500,45 @@ Fade {
     min-width: fit-content;
 }
 
+.dev-other .btn {
+    white-space: nowrap;
+    width: 100%;
+    margin-bottom: 0.66rem;
+}
+
+.bnp {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.bnp .form {
+    flex-grow: 1;
+}
+
+.dev-open .options.popover {
+    left: 60px !important;
+    bottom: 4px !important;
+    top: unset !important;
+    transform: none !important;
+}
+
+.modal-body .nav {
+    height: 32px;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-body .nav-tabs .nav-link.active {
+    background-color: #e0e0e0;
+    color: #202020;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.depends .material-icons {
+    cursor: pointer;
+}
+
 /* Utilities */
 
 .height100 {
@@ -580,6 +618,11 @@ Fade {
     font-size: 0.667rem;
     line-height: 0.5;
     border-radius: 0.2rem;
+}
+
+.modal-wide {
+    width: auto !important;
+    max-width: 75% !important;
 }
 
 .modal-dialog .btn-group-xs > .btn,

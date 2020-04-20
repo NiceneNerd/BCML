@@ -84,7 +84,8 @@ class BcmlMod:
             'name': self.name,
             'priority': self.priority,
             'path': str(self.path),
-            'disabled': (self.path / '.disabled').exists()
+            'disabled': (self.path / '.disabled').exists(),
+            'id': self.id
         }
 
     @staticmethod

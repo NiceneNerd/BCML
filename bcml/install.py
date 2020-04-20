@@ -32,6 +32,17 @@ else:
     ZPATH = str(util.get_exec_dir() / 'helpers' / '7z')
 
 
+def extract_mod_meta(mod: Path) -> {}:
+    p = subprocess.Popen(
+        f'"{ZPATH}" e "{str(mod.resolve())}" -r -so info.json',
+        stdout=subprocess.PIPE,
+        shell=True
+    )
+    out, err = p.communicate()
+    p.wait()
+    return json.loads(out.decode('utf-8'))
+
+
 def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
