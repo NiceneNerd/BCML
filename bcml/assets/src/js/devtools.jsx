@@ -38,6 +38,7 @@ class DevTools extends React.Component {
         this.handleChange = this.handleChange.bind(this);
         this.setOptions = this.setOptions.bind(this);
         this.createBnp = this.createBnp.bind(this);
+        this.generateRstb = this.generateRstb.bind(this);
     }
 
     setOptions(options) {
@@ -72,6 +73,31 @@ class DevTools extends React.Component {
                                     showDone: true
                                 })
                         );
+                    })
+                    .catch(this.props.onError);
+            }
+        );
+    }
+
+    generateRstb() {
+        this.props.onState(
+            {
+                showProgress: true,
+                progressTitle: "Generating RSTB for Mod"
+            },
+            () => {
+                pywebview.api
+                    .gen_rstb()
+                    .then(res => {
+                        console.log("Hello there");
+                        console.log(res);
+                        if (!res.success) {
+                            throw res;
+                        }
+                        this.props.onState({
+                            showProgress: false,
+                            showDone: true
+                        });
                     })
                     .catch(this.props.onError);
             }
@@ -223,7 +249,9 @@ class DevTools extends React.Component {
                         <h4>Other Tools</h4>
                         <Row>
                             <Col>
-                                <Button variant="success">
+                                <Button
+                                    variant="success"
+                                    onClick={this.generateRstb}>
                                     Generate RSTB for Mod
                                 </Button>
                             </Col>

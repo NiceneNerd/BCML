@@ -161,3 +161,6 @@ class EventInfoMerger(mergers.Merger):
             )
         else:
             return
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return self.get_mod_diff(mod).keys()

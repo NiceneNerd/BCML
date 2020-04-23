@@ -242,6 +242,13 @@ class GameDataMerger(mergers.Merger):
                 )
         return diffs
 
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        edited = set()
+        diff = self.get_mod_diff(mod)
+        for items in diff.values():
+            edited |= set(items.keys())
+        return edited
+
     def get_all_diffs(self):
         diffs = []
         for mod in util.get_installed_mods(): 
@@ -515,3 +522,8 @@ class SaveDataMerger(mergers.Merger):
             )
         else:
             return
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return {
+            entry['DataName'] for entry in self.get_mod_diff(mod)
+        }

@@ -67,6 +67,10 @@ class Merger(metaclass=ABCMeta):
         """ Gets the logged diff for this merge in a given mod """
         raise NotImplementedError
 
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        """ Gets a list of modified items in mod for this merger """
+        raise NotImplementedError
+
     def get_all_diffs(self):
         """ Loads the installed diffs for this merge from all installed mods """
         raise NotImplementedError

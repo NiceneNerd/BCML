@@ -557,11 +557,14 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
         partials.update(fall_mod.get_partials())
         fall_mod.change_priority(fall_mod.priority - 1)
 
-    if not wait_merge:
-        for merger in mergers.sort_mergers(remergers):
-            if merger.NAME in partials:
-                merger.set_options({'only_these': partials[merger.NAME]})
-            merger.perform_merge()
+    if not util.get_installed_mods():
+        shutil.rmtree(util.get_master_modpack_dir())
+    else:
+        if not wait_merge:
+            for merger in mergers.sort_mergers(remergers):
+                if merger.NAME in partials:
+                    merger.set_options({'only_these': partials[merger.NAME]})
+                merger.perform_merge()
 
     print(f'{mod.name} has been uninstalled.')
 

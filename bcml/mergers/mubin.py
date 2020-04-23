@@ -373,8 +373,6 @@ class MapMerger(mergers.Merger):
                     if actor['HashId'] not in add_hashes:
                         add_hashes.append(actor['HashId'])
                         c_diffs[file]['add'].append(actor)
-        util.vprint('All map diffs:')
-        util.vprint(c_diffs)
         return c_diffs
 
     @util.timed
@@ -396,6 +394,8 @@ class MapMerger(mergers.Merger):
             log_path.unlink()
         print('Loading map mods...')
         map_diffs = self.consolidate_diffs(self.get_all_diffs())
+        util.vprint('All map diffs:')
+        util.vprint(map_diffs)
         if not map_diffs:
             print('No map merge necessary')
             return
@@ -430,6 +430,11 @@ class MapMerger(mergers.Merger):
             ('no_del', 'Never remove stock actors from merged maps'),
             ('link_del', 'Allow deleting actors with links from merged maps')
         ]
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return {
+            f'{key.section}_{key.type}' for key in self.consolidate_diffs(self.get_mod_diff(mod)).keys()
+        }
 
 
 class DungeonStaticMerger(mergers.Merger):
@@ -496,3 +501,6 @@ class DungeonStaticMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return set(self.get_mod_diff(mod).keys())

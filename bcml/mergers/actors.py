@@ -166,3 +166,15 @@ class ActorInfoMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        log = {int(k): v for k,v in self.get_mod_diff(mod).items()}
+        actors = get_stock_actorinfo()
+        stock_names = {
+            int(actors['Hashes'][i]): actors['Actors'][i]['name'] for i in range(
+                len(actors['Hashes'])
+            )
+        }
+        return {
+            (stock_names[actor] if actor in stock_names else log[actor]['name']) for actor in log
+        }

@@ -25,6 +25,29 @@ RSTB_EXCLUDE_EXTS = {'.pack', '.bgdata', '.txt', '.bgsvdata', '.yml', '.msbt',
 RSTB_EXCLUDE_NAMES = {'ActorInfo.product.byml'}
 
 
+def generate_rstb_for_mod(mod: Path):
+    files = install.find_modded_files(mod)
+    merger = RstbMerger()
+    diff = merger.generate_diff(mod, files)
+    print('Creating RSTB...')
+    table = get_stock_rstb()
+    for file, value in diff.items():
+        canon: str
+        if isinstance(file, Path):
+            canon = util.get_canon_name(file.relative_to(mod))
+        else:
+            canon = file.split('//')[-1].replace('.s', '.')
+        if not (table.is_in_table(canon) and value <= table.get_size(canon)) and value > 0:
+            table.set_size(canon, value)
+    print('Writing RSTB...')
+    rstb_path = mod / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.srsizetable'
+    rstb_path.parent.mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    table.write(buf, util.get_settings('wiiu'))
+    rstb_path.write_bytes(util.compress(buf.getvalue()))
+    del buf
+    del table
+
 def get_stock_rstb() -> rstb.ResourceSizeTable:
     if not hasattr(get_stock_rstb, 'table'):
         get_stock_rstb.table = read_rstb(
@@ -607,3 +630,6 @@ class RstbMerger(mergers.Merger):
         print('Perfoming RSTB merge...')
         log_merged_files_rstb()
         generate_master_rstb()
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return set(self.get_mod_diff(mod).keys())

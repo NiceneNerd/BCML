@@ -205,6 +205,9 @@ class BcmlMod:
             from bcml.install import uninstall_mod
             uninstall_mod(self, wait_merge)
 
+        def get_modded_info() -> {}:
+            pass
+
 
 decompress = oead.yaz0.decompress
 compress = oead.yaz0.compress

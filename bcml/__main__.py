@@ -25,7 +25,7 @@ def win_or_lose(func):
                 log_file.write(f'\n{err}\n')
             return {
                 'error': err,
-                'error_text': hasattr(e, 'error_text')
+                'error_text': hasattr(err, 'error_text')
             }
         return {'success': True}
     return status_run
@@ -362,6 +362,16 @@ class Api:
             meta=meta,
             options=params['options']
         )
+
+    @win_or_lose
+    def gen_rstb(self, params = None):
+        try:
+            mod = Path(self.get_folder())
+            assert mod.exists()
+        except (FileNotFoundError, IndexError, AssertionError):
+            return
+        from .mergers.rstable import generate_rstb_for_mod
+        generate_rstb_for_mod(mod)
 
 
 def main():

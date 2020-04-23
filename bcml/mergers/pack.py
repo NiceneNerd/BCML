@@ -184,3 +184,6 @@ class PackMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return self.get_mod_affected(mod)
