@@ -106,7 +106,7 @@ class BcmlMod:
 
     @property
     def description(self) -> str:
-        return self._info['description']
+        return self._info['desc']
 
     @property
     def image(self) -> str:
@@ -763,9 +763,12 @@ def create_bcml_graphicpack_if_needed():
                          'fsPriority = 9999')
 
 
-def dict_merge(dct: dict, merge_dct: dict, overwrite_lists: bool = False):
+def dict_merge(dct: Union[dict, oead.byml.Hash], merge_dct: Union[dict, oead.byml.Hash],
+               overwrite_lists: bool = False, shallow: bool = False):
     for k in merge_dct:
-        if (k in dct and (isinstance(dct[k], dict) or isinstance(dct[k], oead.byml.Hash))
+        if shallow:
+            dct[k] = merge_dct[k]
+        elif (k in dct and (isinstance(dct[k], dict) or isinstance(dct[k], oead.byml.Hash))
                 and (isinstance(merge_dct[k], Mapping) or isinstance(merge_dct[k], oead.byml.Hash))):
             dict_merge(dct[k], merge_dct[k])
         elif (k in dct and (isinstance(dct[k], list) or isinstance(dct[k], oead.byml.Array))

@@ -126,17 +126,17 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
     }
     if sarc_files:
         print('Updating pack log...')
-        with (tmp_dir / 'logs' / 'packs.json').open('w', encoding='utf-8') as p_file:
-            final_packs = [
-                file for file in list(tmp_dir.rglob('**/*')) if file.suffix in util.SARC_EXTS
-            ]
-            if final_packs:
-                p_file.write('name,path\n')
-                for file in final_packs:
-                    p_file.write(
-                        f'{util.get_canon_name(file.relative_to(tmp_dir))},'
-                        f'{file.relative_to(tmp_dir)}\n'
-                    )
+        final_packs = [
+            file for file in sarc_files if file.suffix in util.SARC_EXTS
+        ]
+        if final_packs:
+            from json import dumps
+            (tmp_dir / 'logs' / 'packs.json').write_text(
+                dumps({
+                    util.get_canon_name(file.relative_to(tmp_dir)): str(file.relative_to(tmp_dir))\
+                        for file in final_packs
+                })
+            )
     else:
         try:
             (tmp_dir / 'logs' / 'packs.json').unlink()
@@ -255,9 +255,12 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
     if (tmp_dir / 'rules.txt').exists():
         (tmp_dir / 'rules.txt').unlink()
-    import json
+    
+    from base64 import urlsafe_b64encode
+    meta['id'] = urlsafe_b64encode(meta['name'].encode('utf8')).decode('utf8')
+    from json import dumps
     (tmp_dir / 'info.json').write_text(
-        json.dumps(meta, ensure_ascii=False),
+        dumps(meta, ensure_ascii=False),
         encoding='utf-8'
     )
 

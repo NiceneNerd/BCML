@@ -224,11 +224,15 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
     return {
         util.get_dlc_path(): (
             f'Aoc/0010/Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin',
-            rstb_calc.calculate_file_size_with_ext(aoc_bytes, True, '.mubin')
+            rstb_calc.calculate_file_size_with_ext(
+                bytes(aoc_bytes), util.get_settings('wiiu'), '.mubin'
+            )
         ),
         'main': (
             f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.mubin',
-            rstb_calc.calculate_file_size_with_ext(base_bytes, True, '.mubin')
+            rstb_calc.calculate_file_size_with_ext(
+                bytes(base_bytes), util.get_settings('wiiu'), '.mubin'
+            )
         )
     }
 
@@ -324,17 +328,24 @@ class MapMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
+        diffs = []
         if self.is_mod_logged(mod):
-            return oead.byml.from_text(
+            diffs.append(oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
-            )
-        else:
-            return {}
+            ))
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                diffs.append(
+                    oead.byml.from_text(
+                        (opt / 'logs' / self._log_name).read_text('utf-8')
+                    )
+                )
+        return diffs
 
     def get_all_diffs(self):
         diffs = []
-        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
-            diffs.append(self.get_mod_diff(mod))
+        for mod in util.get_installed_mods():
+            diffs.extend(self.get_mod_diff(mod))
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -445,12 +456,25 @@ class DungeonStaticMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
+        diffs = {}
         if self.is_mod_logged(mod):
-            return oead.byml.from_text(
-                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+            util.dict_merge(
+                diffs,
+                oead.byml.from_text(
+                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+                ),
+                overwrite_lists=True
             )
-        else:
-            return {}
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                util.dict_merge(
+                    diffs,
+                    oead.byml.from_text(
+                        (opt / 'logs' / self._log_name).read_text('utf-8')
+                    ),
+                    overwrite_lists=True
+                )
+        return diffs
 
     def get_all_diffs(self):
         diffs = []

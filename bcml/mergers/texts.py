@@ -471,7 +471,7 @@ def threaded_merge_texts(msyt: Path, merge_dir: Path,
 
     with msyt.open('r', encoding='utf-8') as f_ref:
         merged_text = json.load(f_ref)
-    util.vprint(text_mods)
+    # util.vprint(text_mods)
     for textmod in text_mods:
         diff_found = False
         if rel_path in textmod:
@@ -618,24 +618,35 @@ class TextsMerger(mergers.Merger):
         )
 
     def get_mod_diff(self, mod: BcmlMod):
-        diff = {}
-        for file in (mod.path / 'logs').glob('texts_*.json'):
-            lang = util.get_file_language(file)
-            if not lang in diff:
-                diff[lang] = {}
-            with file.open('r', encoding='utf-8') as log:
-                diff[lang]['mod'] = json.load(log)
-        for file in (mod.path / 'logs').glob('newtexts*.sarc'):
-            lang = util.get_file_language(file)
-            if not lang in diff:
-                diff[lang] = {}
-            diff[lang]['add'] = oead.Sarc(file.read_bytes())
-        return diff
+        diffs = []
+
+        def load_diff(folder: Path) -> {}:
+            diff = {}
+            for file in (folder / 'logs').glob('texts_*.json'):
+                lang = util.get_file_language(file)
+                if not lang in diff:
+                    diff[lang] = {}
+                with file.open('r', encoding='utf-8') as log:
+                    diff[lang]['mod'] = json.load(log)
+            for file in (folder / 'logs').glob('newtexts*.sarc'):
+                lang = util.get_file_language(file)
+                if not lang in diff:
+                    diff[lang] = {}
+                diff[lang]['add'] = oead.Sarc(file.read_bytes())
+            return diff
+
+        if self.is_mod_logged(mod):
+            diffs.append(load_diff(mod.path / 'logs'))
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                diffs.append(load_diff(opt / 'logs'))
+
+        return diffs
 
     def get_all_diffs(self):
         diffs = []
-        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
-            diffs.append(self.get_mod_diff(mod))
+        for mod in util.get_installed_mods():
+            diffs.extend(self.get_mod_diff(mod))
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -658,7 +669,7 @@ class TextsMerger(mergers.Merger):
                         all_diffs[lang]['add'] = []
                     all_diffs[lang]['add'].append(diff[lang]['add'])
         util.vprint('All text diffs:')
-        util.vprint(all_diffs)
+        # util.vprint(all_diffs)
         return all_diffs
 
     @util.timed

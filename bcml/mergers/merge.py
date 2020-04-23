@@ -267,33 +267,47 @@ class DeepMerger(mergers.Merger):
         return True
 
     def get_mod_affected(self, mod):
-        return self.get_mod_diff().keys()
+        files = set()
+        for diff in self.get_mod_diff(mod):
+            files |= set(diff.keys())
+        return files
 
     def get_mod_diff(self, mod: BcmlMod):
+        diffs = []
         if self.is_mod_logged(mod):
             yml = oead.aamp.ParameterIO.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
             )
             pio = aamp.Reader(bytes(yml.to_binary())).parse()
-            return {
+            diffs.append({
                 file: pio.list('param_root').list(file) \
                     for i, file in pio.list('param_root').object('FileTable').params.items()
-            }
-        else:
-            return None
+            })
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                yml = oead.aamp.ParameterIO.from_text(
+                    (opt / 'logs' / self._log_name).read_text(encoding='utf-8')
+                )
+                pio = aamp.Reader(bytes(yml.to_binary())).parse()
+                diffs.append({
+                    file: pio.list('param_root').list(file) \
+                        for i, file in pio.list('param_root').object('FileTable').params.items()
+                })
+        return diffs
 
     def get_all_diffs(self):
         aamp_diffs = {}
-        for mod in [m for m in util.get_installed_mods() if self.is_mod_logged(m)]:
+        for mod in util.get_installed_mods():
             mod_diffs =  self.get_mod_diff(mod)
-            for file in [
-                diff for diff in mod_diffs if not (
-                    'only_these' in self._options and diff not in self._options['only_these']
-                )
-            ]:
-                if file not in aamp_diffs:
-                    aamp_diffs[file] = []
-                aamp_diffs[file].append(mod_diffs[file])
+            for mod_diff in mod_diffs:
+                for file in [
+                    diff for diff in mod_diff if not (
+                        'only_these' in self._options and diff not in self._options['only_these']
+                    )
+                ]:
+                    if file not in aamp_diffs:
+                        aamp_diffs[file] = []
+                    aamp_diffs[file].append(mod_diff[file])
         return aamp_diffs
 
     def consolidate_diffs(self, diffs: list):

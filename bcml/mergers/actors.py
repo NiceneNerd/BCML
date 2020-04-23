@@ -79,12 +79,25 @@ class ActorInfoMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: BcmlMod):
+        diffs = {}
         if self.is_mod_logged(mod):
-            return oead.byml.from_text(
-                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+            util.dict_merge(
+                diffs,
+                oead.byml.from_text(
+                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+                ),
+                overwrite_lists=True
             )
-        else:
-            return {}
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                util.dict_merge(
+                    diffs,
+                    oead.byml.from_text(
+                        (opt / 'logs' / self._log_name).read_text('utf-8')
+                    ),
+                    overwrite_lists=True
+                )
+        return diffs
 
     def get_all_diffs(self):
         diffs = []

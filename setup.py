@@ -2,6 +2,11 @@ from setuptools import setup
 from pathlib import Path
 from bcml.__version__ import VERSION
 
+from bcml.mergers import pack
+pm = pack.PackMerger()
+pm.perform_merge()
+exit()
+
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
 

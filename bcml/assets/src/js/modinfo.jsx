@@ -7,7 +7,7 @@ class ModInfo extends React.Component {
         super(props);
         this.state = {
             image: "",
-            description: "",
+            desc: "",
             url: "",
             changes: [],
             loading: false
@@ -81,7 +81,9 @@ class ModInfo extends React.Component {
                     </div>
                 </div>
                 <div className="mod-descrip">
-                    {this.state.description || "No mod selected"}
+                    {this.state.mod
+                        ? this.state.desc || "No description"
+                        : "No mod selected"}
                 </div>
                 <div className="mod-actions">
                     <Button

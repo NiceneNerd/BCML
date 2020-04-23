@@ -295,7 +295,7 @@ def refresh_master_export():
 
 
 @refresher
-def install_mod(mod: Path, options: dict = None, wait_merge: bool = False, 
+def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merge: bool = False, 
                 pool: Pool = None, insert_priority: int = 0):
     if insert_priority == 0:
         insert_priority = get_next_priority()
@@ -312,7 +312,7 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
         print(f'Loading mod from {str(mod)}...')
         tmp_dir = util.get_work_dir() / f'tmp_{mod.name}'
         shutil.copytree(str(mod), str(tmp_dir))
-        if (mod / 'rules.txt').exists():
+        if (mod / 'rules.txt').exists() and not (mod / 'info.json').exists():
             print('Upgrading old mod format...')
             from . import upgrade
             upgrade.convert_old_mod(mod, delete_old=True)
@@ -353,6 +353,43 @@ def install_mod(mod: Path, options: dict = None, wait_merge: bool = False,
                                   'not anticipate. Here is the error:\n\n'
                                   f'{traceback.format_exc(limit=-4)}')
         raise clean_error
+
+    if selects:
+        for opt_dir in {d for d in (tmp_dir / 'options').glob('*') if d.is_dir()}:
+            if opt_dir.name not in selects:
+                shutil.rmtree(opt_dir, ignore_errors=True)
+            else:
+                file: Path
+                for file in {f for f in opt_dir.rglob('**/*') if (
+                    'logs' not in f.parts and f.is_file()
+                )}:
+                    out = tmp_dir / file.relative_to(opt_dir)
+                    try:
+                        os.link(file, out)
+                    except FileExistsError:
+                        if file.suffix in util.SARC_EXTS:
+                            try:
+                                old_sarc = oead.Sarc(util.unyaz_if_needed(out.read_bytes()))
+                            except (ValueError, oead.InvalidDataError, RuntimeError):
+                                out.unlink()
+                                os.link(file, out)
+                            try:
+                                link_sarc = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+                            except (ValueError, oead.InvalidDataError, RuntimeError):
+                                continue
+                            new_sarc = oead.SarcWriter.from_sarc(link_sarc)
+                            for sarc_file in old_sarc.get_files():
+                                if not link_sarc.get_file(sarc_file.name):
+                                    new_sarc.files[sarc_file.name] = oead.Bytes(sarc_file.data)
+                            del old_sarc
+                            del link_sarc
+                            out.write_bytes(
+                                new_sarc.write()[1]
+                            )
+                            del new_sarc
+                        else:
+                            out.unlink()
+                            os.link(file, out)
 
     priority = insert_priority
     print(f'Assigned mod priority of {priority}')

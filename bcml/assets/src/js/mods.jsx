@@ -34,7 +34,7 @@ class Mods extends React.Component {
                 if (!res.success) throw res;
             })
             .catch(err => {
-                this.props.onError(err);
+                console.log(err);
                 window.location = "index.html?firstrun=true";
             });
     }
@@ -172,10 +172,10 @@ class Mods extends React.Component {
             async () => {
                 let installs = [];
                 let moves = [];
-                for (const [i, mod] of this.state.mods
-                    .slice()
-                    .reverse()
-                    .entries()) {
+                for (const [
+                    i,
+                    mod
+                ] of this.state.mods.slice().reverse().entries()) {
                     if (mod.path.startsWith("QUEUE")) installs.push(mod);
                     else {
                         const newPriority = !this.state.sortReverse

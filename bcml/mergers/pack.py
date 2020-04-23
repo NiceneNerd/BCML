@@ -33,7 +33,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     new_sarc = oead.SarcWriter(
         endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
     )
-    files_added = []
+    files_added = set()
 
     for opened_sarc in reversed(opened_sarcs):
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
@@ -41,7 +41,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
             if util.is_file_modded(file.name.replace('.s', '.'), data, count_new=True):
                 if not Path(file.name).suffix in util.SARC_EXTS:
                     new_sarc.files[file.name] = data
-                    files_added.append(file.name)
+                    files_added.add(file.name)
                 else:
                     if file.name not in nested_sarcs:
                         nested_sarcs[file.name] = []
@@ -51,7 +51,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
             merged_bytes = util.compress(merged_bytes)
         new_sarc.files[file] = merged_bytes
-        files_added.append(file)
+        files_added.add(file)
     for file in [file for file in all_files if file not in files_added]:
         for opened_sarc in [open_sarc for open_sarc in opened_sarcs if (
                 file in [f.name for f in open_sarc.get_files()]
@@ -101,16 +101,27 @@ class PackMerger(mergers.Merger):
         )
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        return [
-            Path(path.replace('\\', '/')).as_posix() for canon, path in json.loads(
-                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8'),
-                encoding='utf-8'
-            ).items()
-        ]
+        diffs = set()
+        if self.is_mod_logged(mod):
+            diffs |= {
+                Path(path.replace('\\', '/')).as_posix() for _, path in json.loads(
+                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8'),
+                    encoding='utf-8'
+                ).items()
+            }
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                diffs |= {
+                    Path(path.replace('\\', '/')).as_posix() for _, path in json.loads(
+                        (opt / 'logs' / self._log_name).read_text(encoding='utf-8'),
+                        encoding='utf-8'
+                    ).items()
+                }
+        return diffs
 
     def get_all_diffs(self):
         diffs = {}
-        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+        for mod in util.get_installed_mods():
             diffs[mod] = self.get_mod_diff(mod)
         return diffs
 

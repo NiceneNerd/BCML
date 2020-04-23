@@ -16,12 +16,16 @@ import Mods from "./mods.jsx";
 import BackupModal from "./backup.jsx";
 import ProgressModal from "./progress.jsx";
 import React from "react";
+import SelectsDialog from "./selects.jsx";
 
 class BcmlRoot extends React.Component {
     constructor() {
         super();
         this.state = {
             mods: [],
+            selects: null,
+            selectMod: null,
+            selectPath: null,
             settingsLoaded: false,
             settingsValid: false,
             savingSettings: false,
@@ -36,6 +40,8 @@ class BcmlRoot extends React.Component {
             confirmText: "",
             confirmCallback: () => {}
         };
+        this.selects = null;
+
         this.handleBackups = this.handleBackups.bind(this);
         this.handleInstall = this.handleInstall.bind(this);
         this.saveSettings = this.saveSettings.bind(this);
@@ -99,7 +105,22 @@ class BcmlRoot extends React.Component {
     }
 
     async handleInstall(mods, options) {
-        const selects = await pywebview.api.check_mod_options({ mods });
+        if (!this.selects) {
+            this.selects = await pywebview.api.check_mod_options({ mods });
+        }
+        const num_selects = Object.keys(this.selects).length;
+        if (
+            num_selects > 0 &&
+            (!this.state.selects ||
+                num_selects > Object.keys(this.state.selects).length)
+        ) {
+            this.installArgs = { mods, options };
+            this.setState({
+                selectPath: Object.keys(this.selects)[0],
+                selectMod: this.selects[Object.keys(this.selects)[0]]
+            });
+            return;
+        }
         this.setState(
             {
                 showProgress: true,
@@ -107,13 +128,18 @@ class BcmlRoot extends React.Component {
             },
             () => {
                 pywebview.api
-                    .install_mod({ mods, options, selects })
+                    .install_mod({ mods, options, selects: this.state.selects })
                     .then(res => {
                         if (!res.success) {
                             throw res;
                         }
+                        this.selects = null;
                         this.setState(
-                            { showProgress: false, showDone: true },
+                            {
+                                showProgress: false,
+                                showDone: true,
+                                selects: {}
+                            },
                             () => this.refreshMods()
                         );
                     })
@@ -286,6 +312,40 @@ class BcmlRoot extends React.Component {
                     onDelete={this.handleBackups}
                     onClose={() => this.setState({ showBackups: false })}
                 />
+                <SelectsDialog
+                    show={this.state.selectMod != null}
+                    path={this.state.selectPath}
+                    mod={this.state.selectMod}
+                    onClose={() => {
+                        this.setState({
+                            selectMod: null,
+                            selectPath: null,
+                            selects: {}
+                        });
+                        this.installArgs = null;
+                        this.selects = null;
+                    }}
+                    onSet={folders => {
+                        delete this.selects[this.state.selectPath];
+                        this.setState(
+                            {
+                                selectMod: null,
+                                selectPath: null,
+                                selects: {
+                                    ...this.state.selects,
+                                    [this.state.selectPath]: folders
+                                }
+                            },
+                            () => {
+                                this.handleInstall(
+                                    this.installArgs.mods,
+                                    this.installArgs.options
+                                );
+                                this.installArgs = null;
+                            }
+                        );
+                    }}
+                />
             </React.Fragment>
         );
     }
@@ -309,7 +369,7 @@ const DoneDialog = props => {
 
 const ErrorDialog = props => {
     return (
-        <Modal show={props.show} centered>
+        <Modal show={props.show} centered dialogClassName="modal-wide">
             <Modal.Header closeButton>
                 <Modal.Title>Error</Modal.Title>
             </Modal.Header>

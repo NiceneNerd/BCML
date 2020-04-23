@@ -104,7 +104,7 @@ body,
 .nav-tabs .nav-link.active {
     color: #fff;
     background-color: transparent;
-    border-bottom: 2px solid #fff;
+    border-bottom: 2px solid #fff !important;
 }
 
 .tab-pane > .row {
@@ -669,6 +669,10 @@ Fade {
 .form-control:focus {
     background-color: #42454c;
     color: #fff;
+}
+
+.radio-group .form-group {
+    margin-bottom: 0.1667rem;
 }
 
 /* Transitions */

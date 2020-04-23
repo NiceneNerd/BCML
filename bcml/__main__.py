@@ -35,7 +35,7 @@ class Api:
     window: webview.Window
 
     @win_or_lose
-    def sanity_check(self):
+    def sanity_check(self, kwargs = None):
         import platform
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
@@ -75,7 +75,7 @@ class Api:
             elif params['type'] == 'dlc_dir':
                 return (p / 'Pack' / 'AocMainField.pack').exists()
 
-    def get_settings(self):
+    def get_settings(self, params = None):
         return util.get_settings()
 
     def save_settings(self, params):
@@ -138,7 +138,7 @@ class Api:
             pass
         return {
             'changes': [m.NAME.upper() for m in mergers.get_mergers() if m().is_mod_logged(mod)],
-            'description': mod.description,
+            'desc': mod.description,
             'image': img,
             'url': mod.url
         }
@@ -189,15 +189,16 @@ class Api:
         }
 
     @win_or_lose
-    def install_mod(self, params):
+    def install_mod(self, params: dict):
         util.vprint(params)
         set_start_method('spawn', True)
         with Pool(cpu_count()) as pool:
+            selects = params['selects'] if 'selects' in params else {}
             mods = [
                 install.install_mod(
                     Path(m),
                     options=params['options'],
-                    selects=params['selects'][m],
+                    selects=selects.get(m, None),
                     wait_merge=True,
                     pool=pool
                 ) for m in params['mods']
@@ -311,6 +312,7 @@ class Api:
             [
                 m() for m in mergers.get_mergers() if m().friendly_name == params['name']
             ][0].perform_merge()
+            install.refresh_master_export()
 
     @win_or_lose
     def create_backup(self, params):

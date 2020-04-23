@@ -20,9 +20,9 @@ from rstb.util import read_rstb
 from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
-RSTB_EXCLUDE_EXTS = ['.pack', '.bgdata', '.txt', '.bgsvdata', '.yml',
-                     '.bat', '.ini', '.png', '.bfstm', '.py', '.sh']
-RSTB_EXCLUDE_NAMES = ['ActorInfo.product.byml']
+RSTB_EXCLUDE_EXTS = {'.pack', '.bgdata', '.txt', '.bgsvdata', '.yml', '.msbt',
+                     '.bat', '.ini', '.png', '.bfstm', '.py', '.sh'}
+RSTB_EXCLUDE_NAMES = {'ActorInfo.product.byml'}
 
 
 def get_stock_rstb() -> rstb.ResourceSizeTable:
@@ -372,10 +372,12 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
                 elif ext in {'.bfres', '.sbfres'}:
                     size = guess_bfres_size(data, canon)
             sizes[canon] = size
-            if ext in util.SARC_EXTS and not nest_file.endswith('sarc'):
+            if ext in util.SARC_EXTS and not ext not in {
+                '.sarc', '.blarc', '.bfarc', '.ssarc', '.sbfarc', '.sblarc'
+            }:
                 try:
                     nest_sarc = oead.Sarc(data)
-                except ValueError:
+                except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
                 sizes.update(_get_sizes_in_sarc(nest_sarc))
             else:
@@ -402,7 +404,11 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
             canon = util.get_canon_name(file.relative_to(util.get_master_modpack_dir()))
             if canon:
                 diffs[canon] = size
-    sarc_files = {f for f in files if f.suffix in util.SARC_EXTS and f.suffix != '.ssarc'}
+    sarc_files = {
+        f for f in files if (
+            f.suffix in util.SARC_EXTS and f.suffix not in {'.ssarc', '.sblarc', '.sbfarc'}
+        )
+    }
     if sarc_files:
         if not pool:
             multiprocessing.set_start_method('spawn', True)
@@ -430,13 +436,6 @@ def generate_master_rstb():
         rstb_values.update(get_mod_rstb_values(mod))
     if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
         rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir()))
-    if (util.get_master_modpack_dir() / 'logs' / 'map.log').exists():
-        rstb_values.update(
-            get_mod_rstb_values(
-                util.get_master_modpack_dir(),
-                log_name='map.log'
-            )
-        )
 
     table = merge_rstb(table, rstb_values)
 
@@ -445,8 +444,8 @@ def generate_master_rstb():
         if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
             table.delete_entry(f'Message/Msg_{lang}.product.sarc')
 
-    rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' / \
-                                                'ResourceSizeTable.product.srsizetable'
+    rstb_path = (util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /
+                 'ResourceSizeTable.product.srsizetable')
     if not rstb_path.exists():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
     with rstb_path.open('wb') as r_file:
@@ -456,6 +455,8 @@ def generate_master_rstb():
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
+    from json import dumps
+    rstb_log.write_text(dumps(rstb_values))
 
 
 class RstbMerger(mergers.Merger):
@@ -492,6 +493,8 @@ class RstbMerger(mergers.Merger):
                     rstb_diff[file] = size
             elif isinstance(file, str):
                 parts = file.split('//')
+                if any(Path(p).suffix in {'.ssarc', '.sblarc', '.sbfarc'} for p in parts[0:-1]):
+                    continue
                 name = parts[-1]
                 if parts[0] not in open_sarcs:
                     open_sarcs[parts[0]] = oead.Sarc(
@@ -553,23 +556,32 @@ class RstbMerger(mergers.Merger):
         if not self._options:
             self._options['leave'] = (mod.path / 'logs' / '.leave').exists()
             self._options['shrink'] = (mod.path / 'logs' / '.shrink').exists()
-
-        diffs = {}
-        log_path = mod.path / 'logs' / self._log_name
         stock_rstb = get_stock_rstb()
-        with log_path.open('r', encoding='utf-8') as log:
-            for line in log.readlines()[1:]:
-                row = line.split(',')
-                name = row[0]
-                size = int(row[1])
-                old_size = 0
-                if stock_rstb.is_in_table(name):
-                    old_size = stock_rstb.get_size(name)
-                if (size == 0 and self._options['leave']) or \
-                   (size < old_size and self._options['shrink']):
-                    continue
-                diffs[row[0]] = int(row[1])
-        return diffs
+
+        mod_diffs = {}
+
+        def read_log(log_path: Path) -> {}:
+            diffs = {}
+            with log_path.open('r', encoding='utf-8') as log:
+                for line in log.readlines()[1:]:
+                    row = line.split(',')
+                    name = row[0]
+                    size = int(row[1])
+                    old_size = 0
+                    if stock_rstb.is_in_table(name):
+                        old_size = stock_rstb.get_size(name)
+                    if (size == 0 and self._options['leave']) or \
+                    (size < old_size and self._options['shrink']):
+                        continue
+                    diffs[row[0]] = int(row[1])
+            return diffs
+
+        if self.is_mod_logged(mod):
+            mod_diffs.update(read_log(mod.path / 'logs' / self._log_name))
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                mod_diffs.update(read_log(opt / 'logs' / self._log_name))
+        return mod_diffs
 
     def get_all_diffs(self):
         diffs = []
