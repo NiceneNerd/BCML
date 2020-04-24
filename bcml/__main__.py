@@ -188,7 +188,7 @@ class Api:
         util.vprint(params)
         set_start_method('spawn', True)
         with Pool(cpu_count()) as pool:
-            selects = params['selects'] if 'selects' in params else {}
+            selects = params['selects'] if 'selects' in params and params['selects'] else {}
             mods = [
                 install.install_mod(
                     Path(m),
