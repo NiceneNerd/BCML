@@ -138,7 +138,7 @@ class EventInfoMerger(mergers.Merger):
             create_bootup=True
         )
         print('Saving event info merge log...')
-        event_merge_log.write_text(event_mod_hash)
+        event_merge_log.write_text(str(event_mod_hash))
         merged_events.write_bytes(event_bytes)
 
         print('Updating RSTB...')
