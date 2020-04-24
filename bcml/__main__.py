@@ -144,7 +144,7 @@ class Api:
         }
 
     def get_mergers(self):
-        return [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
+        return [m().friendly_name for m in mergers.get_mergers()]
 
     def file_pick(self, params = None):
         if not params:

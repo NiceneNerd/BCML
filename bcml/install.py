@@ -40,7 +40,7 @@ def extract_mod_meta(mod: Path) -> {}:
     )
     out, err = p.communicate()
     p.wait()
-    return json.loads(out.decode('utf-8'))
+    return json.loads(out.decode('utf-8')) if out else {}
 
 
 def open_mod(path: Path) -> Path:
