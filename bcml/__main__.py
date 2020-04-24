@@ -144,12 +144,7 @@ class Api:
         }
 
     def get_mergers(self):
-        try:
-            self.window.evaluate_js(f"""window.mergers = [{','.join(
-                [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
-            )}]; window.loadMergers();""")
-        except webview.WebViewException:
-            sys.exit()
+        return [f'"{m().friendly_name}"' for m in mergers.get_mergers()]
 
     def file_pick(self, params = None):
         if not params:
@@ -413,8 +408,7 @@ def main():
             webview.start(
                 gui='' if no_cef else 'cef',
                 debug=DEBUG if not no_cef else False,
-                http_server=False,
-                func=api.get_mergers
+                http_server=False
             )
 
 if __name__ == "__main__":

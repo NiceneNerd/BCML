@@ -15,10 +15,19 @@ class Mods extends React.Component {
             showInstall: false,
             mods: [],
             dirty: false,
-            mergersReady: false
+            mergersReady: false,
+            mergers: []
         };
-        window.loadMergers = () =>
-            this.setState({ mergersReady: true }, this.sanityCheck);
+        window.addEventListener("pywebviewready", () =>
+            pywebview.api
+                .get_mergers()
+                .then(mergers =>
+                    this.setState(
+                        { mergersReady: true, mergers },
+                        this.sanityCheck
+                    )
+                )
+        );
         this.sanityCheck = this.sanityCheck.bind(this);
         this.handleAction = this.handleAction.bind(this);
         this.handleQueue = this.handleQueue.bind(this);
@@ -304,7 +313,7 @@ class Mods extends React.Component {
 
                                 <Dropdown.Menu>
                                     {this.state.mergersReady &&
-                                        window.mergers.map(m => (
+                                        this.state.mergers.map(m => (
                                             <Dropdown.Item
                                                 key={m}
                                                 onClick={() =>
