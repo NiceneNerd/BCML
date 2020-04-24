@@ -238,7 +238,7 @@ class DeepMerger(mergers.Merger):
         for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
-            except (FileNotFoundError, KeyError, TypeError):
+            except (FileNotFoundError, KeyError, TypeError, AttributeError):
                 continue
         return diffs
 

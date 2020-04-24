@@ -166,7 +166,7 @@ def msbt_to_msyt(tmp_dir: Path = util.get_work_dir() / 'tmp_text',
             multiprocessing.cpu_count(), len(fix_msbts)))
         p.map(_msyt_file, fix_msbts)
         fix_msbts = [
-            msbt.as_posix() for msbt in tmp_dir.rglob('**/*.msbt') \
+            msbt for msbt in tmp_dir.rglob('**/*.msbt') \
                 if not msbt.with_suffix('.msyt').exists()
         ]
         if not pool:
