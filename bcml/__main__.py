@@ -180,7 +180,7 @@ class Api:
             mod: install.extract_mod_meta(Path(mod)) for mod in params['mods'] if mod.endswith('.bnp')
         }
         return {
-            mod: meta for mod, meta in metas.items() if meta['options']
+            mod: meta for mod, meta in metas.items() if 'options' in meta and meta['options']
         }
 
     @win_or_lose
