@@ -5,48 +5,40 @@
 import datetime
 import json
 import os
+import re
 import shutil
 import subprocess
 import traceback
-from configparser import ConfigParser
-from dataclasses import astuple
-from fnmatch import fnmatch
 from functools import partial
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
-from shutil import copy
+from shutil import rmtree
 from typing import List, Union, Callable
 from xml.dom import minidom
 
 import oead
 import xxhash
 
-from bcml import util, mergers, dev
-from bcml.mergers import data, events, merge, mubin, pack, rstable, texts
-from bcml.util import BcmlMod
-
-if system() == 'Windows':
-    ZPATH = str(util.get_exec_dir() / 'helpers' / '7z.exe')
-else:
-    ZPATH = str(util.get_exec_dir() / 'helpers' / '7z')
+from bcml import util, mergers, dev, upgrade
+from bcml.util import BcmlMod, ZPATH
 
 
 def extract_mod_meta(mod: Path) -> {}:
-    p = subprocess.Popen(
+    process = subprocess.Popen(
         f'"{ZPATH}" e "{str(mod.resolve())}" -r -so info.json',
         stdout=subprocess.PIPE,
         shell=True
     )
-    out, err = p.communicate()
-    p.wait()
+    out, _ = process.communicate()
+    process.wait()
     return json.loads(out.decode('utf-8')) if out else {}
 
 
 def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
-    tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh32(str(path)).hexdigest()}'
+    tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(path))}'
     formats = {'.rar', '.zip', '.7z', '.bnp'}
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -57,10 +49,11 @@ def open_mod(path: Path) -> Path:
                 x_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                creationflags=util.CREATE_NO_WINDOW
+                creationflags=util.CREATE_NO_WINDOW,
+                check=False
             )
         else:
-            subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     else:
         err = ValueError()
         err.error_text = 'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).'
@@ -86,7 +79,6 @@ def open_mod(path: Path) -> Path:
             )
             raise err
     print('Looks like an older mod, let\'s upgrade it...')
-    from bcml import upgrade
     upgrade.convert_old_mod(rulesdir, delete_old=True)
     return rulesdir
 
@@ -226,18 +218,18 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
         raise err
     util.vprint(modded_files)
 
-    p = pool or Pool(cpu_count())
+    this_pool = pool or Pool(cpu_count())
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
     for merger_class in [merger_class for merger_class in mergers.get_mergers() \
                         if merger_class.NAME not in options['disable']]:
         merger = merger_class()
         if options is not None and merger.NAME in options:
             merger.set_options(options[merger.NAME])
-        merger.set_pool(p)
+        merger.set_pool(this_pool)
         merger.log_diff(tmp_dir, modded_files)
     if not pool:
-        p.close()
-        p.join()
+        this_pool.close()
+        this_pool.join()
     return modded_files
 
 
@@ -294,8 +286,7 @@ def refresh_master_export():
             settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
-@refresher
-def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merge: bool = False, 
+def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merge: bool = False,
                 pool: Pool = None, insert_priority: int = 0):
     if insert_priority == 0:
         insert_priority = get_next_priority()
@@ -314,14 +305,12 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
         shutil.copytree(str(mod), str(tmp_dir))
         if (mod / 'rules.txt').exists() and not (mod / 'info.json').exists():
             print('Upgrading old mod format...')
-            from . import upgrade
             upgrade.convert_old_mod(mod, delete_old=True)
-            
     else:
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
         return
 
-    p: Pool = None
+    this_pool: Pool = None
     try:
         rules = json.loads(
             (tmp_dir / 'info.json').read_text('utf-8')
@@ -337,11 +326,11 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
                     (tmp_dir / 'logs' / merger.log_name).unlink()
         else:
-            p = pool or Pool(cpu_count())
+            this_pool = pool or Pool(cpu_count())
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
-    except Exception as e: # pylint: disable=broad-except
-        if hasattr(e, 'error_text'):
-            raise e
+    except Exception as err: # pylint: disable=broad-except
+        if hasattr(err, 'error_text'):
+            raise err
         clean_error = RuntimeError()
         try:
             name = mod_name
@@ -361,8 +350,8 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
             else:
                 file: Path
                 for file in {f for f in opt_dir.rglob('**/*') if (
-                    'logs' not in f.parts and f.is_file()
-                )}:
+                        'logs' not in f.parts and f.is_file()
+                    )}:
                     out = tmp_dir / file.relative_to(opt_dir)
                     try:
                         os.link(file, out)
@@ -474,14 +463,14 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                 options = {}
             if 'disable' not in options:
                 options['disable'] = []
-            if not p:
-                p = pool or Pool(cpu_count())
+            if not this_pool:
+                this_pool = pool or Pool(cpu_count())
             for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
                                                 if cls.NAME not in options['disable']]):
                 if merger.NAME in options:
                     merger.set_options(options[merger.NAME])
                 if merger.is_mod_logged(output_mod):
-                    merger.set_pool(p)
+                    merger.set_pool(this_pool)
                     merger.perform_merge()
             print(f'{mod_name} installed successfully!')
         except Exception: # pylint: disable=broad-except
@@ -498,9 +487,9 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
             except FileNotFoundError:
                 pass
             raise clean_error
-    if p and not pool:
-        p.close()
-        p.join()
+    if this_pool and not pool:
+        this_pool.close()
+        this_pool.join()
     return output_mod
 
 @refresher
@@ -559,6 +548,7 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
 
     if not util.get_installed_mods():
         shutil.rmtree(util.get_master_modpack_dir())
+        util.create_bcml_graphicpack_if_needed()
     else:
         if not wait_merge:
             for merger in mergers.sort_mergers(remergers):
@@ -577,14 +567,13 @@ def refresh_merges():
     set_start_method('spawn', True)
     with Pool(cpu_count()) as pool:
         for merger in mergers.sort_mergers(
-            [merger_class() for merger_class in mergers.get_mergers()]
-        ):
+                [merger_class() for merger_class in mergers.get_mergers()]
+            ):
             merger.set_pool(pool)
             merger.perform_merge()
 
 
 def create_backup(name: str = ''):
-    import re
     if not name:
         name = f'BCML_Backup_{datetime.datetime.now().strftime("%Y-%m-%d")}'
     else:
@@ -599,10 +588,11 @@ def create_backup(name: str = ''):
             x_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=util.CREATE_NO_WINDOW
+            creationflags=util.CREATE_NO_WINDOW,
+            check=True
         )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print(f'Backup "{name}" created')
 
 
@@ -621,10 +611,15 @@ def restore_backup(backup: Union[str, Path]):
     print('Extracting backup...')
     x_args = [ZPATH, 'x', str(backup), f'-o{str(util.get_modpack_dir())}']
     if system() == 'Windows':
-        subprocess.run(x_args, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, creationflags=util.CREATE_NO_WINDOW)
+        subprocess.run(
+            x_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=util.CREATE_NO_WINDOW,
+            check=True
+        )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print('Re-enabling mods in Cemu...')
     refresh_master_export()
     print(f'Backup "{backup.name}" restored')
@@ -640,6 +635,7 @@ def link_master_mod(output: Path = None):
         [item for item in util.get_modpack_dir().glob('*') if item.is_dir()],
         reverse=True
     )
+    util.vprint(mod_folders)
     shutil.copy(
         str(util.get_master_modpack_dir() / 'rules.txt'),
         str(output / 'rules.txt')
@@ -661,12 +657,10 @@ def link_master_mod(output: Path = None):
                         str(output / rel_path)
                     )
                 except OSError:
-                    from shutil import copyfile as link_or_copy
+                    from shutil import copyfile as link_or_copy # pylint: disable=import-outside-toplevel
 
 
 def export(output: Path):
-    import subprocess
-    from shutil import rmtree
     print('Loading files...')
     tmp_dir = util.get_work_dir() / 'tmp_export'
     if tmp_dir.drive != util.get_modpack_dir().drive:
@@ -694,19 +688,25 @@ def export(output: Path):
         )
     else:
         print('Exporting as graphic pack mod...')
-        x_args = [ZPATH,
-                    'a', str(output), f'{str(tmp_dir / "*")}']
+        x_args = [
+            ZPATH,
+            'a',
+            str(output),
+            f'{str(tmp_dir / "*")}'
+        ]
         if os.name == 'nt':
             subprocess.run(
                 x_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                creationflags=util.CREATE_NO_WINDOW
+                creationflags=util.CREATE_NO_WINDOW,
+                check=True
             )
         else:
             subprocess.run(
                 x_args,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
+                check=True
             )
     rmtree(str(tmp_dir), True)

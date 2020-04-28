@@ -18,6 +18,7 @@ from collections import namedtuple, OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
+from platform import system
 from typing import Union, List
 
 import oead
@@ -52,7 +53,6 @@ AAMP_EXTS = {'.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.bagl
 BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin',
              '.smubin', '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata',
              '.sbgsvdata'}
-
 
 class BcmlMod:
     priority: int
@@ -548,8 +548,9 @@ def get_master_modpack_dir() -> Path:
 
 @lru_cache(None)
 def get_hash_table() -> {}:
-    with (get_exec_dir() / 'data' / 'hashtable.json').open('r') as h_file:
-        return json.load(h_file)
+    return json.loads(
+        decompress((get_exec_dir() / 'data' / 'hashtable.sjson').read_bytes()).decode('utf-8')
+    )
 
 
 @lru_cache(None)
@@ -600,7 +601,7 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
     table = get_hash_table()
     if name not in table:
         return count_new
-    fhash = xxhash.xxh32(contents).hexdigest()
+    fhash = xxhash.xxh64_intdigest(contents)
     return not fhash in table[name]
 
 
@@ -851,3 +852,8 @@ class Messager:
             if string.startswith('VERBOSE'):
                 string = string[7:]
             log_file.write(f'{string}\n')
+
+if system() == 'Windows':
+    ZPATH = str(get_exec_dir() / 'helpers' / '7z.exe')
+else:
+    ZPATH = str(get_exec_dir() / 'helpers' / '7z')

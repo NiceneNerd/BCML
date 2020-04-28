@@ -1,5 +1,6 @@
 import base64
 import json
+import platform
 import sys
 import traceback
 import urllib
@@ -7,11 +8,15 @@ from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
+from platform import system
+from shutil import rmtree
+from subprocess import Popen
 
 import webview
 
 from . import DEBUG, NO_CEF, install, dev, mergers, upgrade, util
-from .util import BcmlMod, Messager, InstallError, MergeError
+from .util import BcmlMod, Messager, MergeError
+from .mergers.rstable import generate_rstb_for_mod
 
 LOG = util.get_data_dir() / 'bcml.log'
 
@@ -19,8 +24,8 @@ def win_or_lose(func):
     def status_run(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except Exception as e:  # pylint: disable=bare-except
-            err = getattr(e, 'error_text', '') or traceback.format_exc(limit=-5, chain=True)
+        except Exception as err:  # pylint: disable=broad-except
+            err = getattr(err, 'error_text', '') or traceback.format_exc(limit=-5, chain=True)
             with LOG.open('a') as log_file:
                 log_file.write(f'\n{err}\n')
             return {
@@ -32,11 +37,11 @@ def win_or_lose(func):
 
 
 class Api:
+    # pylint: disable=unused-argument
     window: webview.Window
 
     @win_or_lose
-    def sanity_check(self, kwargs = None):
-        import platform
+    def sanity_check(self, kwargs=None):
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
             err = RuntimeError(
@@ -61,21 +66,21 @@ class Api:
         return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
-        p = Path(params['folder'])
-        real_folder = p.exists() and p.is_dir() and params['folder'] != ''
+        path = Path(params['folder'])
+        real_folder = path.exists() and path.is_dir() and params['folder'] != ''
         if not real_folder:
             return False
         else:
             if params['type'] == 'cemu_dir':
-                return len(list(p.glob('Cemu*.exe'))) > 0
+                return len(list(path.glob('Cemu*.exe'))) > 0
             elif params['type'] == 'game_dir':
-                return (p / 'Pack' / 'Dungeon000.pack').exists()
+                return (path / 'Pack' / 'Dungeon000.pack').exists()
             elif params['type'] == 'update_dir':
-                return len(list((p / 'Actor' / 'Pack').glob('*.sbactorpack'))) > 7000
+                return len(list((path / 'Actor' / 'Pack').glob('*.sbactorpack'))) > 7000
             elif params['type'] == 'dlc_dir':
-                return (p / 'Pack' / 'AocMainField.pack').exists()
+                return (path / 'Pack' / 'AocMainField.pack').exists()
 
-    def get_settings(self, params = None):
+    def get_settings(self, params=None):
         return util.get_settings()
 
     def save_settings(self, params):
@@ -85,7 +90,7 @@ class Api:
     def old_settings(self):
         old = util.get_data_dir() / 'settings.ini'
         if old.exists():
-            try:    
+            try:
                 upgrade.convert_old_settings()
                 settings = util.get_settings()
                 return {
@@ -108,19 +113,18 @@ class Api:
         return len({
             d for d in (util.get_cemu_dir() / 'graphicPacks' / 'BCML').glob('*') if d.is_dir()
         })
-    
+
     @win_or_lose
     def convert_old_mods(self):
         upgrade.convert_old_mods()
 
     @win_or_lose
     def delete_old_mods(self):
-        from shutil import rmtree
         rmtree(util.get_cemu_dir() / 'graphicPacks' / 'BCML')
 
     def get_mods(self, params):
         if not params:
-            params = { 'disabled': False }
+            params = {'disabled': False}
         mods = [mod.to_json()
                 for mod in util.get_installed_mods(params['disabled'])]
         util.vprint(mods)
@@ -146,7 +150,7 @@ class Api:
     def get_mergers(self):
         return [m().friendly_name for m in mergers.get_mergers()]
 
-    def file_pick(self, params = None):
+    def file_pick(self, params=None):
         if not params:
             params = {}
         return self.window.create_file_dialog(
@@ -154,17 +158,17 @@ class Api:
                 'Packaged mods (*.bnp;*.7z;*.zip;*.rar)',
                 'Mod meta (*.txt;*.json)'
             ),
-            allow_multiple=True if not 'multiple' in params else params['multiple']
+            allow_multiple=True if 'multiple' not in params else params['multiple']
         ) or []
-    
+
     def get_options(self):
         opts = []
-        for m in mergers.get_mergers():
-            m = m()
+        for merger in mergers.get_mergers():
+            merger = merger()
             opts.append({
-                'name': m.NAME,
-                'friendly': m.friendly_name,
-                'options': {k: v for (k, v) in m.get_checkbox_options()}
+                'name': merger.NAME,
+                'friendly': merger.friendly_name,
+                'options': {k: v for (k, v) in merger.get_checkbox_options()}
             })
         return opts
 
@@ -177,13 +181,15 @@ class Api:
 
     def check_mod_options(self, params):
         metas = {
-            mod: install.extract_mod_meta(Path(mod)) for mod in params['mods'] if mod.endswith('.bnp')
+            mod: install.extract_mod_meta(Path(mod)) for mod in params['mods']\
+                if mod.endswith('.bnp')
         }
         return {
             mod: meta for mod, meta in metas.items() if 'options' in meta and meta['options']
         }
 
     @win_or_lose
+    @install.refresher
     def install_mod(self, params: dict):
         util.vprint(params)
         set_start_method('spawn', True)
@@ -198,26 +204,30 @@ class Api:
                     pool=pool
                 ) for m in params['mods']
             ]
-            ms = {}
+            merger_set = {}
             try:
                 for mod in mods:
-                    for m in mergers.get_mergers_for_mod(mod):
-                        ms[m] = None if not m.can_partial_remerge() else m.get_mod_affected(mod)
-                for m in ms:
-                    if ms[m] is not None:
-                        m.set_options({'only_these': ms[m]})
-                    m.set_pool(pool)
-                    m.perform_merge()
+                    for merger in mergers.get_mergers_for_mod(mod):
+                        merger_set[merger] = (
+                            None if not merger.can_partial_remerge()\
+                                 else merger.get_mod_affected(mod)
+                        )
+                for merger in merger_set:
+                    if merger_set[merger] is not None:
+                        merger.set_options({'only_these': merger_set[merger]})
+                    merger.set_pool(pool)
+                    merger.perform_merge()
                 print('Install complete')
-            except Exception as e:
-                raise MergeError(e)
+            except Exception as err:
+                raise MergeError(err)
 
+    @win_or_lose
+    @install.refresher
     def update_mod(self, params):
         try:
             update_file = self.file_pick({'multiple': False})[0]
         except IndexError:
             return
-        from shutil import rmtree
         mod = BcmlMod.from_json(params['mod'])
         if (mod.path / 'options.json').exists():
             options = json.loads(
@@ -235,21 +245,22 @@ class Api:
 
     @win_or_lose
     def uninstall_all(self):
-        from shutil import rmtree
-        [rmtree(d) for d in util.get_modpack_dir().glob('*') if d.is_dir()]
+        for folder in {d for d in util.get_modpack_dir().glob('*') if d.is_dir()}:
+            rmtree(folder)
 
     @win_or_lose
+    @install.refresher
     def apply_queue(self, params):
         mods = []
-        for m in params['moves']:
-            mod = BcmlMod.from_json(m['mod'])
+        for move_mod in params['moves']:
+            mod = BcmlMod.from_json(move_mod['mod'])
             mods.append(mod)
-            mod.change_priority(m['priority'])
+            mod.change_priority(move_mod['priority'])
         for i in params['installs']:
             print(i)
             mods.append(
                 install.install_mod(
-                    Path(i['path'].replace('QUEUE', '')), 
+                    Path(i['path'].replace('QUEUE', '')),
                     options=i['options'],
                     insert_priority=i['priority'],
                     wait_merge=True
@@ -288,11 +299,9 @@ class Api:
             self.update_mod(params)
 
     def explore(self, params):
-        from platform import system
-        from subprocess import Popen
         path = params['mod']['path']
         if system() == "Windows":
-            from os import startfile  # pylint: disable=no-name-in-module
+            from os import startfile  # pylint: disable=no-name-in-module,import-outside-toplevel
             startfile(path)
         elif system() == "Darwin":
             Popen(["open", path])
@@ -359,13 +368,12 @@ class Api:
         )
 
     @win_or_lose
-    def gen_rstb(self, params = None):
+    def gen_rstb(self, params=None):
         try:
             mod = Path(self.get_folder())
             assert mod.exists()
         except (FileNotFoundError, IndexError, AssertionError):
             return
-        from .mergers.rstable import generate_rstb_for_mod
         generate_rstb_for_mod(mod)
 
 
@@ -386,18 +394,18 @@ def main():
             )
         )
         url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
-        w, h = 907, 680
+        width, height = 907, 680
     else:
         url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
-        w, h = 750, 600
+        width, height = 750, 600
 
     api.window = webview.create_window(
         'BOTW Cemu Mod Loader',
         url=url,
         js_api=api,
         text_select=DEBUG,
-        width=w,
-        height=h
+        width=width,
+        height=height
     )
 
     no_cef = find_spec('cefpython3') is None or NO_CEF

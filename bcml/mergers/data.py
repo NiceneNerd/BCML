@@ -3,10 +3,8 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 """
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-import zlib
-from copy import deepcopy
+# pylint: disable=unsupported-assignment-operation
 from functools import partial, lru_cache
-from io import BytesIO
 from math import ceil
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
@@ -46,7 +44,7 @@ def get_stock_savedata() -> oead.Sarc:
 def get_gamedata_hashes() -> {}:
     gamedata = get_stock_gamedata()
     return {
-        file.name: xxhash.xxh32_hexdigest(file.data) for file in gamedata.get_files()
+        file.name: xxhash.xxh64_intdigest(file.data) for file in gamedata.get_files()
     }
 
 
@@ -54,39 +52,45 @@ def get_gamedata_hashes() -> {}:
 def get_savedata_hashes() -> {}:
     savedata = get_stock_savedata()
     return {
-        file.name: xxhash.xxh32_hexdigest(file.data) for file in savedata.get_files()
+        file.name: xxhash.xxh64_intdigest(file.data) for file in savedata.get_files()
     }
 
 
 def inject_gamedata_into_bootup(bgdata: oead.SarcWriter, bootup_path: Path = None) -> int:
     if not bootup_path:
-        master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
-        bootup_path = master_boot if master_boot.exists() \
-            else util.get_game_file('Pack/Bootup.pack')
+        master_boot = (
+            util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
+        )
+        bootup_path = (
+            master_boot if master_boot.exists() else util.get_game_file('Pack/Bootup.pack')
+        )
     bootup_pack = oead.Sarc(bootup_path.read_bytes())
     new_pack = oead.SarcWriter.from_sarc(bootup_pack)
     gamedata_bytes = bgdata.write()[1]
     new_pack.files['GameData/gamedata.ssarc'] = util.compress(gamedata_bytes)
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack')
-        .mkdir(parents=True, exist_ok=True))
+     .mkdir(parents=True, exist_ok=True))
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
-        .write_bytes(new_pack.write()[1]))
+     .write_bytes(new_pack.write()[1]))
     return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
 
 
 def inject_savedata_into_bootup(bgsvdata: oead.SarcWriter, bootup_path: Path = None) -> int:
     if not bootup_path:
-        master_boot = util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
-        bootup_path = master_boot if master_boot.exists() \
-            else util.get_game_file('Pack/Bootup.pack')
+        master_boot = (
+            util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack'
+        )
+        bootup_path = (
+            master_boot if master_boot.exists() else util.get_game_file('Pack/Bootup.pack')
+        )
     bootup_pack = oead.Sarc(bootup_path.read_bytes())
     new_pack = oead.SarcWriter.from_sarc(bootup_pack)
     savedata_bytes = bgsvdata.write()[1]
     new_pack.files['GameData/savedataformat.ssarc'] = util.compress(savedata_bytes)
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack')
-        .mkdir(parents=True, exist_ok=True))
+     .mkdir(parents=True, exist_ok=True))
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
-        .write_bytes(new_pack.write()[1]))
+     .write_bytes(new_pack.write()[1]))
     return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
 
 
@@ -96,7 +100,7 @@ def is_savedata_modded(savedata: oead.Sarc) -> {}:
     fix_slash = '/' if not sv_files[0].name.startswith('/') else ''
     modded = False
     for svdata in sv_files[0:-2]:
-        svdata_hash = xxhash.xxh32_hexdigest(svdata.data)
+        svdata_hash = xxhash.xxh64_intdigest(svdata.data)
         if not modded:
             modded = fix_slash + \
                 svdata.name not in hashes or svdata_hash != hashes[fix_slash + svdata.name]
@@ -110,7 +114,7 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
 def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     data = {}
     set_start_method('spawn', True)
-    p = pool or Pool(processes=cpu_count())
+    this_pool = pool or Pool(processes=cpu_count())
     game_dict = {}
     for file in gamedata.get_files():
         game_dict[file.name] = bytes(file.data)
@@ -123,39 +127,45 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     for result in results:
         util.dict_merge(data, oead.byml.from_text(result))
     if not pool:
-        p.close()
-        p.join()
+        this_pool.close()
+        this_pool.join()
     util.vprint(data)
     return data
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
-    diffs = oead.byml.Hash()
+    mod_entries = [entry['DataName'] for entry in mod_data[data_type]]
+    diffs = oead.byml.Hash({
+        "add": oead.byml.Hash(),
+        "del": oead.byml.Array({
+            entry for entry in stock_entries if entry not in mod_entries
+        })
+    })
     for entry in mod_data[data_type]:
         if entry['DataName'] not in stock_entries \
            or entry != stock_data[data_type][stock_entries.index(entry['DataName'])]:
-            diffs[entry['DataName']] = entry
+            diffs['add'][entry['DataName']] = entry
     return oead.byml.Hash({data_type: diffs})
 
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     set_start_method('spawn', True)
-    p = pool or Pool(cpu_count())
-    stock_data = consolidate_gamedata(get_stock_gamedata(), p)
-    mod_data = consolidate_gamedata(gamedata, p)
+    this_pool = pool or Pool(cpu_count())
+    stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
+    mod_data = consolidate_gamedata(gamedata, this_pool)
     if not pool:
-        p.close()
-        p.join()
+        this_pool.close()
+        this_pool.join()
     diffs = {}
-    for key in mod_data.keys():
+    for key in mod_data:
         diffs.update(
             diff_gamedata_type(key, mod_data, stock_data)
         )
     return oead.byml.Hash(diffs)
 
 
-def get_modded_savedata_entries(savedata: oead.Sarc) -> []:
+def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
     ref_savedata = get_stock_savedata().get_files()
     ref_hashes = set()
     new_entries = oead.byml.Array()
@@ -163,13 +173,19 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> []:
         ref_hashes |= {
             int(item['HashValue']) for item in oead.byml.from_binary(file.data)['file_list'][1]
         }
+    mod_hashes = set()
     for file in sorted(savedata.get_files(), key=lambda f: f.name,)[0:-2]:
+        entries = oead.byml.from_binary(file.data)['file_list'][1]
+        mod_hashes |= {int(item['HashValue']) for item in entries}
         new_entries.extend(
-            { item for item in oead.byml.from_binary(file.data)['file_list'][1] if (
-                int(item['HashValue']) not in ref_hashes
-            ) }
+            {item for item in entries if int(item['HashValue']) not in ref_hashes}
         )
-    return new_entries
+    return oead.byml.Hash({
+        'add': new_entries,
+        'del': oead.byml.Array(
+            {oead.S32(item) for item in ref_hashes if item not in mod_hashes}
+        )
+    })
 
 
 def get_gamedata_mods() -> List[BcmlMod]:
@@ -185,6 +201,7 @@ def get_savedata_mods() -> List[BcmlMod]:
 
 
 class GameDataMerger(mergers.Merger):
+    # pylint: disable=abstract-method
     NAME: str = 'gamedata'
 
     def __init__(self):
@@ -251,7 +268,7 @@ class GameDataMerger(mergers.Merger):
 
     def get_all_diffs(self):
         diffs = []
-        for mod in util.get_installed_mods(): 
+        for mod in util.get_installed_mods():
             diffs.append(self.get_mod_diff(mod))
         return diffs
 
@@ -259,8 +276,6 @@ class GameDataMerger(mergers.Merger):
         all_diffs = {}
         for diff in diffs:
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
-        util.vprint('All gamedata diffs:')
-        util.vprint(all_diffs)
         return all_diffs
 
     @util.timed
@@ -271,6 +286,8 @@ class GameDataMerger(mergers.Merger):
         glog_path = util.get_master_modpack_dir() / 'logs' / 'gamedata.log'
 
         modded_entries = self.consolidate_diffs(self.get_all_diffs())
+        util.vprint('All gamedata diffs:')
+        util.vprint(modded_entries)
         if not modded_entries:
             print('No gamedata merging necessary.')
             if glog_path.exists():
@@ -280,7 +297,7 @@ class GameDataMerger(mergers.Merger):
             return
         if glog_path.exists() and not force:
             with glog_path.open('r') as l_file:
-                if xxhash.xxh32(str(modded_entries)).hexdigest() == l_file.read():
+                if xxhash.xxh64_hexdigest(str(modded_entries)) == l_file.read():
                     print('No gamedata merging necessary.')
                     return
         merged_entries = {}
@@ -298,17 +315,23 @@ class GameDataMerger(mergers.Merger):
         for data_type in merged_entries:
             if data_type in modded_entries:
                 for entry in [entry for entry in merged_entries[data_type]
-                            if entry['DataName'] in modded_entries[data_type]]:
+                              if entry['DataName'] in modded_entries[data_type]['add']]:
                     i = merged_entries[data_type].index(entry)
-                    merged_entries[data_type][i] = modded_entries[data_type][entry['DataName']]
+                    merged_entries[data_type][i] = (
+                        modded_entries[data_type]['add'][entry['DataName']]
+                    )
                 print(f'Merged modified {data_type} entries')
 
         for data_type in modded_entries:
-            for entry in [entry for entry in modded_entries[data_type]
-                        if entry not in [entry['DataName'] for entry in merged_entries[data_type]]]:
-                merged_entries[data_type].append(modded_entries[data_type][entry])
+            for entry in [entry for entry in modded_entries[data_type]['add']
+                          if entry not in [entry['DataName'] for entry in merged_entries[data_type]]
+                         ]:
+                merged_entries[data_type].append(modded_entries[data_type]['add'][entry])
             print(f'Merged new {data_type} entries')
-
+            for entry in merged_entries[data_type]:
+                if entry['DataName'] in modded_entries[data_type]['del']:
+                    merged_entries[data_type].remove(entry)
+            print(f'Removed {len(modded_entries[data_type]["del"])} {data_type} entries')
         print('Creating and injecting new gamedata.sarc...')
         new_gamedata = oead.SarcWriter(
             endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
@@ -334,8 +357,7 @@ class GameDataMerger(mergers.Merger):
 
         glog_path.parent.mkdir(parents=True, exist_ok=True)
         with glog_path.open('w', encoding='utf-8') as l_file:
-            l_file.write(xxhash.xxh32(str(modded_entries)).hexdigest())
-        
+            l_file.write(xxhash.xxh64_hexdigest(str(modded_entries)))
 
     def get_checkbox_options(self):
         return [('force', 'Remerge game data even if no changes detected')]
@@ -356,6 +378,7 @@ class GameDataMerger(mergers.Merger):
 
 
 class SaveDataMerger(mergers.Merger):
+    # pylint: disable=abstract-method
     NAME: str = 'savedata'
 
     def __init__(self):
@@ -376,7 +399,7 @@ class SaveDataMerger(mergers.Merger):
                 )
             )
         else:
-            return []
+            return {}
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
@@ -388,40 +411,38 @@ class SaveDataMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: BcmlMod):
+        diffs = []
         if self.is_mod_logged(mod):
-            log = oead.byml.from_text(
+            diffs.append(oead.byml.from_text(
                 (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
-            )
-            for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
-                if (opt / 'logs' / self._log_name).exists():
-                    util.dict_merge(
-                        log,
-                        oead.byml.from_text(
-                            (opt / 'logs' / self._log_name).read_text('utf-8')
-                        ),
-                        overwrite_lists=True
-                    )
-            return log
-        else:
-            return {}
+            ))
+        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
+            if (opt / 'logs' / self._log_name).exists():
+                diffs.append(oead.byml.from_text(
+                    (opt / 'logs' / self._log_name).read_text('utf-8')
+                ))
+        return diffs
 
     def get_all_diffs(self):
         diffs = []
-        for mod in util.get_installed_mods(): 
-            diffs.append(self.get_mod_diff(mod))
+        for mod in util.get_installed_mods():
+            diffs.extend(self.get_mod_diff(mod))
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = oead.byml.Array()
+        all_diffs = oead.byml.Hash({
+            'add': oead.byml.Array(),
+            'del': oead.byml.Array()
+        })
         hashes = set()
         for diff in reversed(diffs):
-            diff_entries = [
-                entry for entry in diff if int(entry['HashValue']) not in hashes
-            ]
-            all_diffs.extend(diff_entries)
-            hashes |= {int(entry['HashValue']) for entry in diff_entries}
-        util.vprint('All savedata diffs:')
-        util.vprint(all_diffs)
+            for entry in diff['add']:
+                if entry['HashValue'] not in hashes:
+                    all_diffs['add'].append(entry)
+                hashes.add(entry['HashValue'])
+            for entry in diff['del']:
+                if entry not in all_diffs['del']:
+                    all_diffs['del'].append(entry)
         return all_diffs
 
     @util.timed
@@ -441,7 +462,7 @@ class SaveDataMerger(mergers.Merger):
             return
         if slog_path.exists() and not force:
             with slog_path.open('r') as l_file:
-                if xxhash.xxh32(str(new_entries)).hexdigest() == l_file.read():
+                if xxhash.xxh64_hexdigest(str(new_entries)) == l_file.read():
                     print('No savedata merging necessary.')
                     return
 
@@ -456,7 +477,10 @@ class SaveDataMerger(mergers.Merger):
             )
 
         print('Merging changes...')
-        merged_entries.extend(new_entries)
+        merged_entries.extend(new_entries['add'])
+        for entry in merged_entries:
+            if entry['HashValue'] in new_entries['del']:
+                merged_entries.remove(entry)
         merged_entries.sort(key=lambda x: x['HashValue'])
 
         print('Creating and injecting new savedataformat.sarc...')
@@ -497,14 +521,14 @@ class SaveDataMerger(mergers.Merger):
         bootup_rstb = inject_savedata_into_bootup(new_savedata)
         (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
         ((util.get_master_modpack_dir() / 'logs' / 'savedata.sarc')
-            .write_bytes(new_savedata.write()[1]))
+         .write_bytes(new_savedata.write()[1]))
 
         print('Updating RSTB...')
         rstable.set_size('GameData/savedataformat.sarc', bootup_rstb)
 
         slog_path.parent.mkdir(parents=True, exist_ok=True)
         with slog_path.open('w', encoding='utf-8') as l_file:
-            l_file.write(xxhash.xxh32(str(new_entries)).hexdigest())
+            l_file.write(xxhash.xxh64_hexdigest(str(new_entries)))
 
     def get_checkbox_options(self):
         return [('force', 'Remerge save data even if no changes detected')]
@@ -520,8 +544,7 @@ class SaveDataMerger(mergers.Merger):
                 'GameData/savedataformat.ssarc',
                 util.compress(tmp_sarc.read_bytes())
             )
-        else:
-            return
+        return None
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return {

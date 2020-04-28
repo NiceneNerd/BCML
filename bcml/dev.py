@@ -87,14 +87,14 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
             f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
         }:
             file_data = file.read_bytes()
-            xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
+            xhash = xxhash.xxh64_intdigest(util.unyaz_if_needed(file_data))
             file_name = file.relative_to(folder).as_posix()
             if file_name in old_files:
-                old_hash = xxhash.xxh32(
+                old_hash = xxhash.xxh64_intdigest(
                     util.unyaz_if_needed(
                         old_sarc.get_file(file_name).data
                     )
-                ).hexdigest()
+                )
             if file_name not in old_files or (
                 xhash != old_hash and file.suffix not in util.AAMP_EXTS
             ):
@@ -170,11 +170,11 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         ext = Path(canon).suffix
         if ext in {'.yml', '.bak'}:
             continue
-        xhash = xxhash.xxh32(util.unyaz_if_needed(file_data)).hexdigest()
+        xhash = xxhash.xxh64_intdigest(util.unyaz_if_needed(file_data))
         if nest_file in old_files:
-            old_hash = xxhash.xxh32(
+            old_hash = xxhash.xxh64_intdigest(
                 util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
-            ).hexdigest()
+            )
         if nest_file not in old_files or (xhash != old_hash and ext not in util.AAMP_EXTS):
             can_delete = False
             new_sarc.files[nest_file] = oead.Bytes(file_data)
@@ -245,7 +245,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         tmp_dir: Path = install.open_mod(mod)
     elif mod.is_dir():
         print(f'Loading mod from {str(mod)}...')
-        tmp_dir = util.get_work_dir() / f'tmp_{xxhash.xxh32(str(mod).encode("utf-8")).hexdigest()}'
+        tmp_dir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(mod).encode("utf-8"))}'
         if tmp_dir.exists():
             shutil.rmtree(tmp_dir)
         shutil.copytree(mod, tmp_dir)
@@ -281,8 +281,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             for file in {
                 f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(o)).exists()
             }:
-                xh1 = xxhash.xxh32_hexdigest((tmp_dir / file.relative_to(o)).read_bytes())
-                xh2 = xxhash.xxh32_hexdigest(file.read_bytes())
+                xh1 = xxhash.xxh64_intdigest((tmp_dir / file.relative_to(o)).read_bytes())
+                xh2 = xxhash.xxh64_intdigest(file.read_bytes())
                 if xh1 == xh2:
                     file.unlink()
 

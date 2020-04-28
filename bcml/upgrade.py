@@ -1,10 +1,15 @@
+import csv
+import json
 from configparser import ConfigParser
 from pathlib import Path
-import json
 
+import oead
 import yaml
 from aamp import yaml_util as ayu
+from aamp import ParameterIO, ParameterObject, ParameterList, Writer
+from oead import aamp as oamp
 from bcml import util
+from bcml.mergers.texts import read_msbt
 
 def convert_old_mods():
     import shutil
@@ -88,7 +93,9 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
 def convert_old_logs(mod_dir: Path, delete_old: bool = False):
     if (mod_dir / 'logs' / 'packs.log').exists():
         _convert_pack_log(mod_dir)
-    for log in mod_dir.glob('logs/*.yml'):
+    if (mod_dir / 'logs').glob('*texts*'):
+        _convert_text_logs(mod_dir / 'logs')
+    for log in {l for l in mod_dir.glob('logs/*.yml') if not 'texts' in l.stem}:
         if log.name == 'deepmerge.yml':
             _convert_aamp_log(log)
         elif log.name.startswith('texts'):
@@ -104,7 +111,6 @@ def convert_old_logs(mod_dir: Path, delete_old: bool = False):
 
 
 def _convert_pack_log(mod: Path):
-    import csv
     packs = {}
     with (mod / 'logs' / 'packs.log').open('r') as rlog:
         csv_loop = csv.reader(rlog)
@@ -123,7 +129,6 @@ def _convert_aamp_log(log: Path):
     loader = yaml.CLoader
     ayu.register_constructors(loader)
     doc = yaml.load(log.read_text('utf-8'), Loader=loader)
-    from aamp import ParameterIO, ParameterObject, ParameterList, Writer
     pio = ParameterIO('log', 0)
     root = ParameterList()
     for file, plist in doc.items():
@@ -133,9 +138,39 @@ def _convert_aamp_log(log: Path):
     for i, f in enumerate(doc):
         file_table.set_param(f'File{i}', f)
     root.set_object('FileTable', file_table)
-    from oead import aamp
-    pio = aamp.ParameterIO.from_binary(Writer(pio).get_bytes())
+    pio = oamp.ParameterIO.from_binary(Writer(pio).get_bytes()) # pylint: disable=no-member
     log.write_text(
         pio.to_text(),
+        encoding='utf-8'
+    )
+
+def _convert_text_logs(logs_path: Path):
+    diffs = {}
+    for log_file in logs_path.glob('texts_*.yml'):
+        lang = log_file.stem[6:]
+        data = yaml.safe_load(log_file.read_text('utf-8'))
+        diffs[lang] = {
+            file: data[file]['entries'] for file in data
+        }
+        log_file.unlink()
+    fails = set()
+    for text_pack in logs_path.glob('newtexts_*.sarc'):
+        lang = text_pack.stem[9:]
+        sarc = oead.Sarc(text_pack.read_bytes())
+        for file in sarc.get_files():
+            if lang not in diffs:
+                diffs[lang] = {}
+            try:
+                diffs[lang].update({
+                    file.name: read_msbt(bytes(file.data))['entries']
+                })
+            except RuntimeError:
+                print(f'Warning: {file.name} could not be processed and will not be used')
+                fails.add(file.name)
+                continue
+        util.vprint(f'{len(fails)} text files failed to process:\n{fails}')
+        text_pack.unlink()
+    (logs_path / 'texts.json').write_text(
+        json.dumps(diffs, ensure_ascii=False),
         encoding='utf-8'
     )

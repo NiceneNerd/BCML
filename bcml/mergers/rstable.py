@@ -380,6 +380,8 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
         canon = nest_file.replace('.s', '.')
         if data[0:4] == b'Yaz0':
             data = util.decompress(data)
+        else:
+            data = bytes(data)
         ext = Path(canon).suffix
         if util.is_file_modded(canon, data) and ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
             size = calc.calculate_file_size_with_ext(
