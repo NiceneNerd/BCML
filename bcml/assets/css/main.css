@@ -656,6 +656,19 @@ Fade {
     margin: 0.25rem 1rem 0.25rem 0;
 }
 
+.modal-content .accordion > .card {
+    background-color: #242529;
+}
+
+.modal-content .accordion > .card .card-header {
+    text-transform: capitalize;
+}
+
+.modal-content .accordion .card .card-body {
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
 .form-control {
     border: 1px solid #4f4f4f;
 }

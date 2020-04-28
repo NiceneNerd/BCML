@@ -376,11 +376,23 @@ class Api:
             return
         generate_rstb_for_mod(mod)
 
+    def get_mod_edits(self, params=None):
+        mod = BcmlMod.from_json(params['mod'])
+        edits = {}
+        merger_list = sorted({m() for m in mergers.get_mergers()}, key=lambda m: m.NAME)
+        for merger in merger_list:
+            edits[merger.friendly_name] = merger.get_mod_edit_info(mod)
+        return {
+            key: sorted({str(v) for v in value}) for key, value in edits.items()
+        }
+
 
 def main():
     try:
         LOG.parent.mkdir(parents=True, exist_ok=True)
         LOG.write_text('')
+        for folder in util.get_work_dir().glob('*'):
+            rmtree(folder)
     except (FileNotFoundError, OSError, PermissionError):
         pass
 

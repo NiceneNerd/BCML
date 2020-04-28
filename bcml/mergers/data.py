@@ -72,7 +72,7 @@ def inject_gamedata_into_bootup(bgdata: oead.SarcWriter, bootup_path: Path = Non
      .mkdir(parents=True, exist_ok=True))
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
      .write_bytes(new_pack.write()[1]))
-    return rstb.SizeCalculator().calculate_file_size_with_ext(gamedata_bytes, True, '.sarc')
+    return rstb.SizeCalculator().calculate_file_size_with_ext(bytes(gamedata_bytes), True, '.sarc')
 
 
 def inject_savedata_into_bootup(bgsvdata: oead.SarcWriter, bootup_path: Path = None) -> int:
@@ -91,7 +91,7 @@ def inject_savedata_into_bootup(bgsvdata: oead.SarcWriter, bootup_path: Path = N
      .mkdir(parents=True, exist_ok=True))
     ((util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / 'Bootup.pack')
      .write_bytes(new_pack.write()[1]))
-    return rstb.SizeCalculator().calculate_file_size_with_ext(savedata_bytes, True, '.sarc')
+    return rstb.SizeCalculator().calculate_file_size_with_ext(bytes(savedata_bytes), True, '.sarc')
 
 
 def is_savedata_modded(savedata: oead.Sarc) -> {}:
@@ -187,19 +187,6 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
         )
     })
 
-
-def get_gamedata_mods() -> List[BcmlMod]:
-    gdata_mods = [mod for mod in util.get_installed_mods() if (
-        mod.path / 'logs' / 'gamedata.yml').exists()]
-    return sorted(gdata_mods, key=lambda mod: mod.priority)
-
-
-def get_savedata_mods() -> List[BcmlMod]:
-    sdata_mods = [mod for mod in util.get_installed_mods() if (
-        mod.path / 'logs' / 'savedata.yml').exists()]
-    return sorted(sdata_mods, key=lambda mod: mod.priority)
-
-
 class GameDataMerger(mergers.Merger):
     # pylint: disable=abstract-method
     NAME: str = 'gamedata'
@@ -262,8 +249,10 @@ class GameDataMerger(mergers.Merger):
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         edited = set()
         diff = self.get_mod_diff(mod)
-        for items in diff.values():
-            edited |= set(items.keys())
+        for _, stuff in diff.items():
+            for items in dict(stuff['add']).values():
+                edited |= set(items.keys())
+            edited |= set(stuff['del'])
         return edited
 
     def get_all_diffs(self):
@@ -547,6 +536,9 @@ class SaveDataMerger(mergers.Merger):
         return None
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        diff = self.consolidate_diffs(self.get_mod_diff(mod))
         return {
-            entry['DataName'] for entry in self.get_mod_diff(mod)
+            entry['DataName'] for entry in diff['add']
+        } | {
+            int(item) for item in diff['del']
         }

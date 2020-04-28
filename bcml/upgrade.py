@@ -1,12 +1,14 @@
 import csv
 import json
 from configparser import ConfigParser
+from copy import deepcopy
 from pathlib import Path
 
 import oead
 import yaml
 from aamp import yaml_util as ayu
 from aamp import ParameterIO, ParameterObject, ParameterList, Writer
+from byml import yaml_util as byu
 from oead import aamp as oamp
 from bcml import util
 from bcml.mergers.texts import read_msbt
@@ -37,7 +39,7 @@ def convert_old_mods():
 def convert_old_mod(mod: Path, delete_old: bool = False):
     rules_to_info(mod / 'rules.txt', delete_old=delete_old)
     if (mod / 'logs').exists():
-        convert_old_logs(mod, delete_old=delete_old)
+        convert_old_logs(mod)
 
 
 def convert_old_settings():
@@ -90,7 +92,7 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         rules_path.unlink()
 
 
-def convert_old_logs(mod_dir: Path, delete_old: bool = False):
+def convert_old_logs(mod_dir: Path):
     if (mod_dir / 'logs' / 'packs.log').exists():
         _convert_pack_log(mod_dir)
     if (mod_dir / 'logs').glob('*texts*'):
@@ -98,6 +100,12 @@ def convert_old_logs(mod_dir: Path, delete_old: bool = False):
     for log in {l for l in mod_dir.glob('logs/*.yml') if not 'texts' in l.stem}:
         if log.name == 'deepmerge.yml':
             _convert_aamp_log(log)
+        elif log.name == 'gamedata.yml':
+            _convert_gamedata_log(log)
+        elif log.name == 'savedata.yml':
+            _convert_savedata_log(log)
+        elif log.name == 'map.yml':
+            _convert_map_log(log)
         elif log.name.startswith('texts'):
             text_data = yaml.safe_load(log.read_text('utf-8'))
             log.with_suffix('.json').write_text(
@@ -106,8 +114,6 @@ def convert_old_logs(mod_dir: Path, delete_old: bool = False):
             )
         else:
             pass
-        if delete_old:
-            log.unlink()
 
 
 def _convert_pack_log(mod: Path):
@@ -172,5 +178,53 @@ def _convert_text_logs(logs_path: Path):
         text_pack.unlink()
     (logs_path / 'texts.json').write_text(
         json.dumps(diffs, ensure_ascii=False),
+        encoding='utf-8'
+    )
+
+
+def _convert_gamedata_log(log: Path):
+    diff = oead.byml.from_text(log.read_text('utf-8'))
+    log.write_text(
+        oead.byml.to_text(
+            oead.byml.Hash({
+                data_type: {
+                    'add': data,
+                    'del': oead.byml.Array()
+                } for data_type, data in diff.items()
+            })
+        ),
+        encoding='utf-8'
+    )
+
+
+def _convert_savedata_log(log: Path):
+    diff = oead.byml.from_text(log.read_text('utf-8'))
+    log.write_text(
+        oead.byml.to_text(
+            oead.byml.Hash({
+                'add': diff,
+                'del': oead.byml.Array()
+            })
+        ),
+        encoding='utf-8'
+    )
+
+
+def _convert_map_log(log: Path):
+    loader = yaml.CLoader
+    byu.add_constructors(loader)
+    diff = yaml.load(log.read_text('utf-8'), Loader=loader)
+    new_diff = {}
+    for unit, changes in diff.items():
+        new_changes = {
+            'add': changes['add'],
+            'del': changes['del'],
+            'mod': {str(hashid): actor for hashid, actor in changes['mod'].items()}
+        }
+        new_diff[unit] = new_changes
+    dumper = yaml.CDumper
+    byu.add_representers(dumper)
+    log.write_text(
+        yaml.dump(new_diff, Dumper=dumper, allow_unicode=True),
         encoding='utf-8'
     )

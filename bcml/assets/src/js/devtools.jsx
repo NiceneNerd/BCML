@@ -16,6 +16,7 @@ import {
 } from "react-bootstrap";
 import FolderInput from "./folder.jsx";
 import OptionsDialog from "./options.jsx";
+import CompareView from "./compare.jsx";
 
 class DevTools extends React.Component {
     blank = {
@@ -29,7 +30,8 @@ class DevTools extends React.Component {
         selects: {},
         depends: [],
         showDepends: false,
-        showOptions: false
+        showOptions: false,
+        showCompare: false
     };
 
     constructor() {
@@ -256,7 +258,13 @@ class DevTools extends React.Component {
                                 </Button>
                             </Col>
                             <Col>
-                                <Button variant="warning">Compare Mods</Button>
+                                <Button
+                                    variant="warning"
+                                    onClick={() =>
+                                        this.setState({ showCompare: true })
+                                    }>
+                                    Compare Mods
+                                </Button>
                             </Col>
                             <Col>
                                 <Button variant="info">
@@ -286,6 +294,10 @@ class DevTools extends React.Component {
                         this.setState({ showOptions: false, selects })
                     }
                     folder={this.state.folder}
+                />
+                <CompareView
+                    show={this.state.showCompare}
+                    onHide={() => this.setState({ showCompare: false })}
                 />
             </>
         );

@@ -158,8 +158,10 @@ def get_map_diff(base_map: Union[oead.byml.Hash, Map], mod_map: oead.byml.Hash, 
         elif int(obj['HashId']) in base_hashes and\
              obj != base_map['Objs'][base_hashes.index(int(obj['HashId']))]:
             diffs['mod'][str(obj['HashId'])] = obj
-    diffs['del'].extend([oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes and \
-                    not no_del and not (not link_del and hash_id in base_links)])
+    diffs['del'].extend([
+        oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes and \
+            not no_del and not (not link_del and hash_id in base_links)
+    ])
     return diffs
 
 
