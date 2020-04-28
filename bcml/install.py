@@ -39,10 +39,11 @@ def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
     tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(path))}'
-    formats = {'.rar', '.zip', '.7z', '.bnp'}
+    archive_formats = {'.rar', '.zip', '.7z', '.bnp'}
+    meta_formats = {'.json', '.txt'}
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
-    if path.suffix.lower() in formats:
+    if path.suffix.lower() in archive_formats:
         x_args = [ZPATH, 'x', str(path), f'-o{str(tmpdir)}']
         if system() == 'Windows':
             subprocess.run(
@@ -54,9 +55,14 @@ def open_mod(path: Path) -> Path:
             )
         else:
             subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    elif path.suffix.lower() in meta_formats:
+        shutil.copytree(path.parent, tmpdir)
     else:
         err = ValueError()
-        err.error_text = 'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z).'
+        err.error_text = (
+            'The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z) '
+            'or meta file (rules.txt or info.json).'
+        )
         raise err
     if not tmpdir.exists():
         raise Exception('No files were extracted.')
