@@ -535,7 +535,7 @@ class RstbMerger(mergers.Merger):
                 ext = Path(name).suffix
                 data = util.unyaz_if_needed(open_sarcs[parts[-2]].get_file(name).data)
                 rstb_val = rstb.SizeCalculator().calculate_file_size_with_ext(
-                    data,
+                    bytes(data),
                     wiiu=util.get_settings('wiiu'),
                     ext=ext
                 )

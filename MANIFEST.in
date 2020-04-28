@@ -6,4 +6,4 @@ include bcml/assets/index.html
 include bcml/assets/logo-smaller.png
 recursive-include bcml/assets/css *.css
 recursive-include bcml/assets/icon *
-recursive-include bcml/assets/dist *.js
+recursive-include bcml/assets/scripts *.js
