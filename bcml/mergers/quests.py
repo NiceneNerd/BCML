@@ -23,7 +23,7 @@ class QuestMerger(mergers.Merger):
                          'quests.yml', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        if 'content/Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack' not in modded_files:
+        if f'{util.get_content_path()}/Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack' not in modded_files:
             return {}
         stock_quests = get_stock_quests()
         stock_names = [q['Name'] for q in stock_quests]
@@ -55,10 +55,11 @@ class QuestMerger(mergers.Merger):
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, list):
             diff_material = self.generate_diff(mod_dir, diff_material)
-        (mod_dir / 'logs' / self._log_name).write_text(
-            oead.byml.to_text(diff_material),
-            encoding='utf-8'
-        )
+        if diff_material:
+            (mod_dir / 'logs' / self._log_name).write_text(
+                oead.byml.to_text(diff_material),
+                encoding='utf-8'
+            )
 
     def get_mod_diff(self, mod: util.BcmlMod):
         diffs = []
