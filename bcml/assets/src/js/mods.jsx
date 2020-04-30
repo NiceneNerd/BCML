@@ -1,4 +1,12 @@
-import { Badge, Button, ButtonGroup, Dropdown, Modal } from "react-bootstrap";
+import {
+    Badge,
+    Button,
+    ButtonGroup,
+    Dropdown,
+    Modal,
+    OverlayTrigger,
+    Tooltip
+} from "react-bootstrap";
 
 import InstallModal from "./install.jsx";
 import ModInfo from "./modinfo.jsx";
@@ -344,6 +352,47 @@ class Mods extends React.Component {
                                 </Button>
                             </ButtonGroup>
                             <div className="flex-grow-1"></div>
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>Launch Breath of the Wild</Tooltip>
+                                }>
+                                <Button
+                                    variant="primary"
+                                    size="xs"
+                                    onClick={this.props.onLaunch}>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        x="0px"
+                                        y="0px"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 171 171"
+                                        style={{ fill: "#000000" }}>
+                                        <g
+                                            fill="none"
+                                            fillRule="nonzero"
+                                            stroke="none"
+                                            strokeWidth="1"
+                                            strokeLinecap="butt"
+                                            strokeLinejoin="miter"
+                                            strokeMiterlimit="10"
+                                            strokeDasharray=""
+                                            strokeDashoffset="0"
+                                            fontFamily="none"
+                                            fontWeight="none"
+                                            fontSize="none"
+                                            textAnchor="none"
+                                            style={{ mixBlendMode: "normal" }}>
+                                            <path
+                                                d="M0,171.98863v-171.98863h171.98863v171.98863z"
+                                                fill="none"></path>
+                                            <g fill="#ffb300">
+                                                <path d="M85.5,19.14844l-35.625,61.67578h71.25zM121.125,80.82422l-35.625,61.67578h71.25zM85.5,142.5l-35.625,-61.67578l-35.625,61.67578z"></path>
+                                            </g>
+                                        </g>
+                                    </svg>
+                                </Button>
+                            </OverlayTrigger>
                         </div>
                     </div>
                     <div className="col-8 scroller" id="mod-info">

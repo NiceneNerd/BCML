@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import traceback
+from base64 import b64decode
 from functools import partial
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
@@ -21,7 +22,7 @@ import oead
 import xxhash
 
 from bcml import util, mergers, dev, upgrade
-from bcml.util import BcmlMod, ZPATH
+from bcml.util import BcmlMod, ZPATH, InstallError
 
 
 def extract_mod_meta(mod: Path) -> {}:
@@ -323,10 +324,21 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
         )
         mod_name = rules['name'].strip(' \'"').replace('_', '')
         print(f'Identified mod: {mod_name}')
+        if rules['depends']:
+            installed_ids = {m.id for m in util.get_installed_mods()}
+            for depend in rules['depends']:
+                if not depend in installed_ids:
+                    depend_name = b64decode(depend).decode('utf8')
+                    err = InstallError(f'Missing dependency {depend_name}')
+                    err.error_text = (
+                        f'This mod requires {depend_name}, but it is not installed. Please '
+                        f'install {depend_name} and try again.'
+                    )
+                    raise err
 
         logs = tmp_dir / 'logs'
         if logs.exists():
-            print('This mod supports Quick Install! Loading changes...')
+            print('Loading mod logs...')
             for merger in [merger() for merger in mergers.get_mergers() \
                            if merger.NAME in options['disable']]:
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
@@ -342,11 +354,11 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
             name = mod_name
         except NameError:
             name = 'your mod, the name of which could not be detected'
-        clean_error.error_text = (f'There was an error while processing {name}. '
+        clean_error.error_text = (f'<p>There was an error while processing {name}. '
                                   'This could indicate there is a problem with the mod itself, '
                                   'but it could also reflect a new or unusual edge case BCML does '
-                                  'not anticipate. Here is the error:\n\n'
-                                  f'{traceback.format_exc(limit=-4)}')
+                                  'not anticipate. Here is the error:</p><pre class="scroller">'
+                                  f'{traceback.format_exc(limit=-4)}</pre>')
         raise clean_error
 
     if selects:

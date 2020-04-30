@@ -53,7 +53,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> o
                     .get_file(
                         f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
                         '.smubin').data)
-            except (KeyError, RuntimeError):
+            except (KeyError, RuntimeError, AttributeError):
                 map_bytes = None
     else:
         if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
@@ -63,7 +63,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> o
                     f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
                     '.smubin'
                 ).data
-            except (KeyError, RuntimeError):
+            except (KeyError, RuntimeError, AttributeError):
                 map_bytes = None
         if not map_bytes:
             map_path = f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin'
@@ -79,7 +79,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> o
                             f'Map/MainField/{map_unit.section}/'
                             f'{map_unit.section}_{map_unit.type}.smubin'
                         ).data)
-                    except (KeyError, RuntimeError):
+                    except (KeyError, RuntimeError, AttributeError):
                         map_bytes = None
     if not map_bytes:
         raise FileNotFoundError(

@@ -274,14 +274,16 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         hashes = util.get_hash_table()
         print('Packing SARCs...')
         _pack_sarcs(tmp_dir, hashes, pool)
-        for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
-            _pack_sarcs(d, hashes, pool)
+        for folder in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
+            _pack_sarcs(folder, hashes, pool)
 
-        for o in tmp_dir.glob('options/*'):
+        for option_dir in tmp_dir.glob('options/*'):
             for file in {
-                f for f in o.rglob('**/*') if f.is_file() and (tmp_dir / f.relative_to(o)).exists()
-            }:
-                xh1 = xxhash.xxh64_intdigest((tmp_dir / file.relative_to(o)).read_bytes())
+                    f for f in option_dir.rglob('**/*') if (
+                        f.is_file() and (tmp_dir / f.relative_to(option_dir)).exists()
+                    )
+                }:
+                xh1 = xxhash.xxh64_intdigest((tmp_dir / file.relative_to(option_dir)).read_bytes())
                 xh2 = xxhash.xxh64_intdigest(file.read_bytes())
                 if xh1 == xh2:
                     file.unlink()
@@ -292,14 +294,14 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                 'options': {}
             }
         options['texts'] = {'user_only': False}
-        
+
         _make_bnp_logs(tmp_dir, options)
-        for o in tmp_dir.glob('options/*'):
-            _make_bnp_logs(o, options)
+        for option_dir in tmp_dir.glob('options/*'):
+            _make_bnp_logs(option_dir, options)
 
         _clean_sarcs(tmp_dir, hashes, pool)
-        for d in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
-            _clean_sarcs(d, hashes, pool)
+        for folder in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
+            _clean_sarcs(folder, hashes, pool)
 
     print('Cleaning any junk files...')
     for file in {f for f in tmp_dir.rglob('**/*') if f.is_file()}:
@@ -320,8 +322,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             x_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=util.CREATE_NO_WINDOW
+            creationflags=util.CREATE_NO_WINDOW,
+            check=True
         )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print('Conversion complete.')

@@ -117,7 +117,7 @@ class Merger(metaclass=ABCMeta):
 def get_mergers() -> List[Merger]:
     """ Retrieves all available types of mod mergers """
 
-    from bcml.mergers import pack, texts, merge, data, mubin, events, rstable, actors
+    from bcml.mergers import pack, texts, merge, data, mubin, events, rstable, actors, quests
 
     return [
         pack.PackMerger,
@@ -129,6 +129,7 @@ def get_mergers() -> List[Merger]:
         data.GameDataMerger,
         data.SaveDataMerger,
         events.EventInfoMerger,
+        quests.QuestMerger,
         rstable.RstbMerger
     ]
 

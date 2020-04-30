@@ -41,6 +41,7 @@ class DevTools extends React.Component {
         this.setOptions = this.setOptions.bind(this);
         this.createBnp = this.createBnp.bind(this);
         this.generateRstb = this.generateRstb.bind(this);
+        this.upgradeBnp = this.upgradeBnp.bind(this);
     }
 
     setOptions(options) {
@@ -93,6 +94,26 @@ class DevTools extends React.Component {
                     .then(res => {
                         console.log("Hello there");
                         console.log(res);
+                        if (!res.success) {
+                            throw res;
+                        }
+                        this.props.onState({
+                            showProgress: false,
+                            showDone: true
+                        });
+                    })
+                    .catch(this.props.onError);
+            }
+        );
+    }
+
+    upgradeBnp() {
+        this.props.onState(
+            { showProgress: true, progressTitle: "Upgrading BNP" },
+            () => {
+                pywebview.api
+                    .upgrade_bnp()
+                    .then(res => {
                         if (!res.success) {
                             throw res;
                         }
@@ -267,12 +288,18 @@ class DevTools extends React.Component {
                                 </Button>
                             </Col>
                             <Col>
-                                <Button variant="info">
-                                    View Modded Files
+                                <Button
+                                    variant="info"
+                                    onClick={() =>
+                                        pywebview.api.explore_master()
+                                    }>
+                                    View Merged Files
                                 </Button>
                             </Col>
                             <Col>
-                                <Button variant="danger">
+                                <Button
+                                    variant="danger"
+                                    onClick={this.upgradeBnp}>
                                     Upgrade Old BNP
                                 </Button>
                             </Col>
@@ -331,14 +358,18 @@ class Dependencies extends React.Component {
     }
 
     componentDidMount() {
-        this.setState({
-            depends: this.props.depends.map(depend => {
-                return { id: depend, name: atob(depend) };
-            })
-        });
-        pywebview.api.get_mods({ disabled: false }).then(mods => {
-            this.setState({ mods, modsLoaded: true });
-        });
+        this.setState(
+            {
+                depends: this.props.depends.map(depend => {
+                    return { id: depend, name: atob(depend) };
+                })
+            },
+            () => {
+                pywebview.api.get_mods({ disabled: true }).then(mods => {
+                    this.setState({ mods, modsLoaded: true });
+                });
+            }
+        );
     }
 
     render() {

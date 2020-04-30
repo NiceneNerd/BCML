@@ -10,7 +10,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
 from shutil import rmtree
-from subprocess import Popen
+from subprocess import Popen, run, PIPE
 
 import webview
 
@@ -25,11 +25,15 @@ def win_or_lose(func):
         try:
             func(*args, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
-            err = getattr(err, 'error_text', '') or traceback.format_exc(limit=-5, chain=True)
+            setattr(
+                err,
+                'error_text',
+                getattr(err, 'error_text', traceback.format_exc(limit=-5, chain=True))
+            )
             with LOG.open('a') as log_file:
                 log_file.write(f'\n{err}\n')
             return {
-                'error': err,
+                'error': str(err.error_text),
                 'error_text': hasattr(err, 'error_text')
             }
         return {'success': True}
@@ -304,9 +308,35 @@ class Api:
             from os import startfile  # pylint: disable=no-name-in-module,import-outside-toplevel
             startfile(path)
         elif system() == "Darwin":
-            Popen(["open", path])
+            run(["open", path], check=False)
         else:
-            Popen(["xdg-open", path])
+            run(["xdg-open", path], check=False)
+
+    def explore_master(self, params=None):
+        path = util.get_master_modpack_dir()
+        if system() == "Windows":
+            from os import startfile  # pylint: disable=no-name-in-module,import-outside-toplevel
+            startfile(path)
+        elif system() == "Darwin":
+            run(["open", path], check=False)
+        else:
+            run(["xdg-open", path], check=False)
+
+    @win_or_lose
+    def launch_game(self, params=None):
+        cemu = next(iter(
+            {f for f in util.get_cemu_dir().glob('*.exe') if 'cemu' in f.name.lower()}
+        ))
+        uking = util.get_game_dir().parent / 'code' / 'U-King.rpx'
+        try:
+            assert uking.exists()
+        except AssertionError:
+            raise FileNotFoundError('Your BOTW executable could not be found')
+        if system() == 'Windows':
+            cemu_args = [str(cemu), '-g', str(uking)]
+        else:
+            cemu_args = ['wine', str(cemu), '-g', 'Z:\\' + str(uking).replace('/', '\\')]
+        run(cemu_args, cwd=str(util.get_cemu_dir()), check=False)
 
     @win_or_lose
     def remerge(self, params):
@@ -385,6 +415,35 @@ class Api:
         return {
             key: sorted({str(v) for v in value}) for key, value in edits.items()
         }
+
+    @win_or_lose
+    def upgrade_bnp(self, params=None):
+        path = self.window.create_file_dialog(file_types=tuple(['BOTW Nano Patch (*.bnp)']))
+        if not path:
+            return
+        path = Path(path[0])
+        if not path.exists():
+            return
+        tmp_dir = install.open_mod(path)
+        output = self.window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            file_types=tuple(['BOTW Nano Patch (*.bnp)'])
+        )
+        if not output:
+            return
+        output = Path(output[0])
+        print(f'Saving output file to {str(output)}...')
+        x_args = [install.ZPATH, 'a', str(output), f'{str(tmp_dir / "*")}']
+        if system() == 'Windows':
+            run(
+                x_args,
+                stdout=PIPE,
+                stderr=PIPE,
+                creationflags=util.CREATE_NO_WINDOW,
+                check=True
+            )
+        else:
+            run(x_args, stdout=PIPE, stderr=PIPE, check=True)
 
 
 def main():

@@ -1,7 +1,8 @@
+import base64
 import csv
 import json
+import shutil
 from configparser import ConfigParser
-from copy import deepcopy
 from pathlib import Path
 
 import oead
@@ -12,9 +13,9 @@ from byml import yaml_util as byu
 from oead import aamp as oamp
 from bcml import util
 from bcml.mergers.texts import read_msbt
+from bcml.util import RulesParser
 
 def convert_old_mods():
-    import shutil
     mod_dir = util.get_modpack_dir()
     old_path = util.get_cemu_dir() / 'graphicPacks' / 'BCML'
     print('Moving old mods...')
@@ -26,14 +27,14 @@ def convert_old_mods():
         shutil.rmtree(old_path, ignore_errors=True)
     print('Converting old mods...')
     for mod in {
-        d for d in mod_dir.glob('*') if d.is_dir() and d.name != '9999_BCML'
-    }:
+            d for d in mod_dir.glob('*') if d.is_dir() and d.name != '9999_BCML'
+        }:
         print(f'Converting {mod.name[4:]}')
         try:
             convert_old_mod(mod, True)
-        except Exception as e:
-            e.error_text = f'BCML was unable to convert {mod.name[4:]}. Error: {str(e)}'
-            raise e
+        except Exception as err:
+            err.error_text = f'BCML was unable to convert {mod.name[4:]}. Error: {str(err)}'
+            raise err
 
 
 def convert_old_mod(mod: Path, delete_old: bool = False):
@@ -67,8 +68,7 @@ def convert_old_settings():
 
 
 def rules_to_info(rules_path: Path, delete_old: bool = False):
-    from bcml.util import RulesParser
-    import base64
+    print('Converting meta file...')
     rules = RulesParser()
     rules.read(str(rules_path))
     info = {
@@ -77,7 +77,7 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         'url': str(rules['Definition'].get('url', '')).strip('\"\' '),
         'image': str(rules['Definition'].get('image', '')).strip('\"\' '),
         'version': 1.0,
-        'dependencies': [],
+        'depends': [],
         'options': {}
     }
     info['id'] = base64.urlsafe_b64encode(info['name'].encode('utf8')).decode('utf8')
@@ -93,25 +93,26 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
 
 
 def convert_old_logs(mod_dir: Path):
+    print('Upgrading old logs...')
     if (mod_dir / 'logs' / 'packs.log').exists():
+        print('Upgrading pack log...')
         _convert_pack_log(mod_dir)
     if (mod_dir / 'logs').glob('*texts*'):
+        print('Upgrading text logs...')
         _convert_text_logs(mod_dir / 'logs')
     for log in {l for l in mod_dir.glob('logs/*.yml') if not 'texts' in l.stem}:
         if log.name == 'deepmerge.yml':
+            print('Upgrading deep merge log...')
             _convert_aamp_log(log)
         elif log.name == 'gamedata.yml':
+            print('Upgrading game data log...')
             _convert_gamedata_log(log)
         elif log.name == 'savedata.yml':
+            print('Upgrading save data log...')
             _convert_savedata_log(log)
         elif log.name == 'map.yml':
+            print('Upgrading map log...')
             _convert_map_log(log)
-        elif log.name.startswith('texts'):
-            text_data = yaml.safe_load(log.read_text('utf-8'))
-            log.with_suffix('.json').write_text(
-                json.dumps(text_data, ensure_ascii=False),
-                encoding='utf-8'
-            )
         else:
             pass
 
@@ -141,8 +142,8 @@ def _convert_aamp_log(log: Path):
         root.set_list(file, plist)
     pio.set_list('param_root', root)
     file_table = ParameterObject()
-    for i, f in enumerate(doc):
-        file_table.set_param(f'File{i}', f)
+    for i, file in enumerate(doc):
+        file_table.set_param(f'File{i}', file)
     root.set_object('FileTable', file_table)
     pio = oamp.ParameterIO.from_binary(Writer(pio).get_bytes()) # pylint: disable=no-member
     log.write_text(

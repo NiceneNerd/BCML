@@ -76,7 +76,7 @@ def match_language(lang: str, log_dir: Path) -> str:
         return [l for l in LANGUAGES if l in logged_langs][0]
 
 
-def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
+def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool = True):
     """ Converts MSBTs in given temp dir to MSYTs """
     if system() == 'Windows':
         subprocess.run(
@@ -96,7 +96,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
         this_pool = pool or multiprocessing.Pool(
             processes=min(multiprocessing.cpu_count(), len(fix_msbts))
         )
-        this_pool.map(_msyt_file, fix_msbts)
+        this_pool.map(partial(_msyt_file, do_error=do_error), fix_msbts)
         fix_msbts = [
             msbt for msbt in folder.rglob('**/*.msbt') if not msbt.with_suffix('.msyt').exists()
         ]
@@ -111,7 +111,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
     return fix_msbts
 
 
-def _msyt_file(file, output: Path = None):
+def _msyt_file(file, output: Path = None, do_error: bool = True):
     m_args = [MSYT_PATH, 'export', str(file)]
     if output:
         m_args += ['--output', str(output)]
@@ -130,7 +130,7 @@ def _msyt_file(file, output: Path = None):
             stderr=subprocess.PIPE,
             check=False
         )
-    if result.stderr:
+    if result.stderr and do_error:
         raise RuntimeError(
             (result.stderr.decode('utf-8')
              .replace('an error occurred - see below for details', '')
@@ -213,7 +213,7 @@ def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
             out.write_bytes(file.data)
         del msg_sarc
 
-        msbt_to_msyt(mod_out, pool=pool)
+        msbt_to_msyt(mod_out, pool=pool, do_error=False)
         hashes = get_text_hashes(language)
         ref_lang = 'XXen' if language.endswith('en') else language
         extract_refs(ref_lang, tmp_dir)

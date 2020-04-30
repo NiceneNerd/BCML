@@ -83,10 +83,10 @@ class EventInfoMerger(mergers.Merger):
                     overwrite_lists=True
                 )
         return diffs
-            
+
     def get_all_diffs(self):
         diffs = []
-        for mod in util.get_installed_mods(): 
+        for mod in util.get_installed_mods():
             diffs.append(self.get_mod_diff(mod))
         return diffs
 
@@ -112,7 +112,7 @@ class EventInfoMerger(mergers.Merger):
                 try:
                     stock_eventinfo = util.get_nested_file_bytes(
                         (str(util.get_game_file('Pack/Bootup.pack')) +
-                            '//Event/EventInfo.product.sbyml'),
+                         '//Event/EventInfo.product.sbyml'),
                         unyaz=False
                     )
                     util.inject_file_into_bootup(

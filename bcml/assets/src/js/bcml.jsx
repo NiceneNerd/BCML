@@ -49,6 +49,7 @@ class BcmlRoot extends React.Component {
         this.confirm = this.confirm.bind(this);
         this.refreshMods = this.refreshMods.bind(this);
         this.export = this.export.bind(this);
+        this.launchGame = this.launchGame.bind(this);
     }
 
     componentDidCatch(error) {
@@ -80,6 +81,7 @@ class BcmlRoot extends React.Component {
     }
 
     showError(errorText) {
+        console.error(JSON.stringify(errorText));
         if (typeof errorText !== String) {
             if (errorText.error_text) {
                 errorText = errorText.error;
@@ -224,6 +226,17 @@ class BcmlRoot extends React.Component {
         });
     }
 
+    launchGame() {
+        pywebview.api
+            .launch_game()
+            .then(res => {
+                if (!res.success) {
+                    throw res;
+                }
+            })
+            .catch(this.props.onError);
+    }
+
     render() {
         return (
             <React.Fragment>
@@ -258,6 +271,7 @@ class BcmlRoot extends React.Component {
                             onInstall={this.handleInstall}
                             onError={this.showError}
                             onState={this.setState.bind(this)}
+                            onLaunch={this.launchGame}
                         />
                     </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">
@@ -293,6 +307,8 @@ class BcmlRoot extends React.Component {
                 <DoneDialog
                     show={this.state.showDone}
                     onClose={() => this.setState({ showDone: false })}
+                    onError={this.showError}
+                    onLaunch={this.launchGame}
                 />
                 <ErrorDialog
                     show={this.state.showError}
@@ -351,21 +367,39 @@ class BcmlRoot extends React.Component {
     }
 }
 
-const DoneDialog = props => {
-    return (
-        <Modal show={props.show} size="sm" centered>
-            <Modal.Header closeButton>
-                <Modal.Title>Done!</Modal.Title>
-            </Modal.Header>
-            <Modal.Footer>
-                <Button variant="primary" onClick={props.onClose}>
-                    OK
-                </Button>
-                <Button variant="secondary">Launch Game</Button>
-            </Modal.Footer>
-        </Modal>
-    );
-};
+class DoneDialog extends React.Component {
+    constructor(props) {
+        super(props);
+        this.launch_game = this.launch_game.bind(this);
+    }
+
+    launch_game() {
+        this.props.onClose();
+        this.props.onLaunch();
+    }
+
+    render() {
+        return (
+            <Modal
+                show={this.props.show}
+                size="sm"
+                centered
+                onHide={this.props.onClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Done!</Modal.Title>
+                </Modal.Header>
+                <Modal.Footer>
+                    <Button variant="primary" onClick={this.props.onClose}>
+                        OK
+                    </Button>
+                    <Button variant="secondary" onClick={this.launch_game}>
+                        Launch Game
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        );
+    }
+}
 
 const ErrorDialog = props => {
     return (

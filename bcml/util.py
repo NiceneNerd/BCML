@@ -632,10 +632,24 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
             shutil.copy(get_game_file('Pack/Bootup.pack'), bootup_path)
         old_bootup = oead.Sarc(bootup_path.read_bytes())
         new_bootup = oead.SarcWriter.from_sarc(old_bootup)
-        new_bootup.files[file] = data
+        new_bootup.files[file] = data if isinstance(data, bytes) else bytes(data)
         bootup_path.write_bytes(new_bootup.write()[1])
     else:
         raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
+
+
+def inject_file_into_titlebg(file: str, data: bytes, create_titlebg: bool = False):
+    titlebg_path = get_master_modpack_dir() / 'content' / 'Pack' / 'TitleBG.pack'
+    if titlebg_path.exists() or create_titlebg:
+        if not titlebg_path.exists():
+            titlebg_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(get_game_file('Pack/TitleBG.pack'), titlebg_path)
+        old_titlebg = oead.Sarc(titlebg_path.read_bytes())
+        new_titlebg = oead.SarcWriter.from_sarc(old_titlebg)
+        new_titlebg.files[file] = data if isinstance(data, bytes) else bytes(data)
+        titlebg_path.write_bytes(new_titlebg.write()[1])
+    else:
+        raise FileNotFoundError('TitleBG.pack is not present in the master BCML mod')
 
 
 @lru_cache(None)
