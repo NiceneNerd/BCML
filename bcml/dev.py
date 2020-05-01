@@ -132,6 +132,7 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
         ]
         if final_packs:
             from json import dumps
+            (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
             (tmp_dir / 'logs' / 'packs.json').write_text(
                 dumps({
                     util.get_canon_name(file.relative_to(tmp_dir)): str(file.relative_to(tmp_dir))\
