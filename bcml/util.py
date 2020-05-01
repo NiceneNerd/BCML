@@ -475,12 +475,12 @@ def get_dlc_path() -> str:
     return 'aoc' if get_settings('wiiu') else 'atmosphere/contents/01007EF00011F001/romfs'
 
 
-@lru_cache
+@lru_cache(None)
 def get_modpack_dir() -> Path:
     return get_data_dir() / 'mods'
 
 
-@lru_cache
+@lru_cache(None)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).replace('\\', '/').startswith(f'{get_content_path()}/'):
         path = Path(str(path).replace('\\', '/').replace(f'{get_content_path()}/', ''))
