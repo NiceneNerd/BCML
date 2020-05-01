@@ -199,7 +199,7 @@ class GameDataMerger(mergers.Merger):
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        if 'content/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
+        if f'{util.get_content_path()}/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
             bootup_sarc = oead.Sarc(
                 util.unyaz_if_needed(
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
@@ -374,7 +374,7 @@ class SaveDataMerger(mergers.Merger):
         super().__init__('save data', 'Merge changes to savedataformat.ssarc', 'savedata.yml')
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        if 'content/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
+        if f'{util.get_content_path()}/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
             bootup_sarc = oead.Sarc(
                 util.unyaz_if_needed(
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
@@ -419,6 +419,8 @@ class SaveDataMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
+        if not diffs:
+            return {}
         all_diffs = oead.byml.Hash({
             'add': oead.byml.Array(),
             'del': oead.byml.Array()

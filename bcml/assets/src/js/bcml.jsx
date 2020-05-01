@@ -57,15 +57,17 @@ class BcmlRoot extends React.Component {
     }
 
     saveSettings(settings) {
-        this.setState({ settingsValid: true, savingSettings: false }, () =>
-            pywebview.api.save_settings({ settings }).then(() =>
-                pywebview.api.get_old_mods().then(num => {
-                    this.setState({ oldMods: num });
-                    if (num > 0) {
-                        this.pageCount = 5;
-                    }
-                })
-            )
+        this.setState(
+            {
+                settingsValid: true,
+                savingSettings: false,
+                showProgress: true,
+                progressTitle: "Saving Settings"
+            },
+            () =>
+                pywebview.api
+                    .save_settings({ settings })
+                    .then(() => setTimeout(() => window.location.reload(), 500))
         );
     }
 
@@ -370,7 +372,16 @@ class BcmlRoot extends React.Component {
 class DoneDialog extends React.Component {
     constructor(props) {
         super(props);
+        this.state = {
+            hasCemu: false
+        };
         this.launch_game = this.launch_game.bind(this);
+    }
+
+    componentDidUpdate() {
+        try {
+            pywebview.api.get_setup().then(res => this.setState({ ...res }));
+        } catch (error) {}
     }
 
     launch_game() {
@@ -392,9 +403,11 @@ class DoneDialog extends React.Component {
                     <Button variant="primary" onClick={this.props.onClose}>
                         OK
                     </Button>
-                    <Button variant="secondary" onClick={this.launch_game}>
-                        Launch Game
-                    </Button>
+                    {this.state.hasCemu && (
+                        <Button variant="secondary" onClick={this.launch_game}>
+                            Launch Game
+                        </Button>
+                    )}
                 </Modal.Footer>
             </Modal>
         );
@@ -407,7 +420,7 @@ const ErrorDialog = props => {
             <Modal.Header closeButton>
                 <Modal.Title>Error</Modal.Title>
             </Modal.Header>
-            <Modal.Body>
+            <Modal.Body className="error">
                 <div className="d-flex">
                     <div className="p-1">
                         <Badge variant="danger">
@@ -423,6 +436,21 @@ const ErrorDialog = props => {
                 </div>
             </Modal.Body>
             <Modal.Footer>
+                {props.error.includes("error-msg") && (
+                    <OverlayTrigger
+                        overlay={<Tooltip>Copy error to clipboard</Tooltip>}>
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => {
+                                document.querySelector("#error-msg").select();
+                                document.execCommand("copy");
+                                window.getSelection().removeAllRanges();
+                            }}>
+                            <i className="material-icons">file_copy</i>
+                        </Button>
+                    </OverlayTrigger>
+                )}
                 <Button variant="primary" onClick={props.onClose}>
                     OK
                 </Button>

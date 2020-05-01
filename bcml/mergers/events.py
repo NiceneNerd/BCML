@@ -41,7 +41,7 @@ class EventInfoMerger(mergers.Merger):
                          'eventinfo.yml', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        if 'content/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
+        if f'{util.get_content_path()}/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
             bootup_sarc = oead.Sarc(
                 (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
             )
@@ -91,6 +91,8 @@ class EventInfoMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
+        if not diffs:
+            return {}
         all_diffs = oead.byml.Hash()
         for diff in diffs:
             util.dict_merge(all_diffs, diff, shallow=True)

@@ -93,9 +93,9 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     map_bytes = None
-    aoc_dir = tmp_dir / util.get_dlc_path() / '0010' / util.get_content_path()
+    aoc_dir = tmp_dir / util.get_dlc_path() / ('0010/content' if util.get_settings('wiiu') else '')
     if not aoc_dir.exists():
-        aoc_dir = tmp_dir / util.get_dlc_path() / util.get_content_path() / '0010'
+        aoc_dir = tmp_dir / util.get_dlc_path() / 'content' / '0010'
         if not aoc_dir.exists():
             aoc_dir = tmp_dir / util.get_dlc_path() / '0010'
     if (aoc_dir / 'Pack' / 'AocMainField.pack').exists():
@@ -113,8 +113,10 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash
     if not map_bytes:
         if (aoc_dir / 'Map' / 'MainField' / map_unit.section /\
             f'{map_unit.section}_{map_unit.type}.smubin').exists():
-            map_bytes = (tmp_dir / util.get_dlc_path() / '0010' / 'Map' / 'MainField' / map_unit.section /\
-                         f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
+            map_bytes = (
+                aoc_dir / 'Map' / 'MainField' / map_unit.section \
+                / f'{map_unit.section}_{map_unit.type}.smubin'
+            ).read_bytes()
         elif (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\
                 f'{map_unit.section}_{map_unit.type}.smubin').exists():
             map_bytes = (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\

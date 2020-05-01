@@ -357,8 +357,9 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
         clean_error.error_text = (f'<p>There was an error while processing {name}. '
                                   'This could indicate there is a problem with the mod itself, '
                                   'but it could also reflect a new or unusual edge case BCML does '
-                                  'not anticipate. Here is the error:</p><pre class="scroller">'
-                                  f'{traceback.format_exc(limit=-4)}</pre>')
+                                  'not anticipate. Here is the error:</p>'
+                                  '<textarea class="scroller" disabled id="error-msg">'
+                                  f'{traceback.format_exc(limit=-4)}</textarea>')
         raise clean_error
 
     if selects:
@@ -654,6 +655,7 @@ def link_master_mod(output: Path = None):
         reverse=True
     )
     util.vprint(mod_folders)
+    util.create_bcml_graphicpack_if_needed()
     shutil.copy(
         str(util.get_master_modpack_dir() / 'rules.txt'),
         str(output / 'rules.txt')

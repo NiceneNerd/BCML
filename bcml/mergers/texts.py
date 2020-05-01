@@ -50,7 +50,7 @@ MSYT_PATH = str(
 def get_text_hashes(language: str = None) -> {}:
     hashes = json.loads(
         util.decompress(
-            (util.get_exec_dir() / 'data' / 'text_hashes.sjson').read_bytes()
+            (util.get_exec_dir() / 'data' / 'hashes' / 'msyts.sjson').read_bytes()
         ).decode('utf8')
     )
     if language:
@@ -310,7 +310,7 @@ class TextsMerger(mergers.Merger):
         for language in language_map.values():
             print(f'Logging text changes for {language}...')
             language_diffs[language] = diff_language(
-                mod_dir / 'content' / 'Pack' / f'Bootup_{language}.pack',
+                mod_dir / util.get_content_path() / 'Pack' / f'Bootup_{language}.pack',
                 pool=self._pool
             )
 
@@ -344,6 +344,8 @@ class TextsMerger(mergers.Merger):
         ]
 
     def consolidate_diffs(self, diffs: list):
+        if not diffs:
+            return {}
         main_diff = diffs[0]
         for diff in diffs[1:]:
             for lang, content in diff.items():
@@ -417,7 +419,9 @@ class TextsMerger(mergers.Merger):
             msg_sarc.write()[1]
         )
 
-        bootup_path = util.get_master_modpack_dir() / 'content' / 'Pack' / f'Bootup_{lang}.pack'
+        bootup_path = (
+            util.get_master_modpack_dir() / util.get_content_path() / 'Pack' / f'Bootup_{lang}.pack'
+        )
         bootup_path.parent.mkdir(parents=True, exist_ok=True)
         bootup_path.write_bytes(bootup_sarc.write()[1])
         del bootup_sarc

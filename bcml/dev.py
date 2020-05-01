@@ -5,6 +5,7 @@ from pathlib import Path
 from platform import system
 import shutil
 import subprocess
+import traceback
 
 import aamp
 from aamp import yaml_util
@@ -137,6 +138,11 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
                         for file in final_packs
                 })
             )
+        else:
+            try:
+                (tmp_dir / 'logs' / 'packs.json').unlink()
+            except FileNotFoundError:
+                pass
     else:
         try:
             (tmp_dir / 'logs' / 'packs.json').unlink()
@@ -145,6 +151,8 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
 
 
 def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
+    if 'TitleBG' in str(file):
+        print('Here we go')
     canon = util.get_canon_name(file.relative_to(tmp_dir))
     try:
         stock_file = util.get_game_file(file.relative_to(tmp_dir))
@@ -170,12 +178,11 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         ext = Path(canon).suffix
         if ext in {'.yml', '.bak'}:
             continue
-        xhash = xxhash.xxh64_intdigest(util.unyaz_if_needed(file_data))
         if nest_file in old_files:
-            old_hash = xxhash.xxh64_intdigest(
-                util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
-            )
-        if nest_file not in old_files or (xhash != old_hash and ext not in util.AAMP_EXTS):
+            old_data = util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
+        if nest_file not in old_files or (
+                util.unyaz_if_needed(file_data) != old_data and ext not in util.AAMP_EXTS
+            ):
             can_delete = False
             new_sarc.files[nest_file] = oead.Bytes(file_data)
     del old_sarc
@@ -212,7 +219,7 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
                            fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
             file.unlink()
 
-    if [file for file in (tmp_dir / 'logs').glob('*texts*')]:
+    if set((tmp_dir / 'logs').glob('*texts*')):
         print('Removing language bootup packs...')
         for bootup_lang in (tmp_dir / util.get_content_path() / 'Pack').glob('Bootup_*.pack'):
             bootup_lang.unlink()
@@ -271,7 +278,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             print('Compiling YAML documents...')
             pool.map(_do_yml, yml_files)
 
-        hashes = util.get_hash_table()
+        hashes = util.get_hash_table(util.get_settings('wiiu'))
         print('Packing SARCs...')
         _pack_sarcs(tmp_dir, hashes, pool)
         for folder in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:
@@ -295,9 +302,17 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             }
         options['texts'] = {'user_only': False}
 
-        _make_bnp_logs(tmp_dir, options)
-        for option_dir in tmp_dir.glob('options/*'):
-            _make_bnp_logs(option_dir, options)
+        try:
+            _make_bnp_logs(tmp_dir, options)
+            for option_dir in tmp_dir.glob('options/*'):
+                _make_bnp_logs(option_dir, options)
+        except Exception as err: # pylint: disable=broad-except
+            err.error_text = (
+                'There was an error generating change logs for your mod. Error details:'
+                f"""<textarea class="scroller" readonly>{
+                    getattr(err, 'error_text', traceback.format_exc(-5))
+                }</textarea>"""
+            )
 
         _clean_sarcs(tmp_dir, hashes, pool)
         for folder in {d for d in tmp_dir.glob('options/*') if d.is_dir()}:

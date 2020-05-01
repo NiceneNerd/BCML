@@ -6,7 +6,7 @@ class FolderInput extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            value: this.props.value,
+            value: "",
             valid: false
         };
         this.idRef = React.createRef();
@@ -14,14 +14,28 @@ class FolderInput extends React.Component {
         this.handleChange = this.handleChange.bind(this);
     }
 
-    componentDidMount() {
-        this.setState({ value: this.props.value });
+    async componentDidMount() {
+        const valid = pywebview.api
+            .dir_exists({
+                folder: this.state.value,
+                type: this.idRef.current.id
+            })
+            .then(valid =>
+                this.setState({ valid: valid && this.props.isValid })
+            );
         this.id = this.idRef.current.id;
+        this.setState({ value: this.props.value, valid });
     }
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (nextProps.value != this.state.value) {
-            this.setState({ value: nextProps.value });
+            this.setState({ value: nextProps.value }, () => {
+                pywebview.api
+                    .dir_exists({ folder: this.state.value, type: this.id })
+                    .then(valid =>
+                        this.setState({ valid: valid && this.props.isValid })
+                    );
+            });
         }
     }
 
@@ -32,7 +46,9 @@ class FolderInput extends React.Component {
             });
             pywebview.api
                 .dir_exists({ folder: this.state.value, type: this.id })
-                .then(valid => this.setState({ valid }));
+                .then(valid =>
+                    this.setState({ valid: valid && this.props.isValid })
+                );
         }
     }
 
@@ -55,6 +71,7 @@ class FolderInput extends React.Component {
                     overlay={overlay}
                     placement={this.props.placement || "right"}>
                     <Form.Control
+                        disabled={this.props.disabled}
                         placeholder="Select a directory"
                         value={this.state.value}
                         onChange={this.handleChange}

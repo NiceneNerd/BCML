@@ -40,7 +40,7 @@ def generate_rstb_for_mod(mod: Path):
         if not (table.is_in_table(canon) and value <= table.get_size(canon)) and value > 0:
             table.set_size(canon, value)
     print('Writing RSTB...')
-    rstb_path = mod / 'content' / 'System' / 'Resource' / 'ResourceSizeTable.srsizetable'
+    rstb_path = mod / util.get_content_path() / 'System' / 'Resource' / 'ResourceSizeTable.srsizetable'
     rstb_path.parent.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
     table.write(buf, util.get_settings('wiiu'))
@@ -445,6 +445,7 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if not pool:
             p.close()
             p.join()
+    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as log:
         log.write('name,size,path\n')
         for canon, size in diffs.items():
@@ -464,7 +465,7 @@ def generate_master_rstb():
 
     table = merge_rstb(table, rstb_values)
 
-    for bootup_pack in util.get_master_modpack_dir().glob('content/Pack/Bootup_*.pack'):
+    for bootup_pack in util.get_master_modpack_dir().glob(f'{util.get_content_path()}/Pack/Bootup_*.pack'):
         lang = util.get_file_language(bootup_pack)
         if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
             table.delete_entry(f'Message/Msg_{lang}.product.sarc')

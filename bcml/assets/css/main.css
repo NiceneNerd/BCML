@@ -148,6 +148,22 @@ body,
     white-space: nowrap;
 }
 
+textarea.scroller {
+    background-color: #202020;
+    border: 1px solid #242529;
+    color: #ffffff;
+    font-family: "Fira Code", "Source Code Pro", "Droid Mono", "Consolas",
+        "Courier New", Courier, monospace !important;
+    font-size: smaller;
+    display: block;
+    margin: 0.5rem 0;
+    padding: 0.5rem 1rem;
+    height: 10rem;
+    overflow: auto;
+    width: 100%;
+    white-space: pre;
+}
+
 .scroller::-webkit-scrollbar {
     width: 0;
 }
@@ -682,6 +698,16 @@ Fade {
 .form-control:focus {
     background-color: #42454c;
     color: #fff;
+}
+
+.form-control:disabled {
+    background-color: #42454c;
+    color: #303030;
+}
+
+.form-control:disabled.is-valid {
+    border: 1px solid #4f4f4f;
+    background-image: none;
 }
 
 .radio-group .form-group {

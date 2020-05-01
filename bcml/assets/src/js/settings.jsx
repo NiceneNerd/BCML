@@ -34,11 +34,17 @@ class Settings extends React.Component {
     checkValid() {
         return (
             this.state.game_dir != "" &&
-            this.state.update_dir != "" &&
+            (this.state.update_dir != "" || !this.state.wiiu) &&
             this.state.lang != "" &&
             (this.state.cemu_dir != "" || this.state.no_cemu) &&
             this.formRef.current.checkValidity()
         );
+    }
+
+    componentDidMount() {
+        pywebview.api.get_settings().then(settings => {
+            this.setState({ ...settings });
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -78,6 +84,9 @@ class Settings extends React.Component {
                             <Form.Label>Cemu Directory</Form.Label>
                             <FolderInput
                                 value={this.state.cemu_dir}
+                                disabled={
+                                    !this.state.wiiu || this.state.no_cemu
+                                }
                                 onChange={this.handleChange}
                                 isValid={
                                     this.state.cemu_dir != "" ||
@@ -85,10 +94,17 @@ class Settings extends React.Component {
                                 }
                                 overlay={
                                     <Tooltip>
-                                        (Optional) The directory where Cemu is
-                                        installed. Note that this <em>must</em>{" "}
-                                        be the folder than directly contains
-                                        "Cemu.exe" and "settings.xml"
+                                        {this.state.wiiu ? (
+                                            <>
+                                                (Optional) The directory where
+                                                Cemu is installed. Note that
+                                                this <em>must</em> be the folder
+                                                that directly contains
+                                                "Cemu.exe" and "settings.xml"
+                                            </>
+                                        ) : (
+                                            "Not applicable for Switch mode"
+                                        )}
                                     </Tooltip>
                                 }
                             />
@@ -109,12 +125,14 @@ class Settings extends React.Component {
                                     <Tooltip>
                                         The folder containing the base game
                                         files for BOTW, without the update or
-                                        DLC files. The last folder should be
-                                        "content" or "romfs", e.g.
+                                        DLC files. The last folder should be "
+                                        {this.state.wiiu ? "content" : "romfs"}
+                                        ", e.g.
                                         <br />
                                         <code>
-                                            C:\Games\The Legend of Zelda Breath
-                                            of the Wild [AZE01]\content
+                                            {this.state.wiiu
+                                                ? "C:\\Games\\The Legend of Zelda Breath of the Wild [AZE01]\\content"
+                                                : "C:\\Games\\BOTW\\01007EF00011E000\\romfs"}
                                         </code>
                                     </Tooltip>
                                 }
@@ -140,15 +158,22 @@ class Settings extends React.Component {
                                 disabled={!this.state.wiiu}
                                 overlay={
                                     <Tooltip>
-                                        The folder containing the update files
-                                        for BOTW, version 1.5.0. The last folder
-                                        should be "content", and if you use
-                                        Cemu, it should be in your "mlc01"
-                                        folder, e.g.
-                                        <br />
-                                        <code>
-                                            C:\Cemu\mlc01\usr\title\0005000E\101C9400\content
-                                        </code>
+                                        {this.state.wiiu ? (
+                                            <>
+                                                The folder containing the update
+                                                files for BOTW, version 1.5.0.
+                                                The last folder should be
+                                                "content", and if you use Cemu,
+                                                it should be in your "mlc01"
+                                                folder, e.g.
+                                                <br />
+                                                <code>
+                                                    C:\Cemu\mlc01\usr\title\0005000E\101C9400\content
+                                                </code>
+                                            </>
+                                        ) : (
+                                            "Not applicable for Switch mode"
+                                        )}
                                     </Tooltip>
                                 }
                             />
@@ -163,16 +188,24 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.dlc_dir}
                                 onChange={this.handleChange}
+                                isValid={true}
                                 overlay={
                                     <Tooltip>
                                         (Optional) The folder containing the DLC
-                                        files for BOTW, version 3.0. The last
-                                        folder should usually be "0010", and if
-                                        you use Cemu, it should be in your
-                                        "mlc01" folder, e.g.
+                                        files for BOTW, version 3.0.
+                                        {this.state.wiiu && (
+                                            <>
+                                                The last folder should usually
+                                                be "0010", and if you use Cemu,
+                                                it should be in your "mlc01"
+                                                folder, e.g.
+                                            </>
+                                        )}
                                         <br />
                                         <code>
-                                            C:\Cemu\mlc01\usr\title\0005000C\101C9400\content\0010
+                                            {this.state.wiiu
+                                                ? "C:\\Cemu\\mlc01\\usr\\title\\0005000C\\101C9400\\content\\0010"
+                                                : "C:\\Games\\BOTW\\01007EF00011F001\\romfs"}
                                         </code>
                                     </Tooltip>
                                 }
@@ -230,6 +263,7 @@ class Settings extends React.Component {
                                 placement={"left"}>
                                 <Form.Check
                                     type="checkbox"
+                                    disabled={!this.state.wiiu}
                                     label="Use BCML without a Cemu installation"
                                     checked={this.state.no_cemu}
                                     onChange={this.handleChange}
@@ -280,12 +314,6 @@ class Settings extends React.Component {
                 </Row>
             </Form>
         );
-    }
-
-    componentDidMount() {
-        pywebview.api.get_settings().then(settings => {
-            this.setState({ ...settings });
-        });
     }
 }
 

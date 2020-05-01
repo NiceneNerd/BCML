@@ -175,6 +175,7 @@ class DevTools extends React.Component {
                             <Form.Group controlId="folder">
                                 <Form.Label>Mod root folder</Form.Label>
                                 <FolderInput
+                                    isValid={false}
                                     overlay={
                                         <Tooltip>
                                             The folder containing the main mod

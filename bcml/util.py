@@ -468,43 +468,45 @@ def get_aoc_dir() -> Path:
 
 
 def get_content_path() -> str:
-    return 'content' if get_settings('wiiu') else 'atmosphere/titles/01007EF00011E000/romfs'
+    return 'content' if get_settings('wiiu') else 'atmosphere/contents/01007EF00011E000/romfs'
 
 
 def get_dlc_path() -> str:
-    return 'aoc' if get_settings('wiiu') else 'atmosphere/titles/01007EF00011F001/romfs'
+    return 'aoc' if get_settings('wiiu') else 'atmosphere/contents/01007EF00011F001/romfs'
 
 
-@lru_cache(None)
+@lru_cache
 def get_modpack_dir() -> Path:
     return get_data_dir() / 'mods'
 
 
-@lru_cache(None)
+@lru_cache
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
-    if str(path).startswith('content/') or str(path).startswith('content\\'):
-        path = Path(str(path).replace('content/', '').replace('content\\', ''))
+    if str(path).replace('\\', '/').startswith(f'{get_content_path()}/'):
+        path = Path(str(path).replace('\\', '/').replace(f'{get_content_path()}/', ''))
     if isinstance(path, str):
         path = Path(path)
     game_dir = get_game_dir()
-    update_dir = get_update_dir()
+    if get_settings('wiiu'):
+        update_dir = get_update_dir()
     try:
         aoc_dir = get_aoc_dir()
     except FileNotFoundError:
         aoc_dir = None
-    if 'aoc' in path.parts or aoc:
+    if 'aoc' in path.parts or get_dlc_path() in str(path.as_posix()) or aoc:
         if aoc_dir:
             path = Path(
                 path.as_posix().replace('aoc/content/0010/', '').replace('aoc/0010/content/', '')
-                .replace('aoc/content/', '').replace('aoc/0010/', '')
+                .replace('aoc/content/', '').replace('aoc/0010/', '').replace(get_dlc_path(), '')
             )
             if (aoc_dir / path).exists():
                 return aoc_dir / path
             raise FileNotFoundError(f'{path} not found in DLC files.')
         else:
             raise FileNotFoundError(f'{path} is a DLC file, but the DLC directory is missing.')
-    if (update_dir / path).exists():
-        return update_dir / path
+    if get_settings('wii'):
+        if (update_dir / path).exists():
+            return update_dir / path
     if (game_dir / path).exists():
         return game_dir / path
     elif aoc_dir and (aoc_dir / path).exists():
@@ -547,9 +549,11 @@ def get_master_modpack_dir() -> Path:
 
 
 @lru_cache(None)
-def get_hash_table() -> {}:
+def get_hash_table(wiiu: bool = True) -> {}:
     return json.loads(
-        decompress((get_exec_dir() / 'data' / 'hashtable.sjson').read_bytes()).decode('utf-8')
+        decompress((
+            get_exec_dir() / 'data' / 'hashes' / f'{"wiiu" if wiiu else "switch"}.sjson'
+        ).read_bytes()).decode('utf-8')
     )
 
 
@@ -559,11 +563,12 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
         file = Path(file)
     name = file.as_posix()\
         .replace("\\", "/")\
-        .replace('atmosphere/titles/01007EF00011E000/romfs', 'content')\
-        .replace('atmosphere/titles/01007EF00011E001/romfs', 'aoc/0010')\
-        .replace('atmosphere/titles/01007EF00011E002/romfs', 'aoc/0010')\
-        .replace('atmosphere/titles/01007EF00011F001/romfs', 'aoc/0010')\
-        .replace('atmosphere/titles/01007EF00011F002/romfs', 'aoc/0010')\
+        .replace('/titles/', '/contents/')\
+        .replace('atmosphere/contents/01007EF00011E000/romfs', 'content')\
+        .replace('atmosphere/contents/01007EF00011E001/romfs', 'aoc/0010')\
+        .replace('atmosphere/contents/01007EF00011E002/romfs', 'aoc/0010')\
+        .replace('atmosphere/contents/01007EF00011F001/romfs', 'aoc/0010')\
+        .replace('atmosphere/contents/01007EF00011F002/romfs', 'aoc/0010')\
         .replace('.s', '.')\
         .replace('Content', 'content')\
         .replace('Aoc', 'aoc')
@@ -598,7 +603,7 @@ def get_file_language(file: Union[Path, str]) -> str:
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
     contents = file if isinstance(file, bytes) else \
         file.read_bytes() if isinstance(file, Path) else bytes(file)
-    table = get_hash_table()
+    table = get_hash_table(get_settings('wiiu'))
     if name not in table:
         return count_new
     fhash = xxhash.xxh64_intdigest(contents)
@@ -619,13 +624,13 @@ def decompress_file(file) -> bytes:
 
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
     if file_bytes[0:4] == b'Yaz0':
-        return decompress(file_bytes)
+        return bytes(decompress(file_bytes))
     else:
-        return file_bytes
+        return file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)
 
 
 def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False):
-    bootup_path = get_master_modpack_dir() / 'content' / 'Pack' / 'Bootup.pack'
+    bootup_path = get_master_modpack_dir() / get_content_path() / 'Pack' / 'Bootup.pack'
     if bootup_path.exists() or create_bootup:
         if not bootup_path.exists():
             bootup_path.parent.mkdir(parents=True, exist_ok=True)
@@ -639,7 +644,7 @@ def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False)
 
 
 def inject_file_into_titlebg(file: str, data: bytes, create_titlebg: bool = False):
-    titlebg_path = get_master_modpack_dir() / 'content' / 'Pack' / 'TitleBG.pack'
+    titlebg_path = get_master_modpack_dir() / get_content_path() / 'Pack' / 'TitleBG.pack'
     if titlebg_path.exists() or create_titlebg:
         if not titlebg_path.exists():
             titlebg_path.parent.mkdir(parents=True, exist_ok=True)
@@ -850,7 +855,16 @@ class InstallError(Exception):
     pass
 
 class MergeError(Exception):
-    pass
+    def __init__(self, error_stuff):
+        super().__init__(error_stuff)
+        self.error_text = (
+            f'There was a problem merging your mod(s). Details of the error:\n'
+            f"""<textarea class="scroller" readonly id="error-msg">{
+                getattr(error_stuff, "error_text", traceback.format_exc(-5))
+            }</textarea>"""
+            'Note that you this could leave your game in an unplayable state unless you remove'
+            ' the mod or mods responsible.'
+        )
 
 
 class Messager:

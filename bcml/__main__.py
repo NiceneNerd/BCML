@@ -88,6 +88,7 @@ class Api:
         return util.get_settings()
 
     def save_settings(self, params):
+        print('Saving settings, BCML will reload momentarily...')
         util.get_settings.settings = params['settings']
         util.save_settings()
 
@@ -151,8 +152,11 @@ class Api:
             'url': mod.url
         }
 
-    def get_mergers(self):
-        return [m().friendly_name for m in mergers.get_mergers()]
+    def get_setup(self):
+        return {
+            'hasCemu': not util.get_settings('no_cemu'),
+            'mergers': [m().friendly_name for m in mergers.get_mergers()]
+        }
 
     def file_pick(self, params=None):
         if not params:
@@ -222,7 +226,7 @@ class Api:
                     merger.set_pool(pool)
                     merger.perform_merge()
                 print('Install complete')
-            except Exception as err:
+            except Exception as err: # pylint: disable=broad-except
                 raise MergeError(err)
 
     @win_or_lose
@@ -340,13 +344,16 @@ class Api:
 
     @win_or_lose
     def remerge(self, params):
-        if params['name'] == 'all':
-            install.refresh_merges()
-        else:
-            [
-                m() for m in mergers.get_mergers() if m().friendly_name == params['name']
-            ][0].perform_merge()
-            install.refresh_master_export()
+        try:
+            if params['name'] == 'all':
+                install.refresh_merges()
+            else:
+                [
+                    m() for m in mergers.get_mergers() if m().friendly_name == params['name']
+                ][0].perform_merge()
+                install.refresh_master_export()
+        except Exception as err: # pylint: disable=broad-except
+            raise MergeError(err)
 
     @win_or_lose
     def create_backup(self, params):

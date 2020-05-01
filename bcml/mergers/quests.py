@@ -83,6 +83,8 @@ class QuestMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
+        if not diffs:
+            return {}
         all_diffs = oead.byml.Hash({
             'add': oead.byml.Array(),
             'mod': oead.byml.Hash(),

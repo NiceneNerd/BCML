@@ -24,14 +24,15 @@ class Mods extends React.Component {
             mods: [],
             dirty: false,
             mergersReady: false,
-            mergers: []
+            mergers: [],
+            hasCemu: false
         };
         window.addEventListener("pywebviewready", () =>
             pywebview.api
-                .get_mergers()
-                .then(mergers =>
+                .get_setup()
+                .then(setup =>
                     this.setState(
-                        { mergersReady: true, mergers },
+                        { mergersReady: true, ...setup },
                         this.sanityCheck
                     )
                 )
@@ -51,7 +52,7 @@ class Mods extends React.Component {
                 if (!res.success) throw res;
             })
             .catch(err => {
-                console.log(err);
+                console.error(err);
                 window.location = "index.html?firstrun=true";
             });
     }
@@ -231,7 +232,7 @@ class Mods extends React.Component {
             <React.Fragment>
                 <div className="row">
                     <div className="col-4" id="mods">
-                        {this.state.mods.length > 0 && (
+                        {this.state.mods.length > 0 ? (
                             <SortSelect
                                 mods={
                                     this.state.sortReverse
@@ -252,6 +253,10 @@ class Mods extends React.Component {
                                     )
                                 }
                             />
+                        ) : (
+                            <div className="text-secondary m-2 text-center">
+                                No mods
+                            </div>
                         )}
                         <div className="flex-grow-1"> </div>
                         {this.state.dirty && (
@@ -352,47 +357,53 @@ class Mods extends React.Component {
                                 </Button>
                             </ButtonGroup>
                             <div className="flex-grow-1"></div>
-                            <OverlayTrigger
-                                overlay={
-                                    <Tooltip>Launch Breath of the Wild</Tooltip>
-                                }>
-                                <Button
-                                    variant="primary"
-                                    size="xs"
-                                    onClick={this.props.onLaunch}>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        x="0px"
-                                        y="0px"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 171 171"
-                                        style={{ fill: "#000000" }}>
-                                        <g
-                                            fill="none"
-                                            fillRule="nonzero"
-                                            stroke="none"
-                                            strokeWidth="1"
-                                            strokeLinecap="butt"
-                                            strokeLinejoin="miter"
-                                            strokeMiterlimit="10"
-                                            strokeDasharray=""
-                                            strokeDashoffset="0"
-                                            fontFamily="none"
-                                            fontWeight="none"
-                                            fontSize="none"
-                                            textAnchor="none"
-                                            style={{ mixBlendMode: "normal" }}>
-                                            <path
-                                                d="M0,171.98863v-171.98863h171.98863v171.98863z"
-                                                fill="none"></path>
-                                            <g fill="#ffb300">
-                                                <path d="M85.5,19.14844l-35.625,61.67578h71.25zM121.125,80.82422l-35.625,61.67578h71.25zM85.5,142.5l-35.625,-61.67578l-35.625,61.67578z"></path>
+                            {this.state.hasCemu && (
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            Launch Breath of the Wild
+                                        </Tooltip>
+                                    }>
+                                    <Button
+                                        variant="primary"
+                                        size="xs"
+                                        onClick={this.props.onLaunch}>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            x="0px"
+                                            y="0px"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 171 171"
+                                            style={{ fill: "#000000" }}>
+                                            <g
+                                                fill="none"
+                                                fillRule="nonzero"
+                                                stroke="none"
+                                                strokeWidth="1"
+                                                strokeLinecap="butt"
+                                                strokeLinejoin="miter"
+                                                strokeMiterlimit="10"
+                                                strokeDasharray=""
+                                                strokeDashoffset="0"
+                                                fontFamily="none"
+                                                fontWeight="none"
+                                                fontSize="none"
+                                                textAnchor="none"
+                                                style={{
+                                                    mixBlendMode: "normal"
+                                                }}>
+                                                <path
+                                                    d="M0,171.98863v-171.98863h171.98863v171.98863z"
+                                                    fill="none"></path>
+                                                <g fill="#ffb300">
+                                                    <path d="M85.5,19.14844l-35.625,61.67578h71.25zM121.125,80.82422l-35.625,61.67578h71.25zM85.5,142.5l-35.625,-61.67578l-35.625,61.67578z"></path>
+                                                </g>
                                             </g>
-                                        </g>
-                                    </svg>
-                                </Button>
-                            </OverlayTrigger>
+                                        </svg>
+                                    </Button>
+                                </OverlayTrigger>
+                            )}
                         </div>
                     </div>
                     <div className="col-8 scroller" id="mod-info">
