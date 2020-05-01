@@ -212,9 +212,11 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
     )
     new_map['Objs'] = sorted(new_map['Objs'], key=lambda actor: int(actor['HashId']))
 
-    aoc_out: Path = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / 'Map' / \
-        'MainField' / map_unit.section / \
-        f'{map_unit.section}_{map_unit.type}.smubin'
+    aoc_out: Path = (
+        util.get_master_modpack_dir() / util.get_dlc_path() /\
+            ('0010' if util.get_settings('wiiu') else '') / 'Map' / 'MainField' /\
+            map_unit.section / f'{map_unit.section}_{map_unit.type}.smubin'
+    )
     aoc_out.parent.mkdir(parents=True, exist_ok=True)
     aoc_bytes = oead.byml.to_binary(new_map, big_endian=util.get_settings('wiiu'))
     aoc_out.write_bytes(util.compress(aoc_bytes))
@@ -319,6 +321,7 @@ class MapMerger(mergers.Merger):
         modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
                          file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name]
         if modded_mubins:
+            print('Logging changes to mainfield maps...')
             return generate_modded_map_log(mod_dir, modded_mubins, no_del=self._options['no_del'], 
                                            link_del=self._options['link_del'])
         else:

@@ -200,6 +200,7 @@ class GameDataMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if f'{util.get_content_path()}/Pack/Bootup.pack//GameData/gamedata.ssarc' in modded_files:
+            print('Logging changes to game data flags...')
             bootup_sarc = oead.Sarc(
                 util.unyaz_if_needed(
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
@@ -375,6 +376,7 @@ class SaveDataMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if f'{util.get_content_path()}/Pack/Bootup.pack//GameData/savedataformat.ssarc' in modded_files:
+            print('Logging changes to save data flags...')
             bootup_sarc = oead.Sarc(
                 util.unyaz_if_needed(
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
