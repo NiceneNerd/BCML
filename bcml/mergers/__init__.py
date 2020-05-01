@@ -107,17 +107,14 @@ class Merger(metaclass=ABCMeta):
 
     def perform_unmerge(self):
         """ Performs any cleanup tasks needed when a merge mod is uninstalled """
-        pass
-
-    def get_conflicts(self, mod: util.BcmlMod):
-        """ Gets a list of mods that may merge conflicts with this mod and merger """
-        raise NotImplementedError
 
 
 def get_mergers() -> List[Merger]:
     """ Retrieves all available types of mod mergers """
 
-    from bcml.mergers import pack, texts, merge, data, mubin, events, rstable, actors, quests
+    from bcml.mergers import (
+        pack, texts, merge, data, mubin, events, rstable, actors, quests, effects
+    )
 
     return [
         pack.PackMerger,
@@ -129,6 +126,7 @@ def get_mergers() -> List[Merger]:
         data.GameDataMerger,
         data.SaveDataMerger,
         events.EventInfoMerger,
+        effects.StatusEffectMerger,
         quests.QuestMerger,
         rstable.RstbMerger
     ]
