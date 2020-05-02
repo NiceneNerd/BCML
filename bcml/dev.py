@@ -1,5 +1,8 @@
+# pylint: disable=unsupported-assignment-operation
+from base64 import urlsafe_b64encode
 from fnmatch import fnmatch
 from functools import partial
+from json import dumps
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
@@ -7,11 +10,8 @@ import shutil
 import subprocess
 import traceback
 
-import aamp
-from aamp import yaml_util
 import oead
 import xxhash
-import yaml
 
 from . import util, install
 
@@ -85,8 +85,8 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
             packed.files[file.relative_to(folder).as_posix()] = file.read_bytes()
     else:
         for file in {
-            f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
-        }:
+                f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
+            }:
             file_data = file.read_bytes()
             xhash = xxhash.xxh64_intdigest(util.unyaz_if_needed(file_data))
             file_name = file.relative_to(folder).as_posix()
@@ -97,13 +97,13 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
                     )
                 )
             if file_name not in old_files or (
-                xhash != old_hash and file.suffix not in util.AAMP_EXTS
-            ):
+                    xhash != old_hash and file.suffix not in util.AAMP_EXTS
+                ):
                 packed.files[file_name] = file_data
     finally:
         shutil.rmtree(folder)
         if not packed.files:
-            return
+            return # pylint: disable=lost-exception
         sarc_bytes = packed.write()[1]
         folder.write_bytes(
             util.compress(sarc_bytes) if (
@@ -131,7 +131,6 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
             file for file in sarc_files if file.suffix in util.SARC_EXTS
         ]
         if final_packs:
-            from json import dumps
             (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
             (tmp_dir / 'logs' / 'packs.json').write_text(
                 dumps({
@@ -263,10 +262,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
     if (tmp_dir / 'rules.txt').exists():
         (tmp_dir / 'rules.txt').unlink()
-    
-    from base64 import urlsafe_b64encode
+
     meta['id'] = urlsafe_b64encode(meta['name'].encode('utf8')).decode('utf8')
-    from json import dumps
     (tmp_dir / 'info.json').write_text(
         dumps(meta, ensure_ascii=False),
         encoding='utf-8'

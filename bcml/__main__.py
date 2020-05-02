@@ -62,7 +62,8 @@ class Api:
             raise err
         settings = util.get_settings()
         util.get_game_dir()
-        util.get_update_dir()
+        if settings['wiiu']:
+            util.get_update_dir()
         if not settings['no_cemu']:
             util.get_cemu_dir()
 
@@ -494,7 +495,7 @@ def main():
             webview.start(
                 gui='' if no_cef else 'cef',
                 debug=DEBUG if not no_cef else False,
-                http_server=False
+                http_server=True
             )
 
 if __name__ == "__main__":
