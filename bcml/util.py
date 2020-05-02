@@ -504,7 +504,7 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
             raise FileNotFoundError(f'{path} not found in DLC files.')
         else:
             raise FileNotFoundError(f'{path} is a DLC file, but the DLC directory is missing.')
-    if get_settings('wii'):
+    if get_settings('wiiu'):
         if (update_dir / path).exists():
             return update_dir / path
     if (game_dir / path).exists():
