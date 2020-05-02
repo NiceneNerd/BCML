@@ -645,6 +645,7 @@ def restore_backup(backup: Union[str, Path]):
 
 
 def link_master_mod(output: Path = None):
+    util.create_bcml_graphicpack_if_needed()
     if not output:
         output = util.get_cemu_dir() / 'graphicPacks' / 'BreathOfTheWild_BCML'
     if output.exists():
@@ -655,7 +656,6 @@ def link_master_mod(output: Path = None):
         reverse=True
     )
     util.vprint(mod_folders)
-    util.create_bcml_graphicpack_if_needed()
     shutil.copy(
         str(util.get_master_modpack_dir() / 'rules.txt'),
         str(output / 'rules.txt')
@@ -664,9 +664,10 @@ def link_master_mod(output: Path = None):
     for mod_folder in mod_folders:
         for item in mod_folder.rglob('**/*'):
             rel_path = item.relative_to(mod_folder)
-            if (output / rel_path).exists()\
-               or (str(rel_path).startswith('logs'))\
-               or (len(rel_path.parts) == 1 and rel_path.suffix != '.txt'):
+            exists = (output / rel_path).exists()
+            is_log = str(rel_path).startswith('logs')
+            is_extra = len(rel_path.parts) == 1 and rel_path.suffix != '.txt' and not item.is_dir()
+            if exists or is_log or is_extra:
                 continue
             if item.is_dir():
                 (output / rel_path).mkdir(parents=True, exist_ok=True)
@@ -678,6 +679,10 @@ def link_master_mod(output: Path = None):
                     )
                 except OSError:
                     from shutil import copyfile as link_or_copy # pylint: disable=import-outside-toplevel
+                    link_or_copy(
+                        str(item),
+                        str(output / rel_path)
+                    )
 
 
 def export(output: Path):

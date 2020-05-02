@@ -272,52 +272,69 @@ class Mods extends React.Component {
                         )}
                         <div className="list-actions d-flex pt-1">
                             <ButtonGroup size="xs">
-                                <Button
-                                    variant="secondary"
-                                    title={
-                                        "Sort priority: " +
-                                        (this.state.sortReverse
-                                            ? "highest to lowest"
-                                            : "lowest to highest")
-                                    }
-                                    onClick={() =>
-                                        this.setState({
-                                            sortReverse: !this.state.sortReverse
-                                        })
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            {"Sort priority:\n" +
+                                                (this.state.sortReverse
+                                                    ? "highest to lowest"
+                                                    : "lowest to highest")}
+                                        </Tooltip>
                                     }>
-                                    <i
-                                        className={
-                                            "material-icons" +
-                                            (!this.state.sortReverse
-                                                ? " reversed"
-                                                : "")
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            this.setState({
+                                                sortReverse: !this.state
+                                                    .sortReverse
+                                            })
                                         }>
-                                        sort
-                                    </i>
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() =>
-                                        this.setState({
-                                            showHandle: !this.state.showHandle
-                                        })
-                                    }
-                                    title={
-                                        this.state.showHandle
-                                            ? "Hide sort handles"
-                                            : "Show sort handles"
+                                        <i
+                                            className={
+                                                "material-icons" +
+                                                (!this.state.sortReverse
+                                                    ? " reversed"
+                                                    : "")
+                                            }>
+                                            sort
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            {this.state.showHandle
+                                                ? "Hide sort handles"
+                                                : "Show sort handles"}
+                                        </Tooltip>
                                     }>
-                                    <i className="material-icons">reorder</i>
-                                </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            this.setState({
+                                                showHandle: !this.state
+                                                    .showHandle
+                                            })
+                                        }>
+                                        <i className="material-icons">
+                                            reorder
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <Button
-                                    variant="secondary"
-                                    title="Remerge"
-                                    onClick={() => this.handleRemerge("all")}>
-                                    <i className="material-icons">refresh</i>
-                                </Button>
-
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Remerge</Tooltip>}>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            this.handleRemerge("all")
+                                        }>
+                                        <i className="material-icons">
+                                            refresh
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
                                 <Dropdown.Toggle
                                     split
                                     variant="secondary"
@@ -338,23 +355,43 @@ class Mods extends React.Component {
                                 </Dropdown.Menu>
                             </Dropdown>
                             <ButtonGroup size="xs">
-                                <Button
-                                    variant="secondary"
-                                    title="Backup and restore mods"
-                                    onClick={() =>
-                                        this.setState({ showBackups: true })
-                                    }
-                                    style={{ paddingRight: "0.5rem" }}>
-                                    <i className="material-icons">restore</i>
-                                </Button>
-                                <Button
-                                    variant="danger"
-                                    title="Uninstall all mods"
-                                    onClick={this.uninstallAll}>
-                                    <i className="material-icons">
-                                        delete_sweep
-                                    </i>
-                                </Button>
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>Backup and restore</Tooltip>
+                                    }>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            this.setState({ showBackups: true })
+                                        }>
+                                        <i className="material-icons">
+                                            restore
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Export</Tooltip>}>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={this.props.onExport}
+                                        className="pr-1">
+                                        <i className="material-icons">
+                                            open_in_browser
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>Uninstall all mods</Tooltip>
+                                    }>
+                                    <Button
+                                        variant="danger"
+                                        onClick={this.uninstallAll}>
+                                        <i className="material-icons">
+                                            delete_sweep
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
                             </ButtonGroup>
                             <div className="flex-grow-1"></div>
                             {this.state.hasCemu && (

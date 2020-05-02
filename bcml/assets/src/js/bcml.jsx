@@ -248,18 +248,6 @@ class BcmlRoot extends React.Component {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        <OverlayTrigger
-                            overlay={
-                                <Tooltip>
-                                    Exports all installed mods to a single
-                                    modpack, either as a BNP or a plain format.
-                                </Tooltip>
-                            }
-                            placement={"left"}>
-                            <Dropdown.Item onClick={this.export}>
-                                Export
-                            </Dropdown.Item>
-                        </OverlayTrigger>
                         <Dropdown.Item>About</Dropdown.Item>
                     </Dropdown.Menu>
                 </Dropdown>
@@ -273,6 +261,7 @@ class BcmlRoot extends React.Component {
                             onInstall={this.handleInstall}
                             onError={this.showError}
                             onState={this.setState.bind(this)}
+                            onExport={this.export}
                             onLaunch={this.launchGame}
                         />
                     </Tab>
