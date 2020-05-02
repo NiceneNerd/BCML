@@ -11,7 +11,7 @@ def get_stock_effects() -> oead.byml.Hash:
         util.get_game_file('Pack/Bootup.pack').read_bytes()
     )
     return oead.byml.from_binary(
-        util.decompress(bootup_sarc.get_file('Ecosystem/StatusEffectList.syml').data)
+        util.decompress(bootup_sarc.get_file('Ecosystem/StatusEffectList.sbyml').data)
     )[0]
 
 
@@ -35,7 +35,7 @@ class StatusEffectMerger(mergers.Merger):
             util.decompress(bootup_sarc.get_file('Ecosystem/StatusEffectList.sbyml').data)
         )[0]
         return oead.byml.Hash({
-            effect: params for effect, params in mod_effects if stock_effects[effect] != params
+            effect: params for effect, params in mod_effects.items() if stock_effects[effect] != params
         })
 
     def log_diff(self, mod_dir: Path, diff_material):
@@ -58,6 +58,7 @@ class StatusEffectMerger(mergers.Merger):
                     oead.byml.from_text((opt / 'logs' / self._log_name).read_text('utf-8')),
                     overwrite_lists=True
                 )
+        return diff
 
     def get_all_diffs(self):
         return [self.get_mod_diff(m) for m in util.get_installed_mods() if self.is_mod_logged(m)]
@@ -113,7 +114,7 @@ class StatusEffectMerger(mergers.Merger):
         )
         util.inject_file_into_bootup(
             'Ecosystem/StatusEffectList.sbyml',
-            util.compress(effects),
+            util.compress(oead.byml.to_binary(effects, big_endian=util.get_settings('wiiu'))),
             create_bootup=True
         )
         print('Saving status effect merge log...')
