@@ -52,7 +52,7 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
     if not hasattr(get_stock_rstb, 'table'):
         get_stock_rstb.table = read_rstb(
             str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')),
-            True
+            util.get_settings('wiiu')
         )
     return deepcopy(get_stock_rstb.table)
 
