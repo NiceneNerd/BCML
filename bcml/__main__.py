@@ -495,12 +495,16 @@ def main():
     )
 
     no_cef = find_spec('cefpython3') is None or NO_CEF
-    mods = util.get_installed_mods(True)
+    gui: str = ''
+    if system() == 'Windows' and not no_cef:
+        gui = 'cef'
+    elif system() == 'Linux':
+        gui = 'qt'
 
     with redirect_stderr(sys.stdout):
         with redirect_stdout(Messager(api.window)):
             webview.start(
-                gui='' if no_cef else 'cef',
+                gui=gui,
                 debug=DEBUG if not no_cef else False,
                 http_server=True
             )
