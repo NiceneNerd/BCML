@@ -490,7 +490,8 @@ def main():
         js_api=api,
         text_select=DEBUG,
         width=width,
-        height=height
+        height=height,
+        min_size=(width if width == 750 else 820, 600)
     )
 
     no_cef = find_spec('cefpython3') is None or NO_CEF

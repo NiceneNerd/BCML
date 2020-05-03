@@ -5,7 +5,8 @@ import {
     Dropdown,
     Modal,
     OverlayTrigger,
-    Tooltip
+    Tooltip,
+    Spinner
 } from "react-bootstrap";
 
 import InstallModal from "./install.jsx";
@@ -232,30 +233,38 @@ class Mods extends React.Component {
             <React.Fragment>
                 <div className="row">
                     <div className="col-4" id="mods">
-                        {this.state.mods.length > 0 ? (
-                            <SortSelect
-                                mods={
-                                    this.state.sortReverse
-                                        ? [...this.state.mods].reverse()
-                                        : this.state.mods
-                                }
-                                showHandle={this.state.showHandle}
-                                onSelect={selected =>
-                                    this.setState({ selectedMods: selected })
-                                }
-                                onChange={mods =>
-                                    this.setState({ dirty: true }, () =>
-                                        this.props.onChange(
-                                            !this.state.sortReverse
-                                                ? mods
-                                                : mods.reverse()
+                        {this.props.loaded ? (
+                            this.state.mods.length > 0 ? (
+                                <SortSelect
+                                    mods={
+                                        this.state.sortReverse
+                                            ? [...this.state.mods].reverse()
+                                            : this.state.mods
+                                    }
+                                    showHandle={this.state.showHandle}
+                                    onSelect={selected =>
+                                        this.setState({
+                                            selectedMods: selected
+                                        })
+                                    }
+                                    onChange={mods =>
+                                        this.setState({ dirty: true }, () =>
+                                            this.props.onChange(
+                                                !this.state.sortReverse
+                                                    ? mods
+                                                    : mods.reverse()
+                                            )
                                         )
-                                    )
-                                }
-                            />
+                                    }
+                                />
+                            ) : (
+                                <div className="text-secondary m-2 text-center">
+                                    No mods installed
+                                </div>
+                            )
                         ) : (
-                            <div className="text-secondary m-2 text-center">
-                                No mods
+                            <div className="text-center mt-3">
+                                <Spinner animation="border" variant="light" />
                             </div>
                         )}
                         <div className="flex-grow-1"> </div>

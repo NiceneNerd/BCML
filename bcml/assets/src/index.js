@@ -8,17 +8,7 @@ document.addEventListener("DOMContentLoaded", async event => {
     if (window.location.toString().includes("firstrun")) {
         root = <FirstRun />;
     } else {
-        let mods;
-        if ("pywebview" in window) {
-            mods = await pywebview.api.get_mods({ disabled: true });
-        } else {
-            mods = JSON.parse(
-                decodeURIComponent(
-                    new URLSearchParams(window.location.search).get("mods")
-                )
-            );
-        }
-        root = <BcmlRoot mods={mods} />;
+        root = <BcmlRoot />;
     }
     ReactDOM.render(root, document.getElementById("root"));
 });

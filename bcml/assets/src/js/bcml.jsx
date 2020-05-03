@@ -23,6 +23,7 @@ class BcmlRoot extends React.Component {
         super();
         this.state = {
             mods: [],
+            modsLoaded: false,
             selects: null,
             selectMod: null,
             selectPath: null,
@@ -38,7 +39,8 @@ class BcmlRoot extends React.Component {
             progressTitle: "",
             showConfirm: false,
             confirmText: "",
-            confirmCallback: () => {}
+            confirmCallback: () => {},
+            showAbout: false
         };
         this.selects = null;
 
@@ -50,6 +52,7 @@ class BcmlRoot extends React.Component {
         this.refreshMods = this.refreshMods.bind(this);
         this.export = this.export.bind(this);
         this.launchGame = this.launchGame.bind(this);
+        window.addEventListener("pywebviewready", () => this.refreshMods());
     }
 
     componentDidCatch(error) {
@@ -216,15 +219,16 @@ class BcmlRoot extends React.Component {
     }
 
     componentDidMount() {
-        this.setState({ mods: this.props.mods });
         window.onMsg = msg => {
             this.setState({ progressStatus: msg });
         };
     }
 
     refreshMods() {
-        pywebview.api.get_mods({ disabled: true }).then(mods => {
-            this.setState({ mods });
+        this.setState({ modsLoaded: false }, () => {
+            pywebview.api.get_mods({ disabled: true }).then(mods => {
+                this.setState({ mods, modsLoaded: true });
+            });
         });
     }
 
@@ -248,13 +252,18 @@ class BcmlRoot extends React.Component {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        <Dropdown.Item>About</Dropdown.Item>
+                        <Dropdown.Item>Help</Dropdown.Item>
+                        <Dropdown.Item
+                            onClick={() => this.setState({ showAbout: true })}>
+                            About
+                        </Dropdown.Item>
                     </Dropdown.Menu>
                 </Dropdown>
                 <Tabs id="tabs" mountOnEnter transition={Fade}>
                     <Tab eventKey="mod-list" title="Mods">
                         <Mods
                             mods={this.state.mods}
+                            loaded={this.state.modsLoaded}
                             onRefresh={this.refreshMods}
                             onConfirm={this.confirm}
                             onChange={mods => this.setState({ mods })}
@@ -318,6 +327,10 @@ class BcmlRoot extends React.Component {
                     onRestore={this.handleBackups}
                     onDelete={this.handleBackups}
                     onClose={() => this.setState({ showBackups: false })}
+                />
+                <AboutDialog
+                    show={this.state.showAbout}
+                    onClose={() => this.setState({ showAbout: false })}
                 />
                 <SelectsDialog
                     show={this.state.selectMod != null}
@@ -463,6 +476,62 @@ const ConfirmDialog = props => {
                 <Button
                     variant="secondary"
                     onClick={() => props.onClose(false)}>
+                    Close
+                </Button>
+            </Modal.Footer>
+        </Modal>
+    );
+};
+
+const AboutDialog = props => {
+    return (
+        <Modal show={props.show} onHide={props.onClose}>
+            <Modal.Header>
+                <Modal.Title>About BCML</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <p>
+                    BCML (Breath of the Wild Cross-platform Mod Loader) is a
+                    tool for merging and loading mods for{" "}
+                    <em>The Legend of Zelda: Breath of the Wild</em>. It is
+                    written in Python and ReactJS.
+                </p>
+                <p>
+                    This software is licensed under the terms of the GNU General
+                    Public License, version 3 or later. The source code is
+                    available for free at{" "}
+                    <a href="https://github.com/NiceneNerd/BCML/">
+                        https://github.com/NiceneNerd/BCML/
+                    </a>
+                    .
+                </p>
+                <p>
+                    This software includes the 7-Zip console application 7z.exe
+                    and the library 7z.dll, which are licensed under the GNU
+                    Lesser General Public License. The source code for this
+                    application is available for free at{" "}
+                    <a
+                        target="_blank"
+                        href="https://www.7-zip.org/download.html">
+                        https://www.7-zip.org/download.html
+                    </a>
+                    .
+                </p>
+                <p>
+                    This software includes a modified version of the console
+                    application msyt.exe by Kyle Clemens, &copy; 2018 under the
+                    MIT License. The source code for this application is
+                    available for free at{" "}
+                    <a
+                        target="_blank"
+                        href="https://gitlab.com/jkcclemens/msyt">
+                        https://gitlab.com/jkcclemens/msyt
+                    </a>
+                    .
+                </p>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button onClick={props.onClose} variant="secondary">
                     Close
                 </Button>
             </Modal.Footer>
