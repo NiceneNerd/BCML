@@ -6,6 +6,7 @@ from json import dumps
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
+from tempfile import TemporaryDirectory
 import shutil
 import subprocess
 import traceback
@@ -252,9 +253,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         tmp_dir: Path = install.open_mod(mod)
     elif mod.is_dir():
         print(f'Loading mod from {str(mod)}...')
-        tmp_dir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(mod).encode("utf-8"))}'
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
+        tmp_dir = Path(TemporaryDirectory().name)
         shutil.copytree(mod, tmp_dir)
     else:
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
@@ -340,4 +339,5 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         )
     else:
         subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    shutil.rmtree(tmp_dir, ignore_errors=True)
     print('Conversion complete.')

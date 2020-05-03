@@ -173,26 +173,57 @@ def extract_refs(language: str, tmp_dir: Path, files: set = None):
         raise RuntimeError(result.stderr.decode('utf8'))
 
 
-def diff_msyt(file_data: tuple, ref_dir: Path) -> {}:
-    file: str = file_data[0]
-    text: str = file_data[1].decode('utf8')
-    if not (ref_dir / file).exists():
-        return {
-            file: json.loads(text, encoding='utf-8')['entries']
-        }
-    ref_text = (ref_dir / file).read_text()
-    data = json.loads(text, encoding='utf-8')
-    ref_data = json.loads(ref_text, encoding='utf-8')
-    del ref_text
-    del text
-    return {
-        file: {
-            entry: value for entry, value in data['entries'].items() if (
-                entry not in ref_data['entries'] or value != ref_data['entries'][entry]
-            )
-        }
-    }
+# def diff_msyt(file_data: tuple, ref_dir: Path) -> {}:
+#     file: str = file_data[0].replace('\\', '/')
+#     text: str = file_data[1].decode('utf8')
+#     if not (ref_dir / file).exists():
+#         return {
+#             file: json.loads(text, encoding='utf-8')['entries']
+#         }
+#     ref_text = (ref_dir / file).read_text()
+#     data = json.loads(text, encoding='utf-8')
+#     ref_data = json.loads(ref_text, encoding='utf-8')
+#     del ref_text
+#     del text
+#     return {
+#         file: {
+#             entry: value for entry, value in data['entries'].items() if (
+#                 entry not in ref_data['entries'] or value != ref_data['entries'][entry]
+#             )
+#         }
+#     }
 
+def diff_msyt(msyt: Path, hashes: dict, mod_out: Path, ref_dir: Path):
+    diff = {}
+    filename = msyt.relative_to(mod_out).as_posix()
+    if any(ex in filename for ex in EXCLUDE_TEXTS):
+        msyt.unlink()
+        return {}
+    data = msyt.read_bytes()
+    xxh = xxhash.xxh64_intdigest(data)
+    if filename in hashes and hashes[filename] == xxh:
+        pass
+    else:
+        text = data.decode('utf8')
+        if filename not in hashes:
+            diff[filename] = json.loads(text, encoding='utf-8')['entries']
+        else:
+            ref_text = (ref_dir / filename).read_text('utf-8')
+            if "".join(text.split()) != "".join(ref_text.split()):
+                ref_contents = json.loads(ref_text, encoding='utf-8')
+                contents = json.loads(text, encoding='utf-8')
+                diff[filename] = {
+                    entry: value for entry, value in contents['entries'].items() if (
+                        entry not in ref_contents['entries'] or value != ref_contents['entries'][entry]
+                    )
+                }
+            else:
+                pass
+            del ref_text
+            del text
+    msyt.unlink()
+    del data
+    return diff
 
 def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
     diff = {}
@@ -207,41 +238,27 @@ def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
     with TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         mod_out = tmp_dir / 'mod'
+        print('Extracting mod texts...')
         for file in msg_sarc.get_files():
             out = mod_out / file.name
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(file.data)
         del msg_sarc
 
+        print('Converting texts to MSYT...')
         msbt_to_msyt(mod_out, pool=pool, do_error=False)
         hashes = get_text_hashes(language)
         ref_lang = 'XXen' if language.endswith('en') else language
+        print('Extracting reference texts...')
         extract_refs(ref_lang, tmp_dir)
         ref_dir = tmp_dir / 'refs' / ref_lang
 
-        files = {}
-        for msyt in mod_out.rglob('**/*.msyt'):
-            filename = msyt.relative_to(mod_out).as_posix()
-            if any(ex in filename for ex in EXCLUDE_TEXTS):
-                msyt.unlink()
-                continue
-            data = msyt.read_bytes()
-            xxh = xxhash.xxh64_intdigest(data)
-            if filename in hashes and hashes[filename] == xxh:
-                pass
-            else:
-                text = data.decode('utf8')
-                if filename not in hashes:
-                    diff[filename] = json.loads(text, encoding='utf-8')['entries']
-                else:
-                    ref_text = (ref_dir / filename).read_text('utf-8')
-                    if "".join(text.split()) != "".join(ref_text.split()):
-                        files[filename] = data
-                    del ref_text
-            msyt.unlink()
-            del data
         this_pool = pool or multiprocessing.Pool()
-        results = this_pool.map(partial(diff_msyt, ref_dir=ref_dir), files.items())
+        print('Identifying modified text files...')
+        results = this_pool.map(
+            partial(diff_msyt, ref_dir=ref_dir, hashes=hashes, mod_out=mod_out),
+            mod_out.rglob('**/*.msyt')
+        )
         if not pool:
             this_pool.close()
             this_pool.join()
@@ -267,7 +284,7 @@ def merge_msyt(file_data: tuple, tmp_dir: Path):
             json.dumps(
                 {
                     "group_count": len(changes),
-                    "atr1_unknown": 0,
+                    "atr1_unknown": 0 if 'EventFlowMsg' not in filename else 4,
                     "entries": changes
                 },
                 ensure_ascii=False
@@ -295,6 +312,7 @@ class TextsMerger(mergers.Merger):
         }
         if not languages:
             return None
+        util.vprint(f'Languages: {",".join(languages)}')
 
         language_map = {}
         save_langs = LANGUAGES if not self._options['user_only'] else [util.get_settings('lang')]
@@ -305,9 +323,11 @@ class TextsMerger(mergers.Merger):
                 language_map[lang] = [l for l in languages if l[2:4] == lang[2:4]][0]
             else:
                 language_map[lang] = [l for l in LANGUAGES if l in languages][0]
+        util.vprint(f'Language map:')
+        util.vprint(language_map)
 
         language_diffs = {}
-        for language in language_map.values():
+        for language in set(language_map.values()):
             print(f'Logging text changes for {language}...')
             language_diffs[language] = diff_language(
                 mod_dir / util.get_content_path() / 'Pack' / f'Bootup_{language}.pack',

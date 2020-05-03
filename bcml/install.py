@@ -15,6 +15,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
 from shutil import rmtree
+from tempfile import TemporaryDirectory
 from typing import List, Union, Callable
 from xml.dom import minidom
 
@@ -39,7 +40,7 @@ def extract_mod_meta(mod: Path) -> {}:
 def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
-    tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(path))}'
+    tmpdir = Path(TemporaryDirectory().name)
     archive_formats = {'.rar', '.zip', '.7z', '.bnp'}
     meta_formats = {'.json', '.txt'}
     if tmpdir.exists():
@@ -293,8 +294,7 @@ def refresh_master_export():
             settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
-def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merge: bool = False,
-                pool: Pool = None, insert_priority: int = 0):
+def install_mod(mod: Path, options: dict = None, selects: dict = None, pool: Pool = None, insert_priority: int = 0, merge_now: bool = False):
     if insert_priority == 0:
         insert_priority = get_next_priority()
     util.create_bcml_graphicpack_if_needed()
@@ -430,6 +430,7 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                     raise err
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
         rules['priority'] = priority
         (mod_dir / 'info.json').write_text(
@@ -464,40 +465,20 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                 shutil.rmtree(str(mod_dir))
         raise clean_error
 
+    if merge_now:
+        all_mergers = set()
+        partials = {}
+        for merger in {m() for m in mergers.get_mergers()}:
+            if merger.is_mod_logged(output_mod):
+                all_mergers.add(merger)
+                if merger.can_partial_remerge():
+                    partials[merger.NAME] = set(merger.get_mod_affected(output_mod))
+        for merger in mergers.sort_mergers(all_mergers):
+            if merger.NAME in partials:
+                merger.set_options({'only_these': partials[merger.NAME]})
+            merger.set_pool(this_pool)
+            merger.perform_merge()
 
-    # if wait_merge:
-    #     print('Mod installed, merge still pending...')
-    # else:
-    #     try:
-    #         print('Performing merges...')
-    #         if not options:
-    #             options = {}
-    #         if 'disable' not in options:
-    #             options['disable'] = []
-    #         if not this_pool:
-    #             this_pool = pool or Pool(cpu_count())
-    #         for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
-    #                                             if cls.NAME not in options['disable']]):
-    #             if merger.NAME in options:
-    #                 merger.set_options(options[merger.NAME])
-    #             if merger.is_mod_logged(output_mod):
-    #                 merger.set_pool(this_pool)
-    #                 merger.perform_merge()
-    #         print(f'{mod_name} installed successfully!')
-    #     except Exception: # pylint: disable=broad-except
-    #         clean_error = RuntimeError()
-    #         clean_error.error_text = (f'There was an error merging {mod_name}. '
-    #                                   'It processed and installed without error, but it has not '
-    #                                   'successfully merged with your other mods. '
-    #                                   'Here is the error:\n\n'
-    #                                   f'{traceback.format_exc(limit=-4)}\n\n'
-    #                                   f'To protect your mod setup, BCML will remove {mod_name} '
-    #                                   'and remerge.')
-    #         try:
-    #             uninstall_mod(mod_dir)
-    #         except FileNotFoundError:
-    #             pass
-    #         raise clean_error
     if this_pool and not pool:
         this_pool.close()
         this_pool.join()

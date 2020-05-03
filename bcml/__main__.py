@@ -33,7 +33,7 @@ def win_or_lose(func):
             with LOG.open('a') as log_file:
                 log_file.write(f'\n{err}\n')
             return {
-                'error': str(err.error_text),
+                'error': getattr(err, 'error_text'),
                 'error_text': hasattr(err, 'error_text')
             }
         return {'success': True}
@@ -209,7 +209,6 @@ class Api:
                     Path(m),
                     options=params['options'],
                     selects=selects.get(m, None),
-                    wait_merge=True,
                     pool=pool
                 ) for m in params['mods']
             ]
@@ -253,7 +252,8 @@ class Api:
         install.install_mod(
             Path(update_file),
             insert_priority=mod.priority,
-            options=options, wait_merge=False
+            options=options,
+            merge_now=True
         )
 
     @win_or_lose
@@ -276,8 +276,7 @@ class Api:
                 install.install_mod(
                     Path(i['path'].replace('QUEUE', '')),
                     options=i['options'],
-                    insert_priority=i['priority'],
-                    wait_merge=True
+                    insert_priority=i['priority']
                 )
             )
         set_start_method('spawn', True)
@@ -406,7 +405,7 @@ class Api:
         del meta['selects']
         dev.create_bnp_mod(
             mod=Path(params['folder']),
-            output=Path(out[0]),
+            output=Path(out[0] if isinstance(out, list) else out),
             meta=meta,
             options=params['options']
         )
