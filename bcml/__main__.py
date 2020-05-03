@@ -248,13 +248,18 @@ class Api:
             )
         else:
             options = {}
+        remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
-        install.install_mod(
+        new_mod = install.install_mod(
             Path(update_file),
             insert_priority=mod.priority,
-            options=options,
-            merge_now=True
+            options=options
         )
+        remergers.extend([m for m in mergers.get_mergers_for_mod(new_mod) if m not in remergers])
+        with Pool() as pool:
+            for merger in remergers:
+                merger.set_pool(pool)
+                merger.perform_merge()
 
     @win_or_lose
     @install.refresher
@@ -382,7 +387,7 @@ class Api:
             )
         )
         if out:
-            output = Path(out[0])
+            output = Path(out[0] if isinstance(out, list) else out)
             install.export(output)
 
     def get_option_folders(self, params):

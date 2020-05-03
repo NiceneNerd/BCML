@@ -137,7 +137,7 @@ class ModInfo extends React.Component {
                         onClick={() =>
                             this.props.onAction(this.props.mod, "update")
                         }>
-                        <i className="material-icons">sync</i>{" "}
+                        <i className="material-icons">update</i>{" "}
                         <span>Update</span>
                     </Button>
                     <Button

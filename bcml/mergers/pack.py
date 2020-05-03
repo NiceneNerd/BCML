@@ -15,6 +15,13 @@ import xxhash
 from bcml import data, util, mergers
 from bcml.util import BcmlMod
 
+SPECIAL = {
+    'GameData/gamedata.ssarc',
+    'GameData/savedataformat.ssarc',
+    'Layout/Common.sblarc',
+    'Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc'
+}
+
 
 def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
     opened_sarcs: List[oead.Sarc] = []
@@ -39,14 +46,17 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
             data = oead.Bytes(file.data)
             if util.is_file_modded(file.name.replace('.s', '.'), data, count_new=True):
-                if not Path(file.name).suffix in util.SARC_EXTS:
+                if not Path(file.name).suffix in util.SARC_EXTS or file.name in SPECIAL:
                     new_sarc.files[file.name] = data
                     files_added.add(file.name)
                 else:
                     if file.name not in nested_sarcs:
                         nested_sarcs[file.name] = []
-                    nested_sarcs[file.name].append(util.unyaz_if_needed(data))
+                        nested_sarcs[file.name].append(util.unyaz_if_needed(data))
+    util.vprint(set(nested_sarcs.keys()))
     for file, sarcs in nested_sarcs.items():
+        if not sarcs:
+            continue
         merged_bytes = merge_sarcs(file, sarcs)[1]
         if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
             merged_bytes = util.compress(merged_bytes)
