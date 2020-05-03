@@ -114,7 +114,7 @@ class StatusEffectMerger(mergers.Merger):
         )
         util.inject_file_into_bootup(
             'Ecosystem/StatusEffectList.sbyml',
-            util.compress(oead.byml.to_binary(effects, big_endian=util.get_settings('wiiu'))),
+            util.compress(effect_bytes),
             create_bootup=True
         )
         print('Saving status effect merge log...')

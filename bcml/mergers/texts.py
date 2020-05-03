@@ -221,7 +221,7 @@ def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
 
         files = {}
         for msyt in mod_out.rglob('**/*.msyt'):
-            filename = str(msyt.relative_to(mod_out))
+            filename = msyt.relative_to(mod_out).as_posix()
             if any(ex in filename for ex in EXCLUDE_TEXTS):
                 msyt.unlink()
                 continue

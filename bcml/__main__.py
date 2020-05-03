@@ -198,6 +198,7 @@ class Api:
         }
 
     @win_or_lose
+    @install.refresher
     def install_mod(self, params: dict):
         util.vprint(params)
         set_start_method('spawn', True)
@@ -212,6 +213,8 @@ class Api:
                     pool=pool
                 ) for m in params['mods']
             ]
+            util.vprint(f'Installed {len(mods)} mods')
+            print(f'Installed {len(mods)} mods')
             merger_set = {}
             try:
                 for mod in mods:
@@ -220,13 +223,13 @@ class Api:
                             None if not merger.can_partial_remerge()\
                                  else merger.get_mod_affected(mod)
                         )
+                util.vprint('')
                 util.vprint({m.NAME: merger_set[m] for m in merger_set if merger_set[m]})
                 for merger in merger_set:
                     if merger_set[merger] is not None:
                         merger.set_options({'only_these': merger_set[merger]})
                     merger.set_pool(pool)
                     merger.perform_merge()
-                install.link_master_mod()
                 print('Install complete')
             except Exception as err: # pylint: disable=broad-except
                 raise MergeError(err)
@@ -254,6 +257,7 @@ class Api:
         )
 
     @win_or_lose
+    @install.restore_backup
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob('*') if d.is_dir()}:
             rmtree(folder)

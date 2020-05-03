@@ -407,15 +407,7 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
     try:
         for existing_mod in util.get_installed_mods():
             if existing_mod.priority >= priority:
-                priority_shifted = existing_mod.priority + 1
-                new_id = util.get_mod_id(existing_mod.name, priority_shifted)
-                new_path = util.get_modpack_dir() / new_id
-                shutil.move(str(existing_mod.path), str(new_path))
-                existing_mod_rules = util.RulesParser()
-                existing_mod_rules.read(str(new_path / 'rules.txt'))
-                existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
-                with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
-                    existing_mod_rules.write(r_file)
+                existing_mod.change_priority(existing_mod.priority + 1)
 
         mod_dir.parent.mkdir(parents=True, exist_ok=True)
         print(f'Moving mod to {str(mod_dir)}...')
@@ -473,39 +465,39 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
         raise clean_error
 
 
-    if wait_merge:
-        print('Mod installed, merge still pending...')
-    else:
-        try:
-            print('Performing merges...')
-            if not options:
-                options = {}
-            if 'disable' not in options:
-                options['disable'] = []
-            if not this_pool:
-                this_pool = pool or Pool(cpu_count())
-            for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
-                                                if cls.NAME not in options['disable']]):
-                if merger.NAME in options:
-                    merger.set_options(options[merger.NAME])
-                if merger.is_mod_logged(output_mod):
-                    merger.set_pool(this_pool)
-                    merger.perform_merge()
-            print(f'{mod_name} installed successfully!')
-        except Exception: # pylint: disable=broad-except
-            clean_error = RuntimeError()
-            clean_error.error_text = (f'There was an error merging {mod_name}. '
-                                      'It processed and installed without error, but it has not '
-                                      'successfully merged with your other mods. '
-                                      'Here is the error:\n\n'
-                                      f'{traceback.format_exc(limit=-4)}\n\n'
-                                      f'To protect your mod setup, BCML will remove {mod_name} '
-                                      'and remerge.')
-            try:
-                uninstall_mod(mod_dir)
-            except FileNotFoundError:
-                pass
-            raise clean_error
+    # if wait_merge:
+    #     print('Mod installed, merge still pending...')
+    # else:
+    #     try:
+    #         print('Performing merges...')
+    #         if not options:
+    #             options = {}
+    #         if 'disable' not in options:
+    #             options['disable'] = []
+    #         if not this_pool:
+    #             this_pool = pool or Pool(cpu_count())
+    #         for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
+    #                                             if cls.NAME not in options['disable']]):
+    #             if merger.NAME in options:
+    #                 merger.set_options(options[merger.NAME])
+    #             if merger.is_mod_logged(output_mod):
+    #                 merger.set_pool(this_pool)
+    #                 merger.perform_merge()
+    #         print(f'{mod_name} installed successfully!')
+    #     except Exception: # pylint: disable=broad-except
+    #         clean_error = RuntimeError()
+    #         clean_error.error_text = (f'There was an error merging {mod_name}. '
+    #                                   'It processed and installed without error, but it has not '
+    #                                   'successfully merged with your other mods. '
+    #                                   'Here is the error:\n\n'
+    #                                   f'{traceback.format_exc(limit=-4)}\n\n'
+    #                                   f'To protect your mod setup, BCML will remove {mod_name} '
+    #                                   'and remerge.')
+    #         try:
+    #             uninstall_mod(mod_dir)
+    #         except FileNotFoundError:
+    #             pass
+    #         raise clean_error
     if this_pool and not pool:
         this_pool.close()
         this_pool.join()
