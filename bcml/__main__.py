@@ -257,7 +257,7 @@ class Api:
         )
 
     @win_or_lose
-    @install.restore_backup
+    @install.refresher
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob('*') if d.is_dir()}:
             rmtree(folder)

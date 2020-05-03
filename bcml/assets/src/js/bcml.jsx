@@ -440,7 +440,10 @@ const ErrorDialog = props => {
                         </Button>
                     </OverlayTrigger>
                 )}
-                <Button variant="primary" onClick={props.onClose}>
+                <Button
+                    className="py-2"
+                    variant="primary"
+                    onClick={props.onClose}>
                     OK
                 </Button>
             </Modal.Footer>

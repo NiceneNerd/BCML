@@ -7,6 +7,7 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 from functools import partial, lru_cache
 from math import ceil
 from multiprocessing import Pool, cpu_count, set_start_method
+from operator import itemgetter
 from pathlib import Path
 from typing import List, Union
 
@@ -227,7 +228,7 @@ class GameDataMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: BcmlMod):
-        diffs = {}
+        diffs = oead.byml.Hash()
         if self.is_mod_logged(mod):
             util.dict_merge(
                 diffs,
@@ -263,7 +264,7 @@ class GameDataMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = {}
+        all_diffs = oead.byml.Hash()
         for diff in diffs:
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
         return all_diffs
@@ -290,38 +291,28 @@ class GameDataMerger(mergers.Merger):
                 if xxhash.xxh64_hexdigest(str(modded_entries)) == l_file.read():
                     print('No gamedata merging necessary.')
                     return
-        merged_entries = {}
+        set_start_method('spawn', True)
+        this_pool = self._pool or Pool(cpu_count())
 
         print('Loading stock gamedata...')
-        gamedata = get_stock_gamedata()
-        for yml in gamedata.get_files():
-            base_yml = oead.byml.from_binary(yml.data)
-            for data_type in base_yml:
-                if data_type not in merged_entries:
-                    merged_entries[data_type] = []
-                merged_entries[data_type].extend(base_yml[data_type])
+        gamedata = consolidate_gamedata(get_stock_gamedata(), this_pool)
+        merged_entries = {
+            data_type: oead.byml.Hash({
+                entry['DataName']: entry for entry in entries
+            }) for data_type, entries in gamedata.items()
+        }
 
         print('Merging changes...')
-        for data_type in merged_entries:
-            if data_type in modded_entries:
-                for entry in [entry for entry in merged_entries[data_type]
-                              if entry['DataName'] in modded_entries[data_type]['add']]:
-                    i = merged_entries[data_type].index(entry)
-                    merged_entries[data_type][i] = (
-                        modded_entries[data_type]['add'][entry['DataName']]
-                    )
-                print(f'Merged modified {data_type} entries')
-
-        for data_type in modded_entries:
-            for entry in [entry for entry in modded_entries[data_type]['add']
-                          if entry not in [entry['DataName'] for entry in merged_entries[data_type]]
-                         ]:
-                merged_entries[data_type].append(modded_entries[data_type]['add'][entry])
-            print(f'Merged new {data_type} entries')
-            for entry in merged_entries[data_type]:
-                if entry['DataName'] in modded_entries[data_type]['del']:
-                    merged_entries[data_type].remove(entry)
-            print(f'Removed {len(modded_entries[data_type]["del"])} {data_type} entries')
+        for data_type in {d for d in merged_entries if d in modded_entries}:
+            util.dict_merge(merged_entries[data_type], modded_entries[data_type]['add'])
+            for entry in modded_entries[data_type]['del']:
+                del merged_entries[data_type][entry]
+        
+        merged_entries = oead.byml.Hash({
+            data_type: oead.byml.Array(
+                {value for _, value in entries.items()
+            }) for data_type, entries in merged_entries.items()
+        })
         print('Creating and injecting new gamedata.sarc...')
         new_gamedata = oead.SarcWriter(
             endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
@@ -464,6 +455,17 @@ class SaveDataMerger(mergers.Merger):
         save_files = sorted(savedata.get_files(), key=lambda f: f.name)[0:-2]
 
         print('Loading stock savedata...')
+        from time import time_ns
+        start = time_ns()
+        # merged_entries = oead.byml.Array(
+        #     sorted({
+        #     entry for entry in [
+        #         *[
+        #             e for file in save_files for e in oead.byml.from_binary(file.data)['file_list'][1]
+        #         ], *new_entries['add']
+        #     ] if entry not in new_entries['del']
+        #     }, key=itemgetter('HashValue'))
+        # )
         for file in save_files:
             merged_entries.extend(
                 oead.byml.from_binary(file.data)['file_list'][1]
@@ -475,7 +477,7 @@ class SaveDataMerger(mergers.Merger):
             if entry['HashValue'] in new_entries['del']:
                 merged_entries.remove(entry)
         merged_entries.sort(key=lambda x: x['HashValue'])
-
+        util.vprint(time_ns() - start)
         print('Creating and injecting new savedataformat.sarc...')
         new_savedata = oead.SarcWriter(
             endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
