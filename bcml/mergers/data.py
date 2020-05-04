@@ -7,6 +7,7 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 from functools import partial, lru_cache
 from math import ceil
 from multiprocessing import Pool, cpu_count, set_start_method
+from operator import itemgetter
 from pathlib import Path
 from typing import List, Union
 
@@ -125,7 +126,7 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     del game_dict
     del gamedata
     for result in results:
-        util.dict_merge(data, oead.byml.from_text(result))
+        util.dict_merge(data, oead.byml.from_text(result), overwrite_lists=True)
     if not pool:
         this_pool.close()
         this_pool.join()
@@ -310,11 +311,11 @@ class GameDataMerger(mergers.Merger):
             )
             for entry in modded_entries[data_type]['del']:
                 del merged_entries[data_type][entry]
-        
+
         merged_entries = oead.byml.Hash({
             data_type: oead.byml.Array(
-                {value for _, value in entries.items()
-            }) for data_type, entries in merged_entries.items()
+                {value for _, value in entries.items()}
+            ) for data_type, entries in merged_entries.items()
         })
         print('Creating and injecting new gamedata.sarc...')
         new_gamedata = oead.SarcWriter(
@@ -454,33 +455,18 @@ class SaveDataMerger(mergers.Merger):
                     return
 
         savedata = get_stock_savedata()
-        merged_entries = []
         save_files = sorted(savedata.get_files(), key=lambda f: f.name)[0:-2]
 
-        print('Loading stock savedata...')
-        from time import time_ns
-        start = time_ns()
-        # merged_entries = oead.byml.Array(
-        #     sorted({
-        #     entry for entry in [
-        #         *[
-        #             e for file in save_files for e in oead.byml.from_binary(file.data)['file_list'][1]
-        #         ], *new_entries['add']
-        #     ] if entry not in new_entries['del']
-        #     }, key=itemgetter('HashValue'))
-        # )
-        for file in save_files:
-            merged_entries.extend(
-                oead.byml.from_binary(file.data)['file_list'][1]
-            )
-
         print('Merging changes...')
-        merged_entries.extend(new_entries['add'])
-        for entry in merged_entries:
-            if entry['HashValue'] in new_entries['del']:
-                merged_entries.remove(entry)
-        merged_entries.sort(key=lambda x: x['HashValue'])
-        util.vprint(time_ns() - start)
+        merged_entries = oead.byml.Array(
+            sorted({
+                entry for entry in [
+                    *[
+                        e for file in save_files for e in oead.byml.from_binary(file.data)['file_list'][1]
+                    ], *new_entries['add']
+                ] if entry not in new_entries['del']
+            }, key=itemgetter('HashValue'))
+        )
         print('Creating and injecting new savedataformat.sarc...')
         new_savedata = oead.SarcWriter(
             endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
