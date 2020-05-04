@@ -245,7 +245,7 @@ class BcmlRoot extends React.Component {
 
     render() {
         return (
-            <React.Fragment>
+            <>
                 <Dropdown alignRight className="overflow-menu">
                     <Dropdown.Toggle id="dropdown-basic">
                         <i className="material-icons">menu</i>
@@ -366,7 +366,7 @@ class BcmlRoot extends React.Component {
                         );
                     }}
                 />
-            </React.Fragment>
+            </>
         );
     }
 }
@@ -418,7 +418,11 @@ class DoneDialog extends React.Component {
 
 const ErrorDialog = props => {
     return (
-        <Modal show={props.show} centered dialogClassName="modal-wide">
+        <Modal
+            show={props.show}
+            centered
+            dialogClassName="modal-wide"
+            onHide={props.onClose}>
             <Modal.Header closeButton>
                 <Modal.Title>Error</Modal.Title>
             </Modal.Header>

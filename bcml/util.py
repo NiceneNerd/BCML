@@ -109,6 +109,10 @@ class BcmlMod:
         return self._info['desc']
 
     @property
+    def platform(self) -> str:
+        return self._info['platform']
+
+    @property
     def image(self) -> str:
         return self._info['image']
 
@@ -852,6 +856,7 @@ class MultiDict(OrderedDict):
 
 
 class InstallError(Exception):
+    error_text: str
     pass
 
 class MergeError(Exception):

@@ -139,7 +139,7 @@ class FirstRun extends React.Component {
                         </Carousel.Item>
                         <Carousel.Item>
                             {this.state.settingsLoaded && (
-                                <React.Fragment>
+                                <>
                                     {this.state.oldSettings ? (
                                         <p>
                                             Take a look at your imported
@@ -177,7 +177,7 @@ class FirstRun extends React.Component {
                                         }
                                         onSubmit={this.saveSettings}
                                     />
-                                </React.Fragment>
+                                </>
                             )}
                         </Carousel.Item>
                         {this.state.oldMods > 0 && (
@@ -235,14 +235,14 @@ class FirstRun extends React.Component {
                                 <div className="d-flex align-items-start mt-2">
                                     {this.state.handlingMods &&
                                         (!this.state.modsHandled ? (
-                                            <React.Fragment>
+                                            <>
                                                 <Spinner animation="border" />
                                                 <div className="p-2">
                                                     {this.state.modProgress}
                                                 </div>
-                                            </React.Fragment>
+                                            </>
                                         ) : (
-                                            <React.Fragment>
+                                            <>
                                                 <h3>
                                                     <i className="material-icons">
                                                         check_circle
@@ -251,7 +251,7 @@ class FirstRun extends React.Component {
                                                 <p className="p-1">
                                                     Alright, done!
                                                 </p>
-                                            </React.Fragment>
+                                            </>
                                         ))}
                                 </div>
                             </Carousel.Item>

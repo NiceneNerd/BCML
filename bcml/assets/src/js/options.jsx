@@ -78,15 +78,17 @@ class OptionsDialog extends React.Component {
                     <Popover.Content>
                         {this.refOpts.map(opt => (
                             <React.Fragment key={opt.name}>
-                                <Form.Check
-                                    type="checkbox"
-                                    data-merger={opt.name}
-                                    value={this.state.options.disable.includes(
-                                        opt.name
-                                    )}
-                                    label={`Disable ${opt.friendly}`}
-                                    onChange={this.toggleDisable.bind(this)}
-                                />
+                                {opt.name != "general" && (
+                                    <Form.Check
+                                        type="checkbox"
+                                        data-merger={opt.name}
+                                        value={this.state.options.disable.includes(
+                                            opt.name
+                                        )}
+                                        label={`Disable ${opt.friendly}`}
+                                        onChange={this.toggleDisable.bind(this)}
+                                    />
+                                )}
                                 {Object.keys(opt.options).map(optName => (
                                     <Form.Check
                                         key={opt.name + optName}

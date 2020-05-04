@@ -230,7 +230,7 @@ class Mods extends React.Component {
 
     render() {
         return (
-            <React.Fragment>
+            <>
                 <div className="row">
                     <div className="col-4" id="mods">
                         {this.props.loaded ? (
@@ -475,7 +475,7 @@ class Mods extends React.Component {
                     onQueue={this.handleQueue}
                     onClose={() => this.setState({ showInstall: false })}
                 />
-            </React.Fragment>
+            </>
         );
     }
 }

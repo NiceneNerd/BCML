@@ -331,10 +331,19 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, pool: Poo
                     depend_name = b64decode(depend).decode('utf8')
                     err = InstallError(f'Missing dependency {depend_name}')
                     err.error_text = (
-                        f'This mod requires {depend_name}, but it is not installed. Please '
+                        f'{mod_name} requires {depend_name}, but it is not installed. Please '
                         f'install {depend_name} and try again.'
                     )
                     raise err
+        friendly_plaform = lambda p: 'Wii U' if p == 'wiiu' else 'Switch'
+        user_platform = 'wiiu' if util.get_settings('wiiu') else 'switch'
+        if rules['platform'] != user_platform and not options['options'].get('general', {}).get('agnostic', False):
+            err = InstallError('Incorrect platform')
+            err.error_text = (
+                f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not {friendly_plaform(user_platform)}. '
+                'If you want to use it, check the "Allow cross-platform install" option.'
+            )
+            raise err
 
         logs = tmp_dir / 'logs'
         if logs.exists():
@@ -669,22 +678,23 @@ def export(output: Path):
     print('Adding rules.txt...')
     rules_path = tmp_dir / 'rules.txt'
     mods = util.get_installed_mods()
-    with rules_path.open('w', encoding='utf-8') as rules:
-        rules.writelines([
-            '[Definition]\n',
-            'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
-            'name = Exported BCML Mod\n',
-            'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
-            f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
-            'version = 4\n'
-        ])
+    if util.get_settings('wiiu'):
+        with rules_path.open('w', encoding='utf-8') as rules:
+            rules.writelines([
+                '[Definition]\n',
+                'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
+                'name = Exported BCML Mod\n',
+                'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
+                f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
+                'version = 4\n'
+            ])
     if output.suffix == '.bnp' or output.name.endswith('.bnp.7z'):
         print('Exporting BNP...')
         dev.create_bnp_mod(
             mod=tmp_dir,
             meta={},
             output=output,
-            options={'rstb':{'guess':True}}
+            options={'rstb':{'no_guess':util.get_settings('no_guess')}}
         )
     else:
         print('Exporting as graphic pack mod...')

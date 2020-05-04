@@ -164,14 +164,20 @@ class Api:
             params = {}
         return self.window.create_file_dialog(
             file_types=(
+                'All supported files (*.bnp;*.7z;*.zip;*.rar;*.txt;*.json)',
                 'Packaged mods (*.bnp;*.7z;*.zip;*.rar)',
-                'Mod meta (*.txt;*.json)'
+                'Mod meta (*.txt;*.json)',
+                'All files (*.*)'
             ),
             allow_multiple=True if 'multiple' not in params else params['multiple']
         ) or []
 
     def get_options(self):
-        opts = []
+        opts = [{
+            'name': 'general',
+            'friendly': 'general options',
+            'options': {'agnostic': 'Allow cross-platform install'}
+        }]
         for merger in mergers.get_mergers():
             merger = merger()
             opts.append({
@@ -382,9 +388,10 @@ class Api:
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG,
             file_types=(
-                'BOTW Nano Patch (*.bnp)',
-                ('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere') + ' (*.zip)'
-            )
+                f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
+                'BOTW Nano Patch (*.bnp)'
+            ),
+            save_filename='exported-mods.zip'
         )
         if out:
             output = Path(out[0] if isinstance(out, list) else out)
