@@ -262,8 +262,10 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
     if (tmp_dir / 'rules.txt').exists():
         (tmp_dir / 'rules.txt').unlink()
 
+    if 'showDepends' in meta:
+        del meta['showDepends']
     meta['id'] = urlsafe_b64encode(meta['name'].encode('utf8')).decode('utf8')
-    meta['platform'] == 'wiiu' if util.get_settings('wiiu') else 'switch'
+    meta['platform'] = 'wiiu' if util.get_settings('wiiu') else 'switch'
     (tmp_dir / 'info.json').write_text(
         dumps(meta, ensure_ascii=False),
         encoding='utf-8'

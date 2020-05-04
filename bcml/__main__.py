@@ -489,10 +489,10 @@ def main():
                 api.get_mods({'disabled': True})
             )
         )
-        url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
+        url = 'assets/index.html' #str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
         width, height = 907, 680
     else:
-        url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
+        url = 'assets/index.html?firstrun=yes' #str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
         width, height = 750, 600
 
     api.window = webview.create_window(
