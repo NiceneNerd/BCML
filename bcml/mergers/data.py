@@ -7,7 +7,6 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 from functools import partial, lru_cache
 from math import ceil
 from multiprocessing import Pool, cpu_count, set_start_method
-from operator import itemgetter
 from pathlib import Path
 from typing import List, Union
 

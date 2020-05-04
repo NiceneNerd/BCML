@@ -228,14 +228,9 @@ class BcmlRoot extends React.Component {
 
     refreshMods() {
         this.setState({ modsLoaded: false }, () => {
-            console.log("loading mods...");
-            pywebview.api
-                .get_mods({ disabled: true })
-                .then(mods => {
-                    console.log("mods loaded");
-                    this.setState({ mods, modsLoaded: true });
-                })
-                .catch(this.showError);
+            pywebview.api.get_mods({ disabled: true }).then(mods => {
+                this.setState({ mods, modsLoaded: true });
+            });
         });
     }
 
