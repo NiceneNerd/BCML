@@ -49,7 +49,7 @@ class ModInfo extends React.Component {
 
     render() {
         return (
-            <React.Fragment>
+            <>
                 <div className="mod-header">
                     <img
                         src={
@@ -137,7 +137,7 @@ class ModInfo extends React.Component {
                         onClick={() =>
                             this.props.onAction(this.props.mod, "update")
                         }>
-                        <i className="material-icons">sync</i>{" "}
+                        <i className="material-icons">update</i>{" "}
                         <span>Update</span>
                     </Button>
                     <Button
@@ -154,7 +154,7 @@ class ModInfo extends React.Component {
                 </div>
                 <div className="mod-details">
                     {this.props.mod ? (
-                        <React.Fragment>
+                        <>
                             <span>
                                 <strong>Priority:</strong>{" "}
                                 {this.props.mod.priority}
@@ -179,7 +179,7 @@ class ModInfo extends React.Component {
                                     </a>
                                 </span>
                             )}
-                        </React.Fragment>
+                        </>
                     ) : (
                         "No mod selected"
                     )}
@@ -191,7 +191,7 @@ class ModInfo extends React.Component {
                         </div>
                     </div>
                 )}
-            </React.Fragment>
+            </>
         );
     }
 }

@@ -15,6 +15,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
 from shutil import rmtree
+from tempfile import TemporaryDirectory
 from typing import List, Union, Callable
 from xml.dom import minidom
 
@@ -39,7 +40,7 @@ def extract_mod_meta(mod: Path) -> {}:
 def open_mod(path: Path) -> Path:
     if isinstance(path, str):
         path = Path(path)
-    tmpdir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(path))}'
+    tmpdir = Path(TemporaryDirectory().name)
     archive_formats = {'.rar', '.zip', '.7z', '.bnp'}
     meta_formats = {'.json', '.txt'}
     if tmpdir.exists():
@@ -227,16 +228,18 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
 
     this_pool = pool or Pool(cpu_count())
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
-    for merger_class in [merger_class for merger_class in mergers.get_mergers() \
-                        if merger_class.NAME not in options['disable']]:
+    for i, merger_class in enumerate([merger_class for merger_class in mergers.get_mergers() \
+                        if merger_class.NAME not in options['disable']]):
         merger = merger_class()
         if options is not None and merger.NAME in options:
             merger.set_options(options[merger.NAME])
         merger.set_pool(this_pool)
+        util.vprint(f'Merger {merger.NAME}, #{i} of {len(mergers.get_mergers())}')
         merger.log_diff(tmp_dir, modded_files)
     if not pool:
         this_pool.close()
         this_pool.join()
+    util.vprint(modded_files)
     return modded_files
 
 
@@ -293,8 +296,7 @@ def refresh_master_export():
             settings.writexml(setpath.open('w', encoding='utf-8'), addindent='    ', newl='\n')
 
 
-def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merge: bool = False,
-                pool: Pool = None, insert_priority: int = 0):
+def install_mod(mod: Path, options: dict = None, selects: dict = None, pool: Pool = None, insert_priority: int = 0, merge_now: bool = False):
     if insert_priority == 0:
         insert_priority = get_next_priority()
     util.create_bcml_graphicpack_if_needed()
@@ -331,10 +333,20 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                     depend_name = b64decode(depend).decode('utf8')
                     err = InstallError(f'Missing dependency {depend_name}')
                     err.error_text = (
-                        f'This mod requires {depend_name}, but it is not installed. Please '
+                        f'{mod_name} requires {depend_name}, but it is not installed. Please '
                         f'install {depend_name} and try again.'
                     )
                     raise err
+        if not rules['platform'] == 'any':
+            friendly_plaform = lambda p: 'Wii U' if p == 'wiiu' else 'Switch'
+            user_platform = 'wiiu' if util.get_settings('wiiu') else 'switch'
+            if rules['platform'] != user_platform and not options['options'].get('general', {}).get('agnostic', False):
+                err = InstallError('Incorrect platform')
+                err.error_text = (
+                    f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not {friendly_plaform(user_platform)}. '
+                    'If you want to use it, check the "Allow cross-platform install" option.'
+                )
+                raise err
 
         logs = tmp_dir / 'logs'
         if logs.exists():
@@ -407,15 +419,7 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
     try:
         for existing_mod in util.get_installed_mods():
             if existing_mod.priority >= priority:
-                priority_shifted = existing_mod.priority + 1
-                new_id = util.get_mod_id(existing_mod.name, priority_shifted)
-                new_path = util.get_modpack_dir() / new_id
-                shutil.move(str(existing_mod.path), str(new_path))
-                existing_mod_rules = util.RulesParser()
-                existing_mod_rules.read(str(new_path / 'rules.txt'))
-                existing_mod_rules['Definition']['fsPriority'] = str(priority_shifted)
-                with (new_path / 'rules.txt').open('w', encoding='utf-8') as r_file:
-                    existing_mod_rules.write(r_file)
+                existing_mod.change_priority(existing_mod.priority + 1)
 
         mod_dir.parent.mkdir(parents=True, exist_ok=True)
         print(f'Moving mod to {str(mod_dir)}...')
@@ -438,6 +442,7 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                     raise err
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
         rules['priority'] = priority
         (mod_dir / 'info.json').write_text(
@@ -472,40 +477,20 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, wait_merg
                 shutil.rmtree(str(mod_dir))
         raise clean_error
 
+    if merge_now:
+        all_mergers = set()
+        partials = {}
+        for merger in {m() for m in mergers.get_mergers()}:
+            if merger.is_mod_logged(output_mod):
+                all_mergers.add(merger)
+                if merger.can_partial_remerge():
+                    partials[merger.NAME] = set(merger.get_mod_affected(output_mod))
+        for merger in mergers.sort_mergers(all_mergers):
+            if merger.NAME in partials:
+                merger.set_options({'only_these': partials[merger.NAME]})
+            merger.set_pool(this_pool)
+            merger.perform_merge()
 
-    if wait_merge:
-        print('Mod installed, merge still pending...')
-    else:
-        try:
-            print('Performing merges...')
-            if not options:
-                options = {}
-            if 'disable' not in options:
-                options['disable'] = []
-            if not this_pool:
-                this_pool = pool or Pool(cpu_count())
-            for merger in mergers.sort_mergers([cls() for cls in mergers.get_mergers() \
-                                                if cls.NAME not in options['disable']]):
-                if merger.NAME in options:
-                    merger.set_options(options[merger.NAME])
-                if merger.is_mod_logged(output_mod):
-                    merger.set_pool(this_pool)
-                    merger.perform_merge()
-            print(f'{mod_name} installed successfully!')
-        except Exception: # pylint: disable=broad-except
-            clean_error = RuntimeError()
-            clean_error.error_text = (f'There was an error merging {mod_name}. '
-                                      'It processed and installed without error, but it has not '
-                                      'successfully merged with your other mods. '
-                                      'Here is the error:\n\n'
-                                      f'{traceback.format_exc(limit=-4)}\n\n'
-                                      f'To protect your mod setup, BCML will remove {mod_name} '
-                                      'and remerge.')
-            try:
-                uninstall_mod(mod_dir)
-            except FileNotFoundError:
-                pass
-            raise clean_error
     if this_pool and not pool:
         this_pool.close()
         this_pool.join()
@@ -645,7 +630,10 @@ def restore_backup(backup: Union[str, Path]):
 
 
 def link_master_mod(output: Path = None):
+    util.create_bcml_graphicpack_if_needed()
     if not output:
+        if util.get_settings('no_cemu'):
+            return
         output = util.get_cemu_dir() / 'graphicPacks' / 'BreathOfTheWild_BCML'
     if output.exists():
         shutil.rmtree(str(output), ignore_errors=True)
@@ -655,7 +643,6 @@ def link_master_mod(output: Path = None):
         reverse=True
     )
     util.vprint(mod_folders)
-    util.create_bcml_graphicpack_if_needed()
     shutil.copy(
         str(util.get_master_modpack_dir() / 'rules.txt'),
         str(output / 'rules.txt')
@@ -664,9 +651,10 @@ def link_master_mod(output: Path = None):
     for mod_folder in mod_folders:
         for item in mod_folder.rglob('**/*'):
             rel_path = item.relative_to(mod_folder)
-            if (output / rel_path).exists()\
-               or (str(rel_path).startswith('logs'))\
-               or (len(rel_path.parts) == 1 and rel_path.suffix != '.txt'):
+            exists = (output / rel_path).exists()
+            is_log = str(rel_path).startswith('logs')
+            is_extra = len(rel_path.parts) == 1 and rel_path.suffix != '.txt' and not item.is_dir()
+            if exists or is_log or is_extra:
                 continue
             if item.is_dir():
                 (output / rel_path).mkdir(parents=True, exist_ok=True)
@@ -678,6 +666,10 @@ def link_master_mod(output: Path = None):
                     )
                 except OSError:
                     from shutil import copyfile as link_or_copy # pylint: disable=import-outside-toplevel
+                    link_or_copy(
+                        str(item),
+                        str(output / rel_path)
+                    )
 
 
 def export(output: Path):
@@ -689,22 +681,23 @@ def export(output: Path):
     print('Adding rules.txt...')
     rules_path = tmp_dir / 'rules.txt'
     mods = util.get_installed_mods()
-    with rules_path.open('w', encoding='utf-8') as rules:
-        rules.writelines([
-            '[Definition]\n',
-            'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
-            'name = Exported BCML Mod\n',
-            'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
-            f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
-            'version = 4\n'
-        ])
+    if util.get_settings('wiiu'):
+        with rules_path.open('w', encoding='utf-8') as rules:
+            rules.writelines([
+                '[Definition]\n',
+                'titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n',
+                'name = Exported BCML Mod\n',
+                'path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n',
+                f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
+                'version = 4\n'
+            ])
     if output.suffix == '.bnp' or output.name.endswith('.bnp.7z'):
         print('Exporting BNP...')
         dev.create_bnp_mod(
             mod=tmp_dir,
             meta={},
             output=output,
-            options={'rstb':{'guess':True}}
+            options={'rstb':{'no_guess':util.get_settings('no_guess')}}
         )
     else:
         print('Exporting as graphic pack mod...')

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Union, List
 
 import oead
+from oead.byml import Hash
 import rstb
 import rstb.util
 
@@ -26,7 +27,7 @@ def consolidate_map_files(modded_maps: List[str]) -> List[Map]:
     })
 
 
-def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> oead.byml.Hash:
+def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> Hash:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     try:
@@ -49,10 +50,12 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> o
         except FileNotFoundError:
             try:
                 title_pack = oead.Sarc(util.get_game_file('Pack/TitleBG.pack').read_bytes())
-                map_bytes = (title_pack
-                    .get_file(
+                map_bytes = (
+                    title_pack.get_file(
                         f'Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}'
-                        '.smubin').data)
+                        '.smubin'
+                    ).data
+                )
             except (KeyError, RuntimeError, AttributeError):
                 map_bytes = None
     else:
@@ -89,7 +92,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> o
     return oead.byml.from_binary(map_bytes)
 
 
-def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash:
+def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
     if isinstance(map_unit, tuple):
         map_unit = Map(*map_unit)
     map_bytes = None
@@ -119,8 +122,10 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash
             ).read_bytes()
         elif (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\
                 f'{map_unit.section}_{map_unit.type}.smubin').exists():
-            map_bytes = (tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /\
-                         f'{map_unit.section}_{map_unit.type}.smubin').read_bytes()
+            map_bytes = (
+                tmp_dir / util.get_content_path() / 'Map' / 'MainField' / map_unit.section /
+                f'{map_unit.section}_{map_unit.type}.smubin'
+            ).read_bytes()
     if not map_bytes:
         raise FileNotFoundError(
             f'Oddly, the modded map {map_unit.section}_{map_unit.type}.smubin '
@@ -130,11 +135,11 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> oead.byml.Hash
     return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(base_map: Union[oead.byml.Hash, Map], mod_map: oead.byml.Hash, no_del: bool = False, 
-                 link_del: bool = False) -> oead.byml.Hash:
-    diffs = oead.byml.Hash({
+def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False, 
+                 link_del: bool = False) -> Hash:
+    diffs = Hash({
         'add': oead.byml.Array(),
-        'mod': oead.byml.Hash(),
+        'mod': Hash(),
         'del': oead.byml.Array()
     })
     if isinstance(base_map, Map):
@@ -168,9 +173,9 @@ def get_map_diff(base_map: Union[oead.byml.Hash, Map], mod_map: oead.byml.Hash, 
 
 
 def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
-                            link_del: bool = False) -> oead.byml.Hash:
+                            link_del: bool = False) -> Hash:
     """Generates a dict log of modified mainfield maps"""
-    diffs = oead.byml.Hash()
+    diffs = Hash()
     modded_maps = consolidate_map_files(modded_mubins)
     for modded_map in modded_maps:
         diffs['_'.join(modded_map)] = get_map_diff(
@@ -388,16 +393,20 @@ class MapMerger(mergers.Merger):
     def perform_merge(self):
         no_del = self._options['no_del']
         link_del = self._options['link_del']
-        aoc_pack = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / \
+        aoc_pack = (
+            util.get_master_modpack_dir() / util.get_dlc_path() /
+            ('0010' if util.get_settings('wiiu') else '') /
             'Pack' / 'AocMainField.pack'
+        )
         if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
             print('Emptying AocMainField.pack...')
             aoc_pack.parent.mkdir(parents=True, exist_ok=True)
             aoc_pack.write_bytes(b'')
         shutil.rmtree(str(util.get_master_modpack_dir() /
-                        util.get_dlc_path() / '0010' / 'Map' / 'MainField'), ignore_errors=True)
+                          util.get_dlc_path() / ('0010' if util.get_settings('wiiu') else '') /
+                          'Map' / 'MainField'), ignore_errors=True)
         shutil.rmtree(str(util.get_master_modpack_dir() /
-                        util.get_content_path() / 'Map' / 'MainField'), ignore_errors=True)
+                          util.get_content_path() / 'Map' / 'MainField'), ignore_errors=True)
         log_path = util.get_master_modpack_dir() / 'logs' / 'map.log'
         if log_path.exists():
             log_path.unlink()
@@ -442,7 +451,7 @@ class MapMerger(mergers.Merger):
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return {
-            f'{key.section}_{key.type}' for key in self.consolidate_diffs(self.get_mod_diff(mod)).keys()
+            f'{key.section}_{key.type}' for key in self.consolidate_diffs(self.get_mod_diff(mod))
         }
 
 

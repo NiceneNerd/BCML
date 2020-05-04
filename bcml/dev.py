@@ -1,17 +1,18 @@
+# pylint: disable=unsupported-assignment-operation
+from base64 import urlsafe_b64encode
 from fnmatch import fnmatch
 from functools import partial
+from json import dumps
 from multiprocessing import Pool, cpu_count, set_start_method
 from pathlib import Path
 from platform import system
+from tempfile import TemporaryDirectory
 import shutil
 import subprocess
 import traceback
 
-import aamp
-from aamp import yaml_util
 import oead
 import xxhash
-import yaml
 
 from . import util, install
 
@@ -85,8 +86,8 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
             packed.files[file.relative_to(folder).as_posix()] = file.read_bytes()
     else:
         for file in {
-            f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
-        }:
+                f for f in folder.rglob('**/*') if f.is_file() and not f.suffix in EXCLUDE_EXTS
+            }:
             file_data = file.read_bytes()
             xhash = xxhash.xxh64_intdigest(util.unyaz_if_needed(file_data))
             file_name = file.relative_to(folder).as_posix()
@@ -97,13 +98,13 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
                     )
                 )
             if file_name not in old_files or (
-                xhash != old_hash and file.suffix not in util.AAMP_EXTS
-            ):
+                    xhash != old_hash and file.suffix not in util.AAMP_EXTS
+                ):
                 packed.files[file_name] = file_data
     finally:
         shutil.rmtree(folder)
         if not packed.files:
-            return
+            return # pylint: disable=lost-exception
         sarc_bytes = packed.write()[1]
         folder.write_bytes(
             util.compress(sarc_bytes) if (
@@ -131,7 +132,6 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
             file for file in sarc_files if file.suffix in util.SARC_EXTS
         ]
         if final_packs:
-            from json import dumps
             (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
             (tmp_dir / 'logs' / 'packs.json').write_text(
                 dumps({
@@ -216,8 +216,8 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
 
     if (tmp_dir / 'logs' / 'map.yml').exists():
         print('Removing map units...')
-        for file in [file for file in logged_files if isinstance(file, Path) and \
-                           fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
+        for file in [file for file in tmp_dir.rglob('**/*.smubin') \
+                     if fnmatch(file.name, '[A-Z]-[0-9]_*.smubin')]:
             file.unlink()
 
     if set((tmp_dir / 'logs').glob('*texts*')):
@@ -253,9 +253,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         tmp_dir: Path = install.open_mod(mod)
     elif mod.is_dir():
         print(f'Loading mod from {str(mod)}...')
-        tmp_dir = util.get_work_dir() / f'tmp_{xxhash.xxh64_hexdigest(str(mod).encode("utf-8"))}'
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
+        tmp_dir = Path(TemporaryDirectory().name)
         shutil.copytree(mod, tmp_dir)
     else:
         print(f'Error: {str(mod)} is neither a valid file nor a directory')
@@ -263,10 +261,12 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
     if (tmp_dir / 'rules.txt').exists():
         (tmp_dir / 'rules.txt').unlink()
-    
-    from base64 import urlsafe_b64encode
+
+    if 'showDepends' in meta:
+        del meta['showDepends']
     meta['id'] = urlsafe_b64encode(meta['name'].encode('utf8')).decode('utf8')
-    from json import dumps
+    any_platform = options.get('options', dict()).get('general', dict()).get('agnostic', False)
+    meta['platform'] = 'any' if any_platform else 'wiiu' if util.get_settings('wiiu') else 'switch'
     (tmp_dir / 'info.json').write_text(
         dumps(meta, ensure_ascii=False),
         encoding='utf-8'
@@ -343,4 +343,5 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         )
     else:
         subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    shutil.rmtree(tmp_dir, ignore_errors=True)
     print('Conversion complete.')

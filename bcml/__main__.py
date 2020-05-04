@@ -4,6 +4,7 @@ import platform
 import sys
 import traceback
 import urllib
+from collections import Iterable
 from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
 from multiprocessing import Pool, cpu_count, set_start_method
@@ -33,7 +34,7 @@ def win_or_lose(func):
             with LOG.open('a') as log_file:
                 log_file.write(f'\n{err}\n')
             return {
-                'error': str(err.error_text),
+                'error': getattr(err, 'error_text'),
                 'error_text': hasattr(err, 'error_text')
             }
         return {'success': True}
@@ -62,7 +63,8 @@ class Api:
             raise err
         settings = util.get_settings()
         util.get_game_dir()
-        util.get_update_dir()
+        if settings['wiiu']:
+            util.get_update_dir()
         if not settings['no_cemu']:
             util.get_cemu_dir()
 
@@ -163,14 +165,20 @@ class Api:
             params = {}
         return self.window.create_file_dialog(
             file_types=(
+                'All supported files (*.bnp;*.7z;*.zip;*.rar;*.txt;*.json)',
                 'Packaged mods (*.bnp;*.7z;*.zip;*.rar)',
-                'Mod meta (*.txt;*.json)'
+                'Mod meta (*.txt;*.json)',
+                'All files (*.*)'
             ),
             allow_multiple=True if 'multiple' not in params else params['multiple']
         ) or []
 
     def get_options(self):
-        opts = []
+        opts = [{
+            'name': 'general',
+            'friendly': 'general options',
+            'options': {'agnostic': 'Allow cross-platform install'}
+        }]
         for merger in mergers.get_mergers():
             merger = merger()
             opts.append({
@@ -208,10 +216,11 @@ class Api:
                     Path(m),
                     options=params['options'],
                     selects=selects.get(m, None),
-                    wait_merge=True,
                     pool=pool
                 ) for m in params['mods']
             ]
+            util.vprint(f'Installed {len(mods)} mods')
+            print(f'Installed {len(mods)} mods')
             merger_set = {}
             try:
                 for mod in mods:
@@ -220,6 +229,8 @@ class Api:
                             None if not merger.can_partial_remerge()\
                                  else merger.get_mod_affected(mod)
                         )
+                util.vprint('')
+                util.vprint({m.NAME: merger_set[m] for m in merger_set if merger_set[m]})
                 for merger in merger_set:
                     if merger_set[merger] is not None:
                         merger.set_options({'only_these': merger_set[merger]})
@@ -244,14 +255,21 @@ class Api:
             )
         else:
             options = {}
+        remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
-        install.install_mod(
+        new_mod = install.install_mod(
             Path(update_file),
             insert_priority=mod.priority,
-            options=options, wait_merge=False
+            options=options
         )
+        remergers.extend([m for m in mergers.get_mergers_for_mod(new_mod) if m not in remergers])
+        with Pool() as pool:
+            for merger in remergers:
+                merger.set_pool(pool)
+                merger.perform_merge()
 
     @win_or_lose
+    @install.refresher
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob('*') if d.is_dir()}:
             rmtree(folder)
@@ -270,8 +288,7 @@ class Api:
                 install.install_mod(
                     Path(i['path'].replace('QUEUE', '')),
                     options=i['options'],
-                    insert_priority=i['priority'],
-                    wait_merge=True
+                    insert_priority=i['priority']
                 )
             )
         set_start_method('spawn', True)
@@ -372,12 +389,14 @@ class Api:
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG,
             file_types=(
-                'BOTW Nano Patch (*.bnp)',
-                ('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere') + ' (*.zip)'
-            )
+                f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
+                'BOTW Nano Patch (*.bnp)'
+            ),
+            save_filename='exported-mods.zip'
         )
-        output = Path(out[0])
-        install.export(output)
+        if out:
+            output = Path(out[0] if isinstance(out, Iterable) else out)
+            install.export(output)
 
     def get_option_folders(self, params):
         try:
@@ -399,7 +418,7 @@ class Api:
         del meta['selects']
         dev.create_bnp_mod(
             mod=Path(params['folder']),
-            output=Path(out[0]),
+            output=Path(out[0] if isinstance(out, Iterable) else out),
             meta=meta,
             options=params['options']
         )
@@ -452,6 +471,9 @@ class Api:
         else:
             run(x_args, stdout=PIPE, stderr=PIPE, check=True)
 
+    def open_help(self):
+        webview.create_window('BCML Help', url='assets/help.html?page=main')
+
 
 def main():
     try:
@@ -466,15 +488,10 @@ def main():
 
     url: str
     if (util.get_data_dir() / 'settings.json').exists():
-        mods = urllib.parse.quote(
-            json.dumps(
-                api.get_mods({'disabled': True})
-            )
-        )
-        url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
+        url = 'assets/index.html' #str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
         width, height = 907, 680
     else:
-        url = str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
+        url = 'assets/index.html?firstrun=yes' #str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
         width, height = 750, 600
 
     api.window = webview.create_window(
@@ -483,18 +500,23 @@ def main():
         js_api=api,
         text_select=DEBUG,
         width=width,
-        height=height
+        height=height,
+        min_size=(width if width == 750 else 820, 600)
     )
 
     no_cef = find_spec('cefpython3') is None or NO_CEF
-    mods = util.get_installed_mods(True)
+    gui: str = ''
+    if system() == 'Windows' and not no_cef:
+        gui = 'cef'
+    elif system() == 'Linux':
+        gui = 'qt'
 
     with redirect_stderr(sys.stdout):
         with redirect_stdout(Messager(api.window)):
             webview.start(
-                gui='' if no_cef else 'cef',
+                gui=gui,
                 debug=DEBUG if not no_cef else False,
-                http_server=False
+                http_server=True
             )
 
 if __name__ == "__main__":
