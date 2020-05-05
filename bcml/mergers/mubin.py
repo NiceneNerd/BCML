@@ -146,10 +146,9 @@ def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False
         base_map = get_stock_map(base_map, force_vanilla=stock_map)
 
     base_hashes = [int(obj['HashId']) for obj in base_map['Objs']]
-    base_links = set() if not link_del else {
-        int(link['DestUnitHashId']) for links in {
-            obj['LinksToObj'] for obj in base_map['Objs'] if 'LinksToObj' in obj
-        } for link in links
+    base_links = set() if link_del else {
+        int(link['DestUnitHashId']) for obj in base_map['Objs']\
+            for link in obj.get('LinksToObj', []) if 'LinksToObj' in obj
     }
     mod_hashes = [int(obj['HashId']) for obj in mod_map['Objs']]
 
