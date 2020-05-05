@@ -176,17 +176,15 @@ class PackMerger(mergers.Merger):
             print('No SARC merging necessary')
             return
         print(f'Merging {len(sarcs)} SARC files...')
-        if not self._pool:
-            num_threads = min(cpu_count(), len(sarcs))
-        pool = self._pool or Pool(processes=num_threads)
+        pool = self._pool or Pool()
         results = pool.starmap(merge_sarcs, sarcs.items())
         for result in results:
-            file, data = result
+            file, file_data = result
             output_path = util.get_master_modpack_dir() / file
             output_path.parent.mkdir(parents=True, exist_ok=True)
             if output_path.suffix.startswith('.s'):
-                data = util.compress(data)
-            output_path.write_bytes(data)
+                file_data = util.compress(file_data)
+            output_path.write_bytes(file_data)
         if not self._pool:
             pool.close()
             pool.join()

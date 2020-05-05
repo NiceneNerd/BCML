@@ -336,9 +336,8 @@ class DeepMerger(mergers.Merger):
 
         print('Performing deep merge...')
         if not self._pool:
-            num_threads = min(multiprocessing.cpu_count(), len(diffs))
             multiprocessing.set_start_method('spawn', True)
-        pool = self._pool or multiprocessing.Pool(processes=num_threads)
+        pool = self._pool or multiprocessing.Pool()
         pool.map(partial(threaded_merge), diffs.items())
         if not self._pool:
             pool.close()

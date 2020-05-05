@@ -273,7 +273,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
     )
 
     set_start_method('spawn', True)
-    with Pool(cpu_count()) as pool:
+    with Pool() as pool:
         yml_files = set(tmp_dir.glob('**/*.yml'))
         if yml_files:
             print('Compiling YAML documents...')

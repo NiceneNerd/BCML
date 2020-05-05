@@ -209,7 +209,7 @@ class Api:
     def install_mod(self, params: dict):
         util.vprint(params)
         set_start_method('spawn', True)
-        with Pool(cpu_count()) as pool:
+        with Pool() as pool:
             selects = params['selects'] if 'selects' in params and params['selects'] else {}
             mods = [
                 install.install_mod(
@@ -292,7 +292,7 @@ class Api:
                 )
             )
         set_start_method('spawn', True)
-        with Pool(cpu_count()) as pool:
+        with Pool() as pool:
             print('Remerging where needed...')
             all_mergers = [merger() for merger in mergers.get_mergers()]
             remergers = set()

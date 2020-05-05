@@ -146,8 +146,7 @@ def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
     if sarc_files:
         print(f'Scanning files packed in SARCs...')
         set_start_method('spawn', True)
-        num_threads = min(len(sarc_files), cpu_count() - 1)
-        pool = Pool(processes=num_threads)
+        pool = Pool()
         modded_sarc_files = pool.map(
             partial(find_modded_sarc_files, tmp_dir=tmp_dir),
             sarc_files
@@ -225,7 +224,7 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
         )
         raise err
 
-    this_pool = pool or Pool(cpu_count())
+    this_pool = pool or Pool()
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
     for i, merger_class in enumerate([merger_class for merger_class in mergers.get_mergers() \
                         if merger_class.NAME not in options['disable']]):
@@ -354,7 +353,7 @@ def install_mod(mod: Path, options: dict = None, selects: dict = None, pool: Poo
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
                     (tmp_dir / 'logs' / merger.log_name).unlink()
         else:
-            this_pool = pool or Pool(cpu_count())
+            this_pool = pool or Pool()
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
     except Exception as err: # pylint: disable=broad-except
         if hasattr(err, 'error_text'):
@@ -567,7 +566,7 @@ def refresh_merges():
     shutil.rmtree(util.get_master_modpack_dir(), True)
     print('Refreshing merged mods...')
     set_start_method('spawn', True)
-    with Pool(cpu_count()) as pool:
+    with Pool() as pool:
         for merger in mergers.sort_mergers(
                 [merger_class() for merger_class in mergers.get_mergers()]
             ):

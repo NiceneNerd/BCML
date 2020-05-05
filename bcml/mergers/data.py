@@ -115,7 +115,7 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
 def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     data = {}
     set_start_method('spawn', True)
-    this_pool = pool or Pool(processes=cpu_count())
+    this_pool = pool or Pool()
     game_dict = {}
     for file in gamedata.get_files():
         game_dict[file.name] = bytes(file.data)
@@ -152,7 +152,7 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     set_start_method('spawn', True)
-    this_pool = pool or Pool(cpu_count())
+    this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
     if not pool:
@@ -207,14 +207,18 @@ class GameDataMerger(mergers.Merger):
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
                 )
             )
-            return get_modded_gamedata_entries(
-                oead.Sarc(
-                    util.decompress(
-                        bootup_sarc.get_file('GameData/gamedata.ssarc').data
-                    )
-                ),
+            data_sarc = oead.Sarc(
+                util.decompress(
+                    bootup_sarc.get_file('GameData/gamedata.ssarc').data
+                )
+            )
+            diff = get_modded_gamedata_entries(
+                data_sarc,
                 pool=self._pool
             )
+            del bootup_sarc
+            del data_sarc
+            return diff
         else:
             return {}
 
@@ -292,7 +296,7 @@ class GameDataMerger(mergers.Merger):
                     print('No gamedata merging necessary.')
                     return
         set_start_method('spawn', True)
-        this_pool = self._pool or Pool(cpu_count())
+        this_pool = self._pool or Pool()
 
         print('Loading stock gamedata...')
         gamedata = consolidate_gamedata(get_stock_gamedata(), this_pool)

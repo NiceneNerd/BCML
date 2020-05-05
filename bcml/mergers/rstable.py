@@ -438,7 +438,7 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if not pool:
             multiprocessing.set_start_method('spawn', True)
             num_threads = min(multiprocessing.cpu_count(), len(sarc_files))
-        p = pool or multiprocessing.Pool(processes=num_threads)
+        p = pool or multiprocessing.Pool()
         results = p.map(_get_sizes_in_sarc, sarc_files)
         for result in results:
             diffs.update(result)

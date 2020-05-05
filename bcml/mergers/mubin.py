@@ -423,9 +423,8 @@ class MapMerger(mergers.Merger):
         print('Merging modded map units...')
 
         if not self._pool:
-            num_threads = min(cpu_count() - 1, len(map_diffs))
             set_start_method('spawn', True)
-        pool = self._pool or Pool(processes=num_threads)
+        pool = self._pool or Pool()
         rstb_results = pool.map(
             partial(merge_map, rstb_calc=rstb_calc, no_del=no_del, link_del=link_del),
             [(key, oead.byml.to_text(value)) for key, value in map_diffs.items()]

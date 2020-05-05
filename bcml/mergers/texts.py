@@ -93,9 +93,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool
         print('Some MSBTs failed to convert. Trying again individually...')
         if not pool:
             multiprocessing.set_start_method('spawn', True)
-        this_pool = pool or multiprocessing.Pool(
-            processes=min(multiprocessing.cpu_count(), len(fix_msbts))
-        )
+        this_pool = pool or multiprocessing.Pool()
         this_pool.map(partial(_msyt_file, do_error=do_error), fix_msbts)
         fix_msbts = [
             msbt for msbt in folder.rglob('**/*.msbt') if not msbt.with_suffix('.msyt').exists()
