@@ -229,8 +229,8 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
     for i, merger_class in enumerate([merger_class for merger_class in mergers.get_mergers() \
                         if merger_class.NAME not in options['disable']]):
         merger = merger_class()
-        if options is not None and merger.NAME in options:
-            merger.set_options(options[merger.NAME])
+        if options is not None and merger.NAME in options['options']:
+            merger.set_options(options['options'][merger.NAME])
         merger.set_pool(this_pool)
         util.vprint(f'Merger {merger.NAME}, #{i} of {len(mergers.get_mergers())}')
         merger.log_diff(tmp_dir, modded_files)

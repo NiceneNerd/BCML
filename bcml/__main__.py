@@ -3,15 +3,14 @@ import json
 import platform
 import sys
 import traceback
-import urllib
-from collections import Iterable
+from collections.abc import Iterable
 from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool, set_start_method
 from pathlib import Path
 from platform import system
 from shutil import rmtree
-from subprocess import Popen, run, PIPE
+from subprocess import run, PIPE
 
 import webview
 

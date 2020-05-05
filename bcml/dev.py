@@ -301,7 +301,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                 'disable': [],
                 'options': {}
             }
-        options['texts'] = {'user_only': False}
+        options['options']['texts'] = {'user_only': False}
 
         try:
             _make_bnp_logs(tmp_dir, options)
