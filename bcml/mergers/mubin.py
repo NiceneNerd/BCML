@@ -3,14 +3,13 @@
 # Licensed under GPLv3+
 import shutil
 from collections import namedtuple
-from copy import deepcopy
 from functools import partial
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool, set_start_method
 from pathlib import Path
 from typing import Union, List
 
 import oead
-from oead.byml import Hash
+from oead.byml import Hash, Array # pylint: disable=unresolved-import
 import rstb
 import rstb.util
 
@@ -135,13 +134,8 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
     return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False, 
+def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False,
                  link_del: bool = False) -> Hash:
-    diffs = Hash({
-        'add': oead.byml.Array(),
-        'mod': Hash(),
-        'del': oead.byml.Array()
-    })
     if isinstance(base_map, Map):
         stock_map = True
         for obj in mod_map['Objs']:
@@ -150,45 +144,43 @@ def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False
                 stock_map = False
                 break
         base_map = get_stock_map(base_map, force_vanilla=stock_map)
+
     base_hashes = [int(obj['HashId']) for obj in base_map['Objs']]
-    base_links = set()
-    if not link_del:
-        for obj in base_map['Objs']:
-            if 'LinksToObj' in obj:
-                base_links |= {
-                    int(link['DestUnitHashId']) for link in obj['LinksToObj']
-                }
+    base_links = set() if not link_del else {
+        int(link['DestUnitHashId']) for links in {
+            obj['LinksToObj'] for obj in base_map['Objs'] if 'LinksToObj' in obj
+        } for link in links
+    }
     mod_hashes = [int(obj['HashId']) for obj in mod_map['Objs']]
-    for obj in mod_map['Objs']:
-        if int(obj['HashId']) not in base_hashes:
-            diffs['add'].append(obj)
-        elif int(obj['HashId']) in base_hashes and\
-             obj != base_map['Objs'][base_hashes.index(int(obj['HashId']))]:
-            diffs['mod'][str(obj['HashId'])] = obj
-    diffs['del'].extend([
-        oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes and \
-            not no_del and not (not link_del and hash_id in base_links)
-    ])
+
+    diffs = Hash()
+    diffs['add'] = Array({obj for obj in mod_map['Objs'] if int(obj['HashId']) not in base_hashes})
+    diffs['mod'] = Hash({
+        str(obj['HashId']): obj for obj in mod_map['Objs'] \
+            if int(obj['HashId']) in base_hashes \
+                and obj != base_map['Objs'][base_hashes.index(int(obj['HashId']))]
+    })
+    diffs['del'] = Array({
+        oead.U32(hash_id) for hash_id in base_hashes if hash_id not in {*mod_hashes, *base_links}
+    } if not no_del else set())
     return diffs
 
 
 def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
                             link_del: bool = False) -> Hash:
     """Generates a dict log of modified mainfield maps"""
-    diffs = Hash()
     modded_maps = consolidate_map_files(modded_mubins)
-    for modded_map in modded_maps:
-        diffs['_'.join(modded_map)] = get_map_diff(
+    return oead.byml.Hash({
+        '_'.join(modded_map): get_map_diff(
             modded_map,
             get_modded_map(modded_map, tmp_dir),
             no_del=no_del,
             link_del=link_del
-        )
-    return diffs
+        ) for modded_map in modded_maps
+    })
 
 
-def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False,
-              link_del: bool = False) -> {}:
+def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False) -> {}:
     map_unit, changes = map_pair[0], oead.byml.from_text(map_pair[1])
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
@@ -316,21 +308,27 @@ def merge_dungeonstatic(diffs: dict = None):
 
 
 class MapMerger(mergers.Merger):
+    # pylint: disable=abstract-method
     NAME: str = 'maps'
 
-    def __init__(self, no_del: bool = False, link_del: bool = False):
+    def __init__(self):
         super().__init__('maps', 'Merges changes to actors in mainfield map units',
-                         'map.yml', options={'no_del': no_del, 'link_del': link_del})
+                         'map.yml')
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        modded_mubins = [file for file in modded_files if isinstance(file, Path) and \
-                         file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name]
+        modded_mubins = [
+            file for file in modded_files if isinstance(file, Path) and \
+                file.suffix == '.smubin' and 'MainField' in file.parts and '_' in file.name
+        ]
         if modded_mubins:
             print('Logging changes to mainfield maps...')
-            return generate_modded_map_log(mod_dir, modded_mubins, no_del=self._options['no_del'], 
-                                           link_del=self._options['link_del'])
-        else:
-            return {}
+            return generate_modded_map_log(
+                mod_dir,
+                modded_mubins,
+                no_del=self._options['no_del'],
+                link_del=self._options['link_del']
+            )
+        return {}
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
@@ -455,6 +453,7 @@ class MapMerger(mergers.Merger):
 
 
 class DungeonStaticMerger(mergers.Merger):
+    # pylint: disable=abstract-method
     NAME: str = 'dungeonstatic'
 
     def __init__(self):
