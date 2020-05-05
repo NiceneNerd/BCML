@@ -476,7 +476,7 @@ def generate_master_rstb():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
     with rstb_path.open('wb') as r_file:
         with io.BytesIO() as buf:
-            table.write(buf, True)
+            table.write(buf, util.get_settings('wiiu'))
             r_file.write(util.compress(buf.getvalue()))
 
     rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'

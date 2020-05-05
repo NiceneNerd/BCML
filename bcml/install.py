@@ -224,7 +224,6 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
             'format.'
         )
         raise err
-    util.vprint(modded_files)
 
     this_pool = pool or Pool(cpu_count())
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
@@ -239,7 +238,6 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
     if not pool:
         this_pool.close()
         this_pool.join()
-    util.vprint(modded_files)
     return modded_files
 
 

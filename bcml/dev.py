@@ -268,13 +268,13 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
     any_platform = options.get('options', dict()).get('general', dict()).get('agnostic', False)
     meta['platform'] = 'any' if any_platform else 'wiiu' if util.get_settings('wiiu') else 'switch'
     (tmp_dir / 'info.json').write_text(
-        dumps(meta, ensure_ascii=False),
+        dumps(meta, ensure_ascii=False, indent=2),
         encoding='utf-8'
     )
 
     set_start_method('spawn', True)
     with Pool(cpu_count()) as pool:
-        yml_files = {f for f in tmp_dir.glob('**/*.yml')}
+        yml_files = set(tmp_dir.glob('**/*.yml'))
         if yml_files:
             print('Compiling YAML documents...')
             pool.map(_do_yml, yml_files)

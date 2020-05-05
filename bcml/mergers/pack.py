@@ -44,15 +44,15 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
 
     for opened_sarc in reversed(opened_sarcs):
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
-            data = oead.Bytes(file.data)
-            if util.is_file_modded(file.name.replace('.s', '.'), data, count_new=True):
-                if not Path(file.name).suffix in util.SARC_EXTS or file.name in SPECIAL:
-                    new_sarc.files[file.name] = data
+            file_data = oead.Bytes(file.data)
+            if util.is_file_modded(file.name.replace('.s', '.'), file_data, count_new=True):
+                if (not Path(file.name).suffix in util.SARC_EXTS) or file.name in SPECIAL:
+                    new_sarc.files[file.name] = file_data
                     files_added.add(file.name)
                 else:
                     if file.name not in nested_sarcs:
                         nested_sarcs[file.name] = []
-                        nested_sarcs[file.name].append(util.unyaz_if_needed(data))
+                        nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
     util.vprint(set(nested_sarcs.keys()))
     for file, sarcs in nested_sarcs.items():
         if not sarcs:
@@ -106,7 +106,7 @@ class PackMerger(mergers.Merger):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         (mod_dir / 'logs' / self._log_name).write_text(
-            json.dumps(diff_material, ensure_ascii=False),
+            json.dumps(diff_material, ensure_ascii=False, indent=2),
             encoding='utf-8'
         )
 
