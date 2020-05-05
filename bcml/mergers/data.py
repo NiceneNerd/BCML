@@ -123,10 +123,10 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
         partial(_bgdata_from_bytes, game_dict=game_dict),
         [f.name for f in gamedata.get_files()]
     )
+    for result in results:
+        util.dict_merge(data, oead.byml.from_text(result))
     del game_dict
     del gamedata
-    for result in results:
-        util.dict_merge(data, oead.byml.from_text(result), overwrite_lists=True)
     if not pool:
         this_pool.close()
         this_pool.join()
@@ -307,7 +307,7 @@ class GameDataMerger(mergers.Merger):
             util.dict_merge(
                 merged_entries[data_type],
                 modded_entries[data_type]['add'],
-                overwrite_lists=True
+                shallow=True
             )
             for entry in modded_entries[data_type]['del']:
                 del merged_entries[data_type][entry]
