@@ -389,8 +389,8 @@ class MapMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        no_del = self._options['no_del']
-        link_del = self._options['link_del']
+        no_del = self._options.get('no_del', False)
+        link_del = self._options.get('link_del', False)
         aoc_pack = (
             util.get_master_modpack_dir() / util.get_dlc_path() /
             ('0010' if util.get_settings('wiiu') else '') /
@@ -424,7 +424,7 @@ class MapMerger(mergers.Merger):
             set_start_method('spawn', True)
         pool = self._pool or Pool()
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del, link_del=link_del),
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
             [(key, oead.byml.to_text(value)) for key, value in map_diffs.items()]
         )
         for result in rstb_results:
