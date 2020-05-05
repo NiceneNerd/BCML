@@ -116,13 +116,12 @@ class InstallModal extends React.Component {
                     <OverlayTrigger
                         placement="right"
                         trigger="click"
-                        options={this.state.options}
-                        overlay={props => (
+                        overlay={
                             <OptionsDialog
-                                {...props}
+                                options={this.state.options}
                                 onHide={this.setOptions}
                             />
-                        )}>
+                        }>
                         <Button variant="info" title="Advanced Options">
                             <i
                                 className="material-icons"

@@ -7,67 +7,59 @@ class OptionsDialog extends React.Component {
     state = {
         loading: true,
         show: false,
-        options: {}
+        refs: null
     };
 
     componentDidMount() {
-        if (this.props.options == null) {
-            pywebview.api.get_options().then(opts => {
-                this.refOpts = opts;
-                let options = {};
+        pywebview.api.get_options().then(opts => {
+            let options = this.props.options.options;
+            if (Object.keys(options).length == 0) {
                 for (const m of opts) {
                     options[m.name] = {};
                     for (const opt of Object.keys(m.options)) {
                         options[m.name][opt] = false;
                     }
                 }
-                this.setState({
-                    options: {
-                        disable: [],
-                        options
-                    },
-                    loading: false
+                this.props.onHide({
+                    disable: [],
+                    options
                 });
-            });
-        } else {
-            this.setState({ options: this.props.options });
+            }
+            this.setState({ loading: false, refs: opts });
+        });
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.options != prevProps.options) {
+            const refs = this.state.refs;
+            this.setState({ refs });
         }
     }
 
     toggleDisable(e) {
         e.persist();
-        this.setState(
-            prevState => {
-                let dis = prevState.options.disable;
-                const merger = e.target.dataset.merger;
-                if (dis.includes(merger) && !e.target.checked) {
-                    dis.pop(merger);
-                } else if (!dis.includes(merger) && e.target.checked) {
-                    dis.push(merger);
-                }
-                return {
-                    ...this.state,
-                    options: { ...this.state.options, disable: dis }
-                };
-            },
-            () => this.props.onHide(this.state.options)
-        );
+        let dis = this.props.options.disable;
+        const merger = e.target.dataset.merger;
+        if (dis.includes(merger) && !e.target.checked) {
+            dis.pop(merger);
+        } else if (!dis.includes(merger) && e.target.checked) {
+            dis.push(merger);
+        }
+        this.props.onHide({
+            options: this.props.options.options,
+            disable: dis
+        });
     }
 
     toggleOption(e) {
         e.persist();
-        this.setState(
-            prevState => {
-                let opts = prevState.options.options;
-                const merger = e.target.dataset.merger;
-                opts[merger][e.target.dataset.name] = e.target.checked;
-                return {
-                    ...this.state,
-                    options: { ...this.state.options, options: opts }
-                };
-            },
-            () => this.props.onHide(this.state.options)
-        );
+        let opts = this.props.options.options;
+        const merger = e.target.dataset.merger;
+        opts[merger][e.target.dataset.name] = e.target.checked;
+        this.props.onHide({
+            options: opts,
+            disable: this.props.options.disable
+        });
     }
 
     render() {
@@ -76,13 +68,13 @@ class OptionsDialog extends React.Component {
                 <Popover.Title>Advanced Options</Popover.Title>
                 {!this.state.loading ? (
                     <Popover.Content>
-                        {this.refOpts.map(opt => (
+                        {this.state.refs.map(opt => (
                             <React.Fragment key={opt.name}>
                                 {opt.name != "general" && (
                                     <Form.Check
                                         type="checkbox"
                                         data-merger={opt.name}
-                                        value={this.state.options.disable.includes(
+                                        checked={this.props.options.disable.includes(
                                             opt.name
                                         )}
                                         label={`Disable ${opt.friendly}`}
@@ -95,8 +87,8 @@ class OptionsDialog extends React.Component {
                                         type="checkbox"
                                         data-merger={opt.name}
                                         data-name={optName}
-                                        value={
-                                            this.state.options["options"][
+                                        checked={
+                                            this.props.options["options"][
                                                 opt.name
                                             ][optName]
                                         }

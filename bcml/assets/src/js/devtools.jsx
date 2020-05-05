@@ -26,7 +26,10 @@ class DevTools extends React.Component {
         url: "",
         desc: "",
         version: 1.0,
-        options: {},
+        options: {
+            options: {},
+            disable: []
+        },
         selects: {},
         depends: [],
         showDepends: false,
@@ -212,13 +215,12 @@ class DevTools extends React.Component {
                                         }
                                         trigger="click"
                                         placement="auto"
-                                        options={this.state.options}
-                                        overlay={props => (
+                                        overlay={
                                             <OptionsDialog
-                                                {...props}
+                                                options={this.state.options}
                                                 onHide={this.setOptions}
                                             />
-                                        )}>
+                                        }>
                                         <Button
                                             onClick={() =>
                                                 document

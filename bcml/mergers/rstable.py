@@ -489,13 +489,13 @@ class RstbMerger(mergers.Merger):
     """ A merger for the ResourceSizeTable.product.srsizetable """
     NAME: str = 'rstb'
 
-    def __init__(self, guess: bool = False, leave: bool = False, shrink: bool = False):
+    def __init__(self):
         super().__init__('RSTB', 'Merges changes to ResourceSizeTable.product.srsizetable',
                          'rstb.log')
         self._options = {
-            'guess': guess,
-            'leave': leave,
-            'shrink': shrink
+            'no_guess': False,
+            'leave': False,
+            'shrink': False
         }
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
@@ -510,7 +510,7 @@ class RstbMerger(mergers.Merger):
                     if file.suffix == '.bdmgparam':
                         size = 0
                     if size == 0 and (
-                        self._options['guess'] or file.suffix in {'.bas', '.baslist'}
+                        not self._options['no_guess'] or file.suffix in {'.bas', '.baslist'}
                     ):
                         if file.suffix in util.AAMP_EXTS:
                             size = guess_aamp_size(file)
@@ -542,7 +542,7 @@ class RstbMerger(mergers.Merger):
                 )
                 if ext == '.bdmgparam':
                     rstb_val = 0
-                if rstb_val == 0 and (self._options['guess'] or ext in {'.bas', '.baslist'}):
+                if rstb_val == 0 and (not self._options['no_guess'] or ext in {'.bas', '.baslist'}):
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)
                     elif ext in {'.bfres', '.sbfres'}:
@@ -625,7 +625,7 @@ class RstbMerger(mergers.Merger):
         return [
             ('leave', 'Don\'t remove RSTB entries for complex file types'),
             ('shrink', 'Shrink RSTB values when smaller than the base game'),
-            ('guess', 'Attempt to estimate RSTB values for AAMP and BFRES files'),
+            ('no_guess', 'Don\'t estimate RSTB values for AAMP and BFRES files'),
         ]
 
     @util.timed
