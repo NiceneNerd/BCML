@@ -936,6 +936,9 @@ class Messager:
             if string.startswith('VERBOSE'):
                 string = string[7:]
             log_file.write(f'{string}\n')
+            
+    def isatty(self):
+        return False
 
 if system() == 'Windows':
     ZPATH = str(get_exec_dir() / 'helpers' / '7z.exe')
