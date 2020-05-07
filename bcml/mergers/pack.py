@@ -5,7 +5,7 @@ import io
 import json
 import os
 from functools import partial
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 
@@ -153,7 +153,6 @@ class PackMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        set_start_method('spawn', True)
         print('Loading modded SARC list...')
         sarcs = self.consolidate_diffs(self.get_all_diffs())
         if 'only_these' in self._options:

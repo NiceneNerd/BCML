@@ -4,7 +4,7 @@
 import shutil
 from collections import namedtuple
 from functools import partial
-from multiprocessing import Pool, set_start_method
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, List
 
@@ -419,8 +419,6 @@ class MapMerger(mergers.Merger):
         rstb_calc = rstb.SizeCalculator()
         print('Merging modded map units...')
 
-        if not self._pool:
-            set_start_method('spawn', True)
         pool = self._pool or Pool()
         rstb_results = pool.map(
             partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),

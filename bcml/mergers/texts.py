@@ -91,8 +91,6 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool
     ]
     if fix_msbts:
         print('Some MSBTs failed to convert. Trying again individually...')
-        if not pool:
-            multiprocessing.set_start_method('spawn', True)
         this_pool = pool or multiprocessing.Pool()
         this_pool.map(partial(_msyt_file, do_error=do_error), fix_msbts)
         fix_msbts = [
@@ -313,7 +311,7 @@ class TextsMerger(mergers.Merger):
         util.vprint(f'Languages: {",".join(languages)}')
 
         language_map = {}
-        save_langs = LANGUAGES if not self._options['user_only'] else [util.get_settings('lang')]
+        save_langs = LANGUAGES if not self._options.get('user_only', True) else [util.get_settings('lang')]
         for lang in save_langs:
             if lang in languages:
                 language_map[lang] = lang

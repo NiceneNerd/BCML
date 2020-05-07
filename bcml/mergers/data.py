@@ -6,7 +6,7 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 # pylint: disable=unsupported-assignment-operation
 from functools import partial, lru_cache
 from math import ceil
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool
 from operator import itemgetter
 from pathlib import Path
 from typing import List, Union
@@ -114,7 +114,6 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
 
 def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     data = {}
-    set_start_method('spawn', True)
     this_pool = pool or Pool()
     game_dict = {}
     for file in gamedata.get_files():
@@ -152,7 +151,6 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
 
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
-    set_start_method('spawn', True)
     this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
@@ -295,7 +293,6 @@ class GameDataMerger(mergers.Merger):
                 if xxhash.xxh64_hexdigest(str(modded_entries)) == l_file.read():
                     print('No gamedata merging necessary.')
                     return
-        set_start_method('spawn', True)
         this_pool = self._pool or Pool()
 
         print('Loading stock gamedata...')

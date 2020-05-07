@@ -208,8 +208,7 @@ class Api:
     @install.refresher
     def install_mod(self, params: dict):
         util.vprint(params)
-        set_start_method('spawn', True)
-        with Pool() as pool:
+        with Pool(maxtasksperchild=100) as pool:
             selects = params['selects'] if 'selects' in params and params['selects'] else {}
             mods = [
                 install.install_mod(
@@ -257,13 +256,14 @@ class Api:
             options = {}
         remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
-        new_mod = install.install_mod(
-            Path(update_file),
-            insert_priority=mod.priority,
-            options=options
-        )
-        remergers.extend([m for m in mergers.get_mergers_for_mod(new_mod) if m not in remergers])
-        with Pool() as pool:
+        with Pool(maxtasksperchild=100) as pool:
+            new_mod = install.install_mod(
+                Path(update_file),
+                insert_priority=mod.priority,
+                options=options,
+                pool=pool
+            )
+            remergers.extend([m for m in mergers.get_mergers_for_mod(new_mod) if m not in remergers])
             for merger in remergers:
                 merger.set_pool(pool)
                 merger.perform_merge()
@@ -282,32 +282,32 @@ class Api:
             mod = BcmlMod.from_json(move_mod['mod'])
             mods.append(mod)
             mod.change_priority(move_mod['priority'])
-        for i in params['installs']:
-            print(i)
-            mods.append(
-                install.install_mod(
-                    Path(i['path'].replace('QUEUE', '')),
-                    options=i['options'],
-                    insert_priority=i['priority']
+        with Pool(maxtasksperchild=100) as pool:
+            for i in params['installs']:
+                print(i)
+                mods.append(
+                    install.install_mod(
+                        Path(i['path'].replace('QUEUE', '')),
+                        options=i['options'],
+                        insert_priority=i['priority'],
+                        pool=pool
+                    )
                 )
-            )
-        set_start_method('spawn', True)
-        with Pool() as pool:
-            print('Remerging where needed...')
-            all_mergers = [merger() for merger in mergers.get_mergers()]
-            remergers = set()
-            partials = {}
-            for mod in mods:
-                for merger in all_mergers:
-                    if merger.is_mod_logged(mod):
-                        remergers.add(merger)
-                        if merger.can_partial_remerge():
-                            partials[merger.NAME] = set(merger.get_mod_affected(mod))
-            for merger in mergers.sort_mergers(remergers):
-                if merger.NAME in partials:
-                    merger.set_options({'only_these': partials[merger.NAME]})
-                merger.set_pool(pool)
-                merger.perform_merge()
+                print('Remerging where needed...')
+                all_mergers = [merger() for merger in mergers.get_mergers()]
+                remergers = set()
+                partials = {}
+                for mod in mods:
+                    for merger in all_mergers:
+                        if merger.is_mod_logged(mod):
+                            remergers.add(merger)
+                            if merger.can_partial_remerge():
+                                partials[merger.NAME] = set(merger.get_mod_affected(mod))
+                for merger in mergers.sort_mergers(remergers):
+                    if merger.NAME in partials:
+                        merger.set_options({'only_these': partials[merger.NAME]})
+                    merger.set_pool(pool)
+                    merger.perform_merge()
         install.refresh_master_export()
 
     @win_or_lose
@@ -362,6 +362,11 @@ class Api:
     @win_or_lose
     def remerge(self, params):
         try:
+            if not util.get_installed_mods():
+                if util.get_master_modpack_dir().exists():
+                    rmtree(util.get_master_modpack_dir())
+                    install.link_master_mod()
+                return
             if params['name'] == 'all':
                 install.refresh_merges()
             else:
@@ -386,6 +391,10 @@ class Api:
 
     @win_or_lose
     def export(self):
+        if not util.get_installed_mods():
+            e = Exception()
+            setattr(e, 'error_text', 'No mods installed to export.')
+            raise e
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG,
             file_types=(
@@ -509,6 +518,9 @@ def main():
         min_size=(width if width == 750 else 820, 600)
     )
 
+    globals()['logger'] = Messager(api.window)
+    api.window.closing += stop_it
+
     no_cef = find_spec('cefpython3') is None or NO_CEF
     gui: str = ''
     if system() == 'Windows' and not no_cef:
@@ -524,5 +536,10 @@ def main():
                 http_server=True
             )
 
+def stop_it():
+    del globals()['logger']
+
 if __name__ == "__main__":
+    set_start_method('spawn', True)
+    globals()['logger'] = None
     main()

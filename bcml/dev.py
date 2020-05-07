@@ -3,7 +3,7 @@ from base64 import urlsafe_b64encode
 from fnmatch import fnmatch
 from functools import partial
 from json import dumps
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool
 from pathlib import Path
 from platform import system
 from tempfile import TemporaryDirectory
@@ -152,8 +152,6 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
 
 
 def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
-    if 'TitleBG' in str(file):
-        print('Here we go')
     canon = util.get_canon_name(file.relative_to(tmp_dir))
     try:
         stock_file = util.get_game_file(file.relative_to(tmp_dir))
@@ -272,7 +270,6 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         encoding='utf-8'
     )
 
-    set_start_method('spawn', True)
     with Pool() as pool:
         yml_files = set(tmp_dir.glob('**/*.yml'))
         if yml_files:

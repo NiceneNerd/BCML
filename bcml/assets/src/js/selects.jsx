@@ -87,7 +87,7 @@ class SelectsDialog extends React.Component {
                                                     key={opt.folder}>
                                                     <OverlayTrigger
                                                         overlay={
-                                                            m.desc && (
+                                                            opt.desc && (
                                                                 <Tooltip>
                                                                     {opt.desc}
                                                                 </Tooltip>

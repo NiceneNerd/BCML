@@ -11,7 +11,7 @@ import subprocess
 import traceback
 from base64 import b64decode
 from functools import partial
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool
 from pathlib import Path
 from platform import system
 from shutil import rmtree
@@ -98,7 +98,7 @@ def get_next_priority() -> int:
     return i
 
 
-def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
+def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]]:
     modded_files = []
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
@@ -145,17 +145,16 @@ def find_modded_files(tmp_dir: Path) -> List[Union[Path, str]]:
     sarc_files = [file for file in modded_files if file.suffix in util.SARC_EXTS]
     if sarc_files:
         print(f'Scanning files packed in SARCs...')
-        set_start_method('spawn', True)
-        pool = Pool()
-        modded_sarc_files = pool.map(
-            partial(find_modded_sarc_files, tmp_dir=tmp_dir),
-            sarc_files
-        )
-        pool.close()
-        pool.join()
-        for files in modded_sarc_files:
+        this_pool = pool or Pool()
+        for files in this_pool.imap_unordered(
+                partial(find_modded_sarc_files, tmp_dir=tmp_dir),
+                sarc_files
+            ):
             total += len(files)
             modded_files.extend(files)
+        if not pool:
+            this_pool.close()
+            this_pool.join()
         print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
     return modded_files
 
@@ -214,8 +213,9 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
         options['disable'] = []
     util.vprint(options)
 
+    this_pool = pool or Pool()
     print('Scanning for modified files...')
-    modded_files = find_modded_files(tmp_dir)
+    modded_files = find_modded_files(tmp_dir, pool=pool)
     if not modded_files:
         err = RuntimeError('No modified files were found.')
         err.error_text = (
@@ -224,7 +224,6 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
         )
         raise err
 
-    this_pool = pool or Pool()
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
     try:
         for i, merger_class in enumerate([
@@ -574,7 +573,6 @@ def refresh_merges():
     print('Cleansing old merges...')
     shutil.rmtree(util.get_master_modpack_dir(), True)
     print('Refreshing merged mods...')
-    set_start_method('spawn', True)
     with Pool() as pool:
         for merger in mergers.sort_mergers(
                 [merger_class() for merger_class in mergers.get_mergers()]

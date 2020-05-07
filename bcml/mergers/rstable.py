@@ -22,7 +22,7 @@ from bcml.util import BcmlMod
 
 RSTB_EXCLUDE_EXTS = {'.pack', '.bgdata', '.txt', '.bgsvdata', '.yml', '.msbt',
                      '.bat', '.ini', '.png', '.bfstm', '.py', '.sh'}
-RSTB_EXCLUDE_NAMES = {'ActorInfo.product.byml'}
+RSTB_EXCLUDE_NAMES = {'Actor/ActorInfo.product.byml'}
 
 
 def generate_rstb_for_mod(mod: Path):
@@ -408,11 +408,15 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace('.s', '.')
         if data[0:4] == b'Yaz0':
-            data = util.decompress(data)
+            data = bytes(util.decompress(data))
         else:
             data = bytes(data)
         ext = Path(canon).suffix
-        if util.is_file_modded(canon, data) and ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
+        if (
+                util.is_file_modded(canon, data)
+                and ext not in RSTB_EXCLUDE_EXTS
+                and canon not in RSTB_EXCLUDE_NAMES
+            ):
             size = calc.calculate_file_size_with_ext(
                 data,
                 wiiu=util.get_settings('wiiu'),
@@ -464,9 +468,6 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         )
     }
     if sarc_files:
-        if not pool:
-            multiprocessing.set_start_method('spawn', True)
-            num_threads = min(multiprocessing.cpu_count(), len(sarc_files))
         p = pool or multiprocessing.Pool()
         results = p.map(_get_sizes_in_sarc, sarc_files)
         for result in results:
@@ -533,8 +534,7 @@ class RstbMerger(mergers.Merger):
         for file in modded_files:
             if isinstance(file, Path):
                 canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-                if Path(canon).suffix not in RSTB_EXCLUDE_EXTS and\
-                Path(canon).name not in RSTB_EXCLUDE_NAMES:
+                if Path(canon).suffix not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
                     size = calculate_size(file)
                     if file.suffix == '.bdmgparam':
                         size = 0

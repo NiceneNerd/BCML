@@ -115,7 +115,25 @@ class BcmlRoot extends React.Component {
 
     async handleInstall(mods, options) {
         if (!this.selects) {
+            await new Promise(resolve =>
+                this.setState(
+                    {
+                        progressTitle: "One Sec",
+                        progressStatus: "Processing",
+                        showProgress: true
+                    },
+                    () => resolve()
+                )
+            );
             this.selects = await pywebview.api.check_mod_options({ mods });
+            await new Promise(resolve =>
+                this.setState(
+                    {
+                        showProgress: true
+                    },
+                    () => resolve()
+                )
+            );
         }
         const num_selects = Object.keys(this.selects).length;
         if (

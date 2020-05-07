@@ -5,7 +5,7 @@ from copy import deepcopy
 from functools import partial
 from io import BytesIO
 from math import ceil
-from multiprocessing import Pool, cpu_count, set_start_method
+from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 
