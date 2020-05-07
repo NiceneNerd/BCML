@@ -4,10 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/github-markdown.css" />
+    <link rel="stylesheet" href="css/bootstrap-reboot.min.css" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
     <title>BCML Help</title>
 </head>
-<body class="markdown-body">
-    <div id="root"></div>
+<body class="p-2">
+    <div class="row flex-nowrap">
+        <div class="col-xs-3 mr-3">
+            <nav>
+                <ul>
+                    <li><a href="help.html?page=main">Main Page</a></li>
+                    <li><a href="help.html?page=install">Installing Mods</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="col-xs-9 markdown-body" id="root"></div>
+    </div>
     <script src="scripts/bundle.js"></script>
 </body>
 </html>

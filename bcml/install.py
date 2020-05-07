@@ -226,17 +226,26 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
 
     this_pool = pool or Pool()
     (tmp_dir / 'logs').mkdir(parents=True, exist_ok=True)
-    for i, merger_class in enumerate([merger_class for merger_class in mergers.get_mergers() \
-                        if merger_class.NAME not in options['disable']]):
-        merger = merger_class()
-        if options is not None and merger.NAME in options['options']:
-            merger.set_options(options['options'][merger.NAME])
-        merger.set_pool(this_pool)
-        util.vprint(f'Merger {merger.NAME}, #{i} of {len(mergers.get_mergers())}')
-        merger.log_diff(tmp_dir, modded_files)
+    try:
+        for i, merger_class in enumerate([
+                merger_class for merger_class in mergers.get_mergers() \
+                    if merger_class.NAME not in options['disable']
+            ]):
+            merger = merger_class()
+            if options is not None and merger.NAME in options['options']:
+                merger.set_options(options['options'][merger.NAME])
+            merger.set_pool(this_pool)
+            util.vprint(f'Merger {merger.NAME}, #{i} of {len(mergers.get_mergers())}')
+            merger.log_diff(tmp_dir, modded_files)
+    except Exception as e:
+        this_pool.close()
+        this_pool.join()
+        this_pool.terminate()
+        raise e
     if not pool:
         this_pool.close()
         this_pool.join()
+    util.vprint(modded_files)
     return modded_files
 
 

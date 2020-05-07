@@ -112,14 +112,18 @@ class QuestMerger(mergers.Merger):
             print('No quest merging necessary')
             if merged_quests.exists():
                 merged_quests.unlink()
-                util.inject_file_into_titlebg(
-                    'Quest/QuestProduct.sbquestpack',
-                    util.get_nested_file_bytes(
-                        (f'{str(util.get_game_file("Pack/TitleBG.pack"))}'
-                         '//Quest/QuestProduct.sbquestpack'),
-                        unyaz=False
+                try:
+                    util.inject_file_into_sarc(
+                        'Quest/QuestProduct.sbquestpack',
+                        util.get_nested_file_bytes(
+                            (f'{str(util.get_game_file("Pack/TitleBG.pack"))}'
+                            '//Quest/QuestProduct.sbquestpack'),
+                            unyaz=False
+                        ),
+                        'Pack/TitleBG.pack'
                     )
-                )
+                except FileNotFoundError:
+                    pass
             return
         print('Loading stock quests...')
         quests = get_stock_quests()
@@ -146,10 +150,11 @@ class QuestMerger(mergers.Merger):
         data = oead.byml.to_binary(quests, big_endian=util.get_settings('wiiu'))
         merged_quests.parent.mkdir(parents=True, exist_ok=True)
         merged_quests.write_bytes(data)
-        util.inject_file_into_titlebg(
+        util.inject_file_into_sarc(
             'Quest/QuestProduct.sbquestpack',
             util.compress(data),
-            create_titlebg=True
+            'Pack/TitleBG.pack',
+            create_sarc=True
         )
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:

@@ -11,6 +11,7 @@ from pathlib import Path
 from platform import system
 from shutil import rmtree
 from subprocess import run, PIPE
+from threading import Thread
 
 import webview
 
@@ -471,7 +472,12 @@ class Api:
             run(x_args, stdout=PIPE, stderr=PIPE, check=True)
 
     def open_help(self):
-        webview.create_window('BCML Help', url='assets/help.html?page=main')
+        t = Thread(target=help_window)
+        t.start()
+
+
+def help_window():
+    webview.create_window('BCML Help', url='assets/help.html?page=main')
 
 
 def main():

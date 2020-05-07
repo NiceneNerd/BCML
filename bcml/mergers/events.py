@@ -117,9 +117,10 @@ class EventInfoMerger(mergers.Merger):
                          '//Event/EventInfo.product.sbyml'),
                         unyaz=False
                     )
-                    util.inject_file_into_bootup(
+                    util.inject_file_into_sarc(
                         'Event/EventInfo.product.sbyml',
-                        stock_eventinfo
+                        stock_eventinfo,
+                        'Pack/Bootup.pack'
                     )
                 except FileNotFoundError:
                     pass
@@ -134,9 +135,10 @@ class EventInfoMerger(mergers.Merger):
 
         print('Writing new event info...')
         event_bytes = oead.byml.to_binary(new_events, big_endian=util.get_settings('wiiu'))
-        util.inject_file_into_bootup(
+        util.inject_file_into_sarc(
             'Event/EventInfo.product.sbyml',
             util.compress(event_bytes),
+            'Pack/Bootup.pack',
             create_bootup=True
         )
         print('Saving event info merge log...')

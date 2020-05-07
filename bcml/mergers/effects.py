@@ -90,9 +90,10 @@ class StatusEffectMerger(mergers.Merger):
                          '//Ecosystem/StatusEffectList.sbyml'),
                         unyaz=False
                     )
-                    util.inject_file_into_bootup(
+                    util.inject_file_into_sarc(
                         'Ecosystem/StatusEffectList.sbyml',
-                        stock_effects
+                        stock_effects,
+                        'Pack/Bootup.pack'
                     )
                 except FileNotFoundError:
                     pass
@@ -112,10 +113,11 @@ class StatusEffectMerger(mergers.Merger):
             oead.byml.Array([effects]),
             big_endian=util.get_settings('wiiu')
         )
-        util.inject_file_into_bootup(
+        util.inject_file_into_sarc(
             'Ecosystem/StatusEffectList.sbyml',
             util.compress(effect_bytes),
-            create_bootup=True
+            'Pack/Bootup.pack',
+            create_sarc=True
         )
         print('Saving status effect merge log...')
         merged_effects.write_bytes(effect_bytes)

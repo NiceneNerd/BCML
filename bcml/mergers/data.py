@@ -138,15 +138,16 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
     mod_entries = [entry['DataName'] for entry in mod_data[data_type]]
     diffs = oead.byml.Hash({
-        "add": oead.byml.Hash(),
+        "add": oead.byml.Hash({
+            entry['DataName']: entry for entry in mod_data[data_type] if (
+                entry['DataName'] not in stock_entries \
+                    or entry != stock_data[data_type][stock_entries.index(entry['DataName'])]
+            )
+        }),
         "del": oead.byml.Array({
             entry for entry in stock_entries if entry not in mod_entries
         })
     })
-    for entry in mod_data[data_type]:
-        if entry['DataName'] not in stock_entries \
-           or entry != stock_data[data_type][stock_entries.index(entry['DataName'])]:
-            diffs['add'][entry['DataName']] = entry
     return oead.byml.Hash({data_type: diffs})
 
 
@@ -168,12 +169,11 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
 
 def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
     ref_savedata = get_stock_savedata().get_files()
-    ref_hashes = set()
+    ref_hashes = {
+        int(item['HashValue']) for file in sorted(ref_savedata, key=lambda f: f.name)[0:-2] \
+            for item in oead.byml.from_binary(file.data)['file_list'][1]
+    }
     new_entries = oead.byml.Array()
-    for file in sorted(ref_savedata, key=lambda f: f.name)[0:-2]:
-        ref_hashes |= {
-            int(item['HashValue']) for item in oead.byml.from_binary(file.data)['file_list'][1]
-        }
     mod_hashes = set()
     for file in sorted(savedata.get_files(), key=lambda f: f.name,)[0:-2]:
         entries = oead.byml.from_binary(file.data)['file_list'][1]

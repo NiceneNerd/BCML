@@ -19,7 +19,7 @@ from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from platform import system
-from typing import Union, List
+from typing import Union, List, Dict, ByteString
 
 import oead
 import xxhash
@@ -27,32 +27,51 @@ from webview import Window
 
 
 CREATE_NO_WINDOW = 0x08000000
-SARC_EXTS = {'.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats',
-             '.ssarc', '.spack', '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats',
-             '.sblarc', '.blarc'}
-AAMP_EXTS = {'.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr',
-             '.baglclwd', '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof',
-             '.baglenv', '.sbaglenv', '.baglenvset', '.sbaglenvset', '.baglfila', '.sbaglfila',
-             '.bagllmap', '.sbagllmap', '.bagllref', '.sbagllref', '.baglmf', '.sbaglmf',
-             '.baglshpp', '.sbaglshpp', '.baiprog', '.sbaiprog', '.baslist', '.sbaslist',
-             '.bassetting', '.sbassetting', '.batcl', '.sbatcl', '.batcllist', '.sbatcllist',
-             '.bawareness', '.sbawareness', '.bawntable', '.sbawntable', '.bbonectrl',
-             '.sbbonectrl', '.bchemical', '.sbchemical', '.bchmres', '.sbchmres', '.bdemo',
-             '.sbdemo', '.bdgnenv', '.sbdgnenv', '.bdmgparam', '.sbdmgparam', '.bdrop', '.sbdrop',
-             '.bgapkginfo', '.sbgapkginfo', '.bgapkglist', '.sbgapkglist', '.bgenv', '.sbgenv',
-             '.bglght', '.sbglght', '.bgmsconf', '.sbgmsconf', '.bgparamlist', '.sbgparamlist',
-             '.bgsdw', '.sbgsdw', '.bksky', '.sbksky', '.blifecondition', '.sblifecondition',
-             '.blod', '.sblod', '.bmodellist', '.sbmodellist', '.bmscdef', '.sbmscdef', '.bmscinfo',
-             '.sbmscinfo', '.bnetfp', '.sbnetfp', '.bphyscharcon', '.sbphyscharcon',
-             '.bphyscontact', '.sbphyscontact', '.bphysics', '.sbphysics', '.bphyslayer',
-             '.sbphyslayer', '.bphysmaterial', '.sbphysmaterial', '.bphyssb', '.sbphyssb',
-             '.bphyssubmat', '.sbphyssubmat', '.bptclconf', '.sbptclconf', '.brecipe', '.sbrecipe',
-             '.brgbw', '.sbrgbw', '.brgcon', '.sbrgcon', '.brgconfig', '.sbrgconfig',
-             '.brgconfiglist', '.sbrgconfiglist', '.bsfbt', '.sbsfbt', '.bsft', '.sbsft', '.bshop',
-             '.sbshop', '.bumii', '.sbumii', '.bvege', '.sbvege', '.bactcapt', '.sbactcapt'}
-BYML_EXTS = {'.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin',
-             '.smubin', '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata',
-             '.sbgsvdata'}
+SARC_EXTS = {
+    '.sarc', '.pack', '.bactorpack', '.bmodelsh', '.beventpack', '.stera', '.stats', '.ssarc',
+    '.sbactorpack', '.sbmodelsh', '.sbeventpack', '.sstera', '.sstats', '.sblarc', '.blarc'
+}
+AAMP_EXTS = {
+    '.bxml', '.sbxml', '.bas', '.sbas', '.baglblm', '.sbaglblm', '.baglccr', '.sbaglccr',
+    '.baglclwd', '.sbaglclwd', '.baglcube', '.sbaglcube', '.bagldof', '.sbagldof', '.baglenv',
+    '.sbaglenv', '.baglenvset', '.sbaglenvset', '.baglfila', '.sbaglfila', '.bagllmap',
+    '.sbagllmap', '.bagllref', '.sbagllref', '.baglmf', '.sbaglmf', '.baglshpp', '.sbaglshpp',
+    '.baiprog', '.sbaiprog', '.baslist', '.sbaslist', '.bassetting', '.sbassetting', '.batcl',
+    '.sbatcl', '.batcllist', '.sbatcllist', '.bawareness', '.sbawareness', '.bawntable',
+    '.sbawntable', '.bbonectrl', '.sbbonectrl', '.bchemical', '.sbchemical', '.bchmres',
+    '.sbchmres', '.bdemo', '.sbdemo', '.bdgnenv', '.sbdgnenv', '.bdmgparam', '.sbdmgparam',
+    '.bdrop', '.sbdrop', '.bgapkginfo', '.sbgapkginfo', '.bgapkglist', '.sbgapkglist', '.bgenv',
+    '.sbgenv', '.bglght', '.sbglght', '.bgmsconf', '.sbgmsconf', '.bgparamlist', '.sbgparamlist',
+    '.bgsdw', '.sbgsdw', '.bksky', '.sbksky', '.blifecondition', '.sblifecondition', '.blod',
+    '.sblod', '.bmodellist', '.sbmodellist', '.bmscdef', '.sbmscdef', '.bmscinfo', '.sbmscinfo',
+    '.bnetfp', '.sbnetfp', '.bphyscharcon', '.sbphyscharcon', '.bphyscontact', '.sbphyscontact',
+    '.bphysics', '.sbphysics', '.bphyslayer', '.sbphyslayer', '.bphysmaterial', '.sbphysmaterial',
+    '.bphyssb', '.sbphyssb', '.bphyssubmat', '.sbphyssubmat', '.bptclconf', '.sbptclconf',
+    '.brecipe', '.sbrecipe', '.brgbw', '.sbrgbw', '.brgcon', '.sbrgcon', '.brgconfig',
+    '.sbrgconfig', '.brgconfiglist', '.sbrgconfiglist', '.bsfbt', '.sbsfbt', '.bsft', '.sbsft',
+    '.bshop', '.sbshop', '.bumii', '.sbumii', '.bvege', '.sbvege', '.bactcapt', '.sbactcapt'
+}
+BYML_EXTS = {
+    '.bgdata', '.sbgdata', '.bquestpack', '.sbquestpack', '.byml', '.sbyml', '.mubin', '.smubin',
+    '.baischedule', '.sbaischedule', '.baniminfo', '.sbaniminfo', '.bgsvdata', '.sbgsvdata'
+}
+TITLE_ACTORS = {
+    'AncientArrow', 'Animal_Insect_A', 'Animal_Insect_B', 'Animal_Insect_F', 'Animal_Insect_H',
+    'Animal_Insect_M', 'Animal_Insect_S', 'Animal_Insect_X', 'Armor_Default_Extra_00',
+    'Armor_Default_Extra_01', 'BombArrow_A', 'BrightArrow', 'BrightArrowTP', 'CarryBox',
+    'DemoXLinkActor', 'Dm_Npc_Gerudo_HeroSoul_Kago', 'Dm_Npc_Goron_HeroSoul_Kago',
+    'Dm_Npc_RevivalFairy', 'Dm_Npc_Rito_HeroSoul_Kago', 'Dm_Npc_Zora_HeroSoul_Kago',
+    'ElectricArrow', 'ElectricWaterBall', 'EventCameraRumble', 'EventControllerRumble',
+    'EventMessageTransmitter1', 'EventSystemActor', 'Explode', 'Fader', 'FireArrow',
+    'FireRodLv1Fire', 'FireRodLv2Fire', 'FireRodLv2FireChild', 'GameROMPlayer', 'IceArrow',
+    'IceRodLv1Ice', 'IceRodLv2Ice', 'Item_Conductor', 'Item_Magnetglove', 'Item_Material_01',
+    'Item_Material_03', 'Item_Material_07', 'Item_Ore_F', 'NormalArrow', 'Obj_IceMakerBlock',
+    'Obj_SupportApp_Wind', 'PlayerShockWave', 'PlayerStole2', 'RemoteBomb', 'RemoteBomb2',
+    'RemoteBombCube', 'RemoteBombCube2', 'SceneSoundCtrlTag', 'SoundTriggerTag',
+    'TerrainCalcCenterTag', 'ThunderRodLv1Thunder', 'ThunderRodLv2Thunder',
+    'ThunderRodLv2ThunderChild', 'WakeBoardRope'
+}
+
 
 class BcmlMod:
     priority: int
@@ -519,7 +538,6 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
         raise FileNotFoundError(f'File {str(path)} was not found in game dump.')
 
 
-@lru_cache(10)
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
     nests = file.split('//')
     sarcs = []
@@ -552,7 +570,7 @@ def get_master_modpack_dir() -> Path:
     return master
 
 
-@lru_cache(None)
+@lru_cache(2)
 def get_hash_table(wiiu: bool = True) -> {}:
     return json.loads(
         decompress((
@@ -619,13 +637,6 @@ def is_file_sarc(path: str) -> bool:
     ext = os.path.splitext(str(path))[1]
     return ext in SARC_EXTS
 
-
-def decompress_file(file) -> bytes:
-    if isinstance(file, str):
-        file = Path(file)
-    return decompress(file.read_bytes())
-
-
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
     if file_bytes[0:4] == b'Yaz0':
         return bytes(decompress(file_bytes))
@@ -633,32 +644,72 @@ def unyaz_if_needed(file_bytes: bytes) -> bytes:
         return file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)
 
 
-def inject_file_into_bootup(file: str, data: bytes, create_bootup: bool = False):
-    bootup_path = get_master_modpack_dir() / get_content_path() / 'Pack' / 'Bootup.pack'
-    if bootup_path.exists() or create_bootup:
-        if not bootup_path.exists():
-            bootup_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(get_game_file('Pack/Bootup.pack'), bootup_path)
-        old_bootup = oead.Sarc(bootup_path.read_bytes())
-        new_bootup = oead.SarcWriter.from_sarc(old_bootup)
-        new_bootup.files[file] = data if isinstance(data, bytes) else bytes(data)
-        bootup_path.write_bytes(new_bootup.write()[1])
+def inject_file_into_sarc(file: str, data: bytes, sarc: str, create_sarc: bool = False):
+    path = get_master_modpack_dir() / get_content_path() / sarc
+    if path.exists() or create_sarc:
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(get_game_file(sarc), path)
+        sarc_data = path.read_bytes()
+        yaz = sarc_data[0:4] == b'Yaz0'
+        if yaz:
+            sarc_data = decompress(sarc_data)
+        old_sarc = oead.Sarc(sarc_data)
+        del sarc_data
+        new_sarc = oead.SarcWriter.from_sarc(old_sarc)
+        del old_sarc
+        new_sarc.files[file] = data if isinstance(data, bytes) else bytes(data)
+        new_bytes = new_sarc.write()[1]
+        del new_sarc
+        path.write_bytes(new_bytes if not yaz else compress(new_bytes))
+        del new_bytes
     else:
-        raise FileNotFoundError('Bootup.pack is not present in the master BCML mod')
+        raise FileNotFoundError(f'{sarc} is not present in the master BCML mod')
 
 
-def inject_file_into_titlebg(file: str, data: bytes, create_titlebg: bool = False):
-    titlebg_path = get_master_modpack_dir() / get_content_path() / 'Pack' / 'TitleBG.pack'
-    if titlebg_path.exists() or create_titlebg:
-        if not titlebg_path.exists():
-            titlebg_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(get_game_file('Pack/TitleBG.pack'), titlebg_path)
-        old_titlebg = oead.Sarc(titlebg_path.read_bytes())
-        new_titlebg = oead.SarcWriter.from_sarc(old_titlebg)
-        new_titlebg.files[file] = data if isinstance(data, bytes) else bytes(data)
-        titlebg_path.write_bytes(new_titlebg.write()[1])
+def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
+    actor_sarc: oead.Sarc
+    if actor in TITLE_ACTORS:
+        title_path = get_master_modpack_dir() / get_content_path() / 'Pack' / 'TitleBG.pack'
+        if not title_path.exists():
+            title_path = get_game_file('Pack/TitleBG.pack')
+        title_sarc = oead.Sarc(title_path.read_bytes())
+        actor_sarc = oead.Sarc(
+            decompress(
+                title_sarc.get_file_data(f'Actor/Pack/{actor}.sbactorpack').data
+            )
+        )
+        del title_sarc
     else:
-        raise FileNotFoundError('TitleBG.pack is not present in the master BCML mod')
+        actor_path = (
+            get_master_modpack_dir() / get_content_path() / 'Actor' / 'Pack' /
+            f'{actor}.sbactorpack'
+        )
+        if not actor_path.exists():
+            actor_path = get_game_file(f'Actor/Pack/{actor}.sbactorpack')
+        actor_sarc = oead.Sarc(
+            decompress(actor_path.read_bytes())
+        )
+    new_sarc = oead.SarcWriter.from_sarc(actor_sarc)
+    del actor_sarc
+    for file, data in files.items():
+        new_sarc.files[file] = oead.Bytes(data)
+    out_bytes = compress(new_sarc.write()[1])
+
+    if actor in TITLE_ACTORS:
+        inject_file_into_sarc(
+            f'Actor/Pack/{actor}.sbactorpack',
+            out_bytes,
+            'Pack/TitleBG.pack',
+            True
+        )
+    else:
+        output = (
+            get_master_modpack_dir() / get_content_path() / 'Actor' / 'Pack' /
+            f'{actor}.sbactorpack'
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(out_bytes)
 
 
 @lru_cache(None)
@@ -879,8 +930,8 @@ class Messager:
 
     def write(self, string: str):
         from .__main__ import LOG
-        if string.strip('') not in {'', '\n'} and not string.startswith('VERBOSE'):
-            self.window.evaluate_js(f'window.onMsg(\'{string}\');')
+        if string.strip('') not in {'', '\n'} and not string.startswith('VERBOSE') and isinstance(string, str):
+            self.window.evaluate_js(f'try {{ window.onMsg(\'{string}\') }} catch(err) {{}};')
         with LOG.open('a', encoding='utf-8') as log_file:
             if string.startswith('VERBOSE'):
                 string = string[7:]
