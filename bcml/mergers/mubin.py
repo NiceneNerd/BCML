@@ -134,16 +134,16 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
     return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False,
+def get_map_diff(map_unit: Map, tmp_dir: Path, no_del: bool = False,
                  link_del: bool = False) -> Hash:
-    if isinstance(base_map, Map):
-        stock_map = True
-        for obj in mod_map['Objs']:
-            str_obj = oead.byml.to_text(obj)
-            if 'IsHardModeActor' in str_obj or 'AoC_HardMode_Enabled' in str_obj:
-                stock_map = False
-                break
-        base_map = get_stock_map(base_map, force_vanilla=stock_map)
+    mod_map = get_modded_map(map_unit, tmp_dir)
+    stock_map = True
+    for obj in mod_map['Objs']:
+        str_obj = oead.byml.to_text(obj)
+        if 'IsHardModeActor' in str_obj or 'AoC_HardMode_Enabled' in str_obj:
+            stock_map = False
+            break
+    base_map = get_stock_map(map_unit, force_vanilla=stock_map)
 
     base_hashes = [int(obj['HashId']) for obj in base_map['Objs']]
     base_links = set() if link_del else {
@@ -162,21 +162,28 @@ def get_map_diff(base_map: Union[Hash, Map], mod_map: Hash, no_del: bool = False
     diffs['del'] = Array({
         oead.U32(hash_id) for hash_id in base_hashes if hash_id not in {*mod_hashes, *base_links}
     } if not no_del else set())
-    return diffs
+    del mod_map
+    del base_map
+    del base_links
+    del mod_hashes
+    return '_'.join(map_unit), oead.byml.to_text(diffs)
 
 
 def generate_modded_map_log(tmp_dir: Path, modded_mubins: List[str], no_del: bool = False, 
-                            link_del: bool = False) -> Hash:
-    """Generates a dict log of modified mainfield maps"""
+                            link_del: bool = False, pool: Pool = None) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
-    return oead.byml.Hash({
-        '_'.join(modded_map): get_map_diff(
-            modded_map,
-            get_modded_map(modded_map, tmp_dir),
-            no_del=no_del,
-            link_del=link_del
-        ) for modded_map in modded_maps
+    this_pool = pool or Pool()
+    print(f'link_del is {link_del}')
+    diffs = oead.byml.Hash({
+        map_unit: oead.byml.from_text(diff) for map_unit, diff in this_pool.imap_unordered(
+            partial(get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del),
+            modded_maps
+        )
     })
+    if not pool:
+        this_pool.close()
+        this_pool.join()
+    return diffs
 
 
 def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False) -> {}:
@@ -190,19 +197,23 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
         except ValueError:
             changes['add'].append(actor)
     if not no_del:
-        for map_del in sorted(changes['del'], key=lambda change: stock_hashes.index(change) \
-                              if change in stock_hashes else -1, reverse=True):
-            if map_del in stock_hashes:
+        for map_del in sorted(
+                changes['del'],
+                key=lambda change: \
+                    stock_hashes.index(int(change)) if int(change) in stock_hashes else -1,
+                reverse=True
+            ):
+            if int(map_del) in stock_hashes:
                 try:
-                    new_map['Objs'].pop(stock_hashes.index(map_del))
+                    new_map['Objs'].pop(stock_hashes.index(int(map_del)))
                 except IndexError:
                     try:
                         obj_to_delete = next(
-                            iter([actor for actor in new_map['Objs'] if int(actor['HashId']) == map_del])
+                            iter([actor for actor in new_map['Objs'] if actor['HashId'] == map_del])
                         )
                         new_map['Objs'].remove(obj_to_delete)
                     except (StopIteration, ValueError):
-                        print(f'Could not delete actor with HashId {map_del}')
+                        util.vprint(f'Could not delete actor with HashId {map_del}')
     new_map['Objs'].extend(
         [change for change in changes['add'] if int(change['HashId']) not in stock_hashes]
     )
@@ -249,10 +260,10 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     :return: Returns a dict of shrines and their updated entrance coordinates
     :rtype: dict of str: dict
     """
-    base_file = util.get_game_file(
-        'aoc/0010/Map/CDungeon/Static.smubin', aoc=True)
     base_pos = oead.byml.from_binary(
-        util.decompress_file(str(base_file))
+        util.decompress(
+            (util.get_aoc_dir() / 'Map' / 'CDungeon' / 'Static.smubin').read_bytes()
+        )
     )['StartPos']
 
     mod_pos = oead.byml.from_binary(
@@ -284,8 +295,8 @@ def merge_dungeonstatic(diffs: dict = None):
         return
 
     new_static = oead.byml.from_binary(
-        util.decompress_file(
-            str(util.get_game_file('aoc/0010/Map/CDungeon/Static.smubin'))
+        util.decompress(
+            (util.get_aoc_dir() / 'Map' / 'CDungeon' / 'Static.smubin').read_bytes()
         )
     )
 
@@ -298,8 +309,10 @@ def merge_dungeonstatic(diffs: dict = None):
                 new_static['StartPos'][base_dungeons.index(
                     dungeon)][key] = value
 
-    output_static = util.get_master_modpack_dir() / util.get_dlc_path() / '0010' / 'Map' / \
-        'CDungeon' / 'Static.smubin'
+    output_static = (
+        util.get_master_modpack_dir() / util.get_dlc_path() /
+        ('0010' if util.get_settings('wiiu') else '') / 'Map' / 'CDungeon' / 'Static.smubin'
+    )
     output_static.parent.mkdir(parents=True, exist_ok=True)
     output_static.write_bytes(
         util.compress(oead.byml.to_binary(new_static, big_endian=util.get_settings('wiiu')))
@@ -325,7 +338,8 @@ class MapMerger(mergers.Merger):
                 mod_dir,
                 modded_mubins,
                 no_del=self._options.get('no_del', False),
-                link_del=self._options.get('link_del', False)
+                link_del=self._options.get('link_del', False),
+                pool=self._pool
             )
         return {}
 

@@ -35,7 +35,7 @@ setup(
         'oead>=1.1.1',
         'pywebview>=3.2,<4.0',
         'pyYaml>=5.3.1',
-        'rstb>=1.1.3',
+        'rstb>=1.2.0',
         'xxhash>=1.4.3'
     ],
     zip_safe=False

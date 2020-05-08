@@ -410,8 +410,8 @@ class DoneDialog extends React.Component {
     }
 
     launch_game() {
-        this.props.onClose();
         this.props.onLaunch();
+        this.props.onClose();
     }
 
     render() {

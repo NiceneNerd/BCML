@@ -34,9 +34,11 @@ class StatusEffectMerger(mergers.Merger):
         mod_effects = oead.byml.from_binary(
             util.decompress(bootup_sarc.get_file('Ecosystem/StatusEffectList.sbyml').data)
         )[0]
-        return oead.byml.Hash({
+        diff = oead.byml.Hash({
             effect: params for effect, params in mod_effects.items() if stock_effects[effect] != params
         })
+        del stock_effects
+        del mod_effects
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, list):
@@ -46,6 +48,7 @@ class StatusEffectMerger(mergers.Merger):
                 oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
+            del diff_material
 
     def get_mod_diff(self, mod: util.BcmlMod):
         diff = oead.byml.Hash()
@@ -61,7 +64,12 @@ class StatusEffectMerger(mergers.Merger):
         return diff
 
     def get_all_diffs(self):
-        return [self.get_mod_diff(m) for m in util.get_installed_mods() if self.is_mod_logged(m)]
+        diffs = []
+        for m in util.get_installed_mods():
+            diff = self.get_mod_diff(m)
+            if diff:
+                diffs.append(diff)
+        return diffs
 
     def consolidate_diffs(self, diffs):
         if not diffs:
@@ -73,6 +81,7 @@ class StatusEffectMerger(mergers.Merger):
                 diff,
                 overwrite_lists=True
             )
+            del diff
         return all_diffs
 
     @util.timed
@@ -95,6 +104,7 @@ class StatusEffectMerger(mergers.Merger):
                         stock_effects,
                         'Pack/Bootup.pack'
                     )
+                    del stock_effects
                 except FileNotFoundError:
                     pass
             return
@@ -107,12 +117,14 @@ class StatusEffectMerger(mergers.Merger):
             diffs,
             overwrite_lists=True
         )
+        del diffs
 
         print('Writing new effects list...')
         effect_bytes = oead.byml.to_binary(
             oead.byml.Array([effects]),
             big_endian=util.get_settings('wiiu')
         )
+        del effects
         util.inject_file_into_sarc(
             'Ecosystem/StatusEffectList.sbyml',
             util.compress(effect_bytes),
@@ -124,8 +136,9 @@ class StatusEffectMerger(mergers.Merger):
 
         print('Updating RSTB...')
         rstb_size = rstb.SizeCalculator().calculate_file_size_with_ext(
-            bytes(effect_bytes), True, '.byml'
+            effect_bytes, True, '.byml'
         )
+        del effect_bytes
         rstable.set_size('Ecosystem/StatusEffectList.byml', rstb_size)
 
     def get_checkbox_options(self):

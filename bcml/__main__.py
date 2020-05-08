@@ -208,7 +208,7 @@ class Api:
     @install.refresher
     def install_mod(self, params: dict):
         util.vprint(params)
-        with Pool(maxtasksperchild=100) as pool:
+        with Pool(maxtasksperchild=1000) as pool:
             selects = params['selects'] if 'selects' in params and params['selects'] else {}
             mods = [
                 install.install_mod(
@@ -256,7 +256,7 @@ class Api:
             options = {}
         remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
-        with Pool(maxtasksperchild=100) as pool:
+        with Pool(maxtasksperchild=1000) as pool:
             new_mod = install.install_mod(
                 Path(update_file),
                 insert_priority=mod.priority,
@@ -282,7 +282,7 @@ class Api:
             mod = BcmlMod.from_json(move_mod['mod'])
             mods.append(mod)
             mod.change_priority(move_mod['priority'])
-        with Pool(maxtasksperchild=100) as pool:
+        with Pool(maxtasksperchild=1000) as pool:
             for i in params['installs']:
                 print(i)
                 mods.append(

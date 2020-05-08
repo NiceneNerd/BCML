@@ -1,6 +1,5 @@
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-import zlib
 from copy import deepcopy
 from functools import partial
 from io import BytesIO
@@ -8,6 +7,7 @@ from math import ceil
 from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
+from zlib import crc32
 
 import oead
 import rstb
@@ -26,29 +26,6 @@ def get_stock_actorinfo() -> oead.byml.Hash:
     )
 
 
-def get_modded_actors(actorinfo: bytes):
-    actorinfo = oead.byml.from_binary(actorinfo)
-    stock_actorinfo = get_stock_actorinfo()
-    stock_actors = {
-        zlib.crc32(actor['name'].encode('utf8')): actor for actor in stock_actorinfo['Actors']
-    }
-    modded_actors = oead.byml.Hash()
-
-    for actor in actorinfo['Actors']:
-        actor_name = actor['name']
-        actor_hash = zlib.crc32(actor_name.encode('utf8'))
-        if actor_hash in stock_actors:
-            stock_actor = stock_actors[actor_hash]
-            if actor != stock_actor:
-                modded_actors[str(actor_hash)] = oead.byml.Hash({
-                    key: value for key, value in actor.items()\
-                        if key not in stock_actor or value != stock_actor[key]
-                })
-        else:
-            modded_actors[str(actor_hash)] = actor
-    return modded_actors
-
-
 class ActorInfoMerger(mergers.Merger):
     NAME: str = 'actors'
 
@@ -65,9 +42,22 @@ class ActorInfoMerger(mergers.Merger):
             )
         except StopIteration:
             return {}
-        actor_info = util.decompress(actor_file.read_bytes())   
-        print('Detecting modified actor info entries...')
-        return get_modded_actors(actor_info)
+        print('Detecting modified actor info entries...')        
+        actorinfo = oead.byml.from_binary(util.decompress(actor_file.read_bytes()))
+        del actor_file
+        stock_actorinfo = get_stock_actorinfo()
+        stock_actors = {
+            actor['name']: actor for actor in stock_actorinfo['Actors']
+        }
+        del stock_actorinfo
+        diff = oead.byml.Hash({
+            str(crc32(actor['name'].encode('utf8'))): actor for actor in actorinfo['Actors'] if (
+                actor['name'] not in stock_actors or stock_actors[actor['name']] != actor
+            )
+        })
+        del actorinfo
+        del stock_actors
+        return diff
 
     def log_diff(self, mod_dir: Path, diff_material: Union[oead.byml.Hash, list]):
         if isinstance(diff_material, List):
@@ -115,8 +105,10 @@ class ActorInfoMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        actor_path = (util.get_master_modpack_dir() / util.get_content_path() /
-                  'Actor' / 'ActorInfo.product.sbyml')
+        actor_path = (
+            util.get_master_modpack_dir() / util.get_content_path() /
+            'Actor' / 'ActorInfo.product.sbyml'
+        )
         print('Loading modded actor info...')
         modded_actors = self.consolidate_diffs(self.get_all_diffs())
         if not modded_actors:
@@ -128,7 +120,7 @@ class ActorInfoMerger(mergers.Merger):
         print('Loading unmodded actor info...')
         actorinfo = get_stock_actorinfo()
         stock_actors = {
-            zlib.crc32(actor['name'].encode('utf8')): actor for actor in actorinfo['Actors']
+            crc32(actor['name'].encode('utf8')): actor for actor in actorinfo['Actors']
         }
 
         print('Merging changes...')
@@ -154,7 +146,7 @@ class ActorInfoMerger(mergers.Merger):
         ])
         actorinfo['Actors'] = sorted(
             actorinfo['Actors'],
-            key=lambda x: zlib.crc32(x['name'].encode('utf-8'))
+            key=lambda x: crc32(x['name'].encode('utf-8'))
         )
 
         print('Saving new actor info...')

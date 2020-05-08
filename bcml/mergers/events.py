@@ -25,11 +25,12 @@ def get_stock_eventinfo() -> oead.byml.Hash:
 
 def get_modded_events(event_info: oead.byml.Hash) -> oead.byml.Hash:
     stock_events = get_stock_eventinfo()
-    modded_events = oead.byml.Hash()
-    for event, data in event_info.items():
-        if event not in stock_events or\
-           stock_events[event] != data:
-            modded_events[event] = data
+    modded_events = oead.byml.Hash({
+        event: data for event, data in event_info.items() if (
+            event not in stock_events or stock_events[event] != data
+        )
+    })
+    del stock_events
     return modded_events
 
 
@@ -50,7 +51,10 @@ class EventInfoMerger(mergers.Merger):
                     bootup_sarc.get_file('Event/EventInfo.product.sbyml').data
                 )
             )
-            return get_modded_events(event_info)
+            diff = get_modded_events(event_info)
+            del bootup_sarc
+            del event_info
+            return diff
         else:
             return {}
 
@@ -62,6 +66,7 @@ class EventInfoMerger(mergers.Merger):
                 oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
+            del diff_material
 
     def get_mod_diff(self, mod: BcmlMod):
         diffs = {}
@@ -87,7 +92,9 @@ class EventInfoMerger(mergers.Merger):
     def get_all_diffs(self):
         diffs = []
         for mod in util.get_installed_mods():
-            diffs.append(self.get_mod_diff(mod))
+            diff = self.get_mod_diff(mod)
+            if diff:
+                diffs.append(diff)
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -132,9 +139,11 @@ class EventInfoMerger(mergers.Merger):
         new_events = get_stock_eventinfo()
         for event, data in modded_events.items():
             new_events[event] = data
+        del modded_events
 
         print('Writing new event info...')
         event_bytes = oead.byml.to_binary(new_events, big_endian=util.get_settings('wiiu'))
+        del new_events
         util.inject_file_into_sarc(
             'Event/EventInfo.product.sbyml',
             util.compress(event_bytes),
@@ -149,6 +158,7 @@ class EventInfoMerger(mergers.Merger):
         rstb_size = rstb.SizeCalculator().calculate_file_size_with_ext(
             bytes(event_bytes), True, '.byml'
         )
+        del event_bytes
         rstable.set_size('Event/EventInfo.product.byml', rstb_size)
 
     def get_checkbox_options(self):

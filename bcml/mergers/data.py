@@ -21,7 +21,6 @@ from bcml.mergers import rstable
 from bcml.util import BcmlMod
 
 
-@lru_cache(None)
 def get_stock_gamedata() -> oead.Sarc:
     bootup = oead.Sarc(util.get_game_file('Pack/Bootup.pack').read_bytes())
     return oead.Sarc(
@@ -31,7 +30,6 @@ def get_stock_gamedata() -> oead.Sarc:
     )
 
 
-@lru_cache(None)
 def get_stock_savedata() -> oead.Sarc:
     bootup = oead.Sarc(util.get_game_file('Pack/Bootup.pack').read_bytes())
     return oead.Sarc(
@@ -118,12 +116,12 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     game_dict = {}
     for file in gamedata.get_files():
         game_dict[file.name] = bytes(file.data)
-    results = pool.map(
-        partial(_bgdata_from_bytes, game_dict=game_dict),
-        [f.name for f in gamedata.get_files()]
-    )
-    for result in results:
+    for result in pool.imap_unordered(
+            partial(_bgdata_from_bytes, game_dict=game_dict),
+            [f.name for f in gamedata.get_files()]
+        ):
         util.dict_merge(data, oead.byml.from_text(result))
+        del result
     del game_dict
     del gamedata
     if not pool:
@@ -134,6 +132,8 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
+    mod_data = oead.byml.from_text(mod_data)
+    stock_data = oead.byml.from_text(stock_data)
     stock_entries = [entry['DataName'] for entry in stock_data[data_type]]
     mod_entries = [entry['DataName'] for entry in mod_data[data_type]]
     diffs = oead.byml.Hash({
@@ -147,22 +147,33 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
             entry for entry in stock_entries if entry not in mod_entries
         })
     })
-    return oead.byml.Hash({data_type: diffs})
+    del stock_entries
+    del stock_data
+    del mod_entries
+    del mod_data
+    return oead.byml.to_text(oead.byml.Hash({data_type: diffs}))
 
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
+    diffs = oead.byml.Hash({
+        data_type: diff for d in this_pool.imap_unordered(
+                partial(
+                    diff_gamedata_type,
+                    mod_data=oead.byml.to_text(mod_data),
+                    stock_data=oead.byml.to_text(stock_data)
+                ),
+                mod_data.keys()
+            ) for data_type, diff in oead.byml.from_text(d).items()
+    })
     if not pool:
         this_pool.close()
         this_pool.join()
-    diffs = {}
-    for key in mod_data:
-        diffs.update(
-            diff_gamedata_type(key, mod_data, stock_data)
-        )
-    return oead.byml.Hash(diffs)
+    del stock_data
+    del mod_data
+    return diffs
 
 
 def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
@@ -179,6 +190,7 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
         new_entries.extend(
             {item for item in entries if int(item['HashValue']) not in ref_hashes}
         )
+    del ref_savedata
     return oead.byml.Hash({
         'add': new_entries,
         'del': oead.byml.Array(
@@ -228,6 +240,7 @@ class GameDataMerger(mergers.Merger):
                 oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
+            del diff_material
 
     def get_mod_diff(self, mod: BcmlMod):
         diffs = oead.byml.Hash()
@@ -262,7 +275,9 @@ class GameDataMerger(mergers.Merger):
     def get_all_diffs(self):
         diffs = []
         for mod in util.get_installed_mods():
-            diffs.append(self.get_mod_diff(mod))
+            diff = self.get_mod_diff(mod)
+            if diff:
+                diffs.append(diff)
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -273,9 +288,7 @@ class GameDataMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        force = False
-        if 'force' in self._options:
-            force = self._options['force']
+        force = self._options.get('force', False)
         glog_path = util.get_master_modpack_dir() / 'logs' / 'gamedata.log'
 
         modded_entries = self.consolidate_diffs(self.get_all_diffs())
@@ -302,6 +315,7 @@ class GameDataMerger(mergers.Merger):
                 entry['DataName']: entry for entry in entries
             }) for data_type, entries in gamedata.items()
         }
+        del gamedata
 
         print('Merging changes...')
         for data_type in {d for d in merged_entries if d in modded_entries}:
@@ -332,14 +346,27 @@ class GameDataMerger(mergers.Merger):
                     oead.byml.Hash({data_type: merged_entries[data_type][i*4096:end_pos]}),
                     big_endian=util.get_settings('wiiu')
                 )
-        bootup_rstb = inject_gamedata_into_bootup(new_gamedata)
-        (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-        (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').write_bytes(
-            new_gamedata.write()[1]
+        new_gamedata_bytes = new_gamedata.write()[1]
+        del new_gamedata
+        util.inject_file_into_sarc(
+            'GameData/gamedata.ssarc',
+            util.compress(new_gamedata_bytes),
+            'Pack/Bootup.pack',
+            create_sarc=True
         )
+        (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
+        (util.get_master_modpack_dir() / 'logs' / 'gamedata.sarc').write_bytes(new_gamedata_bytes)
 
         print('Updating RSTB...')
-        rstable.set_size('GameData/gamedata.sarc', bootup_rstb)
+        rstable.set_size(
+            'GameData/gamedata.sarc',
+            rstable.calculate_size.rstb_calc.calculate_file_size_with_ext(
+                new_gamedata_bytes,
+                util.get_settings('wiiu'),
+                '.sarc'
+            )
+        )
+        del new_gamedata_bytes
 
         glog_path.parent.mkdir(parents=True, exist_ok=True)
         with glog_path.open('w', encoding='utf-8') as l_file:
@@ -378,13 +405,15 @@ class SaveDataMerger(mergers.Merger):
                     (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
                 )
             )
-            return get_modded_savedata_entries(
-                oead.Sarc(
-                    util.decompress(
-                        bootup_sarc.get_file('GameData/savedataformat.ssarc').data
-                    )
+            save_sarc = oead.Sarc(
+                util.decompress(
+                    bootup_sarc.get_file('GameData/savedataformat.ssarc').data
                 )
             )
+            diff = get_modded_savedata_entries(save_sarc)
+            del save_sarc
+            del bootup_sarc
+            return diff
         else:
             return {}
 
@@ -396,6 +425,7 @@ class SaveDataMerger(mergers.Merger):
                 oead.byml.to_text(diff_material),
                 encoding='utf-8'
             )
+            del diff_material
 
     def get_mod_diff(self, mod: BcmlMod):
         diffs = []
@@ -413,7 +443,9 @@ class SaveDataMerger(mergers.Merger):
     def get_all_diffs(self):
         diffs = []
         for mod in util.get_installed_mods():
-            diffs.extend(self.get_mod_diff(mod))
+            diff = self.get_mod_diff(mod)
+            if diff:
+                diffs.extend(diff)
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -432,13 +464,12 @@ class SaveDataMerger(mergers.Merger):
             for entry in diff['del']:
                 if entry not in all_diffs['del']:
                     all_diffs['del'].append(entry)
+        del hashes
         return all_diffs
 
     @util.timed
     def perform_merge(self):
-        force = False
-        if 'force' in self._options:
-            force = self._options['force']
+        force = self._options.get('force', False)
         slog_path = util.get_master_modpack_dir() / 'logs' / 'savedata.log'
 
         new_entries = self.consolidate_diffs(self.get_all_diffs())
@@ -499,17 +530,37 @@ class SaveDataMerger(mergers.Merger):
                 big_endian=util.get_settings('wiiu')
             )
             new_savedata.files[f'/saveformat_{i}.bgsvdata'] = data
-        new_savedata.files[f'/saveformat_{num_files}.bgsvdata'] =\
-            oead.Bytes(savedata.get_file('/saveformat_6.bgsvdata').data)
-        new_savedata.files[f'/saveformat_{num_files + 1}.bgsvdata'] =\
-            oead.Bytes(savedata.get_file('/saveformat_7.bgsvdata').data)
-        bootup_rstb = inject_savedata_into_bootup(new_savedata)
+
+        new_savedata.files[f'/saveformat_{num_files}.bgsvdata'] = oead.Bytes(
+            savedata.get_file('/saveformat_6.bgsvdata').data
+        )
+        new_savedata.files[f'/saveformat_{num_files + 1}.bgsvdata'] = oead.Bytes(
+            savedata.get_file('/saveformat_7.bgsvdata').data
+        )
+
+        del savedata
+        new_save_bytes = new_savedata.write()[1]
+        del new_savedata
+        util.inject_file_into_sarc(
+            'GameData/savedataformat.ssarc',
+            util.compress(new_save_bytes),
+            'Pack/Bootup.pack',
+            create_sarc=True
+        )
         (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
         ((util.get_master_modpack_dir() / 'logs' / 'savedata.sarc')
-         .write_bytes(new_savedata.write()[1]))
+         .write_bytes(new_save_bytes))
 
         print('Updating RSTB...')
-        rstable.set_size('GameData/savedataformat.sarc', bootup_rstb)
+        rstable.set_size(
+            'GameData/savedataformat.sarc',
+            rstable.calculate_size.rstb_calc.calculate_file_size_with_ext(
+                new_save_bytes,
+                util.get_settings('wiiu'),
+                '.sarc'
+            )
+        )
+        del new_save_bytes
 
         slog_path.parent.mkdir(parents=True, exist_ok=True)
         with slog_path.open('w', encoding='utf-8') as l_file:

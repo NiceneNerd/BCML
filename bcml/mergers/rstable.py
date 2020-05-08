@@ -58,8 +58,6 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
 
 
 def calculate_size(path: Path) -> int:
-    if not hasattr(calculate_size, 'rstb_calc'):
-        calculate_size.rstb_calc = rstb.SizeCalculator()
     try:
         return calculate_size.rstb_calc.calculate_file_size(
             file_name=str(path),
@@ -68,7 +66,7 @@ def calculate_size(path: Path) -> int:
         )
     except struct.error:
         return 0
-
+setattr(calculate_size, 'rstb_calc', rstb.SizeCalculator())
 
 def set_size(entry: str, size: int):
     rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /\

@@ -23,7 +23,6 @@ from bcml.util import BcmlMod
 def _aamp_diff(base: Union[ParameterIO, ParameterList],
                modded: Union[ParameterIO, ParameterList]) -> ParameterList:
     diffs = ParameterList()
-    #diffs._crc32 = base._crc32
     for crc, plist in modded.lists.items():
         if crc not in base.lists:
             diffs.lists[crc] = plist
@@ -37,7 +36,6 @@ def _aamp_diff(base: Union[ParameterIO, ParameterList],
         else:
             base_obj = base.objects[crc]
             diff_obj = ParameterObject()
-            #diff_obj._crc32 = base_obj._crc32
             changed = False
             for param, value in obj.params.items():
                 if param not in base_obj.params or str(value) != str(base_obj.params[param]):
@@ -101,7 +99,12 @@ def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
     ref_aamp = aamp.Reader(ref_bytes).parse()
     mod_aamp = aamp.Reader(mod_bytes).parse()
 
-    return _aamp_diff(ref_aamp, mod_aamp)
+    diff = _aamp_diff(ref_aamp, mod_aamp)
+    del mod_aamp
+    del mod_bytes
+    del ref_aamp
+    del ref_bytes
+    return diff
 
 
 def get_deepmerge_mods() -> List[BcmlMod]:
@@ -235,7 +238,7 @@ class DeepMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         print('Logging changes to AAMP files...')
         diffs = {}
-        for file in [file for file in modded_files if Path(file).suffix in util.AAMP_EXTS]:
+        for file in {f for f in modded_files if Path(f).suffix in util.AAMP_EXTS}:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
             except (FileNotFoundError, KeyError, TypeError, AttributeError):
@@ -262,6 +265,10 @@ class DeepMerger(mergers.Merger):
                 pio.to_text(),
                 encoding='utf-8'
             )
+            del diff_material
+            del pio
+            del root
+            del file_table
 
     def can_partial_remerge(self):
         return True
@@ -283,6 +290,8 @@ class DeepMerger(mergers.Merger):
                 file: pio.list('param_root').list(file) \
                     for i, file in pio.list('param_root').object('FileTable').params.items()
             })
+            del yml
+            del pio
         for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
             if (opt / 'logs' / self._log_name).exists():
                 yml = oead.aamp.ParameterIO.from_text(
@@ -293,6 +302,8 @@ class DeepMerger(mergers.Merger):
                     file: pio.list('param_root').list(file) \
                         for i, file in pio.list('param_root').object('FileTable').params.items()
                 })
+                del yml
+                del pio
         return diffs
 
     def get_all_diffs(self):
@@ -301,9 +312,7 @@ class DeepMerger(mergers.Merger):
             mod_diffs =  self.get_mod_diff(mod)
             for mod_diff in mod_diffs:
                 for file in [
-                    diff for diff in mod_diff if not (
-                        'only_these' in self._options and diff not in self._options['only_these']
-                    )
+                    diff for diff in mod_diff if not self._options.get('only_these', False)
                 ]:
                     if file not in aamp_diffs:
                         aamp_diffs[file] = []
@@ -333,6 +342,7 @@ class DeepMerger(mergers.Merger):
             if 'only_these' in self._options:
                 old_merges = merge_log.read_text().splitlines()
             merge_log.unlink()
+        del old_merges
 
         print('Performing deep merge...')
         pool = self._pool or multiprocessing.Pool()
@@ -351,6 +361,7 @@ class DeepMerger(mergers.Merger):
             if 'only_these' in self._options:
                 for file in old_merges:
                     l_file.write(f'{file}\n')
+        del diffs
 
     def get_checkbox_options(self):
         return []
