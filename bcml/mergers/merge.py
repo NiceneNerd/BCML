@@ -233,7 +233,7 @@ class DeepMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__('AAMP files', 'Merges changes within arbitrary AAMP files',
-                         'deepmerge.yml', options={})
+                         'deepmerge.aamp', options={})
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         print('Logging changes to AAMP files...')
@@ -263,9 +263,8 @@ class DeepMerger(mergers.Merger):
             aamp_bytes = Writer(pio).get_bytes()
             pio = aamp.ParameterIO.from_binary(aamp_bytes)
             del aamp_bytes
-            (mod_dir / 'logs' / self._log_name).write_text(
-                pio.to_text(),
-                encoding='utf-8'
+            (mod_dir / 'logs' / self._log_name).write_bytes(
+                pio.to_binary()
             )
             del diff_material
             del pio
@@ -284,8 +283,8 @@ class DeepMerger(mergers.Merger):
     def get_mod_diff(self, mod: BcmlMod):
         diffs = []
         if self.is_mod_logged(mod):
-            yml = oead.aamp.ParameterIO.from_text(
-                (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+            yml = oead.aamp.ParameterIO.from_binary(
+                (mod.path / 'logs' / self._log_name).read_bytes()
             )
             pio = aamp.Reader(bytes(yml.to_binary())).parse()
             diffs.append({
@@ -296,8 +295,8 @@ class DeepMerger(mergers.Merger):
             del pio
         for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
             if (opt / 'logs' / self._log_name).exists():
-                yml = oead.aamp.ParameterIO.from_text(
-                    (opt / 'logs' / self._log_name).read_text(encoding='utf-8')
+                yml = oead.aamp.ParameterIO.from_binary(
+                    (opt / 'logs' / self._log_name).read_bytes()
                 )
                 pio = aamp.Reader(bytes(yml.to_binary())).parse()
                 diffs.append({

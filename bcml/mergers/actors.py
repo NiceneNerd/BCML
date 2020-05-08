@@ -51,9 +51,19 @@ class ActorInfoMerger(mergers.Merger):
         }
         del stock_actorinfo
         diff = oead.byml.Hash({
-            str(crc32(actor['name'].encode('utf8'))): actor for actor in actorinfo['Actors'] if (
-                actor['name'] not in stock_actors or stock_actors[actor['name']] != actor
-            )
+            **{
+            str(crc32(actor['name'].encode('utf8'))): actor for actor in actorinfo['Actors'] if \
+                actor['name'] not in stock_actors
+            },
+            **{
+            str(crc32(actor['name'].encode('utf8'))): {
+                key: value for key, value in actor.items() if (
+                    key not in stock_actors[actor['name']]
+                    or value != stock_actors[actor['name']][key]
+                )
+            } for actor in actorinfo['Actors'] if \
+                actor['name'] in stock_actors and actor != stock_actors[actor['name']]
+            }
         })
         del actorinfo
         del stock_actors

@@ -147,9 +147,8 @@ def _convert_aamp_log(log: Path):
         file_table.set_param(f'File{i}', file)
     root.set_object('FileTable', file_table)
     pio = oamp.ParameterIO.from_binary(Writer(pio).get_bytes()) # pylint: disable=no-member
-    log.write_text(
-        pio.to_text(),
-        encoding='utf-8'
+    log.write_bytes(
+        pio.to_binary()
     )
 
 def _convert_text_logs(logs_path: Path):
