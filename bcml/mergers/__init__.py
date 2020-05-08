@@ -132,10 +132,10 @@ def get_mergers() -> List[Merger]:
     ]
 
 def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
-    ms = []
+    ms = set()
     for m in [m() for m in get_mergers()]:
         if m.is_mod_logged(mod):
-            ms.append(m)
+            ms.add(m)
     return ms
 
 

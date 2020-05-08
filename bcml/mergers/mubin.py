@@ -253,13 +253,6 @@ def merge_map(map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = Fa
 
 
 def get_dungeonstatic_diff(file: Path) -> dict:
-    """Returns the changes made to the Static.smubin containing shrine entrance coordinates
-
-    :param file: The Static.mubin file to diff
-    :type file: class:`pathlib.Path`
-    :return: Returns a dict of shrines and their updated entrance coordinates
-    :rtype: dict of str: dict
-    """
     base_pos = oead.byml.from_binary(
         util.decompress(
             (util.get_aoc_dir() / 'Map' / 'CDungeon' / 'Static.smubin').read_bytes()
@@ -267,7 +260,7 @@ def get_dungeonstatic_diff(file: Path) -> dict:
     )['StartPos']
 
     mod_pos = oead.byml.from_binary(
-        util.decompress_file(str(file))
+        util.decompress(file.read_bytes())
     )['StartPos']
 
     base_dungeons = [str(dungeon['Map']) for dungeon in base_pos]
@@ -474,6 +467,7 @@ class DungeonStaticMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         dstatic_path = mod_dir / util.get_dlc_path() / '0010' / 'Map' / 'CDungeon' / 'Static.smubin'
         if dstatic_path.exists():
+            print('Logging changes to shrine entry coordinates...')
             return get_dungeonstatic_diff(dstatic_path)
         else:
             return {}

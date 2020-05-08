@@ -94,6 +94,7 @@ class PackMerger(mergers.Merger):
         return self.get_mod_diff(mod)
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        print('Finding modified SARCs...')
         packs = {}
         for file in [file for file in modded_files \
                      if isinstance(file, Path) and file.suffix in util.SARC_EXTS]:

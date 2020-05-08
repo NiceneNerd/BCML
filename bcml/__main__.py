@@ -299,7 +299,7 @@ class Api:
                 partials = {}
                 for mod in mods:
                     for merger in all_mergers:
-                        if merger.is_mod_logged(mod):
+                        if merger.is_mod_logged(mod) and merger.NAME not in {m.name for m in remergers}:
                             remergers.add(merger)
                             if merger.can_partial_remerge():
                                 partials[merger.NAME] = set(merger.get_mod_affected(mod))

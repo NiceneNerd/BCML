@@ -26,7 +26,7 @@ class StatusEffectMerger(mergers.Merger):
         needle = f'{util.get_content_path()}/Pack/Bootup.pack//Ecosystem/StatusEffectList.sbyml'
         if needle not in modded_files:
             return {}
-
+        print('Logging changes to effect status levels...')
         stock_effects = get_stock_effects()
         bootup_sarc = oead.Sarc(
             (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()

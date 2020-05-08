@@ -234,7 +234,7 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
             if options is not None and merger.NAME in options['options']:
                 merger.set_options(options['options'][merger.NAME])
             merger.set_pool(this_pool)
-            util.vprint(f'Merger {merger.NAME}, #{i} of {len(mergers.get_mergers())}')
+            util.vprint(f'Merger {merger.NAME}, #{i+1} of {len(mergers.get_mergers())}')
             merger.log_diff(tmp_dir, modded_files)
     except Exception as e:
         this_pool.close()
@@ -551,8 +551,6 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     shutil.rmtree(str(mod.path))
 
     for fall_mod in [m for m in util.get_installed_mods() if m.priority > mod.priority]:
-        remergers |= set(fall_mod.mergers)
-        partials.update(fall_mod.get_partials())
         fall_mod.change_priority(fall_mod.priority - 1)
 
     if not util.get_installed_mods():

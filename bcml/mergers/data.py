@@ -325,7 +325,10 @@ class GameDataMerger(mergers.Merger):
                 shallow=True
             )
             for entry in modded_entries[data_type]['del']:
-                del merged_entries[data_type][entry]
+                try:
+                    del merged_entries[data_type][entry]
+                except KeyError:
+                    continue
 
         merged_entries = oead.byml.Hash({
             data_type: oead.byml.Array(

@@ -25,6 +25,7 @@ class QuestMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if f'{util.get_content_path()}/Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack' not in modded_files:
             return {}
+        print('Logging modified quests...')
         stock_quests = get_stock_quests()
         stock_names = [q['Name'] for q in stock_quests]
 

@@ -301,6 +301,7 @@ class TextsMerger(mergers.Merger):
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        print('Checking for modified languages...')
         languages = {
             util.get_file_language(file) for file in modded_files if (
                 isinstance(file, Path) and 'Bootup_' in file.name and 'Graphic' not in file.name

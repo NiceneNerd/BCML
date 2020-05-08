@@ -241,7 +241,7 @@ class DeepMerger(mergers.Merger):
         for file in {f for f in modded_files if Path(f).suffix in util.AAMP_EXTS}:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + '/' + file, mod_dir)
-            except (FileNotFoundError, KeyError, TypeError, AttributeError):
+            except (FileNotFoundError, KeyError, TypeError, AttributeError) as e:
                 continue
         return diffs
 
@@ -260,7 +260,9 @@ class DeepMerger(mergers.Merger):
                 file_table.set_param(f'File{i}', f)
             root.set_object('FileTable', file_table)
             from oead import aamp
-            pio = aamp.ParameterIO.from_binary(Writer(pio).get_bytes())
+            aamp_bytes = Writer(pio).get_bytes()
+            pio = aamp.ParameterIO.from_binary(aamp_bytes)
+            del aamp_bytes
             (mod_dir / 'logs' / self._log_name).write_text(
                 pio.to_text(),
                 encoding='utf-8'
@@ -325,7 +327,6 @@ class DeepMerger(mergers.Merger):
             nest = reduce(lambda res, cur: {cur: res}, reversed(
                 file.split("//")), diff_list)
             util.dict_merge(consolidated_diffs, nest)
-        util.vprint(consolidated_diffs)
         return consolidated_diffs
 
     def perform_merge(self):

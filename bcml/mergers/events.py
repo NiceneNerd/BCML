@@ -43,6 +43,7 @@ class EventInfoMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         if f'{util.get_content_path()}/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
+            print('Logging modded events...')
             bootup_sarc = oead.Sarc(
                 (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
             )
@@ -148,7 +149,7 @@ class EventInfoMerger(mergers.Merger):
             'Event/EventInfo.product.sbyml',
             util.compress(event_bytes),
             'Pack/Bootup.pack',
-            create_bootup=True
+            create_sarc=True
         )
         print('Saving event info merge log...')
         event_merge_log.write_text(str(event_mod_hash))
