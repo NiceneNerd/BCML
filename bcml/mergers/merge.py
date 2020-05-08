@@ -20,6 +20,11 @@ from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
 
+AAMP_EXTS_HANDLED = {
+    '.brecipe', '.sbrecipe', '.bshop', '.sbshop'
+}
+
+
 def _aamp_diff(
     base: Union[ParameterIO, ParameterList], modded: Union[ParameterIO, ParameterList]
 ) -> ParameterList:
@@ -251,7 +256,7 @@ class DeepMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         print("Logging changes to AAMP files...")
         diffs = {}
-        for file in {f for f in modded_files if Path(f).suffix in util.AAMP_EXTS}:
+        for file in {f for f in modded_files if Path(f).suffix in (util.AAMP_EXTS - AAMP_EXTS_HANDLED)}:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + "/" + file, mod_dir)
             except (FileNotFoundError, KeyError, TypeError, AttributeError) as e:
