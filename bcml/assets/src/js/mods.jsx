@@ -43,7 +43,6 @@ class Mods extends React.Component {
         this.handleQueue = this.handleQueue.bind(this);
         this.applyQueue = this.applyQueue.bind(this);
         this.uninstallAll = this.uninstallAll.bind(this);
-        this.backupRef = React.createRef();
     }
 
     sanityCheck() {
@@ -374,9 +373,7 @@ class Mods extends React.Component {
                                     }>
                                     <Button
                                         variant="secondary"
-                                        onClick={() =>
-                                            this.setState({ showBackups: true })
-                                        }>
+                                        onClick={this.props.onBackup}>
                                         <i className="material-icons">
                                             restore
                                         </i>

@@ -274,6 +274,18 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         print(f"Error: {str(mod)} is neither a valid file nor a directory")
         return
 
+    if not util.get_settings("wiiu") and (tmp_dir / "atmosphere" / "titles").exists():
+        shutil.move(
+            tmp_dir / "atmosphere" / "titles", tmp_dir / "atmosphere" / "contents"
+        )
+    if not (
+        (tmp_dir / util.get_content_path()).exists()
+        or (tmp_dir / util.get_dlc_path()).exists()
+    ):
+        raise FileNotFoundError(
+            "This mod does not appear to have a valid folder structure"
+        )
+
     if (tmp_dir / "rules.txt").exists():
         (tmp_dir / "rules.txt").unlink()
 
@@ -366,4 +378,3 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         )
     shutil.rmtree(tmp_dir, ignore_errors=True)
     print("Conversion complete.")
-

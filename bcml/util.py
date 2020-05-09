@@ -713,12 +713,11 @@ def get_dlc_path() -> str:
     )
 
 
-@lru_cache(None)
 def get_modpack_dir() -> Path:
     return get_data_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
 
 
-@lru_cache(None)
+@lru_cache(1024)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).replace("\\", "/").startswith(f"{get_content_path()}/"):
         path = Path(str(path).replace("\\", "/").replace(f"{get_content_path()}/", ""))

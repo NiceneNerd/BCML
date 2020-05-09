@@ -123,20 +123,22 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
+    results = this_pool.map(
+        partial(
+            diff_gamedata_type,
+            mod_data=oead.byml.to_text(mod_data),
+            stock_data=oead.byml.to_text(stock_data),
+        ),
+        mod_data.keys(),
+    )
     diffs = oead.byml.Hash(
         {
             data_type: diff
-            for d in this_pool.imap_unordered(
-                partial(
-                    diff_gamedata_type,
-                    mod_data=oead.byml.to_text(mod_data),
-                    stock_data=oead.byml.to_text(stock_data),
-                ),
-                mod_data.keys(),
-            )
+            for d in results
             for data_type, diff in oead.byml.from_text(d).items()
         }
     )
+    del results
     if not pool:
         this_pool.close()
         this_pool.join()

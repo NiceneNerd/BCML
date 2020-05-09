@@ -43,7 +43,7 @@ class BcmlRoot extends React.Component {
             showAbout: false
         };
         this.selects = null;
-
+        this.backupRef = React.createRef();
         this.handleBackups = this.handleBackups.bind(this);
         this.handleInstall = this.handleInstall.bind(this);
         this.saveSettings = this.saveSettings.bind(this);
@@ -318,6 +318,9 @@ class BcmlRoot extends React.Component {
                     <Tab eventKey="mod-list" title="Mods">
                         <Mods
                             mods={this.state.mods}
+                            onBackup={() =>
+                                this.setState({ showBackups: true })
+                            }
                             loaded={this.state.modsLoaded}
                             onRefresh={this.refreshMods}
                             onConfirm={this.confirm}
