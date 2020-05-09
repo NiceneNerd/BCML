@@ -273,12 +273,8 @@ class DeepMerger(mergers.Merger):
             for i, f in enumerate(diff_material):
                 file_table.set_param(f"File{i}", f)
             root.set_object("FileTable", file_table)
-            from oead import aamp
-
             aamp_bytes = Writer(pio).get_bytes()
-            pio = aamp.ParameterIO.from_binary(aamp_bytes)
-            del aamp_bytes
-            (mod_dir / "logs" / self._log_name).write_bytes(pio.to_binary())
+            (mod_dir / "logs" / self._log_name).write_bytes(aamp_bytes)
             del diff_material
             del pio
             del root
@@ -296,10 +292,7 @@ class DeepMerger(mergers.Merger):
     def get_mod_diff(self, mod: BcmlMod):
         diffs = []
         if self.is_mod_logged(mod):
-            yml = oead.aamp.ParameterIO.from_binary(
-                (mod.path / "logs" / self._log_name).read_bytes()
-            )
-            pio = aamp.Reader(bytes(yml.to_binary())).parse()
+            pio = aamp.Reader((mod.path / "logs" / self._log_name).read_bytes()).parse()
             diffs.append(
                 {
                     file: pio.list("param_root").list(file)
@@ -308,14 +301,10 @@ class DeepMerger(mergers.Merger):
                     .params.items()
                 }
             )
-            del yml
             del pio
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                yml = oead.aamp.ParameterIO.from_binary(
-                    (opt / "logs" / self._log_name).read_bytes()
-                )
-                pio = aamp.Reader(bytes(yml.to_binary())).parse()
+                pio = aamp.Reader((opt / "logs" / self._log_name).read_bytes()).parse()
                 diffs.append(
                     {
                         file: pio.list("param_root").list(file)
@@ -324,7 +313,6 @@ class DeepMerger(mergers.Merger):
                         .params.items()
                     }
                 )
-                del yml
                 del pio
         return diffs
 

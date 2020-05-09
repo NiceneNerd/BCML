@@ -85,11 +85,11 @@ class Api:
         else:
             if params["type"] == "cemu_dir":
                 return len(list(path.glob("Cemu*.exe"))) > 0
-            elif params["type"] == "game_dir":
+            elif "game_dir" in params["type"]:
                 return (path / "Pack" / "Dungeon000.pack").exists()
             elif params["type"] == "update_dir":
                 return len(list((path / "Actor" / "Pack").glob("*.sbactorpack"))) > 7000
-            elif params["type"] == "dlc_dir":
+            elif "dlc_dir" in params["type"]:
                 return (path / "Pack" / "AocMainField.pack").exists()
 
     def get_settings(self, params=None):
@@ -465,6 +465,8 @@ class Api:
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
         )
+        if not out:
+            return
         meta = params.copy()
         del meta["folder"]
         meta["options"] = params["selects"]

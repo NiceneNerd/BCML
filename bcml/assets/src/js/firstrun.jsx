@@ -33,14 +33,7 @@ class FirstRun extends React.Component {
                 page: page < this.pageCount ? page : this.pageCount - 1
             });
         };
-        this.goHome = async () => {
-            ReactDOM.render(
-                <BcmlRoot
-                    mods={await pywebview.api.get_mods({ disabled: true })}
-                />,
-                document.getElementById("root")
-            );
-        };
+        this.goHome = () => (window.location = "index.html");
         this.checkSettings = this.checkSettings.bind(this);
         this.saveSettings = this.saveSettings.bind(this);
     }

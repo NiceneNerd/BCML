@@ -55,9 +55,11 @@ def convert_old_settings():
     settings = {
         "cemu_dir": cemu_dir,
         "game_dir": game_dir,
+        "game_dir_nx": "",
         "load_reverse": old_settings["Settings"]["load_reverse"] == "True",
         "update_dir": str(update_dir or ""),
         "dlc_dir": str(dlc_dir or ""),
+        "dlc_dir_nx": "",
         "site_meta": old_settings["Settings"]["site_meta"],
         "no_guess": old_settings["Settings"]["guess_merge"] == "False",
         "lang": old_settings["Settings"]["lang"],
@@ -83,8 +85,7 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         "options": {},
         "platform": "wiiu",
     }
-    info["id"] = base64.urlsafe_b64encode(
-        info["name"].encode("utf8")).decode("utf8")
+    info["id"] = base64.urlsafe_b64encode(info["name"].encode("utf8")).decode("utf8")
     try:
         info["priority"] = int(rules["Definition"]["fsPriority"])
     except KeyError:
@@ -128,8 +129,7 @@ def _convert_pack_log(mod: Path):
         for row in csv_loop:
             if "logs" in str(row[1]) or str(row[0]) == "name":
                 continue
-            packs[str(row[0])] = Path(
-                str(row[1])).as_posix().replace("\\", "/")
+            packs[str(row[0])] = Path(str(row[1])).as_posix().replace("\\", "/")
     (mod / "logs" / "packs.log").unlink()
     (mod / "logs" / "packs.json").write_text(
         json.dumps(packs, ensure_ascii=False), encoding="utf-8"
@@ -149,25 +149,22 @@ def _convert_aamp_log(log: Path):
     for i, file in enumerate(doc):
         file_table.set_param(f"File{i}", file)
     root.set_object("FileTable", file_table)
-    pio = oamp.ParameterIO.from_binary(
-        Writer(pio).get_bytes()
-    )  # pylint: disable=no-member
-    log.write_bytes(pio.to_binary())
+    log.write_bytes(Writer(pio).get_bytes())
 
 
 def _convert_text_log(log: Path) -> dict:
     lang = log.stem[6:]
     data = yaml.safe_load(log.read_text("utf-8"))
     log.unlink()
-    return {
-        lang: {file: data[file]["entries"] for file in data}
-    }
+    return {lang: {file: data[file]["entries"] for file in data}}
 
 
 def _convert_text_logs(logs_path: Path):
     diffs = {}
     with Pool() as pool:
-        for diff in pool.imap_unordered(_convert_text_log, logs_path.glob("texts_*.yml")):
+        for diff in pool.imap_unordered(
+            _convert_text_log, logs_path.glob("texts_*.yml")
+        ):
             diffs.update(diff)
     fails = set()
     for text_pack in logs_path.glob("newtexts_*.sarc"):
@@ -177,8 +174,7 @@ def _convert_text_logs(logs_path: Path):
             if lang not in diffs:
                 diffs[lang] = {}
             try:
-                diffs[lang].update(
-                    {file.name: read_msbt(bytes(file.data))["entries"]})
+                diffs[lang].update({file.name: read_msbt(bytes(file.data))["entries"]})
             except RuntimeError:
                 print(
                     f"Warning: {file.name} could not be processed and will not be used"
@@ -210,8 +206,7 @@ def _convert_gamedata_log(log: Path):
 def _convert_savedata_log(log: Path):
     diff = oead.byml.from_text(log.read_text("utf-8"))
     log.write_text(
-        oead.byml.to_text(oead.byml.Hash(
-            {"add": diff, "del": oead.byml.Array()})),
+        oead.byml.to_text(oead.byml.Hash({"add": diff, "del": oead.byml.Array()})),
         encoding="utf-8",
     )
 

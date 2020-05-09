@@ -74,6 +74,7 @@ class BcmlRoot extends React.Component {
                 pywebview.api
                     .save_settings({ settings })
                     .then(() => setTimeout(() => window.location.reload(), 500))
+                    .catch(this.showError)
         );
     }
 
@@ -339,7 +340,10 @@ class BcmlRoot extends React.Component {
                             saving={this.state.savingSettings}
                             onFail={() =>
                                 this.setState({
-                                    savingSettings: false
+                                    savingSettings: false,
+                                    showError: true,
+                                    errorText:
+                                        "Your settings are not valid and cannot be saved. Check that all fields are green before submitting."
                                 })
                             }
                             onSubmit={this.saveSettings}

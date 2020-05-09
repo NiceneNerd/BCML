@@ -54,7 +54,11 @@ class Mods extends React.Component {
             })
             .catch(err => {
                 console.error(err);
-                window.location = "index.html?firstrun=true";
+                this.props.onError(err);
+                setTimeout(
+                    () => (window.location = "index.html?firstrun=true"),
+                    1500
+                );
             });
     }
 
