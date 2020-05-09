@@ -263,7 +263,11 @@ class Api:
                 options=options,
                 pool=pool
             )
-            remergers.extend([m for m in mergers.get_mergers_for_mod(new_mod) if m not in remergers])
+            remergers |= {
+                m for m in mergers.get_mergers_for_mod(new_mod) if m.NAME not in {
+                    m.NAME for m in remergers
+                }
+            }
             for merger in remergers:
                 merger.set_pool(pool)
                 merger.perform_merge()

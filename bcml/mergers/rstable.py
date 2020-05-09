@@ -467,8 +467,7 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
     }
     if sarc_files:
         p = pool or multiprocessing.Pool()
-        results = p.map(_get_sizes_in_sarc, sarc_files)
-        for result in results:
+        for result in p.imap_unordered(_get_sizes_in_sarc, sarc_files):
             diffs.update(result)
         if not pool:
             p.close()
@@ -658,7 +657,7 @@ class RstbMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         print('Perfoming RSTB merge...')
-        log_merged_files_rstb()
+        log_merged_files_rstb(self._pool)
         generate_master_rstb()
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
