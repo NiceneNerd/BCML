@@ -16,7 +16,10 @@ setup(
     url="https://github.com/NiceneNerd/BCML",
     include_package_data=True,
     packages=["bcml"],
-    entry_points={"gui_scripts": ["bcml = bcml.__main__:main"]},
+    entry_points={
+        "gui_scripts": ["bcml = bcml.__main__:main"],
+        "console_scripts": ["bcml-debug = bcml.__main__:main"],
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -27,7 +30,7 @@ setup(
     install_requires=[
         "aamp>=1.4.1",
         "byml>=2.3.1",
-        "cefpython3>=66.0",
+        "cefpython3>=66.0 ; platform_system=='Windows'",
         "oead>=1.1.1",
         "pywebview>=3.2,<4.0",
         "pyYaml>=5.3.1",
