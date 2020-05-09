@@ -14,7 +14,7 @@ import traceback
 import oead
 import xxhash
 
-from . import util, install
+from bcml import util, install
 
 EXCLUDE_EXTS = {".yml", ".yaml", ".bak", ".txt", ".json", ".old"}
 

@@ -7,17 +7,18 @@ from collections.abc import Iterable
 from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
 from multiprocessing import Pool, set_start_method
+from os import execlp
 from pathlib import Path
 from platform import system
 from shutil import rmtree
-from subprocess import run, PIPE
+from subprocess import run, PIPE, Popen
 from threading import Thread
 
 import webview
 
-from . import DEBUG, NO_CEF, install, dev, mergers, upgrade, util
-from .util import BcmlMod, Messager, MergeError
-from .mergers.rstable import generate_rstb_for_mod
+from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util
+from bcml.util import BcmlMod, Messager, MergeError
+from bcml.mergers.rstable import generate_rstb_for_mod
 
 LOG = util.get_data_dir() / "bcml.log"
 
@@ -527,6 +528,26 @@ class Api:
         t = Thread(target=help_window)
         t.start()
 
+    @win_or_lose
+    def update_bcml(self):
+        run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "--pre" if DEBUG else "",
+                "bcml",
+            ],
+            check=True,
+        )
+
+    def restart(self):
+        Popen([sys.executable, "-m", "bcml"], cwd=str(Path().resolve()))
+        for win in webview.windows:
+            win.destroy()
+
 
 def help_window():
     webview.create_window("BCML Help", url="assets/help.html?page=main")
@@ -545,14 +566,14 @@ def main():
 
     url: str
     if (util.get_data_dir() / "settings.json").exists():
-        url = "assets/index.html"  # str(util.get_exec_dir() / 'assets' / 'index.html') + f'?mods={mods}'
+        url = f"{util.get_exec_dir()}/assets/index.html"
         width, height = 907, 680
     else:
-        url = "assets/index.html?firstrun=yes"  # str(util.get_exec_dir() / 'assets' / 'index.html') + f'?firstrun=yes'
+        url = f"{util.get_exec_dir()}/assets/index.html?firstrun=yes"
         width, height = 750, 600
 
     api.window = webview.create_window(
-        "BOTW Cemu Mod Loader",
+        "BOTW Cross-Platform Mod Loader",
         url=url,
         js_api=api,
         text_select=DEBUG,

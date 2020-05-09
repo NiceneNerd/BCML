@@ -335,7 +335,7 @@ class BcmlMod:
 
     @property
     def mergers(self) -> list:
-        from .mergers import get_mergers_for_mod
+        from bcml.mergers import get_mergers_for_mod
 
         return get_mergers_for_mod(self)
 
@@ -380,7 +380,8 @@ class BcmlMod:
                     if image_path.startswith("http"):
                         urllib.request.urlretrieve(
                             image_path,
-                            str(self.path / ("thumbnail." + image_path.split(".")[-1])),
+                            str(self.path / ("thumbnail." +
+                                             image_path.split(".")[-1])),
                         )
                         image_path = "thumbnail." + image_path.split(".")[-1]
                     if not os.path.isfile(str(self.path / image_path)):
@@ -407,7 +408,7 @@ compress = oead.yaz0.compress
 
 
 def vprint(content):
-    from . import DEBUG
+    from bcml import DEBUG
 
     if not DEBUG:
         return
@@ -515,7 +516,8 @@ def save_settings():
 def get_cemu_dir() -> Path:
     cemu_dir = str(get_settings("cemu_dir"))
     if not cemu_dir or not Path(cemu_dir).is_dir():
-        err = FileNotFoundError("The Cemu directory has moved or not been saved yet.")
+        err = FileNotFoundError(
+            "The Cemu directory has moved or not been saved yet.")
         err.error_text = "The Cemu directory has moved or not been saved yet."
         raise err
     return Path(cemu_dir)
@@ -551,7 +553,8 @@ def set_game_dir(path: Path):
 
             set_path = get_cemu_dir() / "settings.xml"
             if not set_path.exists():
-                err = FileNotFoundError("The Cemu settings file could not be found.")
+                err = FileNotFoundError(
+                    "The Cemu settings file could not be found.")
                 err.error_text = (
                     "The Cemu settings file could not be found. This usually means your Cemu directory "
                     "is set incorrectly."
@@ -563,7 +566,8 @@ def set_game_dir(path: Path):
                     set_read += line.strip()
             settings = minidom.parseString(set_read)
             mlc_path = Path(
-                settings.getElementsByTagName("mlc_path")[0].firstChild.nodeValue
+                settings.getElementsByTagName(
+                    "mlc_path")[0].firstChild.nodeValue
             )
         except (FileNotFoundError, IndexError, ValueError, AttributeError):
             mlc_path = get_cemu_dir() / "mlc01"
@@ -697,7 +701,8 @@ def get_content_path() -> str:
 
 def get_dlc_path() -> str:
     return (
-        "aoc" if get_settings("wiiu") else "atmosphere/contents/01007EF00011F001/romfs"
+        "aoc" if get_settings(
+            "wiiu") else "atmosphere/contents/01007EF00011F001/romfs"
     )
 
 
@@ -709,7 +714,8 @@ def get_modpack_dir() -> Path:
 @lru_cache(None)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).replace("\\", "/").startswith(f"{get_content_path()}/"):
-        path = Path(str(path).replace("\\", "/").replace(f"{get_content_path()}/", ""))
+        path = Path(str(path).replace(
+            "\\", "/").replace(f"{get_content_path()}/", ""))
     if isinstance(path, str):
         path = Path(path)
     game_dir = get_game_dir()
@@ -744,7 +750,8 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     elif aoc_dir and (aoc_dir / path).exists():
         return aoc_dir / path
     else:
-        raise FileNotFoundError(f"File {str(path)} was not found in game dump.")
+        raise FileNotFoundError(
+            f"File {str(path)} was not found in game dump.")
 
 
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
@@ -882,7 +889,8 @@ def inject_file_into_sarc(file: str, data: bytes, sarc: str, create_sarc: bool =
         path.write_bytes(new_bytes if not yaz else compress(new_bytes))
         del new_bytes
     else:
-        raise FileNotFoundError(f"{sarc} is not present in the master BCML mod")
+        raise FileNotFoundError(
+            f"{sarc} is not present in the master BCML mod")
 
 
 def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
@@ -895,7 +903,8 @@ def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
             title_path = get_game_file("Pack/TitleBG.pack")
         title_sarc = oead.Sarc(title_path.read_bytes())
         actor_sarc = oead.Sarc(
-            decompress(title_sarc.get_file_data(f"Actor/Pack/{actor}.sbactorpack").data)
+            decompress(title_sarc.get_file_data(
+                f"Actor/Pack/{actor}.sbactorpack").data)
         )
         del title_sarc
     else:
@@ -1058,10 +1067,6 @@ def get_installed_mods(disabled: bool = False) -> List[BcmlMod]:
     )
 
 
-def update_bcml():
-    subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "bcml"])
-
-
 def create_bcml_graphicpack_if_needed():
     """Creates the BCML master modpack if it doesn't exist"""
     bcml_mod_dir = get_modpack_dir() / "9999_BCML"
@@ -1135,16 +1140,20 @@ def create_schema_handler():
                 winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
                 with winreg.CreateKey(key, r"shell\open\command") as key2:
                     if (
-                        Path(os.__file__).parent.parent / "Scripts" / "bcml.exe"
+                        Path(os.__file__).parent.parent /
+                        "Scripts" / "bcml.exe"
                     ).exists():
                         exec_path = (
-                            Path(os.__file__).parent.parent / "Scripts" / "bcml.exe"
+                            Path(os.__file__).parent.parent /
+                            "Scripts" / "bcml.exe"
                         )
                     elif (
-                        Path(__file__).parent.parent.parent / "bin" / "bcml.exe"
+                        Path(__file__).parent.parent.parent /
+                        "bin" / "bcml.exe"
                     ).exists():
                         exec_path = (
-                            Path(__file__).parent.parent.parent / "bin" / "bcml.exe"
+                            Path(__file__).parent.parent.parent /
+                            "bin" / "bcml.exe"
                         )
                     else:
                         return
@@ -1200,7 +1209,7 @@ class Messager:
         self.log = get_data_dir() / "bcml.log"
 
     def write(self, string: str):
-        from .__main__ import LOG
+        from bcml.__main__ import LOG
 
         if (
             string.strip("") not in {"", "\n"}
@@ -1223,4 +1232,3 @@ if system() == "Windows":
     ZPATH = str(get_exec_dir() / "helpers" / "7z.exe")
 else:
     ZPATH = str(get_exec_dir() / "helpers" / "7z")
-

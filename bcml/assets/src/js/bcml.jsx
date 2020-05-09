@@ -52,6 +52,7 @@ class BcmlRoot extends React.Component {
         this.refreshMods = this.refreshMods.bind(this);
         this.export = this.export.bind(this);
         this.launchGame = this.launchGame.bind(this);
+        this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () =>
             setTimeout(this.refreshMods, 150)
         );
@@ -263,6 +264,33 @@ class BcmlRoot extends React.Component {
             .catch(this.props.onError);
     }
 
+    updateBcml() {
+        this.setState(
+            {
+                progressTitle: "Upgrading BCML",
+                progressStatus: "Please wait while BCML upgrades...",
+                showProgress: true
+            },
+            () => {
+                pywebview.api
+                    .update_bcml()
+                    .then(res => {
+                        if (res.error) {
+                            throw res.error;
+                        }
+                        this.setState({
+                            showProgress: false,
+                            showConfirm: true,
+                            confirmText:
+                                "BCML has been updated successfully. You must restart the program for changes to take effect. Restart now?",
+                            confirmCallback: () => pywebview.api.restart()
+                        });
+                    })
+                    .catch(this.showError);
+            }
+        );
+    }
+
     render() {
         return (
             <>
@@ -275,6 +303,9 @@ class BcmlRoot extends React.Component {
                         <Dropdown.Item
                             onClick={() => pywebview.api.open_help()}>
                             Help
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={this.updateBcml}>
+                            Update BCML
                         </Dropdown.Item>
                         <Dropdown.Item
                             onClick={() => this.setState({ showAbout: true })}>

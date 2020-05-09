@@ -235,6 +235,11 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
                 "AAMP extension must not be blank if passing file as bytes."
             )
     ext = ext.replace(".s", ".")
+    if ext in guess_aamp_size.factories and util.get_settings("wiiu"):
+        real_size += (
+            guess_aamp_size.factories[ext].size_nx
+            - guess_aamp_size.factories[ext].size_wiiu
+        )
     if ext == ".baiprog":
         if real_size <= 380:
             return real_size * 7
@@ -346,6 +351,9 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
         return int(((-0.0018 * real_size) + 6.6273) * real_size) + 500
     else:
         return 0
+
+
+setattr(guess_aamp_size, "factories", rstb.SizeCalculator()._factory_info)
 
 
 def get_mod_rstb_values(
