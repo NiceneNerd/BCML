@@ -149,7 +149,8 @@ def _convert_aamp_log(log: Path):
     for i, file in enumerate(doc):
         file_table.set_param(f"File{i}", file)
     root.set_object("FileTable", file_table)
-    log.write_bytes(Writer(pio).get_bytes())
+    log.unlink()
+    log.with_suffix(".aamp").write_bytes(Writer(pio).get_bytes())
 
 
 def _convert_text_log(log: Path) -> dict:

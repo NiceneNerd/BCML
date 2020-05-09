@@ -604,10 +604,7 @@ class RstbMerger(mergers.Merger):
                     size = calculate_size(file)
                     if file.suffix == ".bdmgparam":
                         size = 0
-                    if size == 0 and (
-                        not self._options["no_guess"]
-                        or file.suffix in {".bas", ".baslist"}
-                    ):
+                    if size == 0 and not self._options.get("no_guess", False):
                         if file.suffix in util.AAMP_EXTS:
                             size = guess_aamp_size(file)
                         elif file.suffix in [".bfres", ".sbfres"]:
@@ -641,9 +638,7 @@ class RstbMerger(mergers.Merger):
                 )
                 if ext == ".bdmgparam":
                     rstb_val = 0
-                if rstb_val == 0 and (
-                    not self._options["no_guess"] or ext in {".bas", ".baslist"}
-                ):
+                if rstb_val == 0 and not self._options.get("no_guess", False):
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)
                     elif ext in {".bfres", ".sbfres"}:
