@@ -17,9 +17,11 @@ class Settings extends React.Component {
         this.state = {
             cemu_dir: "",
             game_dir: "",
+            game_dir_nx: "",
             load_reverse: false,
             update_dir: "",
             dlc_dir: "",
+            dlc_dir_nx: "",
             site_meta: "",
             no_guess: false,
             lang: "",
@@ -33,7 +35,8 @@ class Settings extends React.Component {
 
     checkValid() {
         return (
-            this.state.game_dir != "" &&
+            (this.state.game_dir != "" || !this.state.wiiu) &&
+            (this.state.game_dir_nx != "" || this.state.wiiu) &&
             (this.state.update_dir != "" || !this.state.wiiu) &&
             this.state.lang != "" &&
             (this.state.cemu_dir != "" || this.state.no_cemu) &&
@@ -64,6 +67,7 @@ class Settings extends React.Component {
         try {
             e.persist();
         } catch (error) {}
+        console.log(e);
         this.setState({
             [e.target.id]:
                 e.target.type != "checkbox" ? e.target.value : e.target.checked
@@ -115,24 +119,56 @@ class Settings extends React.Component {
                         </Form.Group>
                     </Col>
                     <Col>
-                        <Form.Group controlId="game_dir">
+                        <Form.Group
+                            controlId="game_dir"
+                            className={!this.state.wiiu && "d-none"}>
                             <Form.Label>Base Game Directory</Form.Label>
                             <FolderInput
                                 value={this.state.game_dir}
                                 onChange={this.handleChange}
-                                isValid={this.state.game_dir != ""}
+                                isValid={
+                                    this.state.game_dir != "" ||
+                                    !this.state.wiiu
+                                }
                                 overlay={
                                     <Tooltip>
                                         The folder containing the base game
                                         files for BOTW, without the update or
-                                        DLC files. The last folder should be "
-                                        {this.state.wiiu ? "content" : "romfs"}
-                                        ", e.g.
+                                        DLC files. The last folder should be
+                                        "content", e.g.
                                         <br />
                                         <code>
-                                            {this.state.wiiu
-                                                ? "C:\\Games\\The Legend of Zelda Breath of the Wild [AZE01]\\content"
-                                                : "C:\\Games\\BOTW\\01007EF00011E000\\romfs"}
+                                            C:\Games\The Legend of Zelda Breath
+                                            of the Wild [AZE01]\content
+                                        </code>
+                                    </Tooltip>
+                                }
+                                placement={"left"}
+                            />
+                        </Form.Group>
+                        <Form.Control.Feedback type="invalid">
+                            The BOTW dump folder is required
+                        </Form.Control.Feedback>
+                        <Form.Group
+                            controlId="game_dir_nx"
+                            className={this.state.wiiu && "d-none"}>
+                            <Form.Label>Base Game Directory</Form.Label>
+                            <FolderInput
+                                value={this.state.game_dir_nx}
+                                onChange={this.handleChange}
+                                isValid={
+                                    this.state.game_dir_nx != "" ||
+                                    this.state.wiiu
+                                }
+                                overlay={
+                                    <Tooltip>
+                                        The folder containing the base game
+                                        files for BOTW, without the update or
+                                        DLC files. The last folder should be
+                                        "romfs", e.g.
+                                        <br />
+                                        <code>
+                                            C:\Games\BOTW\01007EF00011E000\romfs
                                         </code>
                                     </Tooltip>
                                 }
@@ -183,7 +219,9 @@ class Settings extends React.Component {
                         </Form.Control.Feedback>
                     </Col>
                     <Col>
-                        <Form.Group controlId="dlc_dir">
+                        <Form.Group
+                            controlId="dlc_dir"
+                            className={!this.state.wiiu && "d-none"}>
                             <Form.Label>DLC Directory</Form.Label>
                             <FolderInput
                                 value={this.state.dlc_dir}
@@ -192,20 +230,35 @@ class Settings extends React.Component {
                                 overlay={
                                     <Tooltip>
                                         (Optional) The folder containing the DLC
-                                        files for BOTW, version 3.0.
-                                        {this.state.wiiu && (
-                                            <>
-                                                The last folder should usually
-                                                be "0010", and if you use Cemu,
-                                                it should be in your "mlc01"
-                                                folder, e.g.
-                                            </>
-                                        )}
+                                        files for BOTW, version 3.0. The last
+                                        folder should usually be "0010", and if
+                                        you use Cemu, it should be in your
+                                        "mlc01" folder, e.g.
                                         <br />
                                         <code>
-                                            {this.state.wiiu
-                                                ? "C:\\Cemu\\mlc01\\usr\\title\\0005000C\\101C9400\\content\\0010"
-                                                : "C:\\Games\\BOTW\\01007EF00011F001\\romfs"}
+                                            C:\Cemu\mlc01\usr\title\0005000C\101C9400\content\0010
+                                        </code>
+                                    </Tooltip>
+                                }
+                                placement={"left"}
+                            />
+                        </Form.Group>
+
+                        <Form.Group
+                            controlId="dlc_dir_nx"
+                            className={this.state.wiiu && "d-none"}>
+                            <Form.Label>DLC Directory</Form.Label>
+                            <FolderInput
+                                value={this.state.dlc_dir_nx}
+                                onChange={this.handleChange}
+                                isValid={true}
+                                overlay={
+                                    <Tooltip>
+                                        (Optional) The folder containing the DLC
+                                        files for BOTW, version 3.0.
+                                        <br />
+                                        <code>
+                                            C:\Games\BOTW\01007EF00011F001\romfs
                                         </code>
                                     </Tooltip>
                                 }
