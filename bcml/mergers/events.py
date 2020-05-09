@@ -12,44 +12,57 @@ from bcml.mergers import rstable
 
 
 def get_stock_eventinfo() -> oead.byml.Hash:
-    if not hasattr(get_stock_eventinfo, 'event_info'):
+    if not hasattr(get_stock_eventinfo, "event_info"):
         get_stock_eventinfo.event_info = oead.byml.to_text(
             oead.byml.from_binary(
                 util.get_nested_file_bytes(
-                    str(util.get_game_file('Pack/Bootup.pack')) + '//Event/EventInfo.product.sbyml',
-                    unyaz=True
+                    str(util.get_game_file("Pack/Bootup.pack"))
+                    + "//Event/EventInfo.product.sbyml",
+                    unyaz=True,
                 )
             )
         )
     return oead.byml.from_text(get_stock_eventinfo.event_info)
 
+
 def get_modded_events(event_info: oead.byml.Hash) -> oead.byml.Hash:
     stock_events = get_stock_eventinfo()
-    modded_events = oead.byml.Hash({
-        event: data for event, data in event_info.items() if (
-            event not in stock_events or stock_events[event] != data
-        )
-    })
+    modded_events = oead.byml.Hash(
+        {
+            event: data
+            for event, data in event_info.items()
+            if (event not in stock_events or stock_events[event] != data)
+        }
+    )
     del stock_events
     return modded_events
 
 
 class EventInfoMerger(mergers.Merger):
-    NAME: str = 'eventinfo'
+    NAME: str = "eventinfo"
 
     def __init__(self):
-        super().__init__('event info', 'Merges changes to EventInfo.product.byml',
-                         'eventinfo.yml', options={})
+        super().__init__(
+            "event info",
+            "Merges changes to EventInfo.product.byml",
+            "eventinfo.yml",
+            options={},
+        )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
-        if f'{util.get_content_path()}/Pack/Bootup.pack//Event/EventInfo.product.sbyml' in modded_files:
-            print('Logging modded events...')
+        if (
+            f"{util.get_content_path()}/Pack/Bootup.pack//Event/EventInfo.product.sbyml"
+            in modded_files
+        ):
+            print("Logging modded events...")
             bootup_sarc = oead.Sarc(
-                (mod_dir / util.get_content_path() / 'Pack' / 'Bootup.pack').read_bytes()
+                (
+                    mod_dir / util.get_content_path() / "Pack" / "Bootup.pack"
+                ).read_bytes()
             )
             event_info = oead.byml.from_binary(
                 util.decompress(
-                    bootup_sarc.get_file('Event/EventInfo.product.sbyml').data
+                    bootup_sarc.get_file("Event/EventInfo.product.sbyml").data
                 )
             )
             diff = get_modded_events(event_info)
@@ -63,9 +76,8 @@ class EventInfoMerger(mergers.Merger):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
-            (mod_dir / 'logs' / self._log_name).write_text(
-                oead.byml.to_text(diff_material),
-                encoding='utf-8'
+            (mod_dir / "logs" / self._log_name).write_text(
+                oead.byml.to_text(diff_material), encoding="utf-8"
             )
             del diff_material
 
@@ -75,18 +87,18 @@ class EventInfoMerger(mergers.Merger):
             util.dict_merge(
                 diffs,
                 oead.byml.from_text(
-                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8')
+                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8")
                 ),
-                overwrite_lists=True
+                overwrite_lists=True,
             )
-        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
-            if (opt / 'logs' / self._log_name).exists():
+        for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
+            if (opt / "logs" / self._log_name).exists():
                 util.dict_merge(
                     diffs,
                     oead.byml.from_text(
-                        (opt / 'logs' / self._log_name).read_text('utf-8')
+                        (opt / "logs" / self._log_name).read_text("utf-8")
                     ),
-                    overwrite_lists=True
+                    overwrite_lists=True,
                 )
         return diffs
 
@@ -108,33 +120,35 @@ class EventInfoMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        merged_events = util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml'
-        event_merge_log = util.get_master_modpack_dir() / 'logs' / 'eventinfo.log'
+        merged_events = util.get_master_modpack_dir() / "logs" / "eventinfo.byml"
+        event_merge_log = util.get_master_modpack_dir() / "logs" / "eventinfo.log"
 
-        print('Loading event info mods...')
+        print("Loading event info mods...")
         modded_events = self.consolidate_diffs(self.get_all_diffs())
         event_mod_hash = hash(str(modded_events))
         if not modded_events:
-            print('No event info merging necessary')
+            print("No event info merging necessary")
             if merged_events.exists():
                 merged_events.unlink()
                 event_merge_log.unlink()
                 try:
                     stock_eventinfo = util.get_nested_file_bytes(
-                        (str(util.get_game_file('Pack/Bootup.pack')) +
-                         '//Event/EventInfo.product.sbyml'),
-                        unyaz=False
+                        (
+                            str(util.get_game_file("Pack/Bootup.pack"))
+                            + "//Event/EventInfo.product.sbyml"
+                        ),
+                        unyaz=False,
                     )
                     util.inject_file_into_sarc(
-                        'Event/EventInfo.product.sbyml',
+                        "Event/EventInfo.product.sbyml",
                         stock_eventinfo,
-                        'Pack/Bootup.pack'
+                        "Pack/Bootup.pack",
                     )
                 except FileNotFoundError:
                     pass
             return
         if event_merge_log.exists() and event_merge_log.read_text() == event_mod_hash:
-            print('No event info merging necessary')
+            print("No event info merging necessary")
             return
 
         new_events = get_stock_eventinfo()
@@ -142,25 +156,27 @@ class EventInfoMerger(mergers.Merger):
             new_events[event] = data
         del modded_events
 
-        print('Writing new event info...')
-        event_bytes = oead.byml.to_binary(new_events, big_endian=util.get_settings('wiiu'))
+        print("Writing new event info...")
+        event_bytes = oead.byml.to_binary(
+            new_events, big_endian=util.get_settings("wiiu")
+        )
         del new_events
         util.inject_file_into_sarc(
-            'Event/EventInfo.product.sbyml',
+            "Event/EventInfo.product.sbyml",
             util.compress(event_bytes),
-            'Pack/Bootup.pack',
-            create_sarc=True
+            "Pack/Bootup.pack",
+            create_sarc=True,
         )
-        print('Saving event info merge log...')
+        print("Saving event info merge log...")
         event_merge_log.write_text(str(event_mod_hash))
         merged_events.write_bytes(event_bytes)
 
-        print('Updating RSTB...')
+        print("Updating RSTB...")
         rstb_size = rstb.SizeCalculator().calculate_file_size_with_ext(
-            bytes(event_bytes), True, '.byml'
+            bytes(event_bytes), True, ".byml"
         )
         del event_bytes
-        rstable.set_size('Event/EventInfo.product.byml', rstb_size)
+        rstable.set_size("Event/EventInfo.product.byml", rstb_size)
 
     def get_checkbox_options(self):
         return []
@@ -170,11 +186,11 @@ class EventInfoMerger(mergers.Merger):
         return True
 
     def get_bootup_injection(self):
-        tmp_sarc = util.get_master_modpack_dir() / 'logs' / 'eventinfo.byml'
+        tmp_sarc = util.get_master_modpack_dir() / "logs" / "eventinfo.byml"
         if tmp_sarc.exists():
             return (
-                'Event/EventInfo.product.sbyml',
-                util.compress(tmp_sarc.read_bytes())
+                "Event/EventInfo.product.sbyml",
+                util.compress(tmp_sarc.read_bytes()),
             )
         else:
             return

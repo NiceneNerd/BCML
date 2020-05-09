@@ -16,10 +16,10 @@ from bcml import data, util, mergers
 from bcml.util import BcmlMod
 
 SPECIAL = {
-    'GameData/gamedata.ssarc',
-    'GameData/savedataformat.ssarc',
-    'Layout/Common.sblarc',
-    'Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc'
+    "GameData/gamedata.ssarc",
+    "GameData/savedataformat.ssarc",
+    "Layout/Common.sblarc",
+    "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
 }
 
 
@@ -35,18 +35,26 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
         except (ValueError, RuntimeError, oead.InvalidDataError):
             continue
 
-    all_files = {file.name for open_sarc in opened_sarcs for file in open_sarc.get_files()}
+    all_files = {
+        file.name for open_sarc in opened_sarcs for file in open_sarc.get_files()
+    }
     nested_sarcs = {}
     new_sarc = oead.SarcWriter(
-        endian=oead.Endianness.Big if util.get_settings('wiiu') else oead.Endianness.Little
+        endian=oead.Endianness.Big
+        if util.get_settings("wiiu")
+        else oead.Endianness.Little
     )
     files_added = set()
 
     for opened_sarc in reversed(opened_sarcs):
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
             file_data = oead.Bytes(file.data)
-            if util.is_file_modded(file.name.replace('.s', '.'), file_data, count_new=True):
-                if (not Path(file.name).suffix in util.SARC_EXTS) or file.name in SPECIAL:
+            if util.is_file_modded(
+                file.name.replace(".s", "."), file_data, count_new=True
+            ):
+                if (
+                    not Path(file.name).suffix in util.SARC_EXTS
+                ) or file.name in SPECIAL:
                     new_sarc.files[file.name] = file_data
                     files_added.add(file.name)
                 else:
@@ -58,19 +66,23 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
         if not sarcs:
             continue
         merged_bytes = merge_sarcs(file, sarcs)[1]
-        if Path(file).suffix.startswith('.s') and not file.endswith('.sarc'):
+        if Path(file).suffix.startswith(".s") and not file.endswith(".sarc"):
             merged_bytes = util.compress(merged_bytes)
         new_sarc.files[file] = merged_bytes
         files_added.add(file)
     for file in [file for file in all_files if file not in files_added]:
-        for opened_sarc in [open_sarc for open_sarc in opened_sarcs if (
-                file in [f.name for f in open_sarc.get_files()]
-            )]:
+        for opened_sarc in [
+            open_sarc
+            for open_sarc in opened_sarcs
+            if (file in [f.name for f in open_sarc.get_files()])
+        ]:
             new_sarc.files[file] = oead.Bytes(opened_sarc.get_file(file).data)
             break
 
-    if 'Bootup.pack' in file_name:
-        for merger in [merger() for merger in mergers.get_mergers() if merger.is_bootup_injector()]:
+    if "Bootup.pack" in file_name:
+        for merger in [
+            merger() for merger in mergers.get_mergers() if merger.is_bootup_injector()
+        ]:
             inject = merger.get_bootup_injection()
             if not inject:
                 continue
@@ -82,10 +94,13 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
 
 class PackMerger(mergers.Merger):
     """ A merger for modified pack files """
-    NAME: str = 'packs'
+
+    NAME: str = "packs"
 
     def __init__(self):
-        super().__init__('packs', 'Merges modified files within SARCs', 'packs.json', {})
+        super().__init__(
+            "packs", "Merges modified files within SARCs", "packs.json", {}
+        )
 
     def can_partial_remerge(self):
         return True
@@ -94,38 +109,44 @@ class PackMerger(mergers.Merger):
         return self.get_mod_diff(mod)
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
-        print('Finding modified SARCs...')
+        print("Finding modified SARCs...")
         packs = {}
-        for file in [file for file in modded_files \
-                     if isinstance(file, Path) and file.suffix in util.SARC_EXTS]:
+        for file in [
+            file
+            for file in modded_files
+            if isinstance(file, Path) and file.suffix in util.SARC_EXTS
+        ]:
             canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-            if canon and not any(ex in file.name for ex in ['Dungeon', 'Bootup_', 'AocMainField']):
+            if canon and not any(
+                ex in file.name for ex in ["Dungeon", "Bootup_", "AocMainField"]
+            ):
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
-        (mod_dir / 'logs' / self._log_name).write_text(
-            json.dumps(diff_material, ensure_ascii=False, indent=2),
-            encoding='utf-8'
+        (mod_dir / "logs" / self._log_name).write_text(
+            json.dumps(diff_material, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
     def get_mod_diff(self, mod: util.BcmlMod):
         diffs = set()
         if self.is_mod_logged(mod):
             diffs |= {
-                Path(path.replace('\\', '/')).as_posix() for _, path in json.loads(
-                    (mod.path / 'logs' / self._log_name).read_text(encoding='utf-8'),
-                    encoding='utf-8'
+                Path(path.replace("\\", "/")).as_posix()
+                for _, path in json.loads(
+                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8"),
+                    encoding="utf-8",
                 ).items()
             }
-        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
-            if (opt / 'logs' / self._log_name).exists():
+        for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
+            if (opt / "logs" / self._log_name).exists():
                 diffs |= {
-                    Path(path.replace('\\', '/')).as_posix() for _, path in json.loads(
-                        (opt / 'logs' / self._log_name).read_text(encoding='utf-8'),
-                        encoding='utf-8'
+                    Path(path.replace("\\", "/")).as_posix()
+                    for _, path in json.loads(
+                        (opt / "logs" / self._log_name).read_text(encoding="utf-8"),
+                        encoding="utf-8",
                     ).items()
                 }
         return diffs
@@ -148,24 +169,29 @@ class PackMerger(mergers.Merger):
                         all_diffs[modded_sarc] = []
                     if (mod.path / modded_sarc).exists():
                         all_diffs[modded_sarc].append(mod.path / modded_sarc)
-        util.vprint('All SARC diffs:')
+        util.vprint("All SARC diffs:")
         util.vprint(all_diffs)
         return all_diffs
 
     @util.timed
     def perform_merge(self):
-        print('Loading modded SARC list...')
+        print("Loading modded SARC list...")
         sarcs = self.consolidate_diffs(self.get_all_diffs())
-        if 'only_these' in self._options:
-            for sarc_file in self._options['only_these']:
-                master_path = (util.get_master_modpack_dir() / sarc_file)
+        if "only_these" in self._options:
+            for sarc_file in self._options["only_these"]:
+                master_path = util.get_master_modpack_dir() / sarc_file
                 if master_path.exists():
                     master_path.unlink()
-            for sarc_file in [file for file in sarcs if file not in self._options['only_these']]:
+            for sarc_file in [
+                file for file in sarcs if file not in self._options["only_these"]
+            ]:
                 del sarcs[sarc_file]
         else:
-            for file in [file for file in util.get_master_modpack_dir().rglob('**/*') \
-                        if file.suffix in util.SARC_EXTS]:
+            for file in [
+                file
+                for file in util.get_master_modpack_dir().rglob("**/*")
+                if file.suffix in util.SARC_EXTS
+            ]:
                 file.unlink()
         for sarc_file in sarcs:
             try:
@@ -173,22 +199,22 @@ class PackMerger(mergers.Merger):
             except FileNotFoundError:
                 continue
         if not sarcs:
-            print('No SARC merging necessary')
+            print("No SARC merging necessary")
             return
-        print(f'Merging {len(sarcs)} SARC files...')
+        print(f"Merging {len(sarcs)} SARC files...")
         pool = self._pool or Pool()
         results = pool.starmap(merge_sarcs, sarcs.items())
         for result in results:
             file, file_data = result
             output_path = util.get_master_modpack_dir() / file
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            if output_path.suffix.startswith('.s'):
+            if output_path.suffix.startswith(".s"):
                 file_data = util.compress(file_data)
             output_path.write_bytes(file_data)
         if not self._pool:
             pool.close()
             pool.join()
-        print('Finished merging SARCs')
+        print("Finished merging SARCs")
 
     def get_checkbox_options(self):
         return []

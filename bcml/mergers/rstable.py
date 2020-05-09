@@ -20,39 +20,65 @@ from rstb.util import read_rstb
 from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
-RSTB_EXCLUDE_EXTS = {'.pack', '.bgdata', '.txt', '.bgsvdata', '.yml', '.msbt',
-                     '.bat', '.ini', '.png', '.bfstm', '.py', '.sh'}
-RSTB_EXCLUDE_NAMES = {'Actor/ActorInfo.product.byml'}
+RSTB_EXCLUDE_EXTS = {
+    ".pack",
+    ".bgdata",
+    ".txt",
+    ".bgsvdata",
+    ".yml",
+    ".msbt",
+    ".bat",
+    ".ini",
+    ".png",
+    ".bfstm",
+    ".py",
+    ".sh",
+}
+RSTB_EXCLUDE_NAMES = {"Actor/ActorInfo.product.byml"}
 
 
 def generate_rstb_for_mod(mod: Path):
     files = install.find_modded_files(mod)
     merger = RstbMerger()
     diff = merger.generate_diff(mod, files)
-    print('Creating RSTB...')
+    print("Creating RSTB...")
     table = get_stock_rstb()
     for file, value in diff.items():
         canon: str
         if isinstance(file, Path):
             canon = util.get_canon_name(file.relative_to(mod))
         else:
-            canon = file.split('//')[-1].replace('.s', '.')
-        if not (table.is_in_table(canon) and value <= table.get_size(canon)) and value > 0:
+            canon = file.split("//")[-1].replace(".s", ".")
+        if (
+            not (table.is_in_table(canon) and value <= table.get_size(canon))
+            and value > 0
+        ):
             table.set_size(canon, value)
-    print('Writing RSTB...')
-    rstb_path = mod / util.get_content_path() / 'System' / 'Resource' / 'ResourceSizeTable.srsizetable'
+    print("Writing RSTB...")
+    rstb_path = (
+        mod
+        / util.get_content_path()
+        / "System"
+        / "Resource"
+        / "ResourceSizeTable.srsizetable"
+    )
     rstb_path.parent.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
-    table.write(buf, util.get_settings('wiiu'))
+    table.write(buf, util.get_settings("wiiu"))
     rstb_path.write_bytes(util.compress(buf.getvalue()))
     del buf
     del table
 
+
 def get_stock_rstb() -> rstb.ResourceSizeTable:
-    if not hasattr(get_stock_rstb, 'table'):
+    if not hasattr(get_stock_rstb, "table"):
         get_stock_rstb.table = read_rstb(
-            str(util.get_game_file('System/Resource/ResourceSizeTable.product.srsizetable')),
-            util.get_settings('wiiu')
+            str(
+                util.get_game_file(
+                    "System/Resource/ResourceSizeTable.product.srsizetable"
+                )
+            ),
+            util.get_settings("wiiu"),
         )
     return deepcopy(get_stock_rstb.table)
 
@@ -60,43 +86,47 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
 def calculate_size(path: Path) -> int:
     try:
         return calculate_size.rstb_calc.calculate_file_size(
-            file_name=str(path),
-            wiiu=util.get_settings('wiiu'),
-            force=False
+            file_name=str(path), wiiu=util.get_settings("wiiu"), force=False
         )
     except struct.error:
         return 0
-setattr(calculate_size, 'rstb_calc', rstb.SizeCalculator())
+
+
+setattr(calculate_size, "rstb_calc", rstb.SizeCalculator())
+
 
 def set_size(entry: str, size: int):
-    rstb_path = util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /\
-                'ResourceSizeTable.product.srsizetable'
+    rstb_path = (
+        util.get_master_modpack_dir()
+        / util.get_content_path()
+        / "System"
+        / "Resource"
+        / "ResourceSizeTable.product.srsizetable"
+    )
     if rstb_path.exists():
-        table = read_rstb(rstb_path, be=util.get_settings('wiiu'))
+        table = read_rstb(rstb_path, be=util.get_settings("wiiu"))
     else:
         table = get_stock_rstb()
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
     table.set_size(entry, size)
     buf = io.BytesIO()
-    table.write(buf, be=util.get_settings('wiiu'))
-    rstb_path.write_bytes(
-        util.compress(buf.getvalue())
-    )
+    table.write(buf, be=util.get_settings("wiiu"))
+    rstb_path.write_bytes(util.compress(buf.getvalue()))
 
 
-def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
+def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
-    if real_bytes[0:4] == b'Yaz0':
+    if real_bytes[0:4] == b"Yaz0":
         real_bytes = util.decompress(real_bytes)
     real_size = int(len(real_bytes) * 1.05)
     del real_bytes
-    if name == '':
+    if name == "":
         if isinstance(file, Path):
             name = file.name
         else:
-            raise ValueError('BFRES name must not be blank if passing file as bytes.')
-    if util.get_settings('wiiu'):
-        if '.Tex' in name:
+            raise ValueError("BFRES name must not be blank if passing file as bytes.")
+    if util.get_settings("wiiu"):
+        if ".Tex" in name:
             if real_size < 100:
                 return real_size * 9
             elif 100 < real_size <= 2000:
@@ -155,7 +185,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
             else:
                 return int(real_size * 1.25)
     else:
-        if '.Tex' in name:
+        if ".Tex" in name:
             if 50000 < real_size:
                 return int(real_size * 1.2)
             elif 30000 < real_size:
@@ -174,7 +204,7 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
             elif 800000 < real_size:
                 return int(real_size * 2.367)
             elif 100000 < real_size:
-                return int(real_size  * 2.5)
+                return int(real_size * 2.5)
             elif 50000 < real_size:
                 return int(real_size * 3.4)
             elif 2500 < real_size:
@@ -184,22 +214,28 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = '') -> int:
             else:
                 return int(real_size * 9.5)
 
-def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
+
+def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
     real_bytes = (
-        file if isinstance(file, bytes) else file.tobytes() \
-            if isinstance(file, memoryview) else file.read_bytes()
+        file
+        if isinstance(file, bytes)
+        else file.tobytes()
+        if isinstance(file, memoryview)
+        else file.read_bytes()
     )
-    if real_bytes[0:4] == b'Yaz0':
+    if real_bytes[0:4] == b"Yaz0":
         real_bytes = util.decompress(real_bytes)
     real_size = int(len(real_bytes) * 1.05)
     del real_bytes
-    if ext == '':
+    if ext == "":
         if isinstance(file, Path):
             ext = file.suffix
         else:
-            raise ValueError('AAMP extension must not be blank if passing file as bytes.')
-    ext = ext.replace('.s', '.')
-    if ext == '.baiprog':
+            raise ValueError(
+                "AAMP extension must not be blank if passing file as bytes."
+            )
+    ext = ext.replace(".s", ".")
+    if ext == ".baiprog":
         if real_size <= 380:
             return real_size * 7
         elif 380 < real_size <= 400:
@@ -214,7 +250,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return int(real_size * 3.5)
         else:
             return real_size * 3
-    elif ext == '.bgparamlist':
+    elif ext == ".bgparamlist":
         if real_size <= 100:
             return real_size * 20
         elif 100 < real_size <= 150:
@@ -227,7 +263,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 7
         else:
             return real_size * 6
-    elif ext == '.bdrop':
+    elif ext == ".bdrop":
         if real_size < 200:
             return int(real_size * 8.5)
         elif 200 < real_size <= 250:
@@ -240,7 +276,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return int(real_size * 4.5)
         else:
             return real_size * 4
-    elif ext == '.bxml':
+    elif ext == ".bxml":
         if real_size < 350:
             return real_size * 6
         elif 350 < real_size <= 450:
@@ -253,7 +289,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return int(real_size * 3.5)
         else:
             return real_size * 3
-    elif ext == '.brecipe':
+    elif ext == ".brecipe":
         if real_size < 100:
             return int(real_size * 12.5)
         elif 100 < real_size <= 160:
@@ -264,7 +300,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 7
         else:
             return int(real_size * 6.5)
-    elif ext == '.bshop':
+    elif ext == ".bshop":
         if real_size < 200:
             return int(real_size * 7.25)
         elif 200 < real_size <= 400:
@@ -273,7 +309,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 5
         else:
             return int(real_size * 4.05)
-    elif ext == '.bas':
+    elif ext == ".bas":
         real_size = int(real_size * 1.05)
         if real_size < 100:
             return real_size * 20
@@ -291,7 +327,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 5
         else:
             return int(real_size * 4.5)
-    elif ext == '.baslist':
+    elif ext == ".baslist":
         if real_size < 100:
             return real_size * 15
         elif 100 < real_size <= 200:
@@ -306,87 +342,91 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = '') -> int:
             return real_size * 4
         else:
             return int(real_size * 3.5)
-    elif ext == '.bdmgparam':
+    elif ext == ".bdmgparam":
         return int(((-0.0018 * real_size) + 6.6273) * real_size) + 500
     else:
         return 0
 
 
-def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = 'rstb.log') -> {}:
+def get_mod_rstb_values(
+    mod: Union[Path, str, BcmlMod], log_name: str = "rstb.log"
+) -> {}:
     """ Gets all of the RSTB values for a given mod """
-    path = mod if isinstance(mod, Path) else Path(
-        mod) if isinstance(mod, str) else mod.path
+    path = (
+        mod
+        if isinstance(mod, Path)
+        else Path(mod)
+        if isinstance(mod, str)
+        else mod.path
+    )
     changes = {}
-    leave = (path / 'logs' / '.leave').exists()
-    shrink = (path / 'logs' / '.shrink').exists()
-    with (path / 'logs' / log_name).open('r') as l_file:
+    leave = (path / "logs" / ".leave").exists()
+    shrink = (path / "logs" / ".shrink").exists()
+    with (path / "logs" / log_name).open("r") as l_file:
         log_loop = csv.reader(l_file)
         for row in log_loop:
-            if row[0] != 'name':
-                changes[row[0]] = {
-                    'size': row[1],
-                    'leave': leave,
-                    'shrink': shrink
-                }
+            if row[0] != "name":
+                changes[row[0]] = {"size": row[1], "leave": leave, "shrink": shrink}
     return changes
 
 
 def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
-    spaces = '  '
-    change_count = {
-        'updated': 0,
-        'deleted': 0,
-        'added': 0,
-        'warning': 0
-    }
+    spaces = "  "
+    change_count = {"updated": 0, "deleted": 0, "added": 0, "warning": 0}
     for change in changes:
         if zlib.crc32(change.encode()) in table.crc32_map:
-            newsize = int(changes[change]['size'])
+            newsize = int(changes[change]["size"])
             if newsize == 0:
-                if not changes[change]['leave']:
-                    if change.endswith('.bas') or change.endswith('.baslist'):
+                if not changes[change]["leave"]:
+                    if change.endswith(".bas") or change.endswith(".baslist"):
                         print(
-                            f'{spaces}WARNING: Could not calculate or safely remove RSTB size for'
-                            f'{change}. This may need to be corrected manually, or the game could '
-                            'become unstable'
+                            f"{spaces}WARNING: Could not calculate or safely remove RSTB size for"
+                            f"{change}. This may need to be corrected manually, or the game could "
+                            "become unstable"
                         )
-                        change_count['warning'] += 1
+                        change_count["warning"] += 1
                         continue
                     else:
                         table.delete_entry(change)
-                        util.vprint(f'{spaces}Deleted RSTB entry for {change}')
-                        change_count['deleted'] += 1
+                        util.vprint(f"{spaces}Deleted RSTB entry for {change}")
+                        change_count["deleted"] += 1
                         continue
                 else:
-                    util.vprint(f'{spaces}Skipped deleting RSTB entry for {change}')
+                    util.vprint(f"{spaces}Skipped deleting RSTB entry for {change}")
                     continue
             oldsize = table.get_size(change)
             if newsize <= oldsize:
-                if changes[change]['shrink']:
+                if changes[change]["shrink"]:
                     table.set_size(change, newsize)
                     util.vprint(
-                        f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}'
+                        f"{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}"
                     )
-                    change_count['updated'] += 1
+                    change_count["updated"] += 1
                     continue
                 else:
-                    util.vprint(f'{spaces}Skipped updating RSTB entry for {change}')
+                    util.vprint(f"{spaces}Skipped updating RSTB entry for {change}")
                     continue
             elif newsize > oldsize:
                 table.set_size(change, newsize)
-                util.vprint(f'{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}')
-                change_count['updated'] += 1
+                util.vprint(
+                    f"{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}"
+                )
+                change_count["updated"] += 1
         else:
             try:
-                newsize = int(changes[change]['size'])
+                newsize = int(changes[change]["size"])
             except ValueError:
-                newsize = int(float(changes[change]['size']))
+                newsize = int(float(changes[change]["size"]))
             if newsize == 0:
-                util.vprint(f'{spaces}Could not calculate size for new entry {change}, skipped')
+                util.vprint(
+                    f"{spaces}Could not calculate size for new entry {change}, skipped"
+                )
                 continue
             table.set_size(change, newsize)
-            util.vprint(f'{spaces}Added new RSTB entry for {change} with value {newsize}')
-            change_count['added'] += 1
+            util.vprint(
+                f"{spaces}Added new RSTB entry for {change} with value {newsize}"
+            )
+            change_count["added"] += 1
     print(
         f'RSTB merge complete: updated {change_count["updated"]} entries, deleted'
         f' {change_count["deleted"]} entries, added {change_count["added"]} entries'
@@ -397,39 +437,42 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
 def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
     calc = rstb.SizeCalculator()
     sizes = {}
-    no_guess = util.get_settings('no_guess')
+    no_guess = util.get_settings("no_guess")
     if isinstance(file, Path):
         try:
             file = oead.Sarc(file.read_bytes())
         except (RuntimeError, oead.InvalidDataError):
             return {}
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
-        canon = nest_file.replace('.s', '.')
-        if data[0:4] == b'Yaz0':
+        canon = nest_file.replace(".s", ".")
+        if data[0:4] == b"Yaz0":
             data = bytes(util.decompress(data))
         else:
             data = bytes(data)
         ext = Path(canon).suffix
         if (
-                util.is_file_modded(canon, data)
-                and ext not in RSTB_EXCLUDE_EXTS
-                and canon not in RSTB_EXCLUDE_NAMES
-            ):
+            util.is_file_modded(canon, data)
+            and ext not in RSTB_EXCLUDE_EXTS
+            and canon not in RSTB_EXCLUDE_NAMES
+        ):
             size = calc.calculate_file_size_with_ext(
-                data,
-                wiiu=util.get_settings('wiiu'),
-                ext=ext
+                data, wiiu=util.get_settings("wiiu"), ext=ext
             )
-            if ext == '.bdmgparam':
+            if ext == ".bdmgparam":
                 size = 0
             if size == 0 and not no_guess:
                 if ext in util.AAMP_EXTS:
                     size = guess_aamp_size(data, ext)
-                elif ext in {'.bfres', '.sbfres'}:
+                elif ext in {".bfres", ".sbfres"}:
                     size = guess_bfres_size(data, canon)
             sizes[canon] = size
             if ext in util.SARC_EXTS and not ext not in {
-                '.sarc', '.blarc', '.bfarc', '.ssarc', '.sbfarc', '.sblarc'
+                ".sarc",
+                ".blarc",
+                ".bfarc",
+                ".ssarc",
+                ".sbfarc",
+                ".sblarc",
             }:
                 try:
                     nest_sarc = oead.Sarc(data)
@@ -442,27 +485,31 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
 
 
 def log_merged_files_rstb(pool: multiprocessing.Pool = None):
-    print('Updating RSTB for merged files...')
+    print("Updating RSTB for merged files...")
     diffs = {}
     files = {
-        f for f in util.get_master_modpack_dir().rglob('**/*') \
-            if f.is_file() and f.parent != 'logs'
+        f
+        for f in util.get_master_modpack_dir().rglob("**/*")
+        if f.is_file() and f.parent != "logs"
     }
-    no_guess = util.get_settings('no_guess')
+    no_guess = util.get_settings("no_guess")
     for file in files:
         if not (file.suffix in RSTB_EXCLUDE_EXTS or file.name in RSTB_EXCLUDE_NAMES):
             size = calculate_size(file)
             if size == 0 and not no_guess:
                 if file.suffix in util.AAMP_EXTS:
                     size = guess_aamp_size(file)
-                elif file.suffix in ['.bfres', '.sbfres']:
+                elif file.suffix in [".bfres", ".sbfres"]:
                     size = guess_bfres_size(file)
             canon = util.get_canon_name(file.relative_to(util.get_master_modpack_dir()))
             if canon:
                 diffs[canon] = size
     sarc_files = {
-        f for f in files if (
-            f.suffix in util.SARC_EXTS and f.suffix not in {'.ssarc', '.sblarc', '.sbfarc'}
+        f
+        for f in files
+        if (
+            f.suffix in util.SARC_EXTS
+            and f.suffix not in {".ssarc", ".sblarc", ".sbfarc"}
         )
     }
     if sarc_files:
@@ -472,58 +519,69 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if not pool:
             p.close()
             p.join()
-    (util.get_master_modpack_dir() / 'logs').mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / 'logs' / 'rstb.log').open('w', encoding='utf-8') as log:
-        log.write('name,size,path\n')
+    (util.get_master_modpack_dir() / "logs").mkdir(parents=True, exist_ok=True)
+    with (util.get_master_modpack_dir() / "logs" / "rstb.log").open(
+        "w", encoding="utf-8"
+    ) as log:
+        log.write("name,size,path\n")
         for canon, size in diffs.items():
-            log.write(f'{canon},{size},//\n')
+            log.write(f"{canon},{size},//\n")
+
 
 def generate_master_rstb():
-    print('Merging RSTB changes...')
-    if (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').exists():
-        (util.get_master_modpack_dir() / 'logs' / 'master-rstb.log').unlink()
+    print("Merging RSTB changes...")
+    if (util.get_master_modpack_dir() / "logs" / "master-rstb.log").exists():
+        (util.get_master_modpack_dir() / "logs" / "master-rstb.log").unlink()
 
     table = get_stock_rstb()
     rstb_values = {}
     for mod in util.get_installed_mods():
         rstb_values.update(get_mod_rstb_values(mod))
-    if (util.get_master_modpack_dir() / 'logs' / 'rstb.log').exists():
+    if (util.get_master_modpack_dir() / "logs" / "rstb.log").exists():
         rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir()))
 
     table = merge_rstb(table, rstb_values)
 
-    for bootup_pack in util.get_master_modpack_dir().glob(f'{util.get_content_path()}/Pack/Bootup_*.pack'):
+    for bootup_pack in util.get_master_modpack_dir().glob(
+        f"{util.get_content_path()}/Pack/Bootup_*.pack"
+    ):
         lang = util.get_file_language(bootup_pack)
-        if table.is_in_table(f'Message/Msg_{lang}.product.sarc'):
-            table.delete_entry(f'Message/Msg_{lang}.product.sarc')
+        if table.is_in_table(f"Message/Msg_{lang}.product.sarc"):
+            table.delete_entry(f"Message/Msg_{lang}.product.sarc")
 
-    rstb_path = (util.get_master_modpack_dir() / util.get_content_path() / 'System' / 'Resource' /
-                 'ResourceSizeTable.product.srsizetable')
+    rstb_path = (
+        util.get_master_modpack_dir()
+        / util.get_content_path()
+        / "System"
+        / "Resource"
+        / "ResourceSizeTable.product.srsizetable"
+    )
     if not rstb_path.exists():
         rstb_path.parent.mkdir(parents=True, exist_ok=True)
-    with rstb_path.open('wb') as r_file:
+    with rstb_path.open("wb") as r_file:
         with io.BytesIO() as buf:
-            table.write(buf, util.get_settings('wiiu'))
+            table.write(buf, util.get_settings("wiiu"))
             r_file.write(util.compress(buf.getvalue()))
 
-    rstb_log = util.get_master_modpack_dir() / 'logs' / 'master-rstb.log'
+    rstb_log = util.get_master_modpack_dir() / "logs" / "master-rstb.log"
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
     from json import dumps
+
     rstb_log.write_text(dumps(rstb_values))
 
 
 class RstbMerger(mergers.Merger):
     """ A merger for the ResourceSizeTable.product.srsizetable """
-    NAME: str = 'rstb'
+
+    NAME: str = "rstb"
 
     def __init__(self):
-        super().__init__('RSTB', 'Merges changes to ResourceSizeTable.product.srsizetable',
-                         'rstb.log')
-        self._options = {
-            'no_guess': False,
-            'leave': False,
-            'shrink': False
-        }
+        super().__init__(
+            "RSTB",
+            "Merges changes to ResourceSizeTable.product.srsizetable",
+            "rstb.log",
+        )
+        self._options = {"no_guess": False, "leave": False, "shrink": False}
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
         rstb_diff = {}
@@ -531,21 +589,28 @@ class RstbMerger(mergers.Merger):
         for file in modded_files:
             if isinstance(file, Path):
                 canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-                if Path(canon).suffix not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
+                if (
+                    Path(canon).suffix not in RSTB_EXCLUDE_EXTS
+                    and canon not in RSTB_EXCLUDE_NAMES
+                ):
                     size = calculate_size(file)
-                    if file.suffix == '.bdmgparam':
+                    if file.suffix == ".bdmgparam":
                         size = 0
                     if size == 0 and (
-                        not self._options['no_guess'] or file.suffix in {'.bas', '.baslist'}
+                        not self._options["no_guess"]
+                        or file.suffix in {".bas", ".baslist"}
                     ):
                         if file.suffix in util.AAMP_EXTS:
                             size = guess_aamp_size(file)
-                        elif file.suffix in ['.bfres', '.sbfres']:
+                        elif file.suffix in [".bfres", ".sbfres"]:
                             size = guess_bfres_size(file)
                     rstb_diff[file] = size
             elif isinstance(file, str):
-                parts = file.split('//')
-                if any(Path(p).suffix in {'.ssarc', '.sblarc', '.sbfarc'} for p in parts[0:-1]):
+                parts = file.split("//")
+                if any(
+                    Path(p).suffix in {".ssarc", ".sblarc", ".sbfarc"}
+                    for p in parts[0:-1]
+                ):
                     continue
                 name = parts[-1]
                 if parts[0] not in open_sarcs:
@@ -556,22 +621,24 @@ class RstbMerger(mergers.Merger):
                     if part not in open_sarcs:
                         open_sarcs[part] = oead.Sarc(
                             util.unyaz_if_needed(
-                                open_sarcs[parts[parts.index(part) - 1]].get_file(part).data
+                                open_sarcs[parts[parts.index(part) - 1]]
+                                .get_file(part)
+                                .data
                             )
                         )
                 ext = Path(name).suffix
                 data = util.unyaz_if_needed(open_sarcs[parts[-2]].get_file(name).data)
                 rstb_val = rstb.SizeCalculator().calculate_file_size_with_ext(
-                    bytes(data),
-                    wiiu=util.get_settings('wiiu'),
-                    ext=ext
+                    bytes(data), wiiu=util.get_settings("wiiu"), ext=ext
                 )
-                if ext == '.bdmgparam':
+                if ext == ".bdmgparam":
                     rstb_val = 0
-                if rstb_val == 0 and (not self._options['no_guess'] or ext in {'.bas', '.baslist'}):
+                if rstb_val == 0 and (
+                    not self._options["no_guess"] or ext in {".bas", ".baslist"}
+                ):
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)
-                    elif ext in {'.bfres', '.sbfres'}:
+                    elif ext in {".bfres", ".sbfres"}:
                         rstb_val = guess_bfres_size(data, name)
                 rstb_diff[file] = rstb_val
         for open_sarc in open_sarcs:
@@ -585,54 +652,55 @@ class RstbMerger(mergers.Merger):
         elif isinstance(diff_material, List):
             diffs = self.generate_diff(mod_dir, diff_material)
 
-        log_path = mod_dir / 'logs' / self._log_name
-        with log_path.open('w', encoding='utf-8') as log:
-            log.write('name,rstb,path\n')
+        log_path = mod_dir / "logs" / self._log_name
+        with log_path.open("w", encoding="utf-8") as log:
+            log.write("name,rstb,path\n")
             for diff, value in diffs.items():
                 ext = Path(diff).suffix
                 if isinstance(diff, Path):
                     canon = util.get_canon_name(str(diff.relative_to(mod_dir)))
                     path = diff.relative_to(mod_dir).as_posix()
                 elif isinstance(diff, str):
-                    canon = diff.split('//')[-1].replace('.s', '.')
+                    canon = diff.split("//")[-1].replace(".s", ".")
                     path = diff
                 if ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
-                    log.write(f'{canon},{value},{path}\n')
+                    log.write(f"{canon},{value},{path}\n")
 
-        if 'leave' in self._options and self._options['leave']:
-            (mod_dir / 'logs' / '.leave').write_bytes(b'')
-        if 'shrink' in self._options and self._options['shrink']:
-            (mod_dir / 'logs' / '.shrink').write_bytes(b'')
+        if "leave" in self._options and self._options["leave"]:
+            (mod_dir / "logs" / ".leave").write_bytes(b"")
+        if "shrink" in self._options and self._options["shrink"]:
+            (mod_dir / "logs" / ".shrink").write_bytes(b"")
 
     def get_mod_diff(self, mod: util.BcmlMod):
         if not self._options:
-            self._options['leave'] = (mod.path / 'logs' / '.leave').exists()
-            self._options['shrink'] = (mod.path / 'logs' / '.shrink').exists()
+            self._options["leave"] = (mod.path / "logs" / ".leave").exists()
+            self._options["shrink"] = (mod.path / "logs" / ".shrink").exists()
         stock_rstb = get_stock_rstb()
 
         mod_diffs = {}
 
         def read_log(log_path: Path) -> {}:
             diffs = {}
-            with log_path.open('r', encoding='utf-8') as log:
+            with log_path.open("r", encoding="utf-8") as log:
                 for line in log.readlines()[1:]:
-                    row = line.split(',')
+                    row = line.split(",")
                     name = row[0]
                     size = int(row[1])
                     old_size = 0
                     if stock_rstb.is_in_table(name):
                         old_size = stock_rstb.get_size(name)
-                    if (size == 0 and self._options['leave']) or \
-                    (size < old_size and self._options['shrink']):
+                    if (size == 0 and self._options["leave"]) or (
+                        size < old_size and self._options["shrink"]
+                    ):
                         continue
                     diffs[row[0]] = int(row[1])
             return diffs
 
         if self.is_mod_logged(mod):
-            mod_diffs.update(read_log(mod.path / 'logs' / self._log_name))
-        for opt in {d for d in (mod.path / 'options').glob('*') if d.is_dir()}:
-            if (opt / 'logs' / self._log_name).exists():
-                mod_diffs.update(read_log(opt / 'logs' / self._log_name))
+            mod_diffs.update(read_log(mod.path / "logs" / self._log_name))
+        for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
+            if (opt / "logs" / self._log_name).exists():
+                mod_diffs.update(read_log(opt / "logs" / self._log_name))
         return mod_diffs
 
     def get_all_diffs(self):
@@ -649,14 +717,14 @@ class RstbMerger(mergers.Merger):
 
     def get_checkbox_options(self) -> List[tuple]:
         return [
-            ('leave', 'Don\'t remove RSTB entries for complex file types'),
-            ('shrink', 'Shrink RSTB values when smaller than the base game'),
-            ('no_guess', 'Don\'t estimate RSTB values for AAMP and BFRES files'),
+            ("leave", "Don't remove RSTB entries for complex file types"),
+            ("shrink", "Shrink RSTB values when smaller than the base game"),
+            ("no_guess", "Don't estimate RSTB values for AAMP and BFRES files"),
         ]
 
     @util.timed
     def perform_merge(self):
-        print('Perfoming RSTB merge...')
+        print("Perfoming RSTB merge...")
         log_merged_files_rstb(self._pool)
         generate_master_rstb()
 

@@ -5,11 +5,13 @@ from pathlib import Path
 from typing import List, Union
 from bcml import util
 
+
 class Merger(metaclass=ABCMeta):
     """
     An abstract base class that represents a collection of merging functions for BCML. It can
     be subclassed to represent a single kind of merge, e.g. merging packs, game data, maps, etc.
     """
+
     NAME: str
     _friendly_name: str
     _description: str
@@ -17,8 +19,9 @@ class Merger(metaclass=ABCMeta):
     _options: dict
     _pool: Pool
 
-    def __init__(self, friendly_name: str, description: str, log_name: str,
-                 options: dict = None):
+    def __init__(
+        self, friendly_name: str, description: str, log_name: str, options: dict = None
+    ):
         self._friendly_name = friendly_name
         self._description = description
         self._log_name = log_name
@@ -61,7 +64,7 @@ class Merger(metaclass=ABCMeta):
 
     def is_mod_logged(self, mod: util.BcmlMod) -> bool:
         """ Checks if a mod is logged for this merge """
-        return (mod.path / 'logs' / self._log_name).exists()
+        return (mod.path / "logs" / self._log_name).exists()
 
     def get_mod_diff(self, mod: util.BcmlMod):
         """ Gets the logged diff for this merge in a given mod """
@@ -113,7 +116,16 @@ def get_mergers() -> List[Merger]:
     """ Retrieves all available types of mod mergers """
 
     from bcml.mergers import (
-        pack, texts, merge, data, mubin, events, rstable, actors, quests, effects
+        pack,
+        texts,
+        merge,
+        data,
+        mubin,
+        events,
+        rstable,
+        actors,
+        quests,
+        effects,
     )
 
     return [
@@ -128,8 +140,9 @@ def get_mergers() -> List[Merger]:
         events.EventInfoMerger,
         effects.StatusEffectMerger,
         quests.QuestMerger,
-        rstable.RstbMerger
+        rstable.RstbMerger,
     ]
+
 
 def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
     ms = set()
@@ -140,4 +153,4 @@ def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
 
 
 def sort_mergers(mergers: List[Merger]) -> List[Merger]:
-    return sorted(mergers, key=lambda merger: merger.NAME == 'rstb', reverse=False)
+    return sorted(mergers, key=lambda merger: merger.NAME == "rstb", reverse=False)
