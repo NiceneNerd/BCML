@@ -3,7 +3,6 @@ import json
 import platform
 import sys
 import traceback
-from collections.abc import Iterable
 from contextlib import redirect_stderr, redirect_stdout
 from importlib.util import find_spec
 from multiprocessing import Pool, set_start_method
@@ -452,7 +451,7 @@ class Api:
             save_filename="exported-mods.zip",
         )
         if out:
-            output = Path(out[0] if isinstance(out, Iterable) else out)
+            output = Path(out if isinstance(out, str) else out[0])
             install.export(output)
 
     def get_option_folders(self, params):
@@ -472,7 +471,7 @@ class Api:
         del meta["selects"]
         dev.create_bnp_mod(
             mod=Path(params["folder"]),
-            output=Path(out[0] if isinstance(out, Iterable) else out),
+            output=Path(out if isinstance(out, str) else out[0]),
             meta=meta,
             options=params["options"],
         )
