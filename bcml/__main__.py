@@ -531,9 +531,14 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
+        if util.get_exec_dir().parent.name == "pkgs":
+            exe = str(util.get_exec_dir().parent.parent / "Python" / "python.exe")
+            rmtree(util.get_exec_dir(), ignore_errors=True)
+        else:
+            exe = sys.executable
         run(
             [
-                sys.executable,
+                exe,
                 "-m",
                 "pip",
                 "install",
@@ -542,10 +547,16 @@ class Api:
                 "bcml",
             ],
             check=True,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
     def restart(self):
-        Popen([sys.executable, "-m", "bcml"], cwd=str(Path().resolve()))
+        if util.get_exec_dir().parent.name == "pkgs":
+            exe = str(util.get_exec_dir().parent.parent / "Python" / "python.exe")
+        else:
+            exe = sys.executable
+        Popen([exe, "-m", "bcml"], cwd=str(Path().resolve()))
         for win in webview.windows:
             win.destroy()
 
