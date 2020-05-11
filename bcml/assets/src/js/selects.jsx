@@ -27,7 +27,10 @@ class SelectsDialog extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show} scrollable={true}>
+            <Modal
+                show={this.props.show}
+                scrollable={true}
+                onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>
                         Select Options for{" "}

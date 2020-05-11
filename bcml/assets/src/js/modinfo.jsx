@@ -82,7 +82,7 @@ class ModInfo extends React.Component {
                 </div>
                 <div className="mod-descrip">
                     {this.props.mod
-                        ? this.props.mod.desc || "No description"
+                        ? this.state.desc || "No description"
                         : "No mod selected"}
                 </div>
                 <div className="mod-actions">

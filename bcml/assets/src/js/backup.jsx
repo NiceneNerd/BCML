@@ -30,7 +30,7 @@ class BackupModal extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show}>
+            <Modal show={this.props.show} onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>Backup and Restore Mods</Modal.Title>
                 </Modal.Header>
