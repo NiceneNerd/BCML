@@ -18,7 +18,7 @@ setup(
     packages=["bcml"],
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": ["bcml-debug = bcml.__main__:main"],
+        "console_scripts": ["bcml-debug = bcml.__main__:main_debug"],
     },
     classifiers=[
         "Development Status :: 4 - Beta",

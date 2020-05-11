@@ -324,7 +324,7 @@ class Api:
                 for mod in mods:
                     for merger in all_mergers:
                         if merger.is_mod_logged(mod) and merger.NAME not in {
-                            m.name for m in remergers
+                            m.NAME for m in remergers
                         }:
                             remergers.add(merger)
                             if merger.can_partial_remerge():
@@ -554,7 +554,9 @@ def help_window():
     webview.create_window("BCML Help", url="assets/help.html?page=main")
 
 
-def main():
+def main(debug: bool = False):
+    set_start_method("spawn", True)
+    globals()["logger"] = None
     try:
         LOG.parent.mkdir(parents=True, exist_ok=True)
         LOG.write_text("")
@@ -593,18 +595,21 @@ def main():
     elif system() == "Linux":
         gui = "qt"
 
+    if not debug:
+        debug = DEBUG if not no_cef else "bcml-debug" in sys.argv
+
     with redirect_stderr(sys.stdout):
         with redirect_stdout(Messager(api.window)):
-            webview.start(
-                gui=gui, debug=DEBUG if not no_cef else False, http_server=True
-            )
+            webview.start(gui=gui, debug=debug, http_server=True)
 
 
 def stop_it():
     del globals()["logger"]
 
 
+def main_debug():
+    main(True)
+
+
 if __name__ == "__main__":
-    set_start_method("spawn", True)
-    globals()["logger"] = None
     main()
