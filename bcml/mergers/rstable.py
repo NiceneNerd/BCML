@@ -225,7 +225,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
     )
     if real_bytes[0:4] == b"Yaz0":
         real_bytes = util.decompress(real_bytes)
-    real_size = int(len(real_bytes) * 1.05)
+    real_size = len(real_bytes) * 1.05
     del real_bytes
     if ext == "":
         if isinstance(file, Path):
@@ -235,125 +235,121 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
                 "AAMP extension must not be blank if passing file as bytes."
             )
     ext = ext.replace(".s", ".")
-    if ext in guess_aamp_size.factories and util.get_settings("wiiu"):
-        real_size += (
-            guess_aamp_size.factories[ext].size_nx
-            - guess_aamp_size.factories[ext].size_wiiu
-        )
+    value: int
     if ext == ".baiprog":
         if real_size <= 380:
-            return real_size * 7
+            value = real_size * 7
         elif 380 < real_size <= 400:
-            return real_size * 6
+            value = real_size * 6
         elif 400 < real_size <= 450:
-            return int(real_size * 5.5)
+            value = real_size * 5.5
         elif 450 < real_size <= 600:
-            return real_size * 5
+            value = real_size * 5
         elif 600 < real_size <= 1000:
-            return real_size * 4
+            value = real_size * 4
         elif 1000 < real_size <= 1750:
-            return int(real_size * 3.5)
+            value = real_size * 3.5
         else:
-            return real_size * 3
+            value = real_size * 3
     elif ext == ".bgparamlist":
         if real_size <= 100:
-            return real_size * 20
+            value = real_size * 20
         elif 100 < real_size <= 150:
-            return real_size * 12
+            value = real_size * 12
         elif 150 < real_size <= 250:
-            return real_size * 10
+            value = real_size * 10
         elif 250 < real_size <= 350:
-            return real_size * 8
+            value = real_size * 8
         elif 350 < real_size <= 450:
-            return real_size * 7
+            value = real_size * 7
         else:
-            return real_size * 6
+            value = real_size * 6
     elif ext == ".bdrop":
         if real_size < 200:
-            return int(real_size * 8.5)
+            value = real_size * 8.5
         elif 200 < real_size <= 250:
-            return real_size * 7
+            value = real_size * 7
         elif 250 < real_size <= 350:
-            return real_size * 6
+            value = real_size * 6
         elif 350 < real_size <= 450:
-            return int(real_size * 5.25)
+            value = real_size * 5.25
         elif 450 < real_size <= 850:
-            return int(real_size * 4.5)
+            value = real_size * 4.5
         else:
-            return real_size * 4
+            value = real_size * 4
     elif ext == ".bxml":
         if real_size < 350:
-            return real_size * 6
+            value = real_size * 6
         elif 350 < real_size <= 450:
-            return real_size * 5
+            value = real_size * 5
         elif 450 < real_size <= 550:
-            return int(real_size * 4.5)
+            value = real_size * 4.5
         elif 550 < real_size <= 650:
-            return real_size * 4
+            value = real_size * 4
         elif 650 < real_size <= 800:
-            return int(real_size * 3.5)
+            value = real_size * 3.5
         else:
-            return real_size * 3
+            value = real_size * 3
     elif ext == ".brecipe":
         if real_size < 100:
-            return int(real_size * 12.5)
+            value = real_size * 12.5
         elif 100 < real_size <= 160:
-            return int(real_size * 8.5)
+            value = real_size * 8.5
         elif 160 < real_size <= 200:
-            return int(real_size * 7.5)
+            value = real_size * 7.5
         elif 200 < real_size <= 215:
-            return real_size * 7
+            value = real_size * 7
         else:
-            return int(real_size * 6.5)
+            value = real_size * 6.5
     elif ext == ".bshop":
         if real_size < 200:
-            return int(real_size * 7.25)
+            value = real_size * 7.25
         elif 200 < real_size <= 400:
-            return real_size * 6
+            value = real_size * 6
         elif 400 < real_size <= 500:
-            return real_size * 5
+            value = real_size * 5
         else:
-            return int(real_size * 4.05)
+            value = real_size * 4.05
     elif ext == ".bas":
-        real_size = int(real_size * 1.05)
+        real_size = real_size * 1.05
         if real_size < 100:
-            return real_size * 20
+            value = real_size * 20
         elif 100 < real_size <= 200:
-            return int(real_size * 12.5)
+            value = real_size * 12.5
         elif 200 < real_size <= 300:
-            return real_size * 10
+            value = real_size * 10
         elif 300 < real_size <= 600:
-            return real_size * 8
+            value = real_size * 8
         elif 600 < real_size <= 1500:
-            return real_size * 6
+            value = real_size * 6
         elif 1500 < real_size <= 2000:
-            return int(real_size * 5.5)
+            value = real_size * 5.5
         elif 2000 < real_size <= 15000:
-            return real_size * 5
+            value = real_size * 5
         else:
-            return int(real_size * 4.5)
+            value = real_size * 4.5
     elif ext == ".baslist":
         if real_size < 100:
-            return real_size * 15
+            value = real_size * 15
         elif 100 < real_size <= 200:
-            return real_size * 10
+            value = real_size * 10
         elif 200 < real_size <= 300:
-            return real_size * 8
+            value = real_size * 8
         elif 300 < real_size <= 500:
-            return real_size * 6
+            value = real_size * 6
         elif 500 < real_size <= 800:
-            return real_size * 5
+            value = real_size * 5
         elif 800 < real_size <= 4000:
-            return real_size * 4
+            value = real_size * 4
         else:
-            return int(real_size * 3.5)
+            value = real_size * 3.5
     elif ext == ".bdmgparam":
-        return int(((-0.0018 * real_size) + 6.6273) * real_size) + 500
+        value = (((-0.0018 * real_size) + 6.6273) * real_size) + 500
     else:
-        return 0
-
-
-setattr(guess_aamp_size, "factories", rstb.SizeCalculator()._factory_info)
+        value = 0
+    if not util.get_settings("wiiu"):
+        value = value * 1.5
+    return int(value)
 
 
 def get_mod_rstb_values(
@@ -454,9 +450,7 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace(".s", ".")
         if data[0:4] == b"Yaz0":
-            data = bytes(util.decompress(data))
-        else:
-            data = bytes(data)
+            data = util.decompress(data)
         ext = Path(canon).suffix
         if (
             util.is_file_modded(canon, data)
@@ -487,12 +481,28 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
                 except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
                 sizes.update(_get_sizes_in_sarc(nest_sarc))
-            else:
-                del data
+                del nest_sarc
+        del data
+    del file
     return sizes
 
 
+def _calculate_rstb_size(file: Path, root: Path, no_guess: bool = False) -> dict:
+    canon = util.get_canon_name(file.relative_to(root))
+    if not (file.suffix in RSTB_EXCLUDE_EXTS or canon in RSTB_EXCLUDE_NAMES):
+        size = calculate_size(file)
+        if size == 0 and not no_guess:
+            if file.suffix in util.AAMP_EXTS:
+                size = guess_aamp_size(file)
+            elif file.suffix in {".bfres", ".sbfres"}:
+                size = guess_bfres_size(file)
+        if canon:
+            return {canon: size}
+    return {}
+
+
 def log_merged_files_rstb(pool: multiprocessing.Pool = None):
+    p: multiprocessing.Pool = pool or multiprocessing.Pool()
     print("Updating RSTB for merged files...")
     diffs = {}
     files = {
@@ -501,32 +511,27 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if f.is_file() and f.parent != "logs"
     }
     no_guess = util.get_settings("no_guess")
-    for file in files:
-        if not (file.suffix in RSTB_EXCLUDE_EXTS or file.name in RSTB_EXCLUDE_NAMES):
-            size = calculate_size(file)
-            if size == 0 and not no_guess:
-                if file.suffix in util.AAMP_EXTS:
-                    size = guess_aamp_size(file)
-                elif file.suffix in [".bfres", ".sbfres"]:
-                    size = guess_bfres_size(file)
-            canon = util.get_canon_name(file.relative_to(util.get_master_modpack_dir()))
-            if canon:
-                diffs[canon] = size
+    results = p.map(
+        partial(
+            _calculate_rstb_size, root=util.get_master_modpack_dir(), no_guess=no_guess
+        ),
+        files,
+    )
+    for result in results:
+        diffs.update(result)
+    print("Updating RSTB for merged SARCs...")
     sarc_files = {
         f
         for f in files
-        if (
-            f.suffix in util.SARC_EXTS
-            and f.suffix not in {".ssarc", ".sblarc", ".sbfarc"}
-        )
+        if (f.suffix in (util.SARC_EXTS - {".ssarc", ".sblarc", ".sbfarc"}))
     }
     if sarc_files:
-        p = pool or multiprocessing.Pool()
-        for result in p.imap_unordered(_get_sizes_in_sarc, sarc_files):
+        results = p.map(_get_sizes_in_sarc, sarc_files)
+        for result in results:
             diffs.update(result)
-        if not pool:
-            p.close()
-            p.join()
+    if not pool:
+        p.close()
+        p.join()
     (util.get_master_modpack_dir() / "logs").mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / "logs" / "rstb.log").open(
         "w", encoding="utf-8"
