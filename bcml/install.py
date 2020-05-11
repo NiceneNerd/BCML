@@ -546,8 +546,7 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
             remergers.append(merger)
             if merger.can_partial_remerge():
                 partials[merger.NAME] = merger.get_mod_affected(mod)
-    rules_path: Path = mod.path / "rules.txt"
-    rules_path.rename(rules_path.with_suffix(".txt.disable"))
+    (mod.path / ".disabled").write_bytes(b"")
     if not wait_merge:
         print(f"Remerging affected files...")
         for merger in remergers:
@@ -560,8 +559,7 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
 @refresher
 def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Enabling {mod.name}...")
-    rules_path: Path = mod.path / "rules.txt.disable"
-    rules_path.rename(rules_path.with_suffix(""))
+    (mod.path / ".disabled").unlink()
     if not wait_merge:
         print(f"Remerging affected files...")
         remergers = []
