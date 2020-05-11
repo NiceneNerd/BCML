@@ -125,94 +125,96 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
             name = file.name
         else:
             raise ValueError("BFRES name must not be blank if passing file as bytes.")
+    value: int
     if util.get_settings("wiiu"):
         if ".Tex" in name:
             if real_size < 100:
-                return real_size * 9
+                value = real_size * 9
             elif 100 < real_size <= 2000:
-                return real_size * 7
+                value = real_size * 7
             elif 2000 < real_size <= 3000:
-                return real_size * 5
+                value = real_size * 5
             elif 3000 < real_size <= 4000:
-                return real_size * 4
+                value = real_size * 4
             elif 4000 < real_size <= 8500:
-                return real_size * 3
+                value = real_size * 3
             elif 8500 < real_size <= 12000:
-                return real_size * 2
+                value = real_size * 2
             elif 12000 < real_size <= 17000:
-                return int(real_size * 1.75)
+                value = real_size * 1.75
             elif 17000 < real_size <= 30000:
-                return int(real_size * 1.5)
+                value = real_size * 1.5
             elif 30000 < real_size <= 45000:
-                return int(real_size * 1.3)
+                value = real_size * 1.3
             elif 45000 < real_size <= 100000:
-                return int(real_size * 1.2)
+                value = real_size * 1.2
             elif 100000 < real_size <= 150000:
-                return int(real_size * 1.1)
+                value = real_size * 1.1
             elif 150000 < real_size <= 200000:
-                return int(real_size * 1.07)
+                value = real_size * 1.07
             elif 200000 < real_size <= 250000:
-                return int(real_size * 1.045)
+                value = real_size * 1.045
             elif 250000 < real_size <= 300000:
-                return int(real_size * 1.035)
+                value = real_size * 1.035
             elif 300000 < real_size <= 600000:
-                return int(real_size * 1.03)
+                value = real_size * 1.03
             elif 600000 < real_size <= 1000000:
-                return int(real_size * 1.015)
+                value = real_size * 1.015
             elif 1000000 < real_size <= 1800000:
-                return int(real_size * 1.009)
+                value = real_size * 1.009
             elif 1800000 < real_size <= 4500000:
-                return int(real_size * 1.005)
+                value = real_size * 1.005
             elif 4500000 < real_size <= 6000000:
-                return int(real_size * 1.002)
+                value = real_size * 1.002
             else:
-                return int(real_size * 1.0015)
+                value = real_size * 1.0015
         else:
             if real_size < 500:
-                return real_size * 7
+                value = real_size * 7
             elif 500 < real_size <= 750:
-                return real_size * 4
+                value = real_size * 4
             elif 750 < real_size <= 2000:
-                return real_size * 3
+                value = real_size * 3
             elif 2000 < real_size <= 400000:
-                return int(real_size * 1.75)
+                value = real_size * 1.75
             elif 400000 < real_size <= 600000:
-                return int(real_size * 1.7)
+                value = real_size * 1.7
             elif 600000 < real_size <= 1500000:
-                return int(real_size * 1.6)
+                value = real_size * 1.6
             elif 1500000 < real_size <= 3000000:
-                return int(real_size * 1.5)
+                value = real_size * 1.5
             else:
-                return int(real_size * 1.25)
+                value = real_size * 1.25
     else:
         if ".Tex" in name:
             if 50000 < real_size:
-                return int(real_size * 1.2)
+                value = real_size * 1.2
             elif 30000 < real_size:
-                return int(real_bytes * 1.3)
+                value = real_size * 1.3
             elif 10000 < real_size:
-                return int(real_size * 1.5)
+                value = real_size * 1.5
             else:
-                return real_size * 2
+                value = real_size * 2
         else:
             if 4000000 < real_size:
-                return int(real_size * 1.5)
+                value = real_size * 1.5
             elif 3000000 < real_size:
-                return int(real_size * 1.667)
+                value = real_size * 1.667
             elif 2000000 < real_size:
-                return real_size * 2
+                value = real_size * 2.5
             elif 800000 < real_size:
-                return int(real_size * 2.367)
+                value = real_size * 3.15
             elif 100000 < real_size:
-                return int(real_size * 2.5)
+                value = real_size * 3.5
             elif 50000 < real_size:
-                return int(real_size * 3.4)
+                value = real_size * 3.66
             elif 2500 < real_size:
-                return real_size * 4
+                value = real_size * 4.25
             elif 1250 < real_size:
-                return real_size * 5
+                value = real_size * 6
             else:
-                return int(real_size * 9.5)
+                value = real_size * 9.5
+    return int(value)
 
 
 def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
