@@ -222,9 +222,6 @@ def shop_merge(
     if ext == "bshop":
         fix_itemsorts(base_sorted)
 
-    for key in EXT_PARAMS[ext]:
-        NAME_TABLE.add_name(key)
-
     merged = ParameterIO()
     merged_header = ParameterObject()
     merged.objects["Header"] = merged_header
@@ -244,9 +241,9 @@ def shop_merge(
                 entry_key = "%03d" % (item_obj.params["ItemSort"].v + 1)
             else:
                 raise KeyError(ext)
-            for param_hash, param_value in item_obj.params.items():
-                param_key = NAME_TABLE.get_name(param_hash.hash, 0, 0)
-                merged_table_obj.params[param_key + entry_key] = param_value
+            for param_key in EXT_PARAMS[ext]:
+                param_name = param_key + entry_key
+                merged_table_obj.params[param_name] = item_obj.params[param_key]
         merged.objects[table_key] = merged_table_obj
     return merged
 
