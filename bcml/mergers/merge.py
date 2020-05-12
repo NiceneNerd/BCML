@@ -11,7 +11,9 @@ from typing import List, Union
 
 import aamp
 import aamp.converters
-from aamp.parameters import ParameterList, ParameterIO, ParameterObject
+
+# from aamp.parameters import ParameterList, ParameterIO, ParameterObject
+from oead.aamp import ParameterList, ParameterIO, ParameterObject
 import aamp.yaml_util
 import oead
 
@@ -68,7 +70,7 @@ def _aamp_merge(
             merged.objects[crc] = obj
         else:
             base_obj = base.objects[crc]
-            merge_obj = deepcopy(base_obj)
+            merge_obj = base_obj
             changed = False
             for param, value in obj.params.items():
                 if param not in base_obj.params or value != base_obj.params[param]:
@@ -106,8 +108,8 @@ def get_aamp_diff(file: Union[Path, str], tmp_dir: Path):
             ref_bytes = r_file.read()
         ref_bytes = util.unyaz_if_needed(ref_bytes)
 
-    ref_aamp = aamp.Reader(ref_bytes).parse()
-    mod_aamp = aamp.Reader(mod_bytes).parse()
+    ref_aamp = ParameterIO.from_binary(ref_bytes)
+    mod_aamp = ParameterIO.from_binary(mod_bytes)
 
     diff = _aamp_diff(ref_aamp, mod_aamp)
     del mod_aamp
@@ -148,11 +150,11 @@ def nested_patch(pack: oead.Sarc, nest: dict) -> (oead.SarcWriter, dict):
         elif isinstance(stuff, list):
             try:
                 if file_bytes[0:4] == b"AAMP":
-                    aamp_contents = aamp.Reader(bytes(file_bytes)).parse()
+                    aamp_contents = ParameterIO.from_binary(bytes(file_bytes))
                     try:
                         for change in stuff:
                             aamp_contents = _aamp_merge(aamp_contents, change)
-                        aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
+                        aamp_bytes = aamp_contents.to_binary()
                     except:  # pylint: disable=bare-except
                         raise RuntimeError(f"AAMP file {file} could be merged.")
                     del aamp_contents
@@ -210,11 +212,11 @@ def threaded_merge(item) -> (str, dict):
     else:
         try:
             if magic == b"AAMP":
-                aamp_contents = aamp.Reader(file_bytes).parse()
+                aamp_contents = ParameterIO.from_binary(file_bytes)
                 try:
                     for change in stuff:
                         aamp_contents = _aamp_merge(aamp_contents, change)
-                    aamp_bytes = aamp.Writer(aamp_contents).get_bytes()
+                    aamp_bytes = aamp_contents.to_binary()
                 except:  # pylint: disable=bare-except
                     raise RuntimeError(f"AAMP file {file} could be merged.")
                 del aamp_contents
@@ -269,22 +271,19 @@ class DeepMerger(mergers.Merger):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
-            from aamp import ParameterIO, ParameterObject, ParameterList, Writer
+            # from aamp import ParameterIO, ParameterObject, ParameterList, Writer
 
-            pio = ParameterIO("log", 0)
-            root = ParameterList()
+            pio = ParameterIO()
             for file, plist in diff_material.items():
-                root.set_list(file, plist)
-            pio.set_list("param_root", root)
+                pio.lists[file] = plist
             file_table = ParameterObject()
             for i, f in enumerate(diff_material):
-                file_table.set_param(f"File{i}", f)
-            root.set_object("FileTable", file_table)
-            aamp_bytes = Writer(pio).get_bytes()
+                file_table.params[f"File{i}"] = f
+            pio.objects["FileTable"] = file_table
+            aamp_bytes = pio.to_binary()
             (mod_dir / "logs" / self._log_name).write_bytes(aamp_bytes)
             del diff_material
             del pio
-            del root
             del file_table
 
     def can_partial_remerge(self):
@@ -299,25 +298,25 @@ class DeepMerger(mergers.Merger):
     def get_mod_diff(self, mod: BcmlMod):
         diffs = []
         if self.is_mod_logged(mod):
-            pio = aamp.Reader((mod.path / "logs" / self._log_name).read_bytes()).parse()
+            pio = ParameterIO.from_binary(
+                (mod.path / "logs" / self._log_name).read_bytes()
+            )
             diffs.append(
                 {
-                    file: pio.list("param_root").list(file)
-                    for i, file in pio.list("param_root")
-                    .object("FileTable")
-                    .params.items()
+                    file: pio.lists[file.v]
+                    for i, file in pio.objects["FileTable"].params.items()
                 }
             )
             del pio
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                pio = aamp.Reader((opt / "logs" / self._log_name).read_bytes()).parse()
+                pio = ParameterIO.from_binary(
+                    (opt / "logs" / self._log_name).read_bytes()
+                )
                 diffs.append(
                     {
-                        file: pio.list("param_root").list(file)
-                        for i, file in pio.list("param_root")
-                        .object("FileTable")
-                        .params.items()
+                        file: pio.lists[file.v]
+                        for i, file in pio.objects["FileTable"].params.items()
                     }
                 )
                 del pio
@@ -342,7 +341,7 @@ class DeepMerger(mergers.Merger):
         consolidated_diffs = {}
         for file, diff_list in diffs.items():
             nest = reduce(
-                lambda res, cur: {cur: res}, reversed(file.split("//")), diff_list
+                lambda res, cur: {cur: res}, reversed(file.v.split("//")), diff_list
             )
             util.dict_merge(consolidated_diffs, nest)
         return consolidated_diffs
