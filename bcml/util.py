@@ -18,11 +18,13 @@ import urllib.request
 from collections import namedtuple, OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
+from copy import deepcopy
 from pathlib import Path
 from platform import system
 from typing import Union, List, Dict, ByteString
 
 import oead
+from oead import ParameterIO, ParameterList
 import xxhash
 from webview import Window
 
@@ -1124,15 +1126,11 @@ def dict_merge(
             dct[k] = merge_dct[k]
 
 
-def pio_deepcopy(ref: ParameterIO) -> ParameterIO:
-    return ParameterIO.from_binary(ParameterIO.to_binary(ref))
-
-
 def pio_merge(
     ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
 ) -> Union[ParameterIO, ParameterList]:
     if isinstance(ref, ParameterIO):
-        merged = pio_deepcopy(ref)
+        merged = deepcopy(ref)
     else:
         merged = ref
     for key, plist in mod.lists.items():
@@ -1157,7 +1155,7 @@ def pio_subtract(
     ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
 ) -> Union[ParameterIO, ParameterList]:
     if isinstance(ref, ParameterIO):
-        merged = pio_deepcopy(ref)
+        merged = deepcopy(ref)
     else:
         merged = ref
     for key, plist in mod.lists.items():
