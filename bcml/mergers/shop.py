@@ -130,7 +130,7 @@ def nand_pio_into_plist(
         if key not in ref.lists:
             res_plist.lists[key] = plist
         else:
-            processed_list = nand_pio(ref.lists[key], plist)
+            processed_list = nand_pio_into_plist(ref.lists[key], plist)
             if processed_list.lists or processed_list.objects:
                 res_plist.lists[key] = processed_list
     for key, pobj in mod.objects.items():

@@ -1124,6 +1124,58 @@ def dict_merge(
             dct[k] = merge_dct[k]
 
 
+def pio_deepcopy(ref: ParameterIO) -> ParameterIO:
+    return ParameterIO.from_binary(ParameterIO.to_binary(ref))
+
+
+def pio_merge(
+    ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
+) -> Union[ParameterIO, ParameterList]:
+    if isinstance(ref, ParameterIO):
+        merged = pio_deepcopy(ref)
+    else:
+        merged = ref
+    for key, plist in mod.lists.items():
+        if key not in merged.lists:
+            merged.lists[key] = plist
+        else:
+            merged_list = pio_merge(merged.lists[key], plist)
+            if merged_list.lists or merged_list.objects:
+                merged.lists[key] = merged_list
+    for key, pobj in mod.objects.items():
+        if key not in merged.objects:
+            merged.objects[key] = pobj
+        else:
+            merged_pobj = merged.objects[key]
+            for pkey, param in pobj.params.items():
+                if pkey not in merged_pobj.params or param != merged_pobj.params[pkey]:
+                    merged_pobj.params[pkey] = param
+    return merged
+
+
+def pio_subtract(
+    ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
+) -> Union[ParameterIO, ParameterList]:
+    if isinstance(ref, ParameterIO):
+        merged = pio_deepcopy(ref)
+    else:
+        merged = ref
+    for key, plist in mod.lists.items():
+        if key in merged.lists:
+            pio_subtract(merged.lists[key], plist)
+        if len(merged.lists[key].objects) == 0 and len(merged.lists[key].lists) == 0:
+            del merged.lists[key]
+    for key, pobj in mod.objects.items():
+        if key in merged.objects:
+            merged_pobj = merged.objects[key]
+            for pkey, param in pobj.params.items():
+                if pkey in merged_pobj.params:
+                    del merged_pobj.params[pkey]
+            if len(merged_pobj.params) == 0:
+                del merged.objects[key]
+    return merged
+
+
 def create_schema_handler():
     # pylint: disable=import-error,undefined-variable
     import platform
