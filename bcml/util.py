@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+import copyreg
 import csv
 from dataclasses import dataclass
 from functools import lru_cache
@@ -419,7 +420,10 @@ def vprint(content):
         else:
             from pprint import pformat
 
-            content = pformat(content, compact=True, indent=4)
+            try:
+                content = pformat(content, compact=True, indent=4)
+            except:  # pylint: disable=bare-except
+                pass
     print(f"VERBOSE{content}")
 
 
@@ -700,17 +704,11 @@ def get_aoc_dir() -> Path:
 
 
 def get_content_path() -> str:
-    return (
-        "content"
-        if get_settings("wiiu")
-        else "atmosphere/contents/01007EF00011E000/romfs"
-    )
+    return "content" if get_settings("wiiu") else "01007EF00011E000/romfs"
 
 
 def get_dlc_path() -> str:
-    return (
-        "aoc" if get_settings("wiiu") else "atmosphere/contents/01007EF00011F001/romfs"
-    )
+    return "aoc" if get_settings("wiiu") else "01007EF00011F001/romfs"
 
 
 def get_modpack_dir() -> Path:
@@ -805,22 +803,27 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
     name = (
         file.as_posix()
         .replace("\\", "/")
-        .replace("/titles/", "/contents/")
-        .replace("atmosphere/contents/01007EF00011E000/romfs", "content")
-        .replace("atmosphere/contents/01007EF00011E001/romfs", "aoc/0010")
-        .replace("atmosphere/contents/01007EF00011E002/romfs", "aoc/0010")
-        .replace("atmosphere/contents/01007EF00011F001/romfs", "aoc/0010")
-        .replace("atmosphere/contents/01007EF00011F002/romfs", "aoc/0010")
+        .replace("atmosphere/", "")
+        .replace("contents/", "")
+        .replace("titles/", "")
+        .replace("7EF0", "7ef0")
+        .replace("1E0", "1e0")
+        .replace("1F0", "1f0")
+        .replace("01007ef00011e000/romfs", "content")
+        .replace("01007ef00011e000/romfs", "content")
+        .replace("01007ef00011e001/romfs", "aoc/0010")
+        .replace("01007ef00011e002/romfs", "aoc/0010")
+        .replace("01007ef00011f001/romfs", "aoc/0010")
+        .replace("01007ef00011f002/romfs", "aoc/0010")
         .replace(".s", ".")
-        .replace("Content", "content")
-        .replace("Aoc", "aoc")
     )
     if "aoc/" in name:
-        return name.replace("aoc/content", "aoc").replace("aoc", "Aoc")
+        name = name.replace("aoc/content", "aoc").replace("aoc", "Aoc")
     elif "content/" in name and "/aoc" not in name:
-        return name.replace("content/", "")
-    elif allow_no_source:
-        return name
+        name = name.replace("content/", "")
+    elif not allow_no_source:
+        raise ValueError("A canonical path must begin with a valid content directory.")
+    return name
 
 
 @lru_cache(None)
@@ -1062,7 +1065,7 @@ def get_installed_mods(disabled: bool = False) -> List[BcmlMod]:
             for info in get_modpack_dir().glob("*/info.json")
             if not (
                 info.parent.stem == "9999_BCML"
-                and (not disabled and (info.parent / ".disabled").exists())
+                or (not disabled and (info.parent / ".disabled").exists())
             )
         },
         key=lambda mod: mod.priority,
@@ -1230,3 +1233,31 @@ if system() == "Windows":
     ZPATH = str(get_exec_dir() / "helpers" / "7z.exe")
 else:
     ZPATH = str(get_exec_dir() / "helpers" / "7z")
+
+
+def pickle_pio(pio: oead.aamp.ParameterIO):
+    return oead.aamp.ParameterIO.from_binary, (bytes(pio.to_binary()),)
+
+
+def construct_plist(data: bytes) -> oead.aamp.ParameterList:
+    return oead.aamp.ParameterIO.from_binary(data).lists["main"]
+
+
+def pickle_plist(plist: oead.aamp.ParameterList):
+    tmp_pio = oead.aamp.ParameterIO()
+    tmp_pio.lists["main"] = plist
+    return construct_plist, (bytes(tmp_pio.to_binary()),)
+
+
+def construct_byml(data: bytes) -> Union[oead.byml.Hash, oead.byml.Array]:
+    return oead.byml.from_binary(data)
+
+
+def pickle_byml(byml: Union[oead.byml.Hash, oead.byml.Array]):
+    return construct_byml, (bytes(oead.byml.to_binary(byml, big_endian=False)),)
+
+
+copyreg.pickle(oead.aamp.ParameterIO, pickle_pio)
+copyreg.pickle(oead.aamp.ParameterList, pickle_plist)
+copyreg.pickle(oead.byml.Hash, pickle_byml)
+copyreg.pickle(oead.byml.Array, pickle_byml)

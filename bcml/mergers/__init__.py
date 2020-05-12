@@ -119,7 +119,6 @@ def get_mergers() -> List[Merger]:
         pack,
         texts,
         merge,
-        shop,
         data,
         mubin,
         events,
@@ -132,7 +131,6 @@ def get_mergers() -> List[Merger]:
     return [
         pack.PackMerger,
         merge.DeepMerger,
-        shop.ShopMerger,
         texts.TextsMerger,
         actors.ActorInfoMerger,
         mubin.DungeonStaticMerger,
@@ -155,4 +153,7 @@ def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
 
 
 def sort_mergers(mergers: List[Merger]) -> List[Merger]:
-    return sorted(mergers, key=lambda merger: merger.NAME == "rstb", reverse=False)
+    merger_names = [m.NAME for m in get_mergers()]
+    return sorted(
+        mergers, key=lambda merger: merger_names.index(merger.NAME), reverse=False,
+    )

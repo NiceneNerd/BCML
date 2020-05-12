@@ -65,22 +65,14 @@ def is_savedata_modded(savedata: oead.Sarc) -> {}:
 
 
 def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
-    return oead.byml.to_text(oead.byml.from_binary(game_dict[file]))
+    return oead.byml.from_binary(game_dict[file])
 
 
 def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
     data = {}
     this_pool = pool or Pool()
-    game_dict = {}
     for file in gamedata.get_files():
-        game_dict[file.name] = bytes(file.data)
-    for result in pool.imap_unordered(
-        partial(_bgdata_from_bytes, game_dict=game_dict),
-        [f.name for f in gamedata.get_files()],
-    ):
-        util.dict_merge(data, oead.byml.from_text(result))
-        del result
-    del game_dict
+        util.dict_merge(data, oead.byml.from_binary(file.data))
     del gamedata
     if not pool:
         this_pool.close()
@@ -90,8 +82,6 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
-    mod_data = oead.byml.from_text(mod_data)
-    stock_data = oead.byml.from_text(stock_data)
     stock_entries = [entry["DataName"] for entry in stock_data[data_type]]
     mod_entries = [entry["DataName"] for entry in mod_data[data_type]]
     diffs = oead.byml.Hash(
@@ -116,7 +106,7 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     del stock_data
     del mod_entries
     del mod_data
-    return oead.byml.to_text(oead.byml.Hash({data_type: diffs}))
+    return oead.byml.Hash({data_type: diffs})
 
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
@@ -124,19 +114,11 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
     results = this_pool.map(
-        partial(
-            diff_gamedata_type,
-            mod_data=oead.byml.to_text(mod_data),
-            stock_data=oead.byml.to_text(stock_data),
-        ),
+        partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data,),
         mod_data.keys(),
     )
     diffs = oead.byml.Hash(
-        {
-            data_type: diff
-            for d in results
-            for data_type, diff in oead.byml.from_text(d).items()
-        }
+        {data_type: diff for d in results for data_type, diff in d.items()}
     )
     del results
     if not pool:

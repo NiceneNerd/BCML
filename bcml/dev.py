@@ -274,10 +274,6 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         print(f"Error: {str(mod)} is neither a valid file nor a directory")
         return
 
-    if not util.get_settings("wiiu") and (tmp_dir / "atmosphere" / "titles").exists():
-        shutil.move(
-            tmp_dir / "atmosphere" / "titles", tmp_dir / "atmosphere" / "contents"
-        )
     if not (
         (tmp_dir / util.get_content_path()).exists()
         or (tmp_dir / util.get_dlc_path()).exists()
@@ -342,6 +338,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                     getattr(err, 'error_text', traceback.format_exc(-5))
                 }</textarea>"""
             )
+            raise err
 
         _clean_sarcs(tmp_dir, hashes, pool)
         for folder in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:

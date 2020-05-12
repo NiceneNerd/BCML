@@ -20,9 +20,7 @@ from bcml import util, install, mergers
 from bcml.util import BcmlMod
 
 
-AAMP_EXTS_HANDLED = {
-    '.brecipe', '.sbrecipe', '.bshop', '.sbshop'
-}
+AAMP_EXTS_HANDLED = {".brecipe", ".sbrecipe", ".bshop", ".sbshop"}
 
 
 def _aamp_diff(
@@ -239,7 +237,7 @@ def threaded_merge(item) -> (str, dict):
         util.vprint(f"Finished patching files inside {file}")
     else:
         util.vprint(f"Finished patching {file}")
-    return util.get_canon_name(file), failures
+    return util.get_canon_name(file, True), failures
 
 
 class DeepMerger(mergers.Merger):
@@ -256,7 +254,11 @@ class DeepMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         print("Logging changes to AAMP files...")
         diffs = {}
-        for file in {f for f in modded_files if Path(f).suffix in (util.AAMP_EXTS - AAMP_EXTS_HANDLED)}:
+        for file in {
+            f
+            for f in modded_files
+            if Path(f).suffix in (util.AAMP_EXTS - AAMP_EXTS_HANDLED)
+        }:
             try:
                 diffs[file] = get_aamp_diff(str(mod_dir) + "/" + file, mod_dir)
             except (FileNotFoundError, KeyError, TypeError, AttributeError) as e:

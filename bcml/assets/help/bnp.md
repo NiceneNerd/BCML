@@ -11,6 +11,7 @@ define some useful settings such as dependencies and optional components.
 You will also need to select the folder containing your mod files. Mods should have the following folder layout:
 
 **Wii U**
+
 ```
 .
 ├── content
@@ -25,3 +26,21 @@ You will also need to select the folder containing your mod files. Mods should h
 ```
 
 **Switch**
+
+```
+.
+├── 01007EF00011E000
+│   └── romfs
+├── 01007EF00011F001 (optional: for DLC files)
+│   └── romfs
+└── options (optional: for optional mod components)
+    ├── option1 (any name allowed)
+    │   ├── 01007EF00011E000
+    │   │   └── romfs
+    │   └── 01007EF00011F001
+    │       └── romfs
+    ├── option2
+    │   └── 01007EF00011E000
+    │       └── romfs
+    └── ...
+```

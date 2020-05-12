@@ -10,7 +10,7 @@ from os import execlp
 from pathlib import Path
 from platform import system
 from shutil import rmtree
-from subprocess import run, PIPE, Popen
+from subprocess import run, PIPE, Popen, DEVNULL
 from threading import Thread
 
 import webview
@@ -20,6 +20,7 @@ from bcml.util import BcmlMod, Messager, MergeError
 from bcml.mergers.rstable import generate_rstb_for_mod
 
 LOG = util.get_data_dir() / "bcml.log"
+SYSTEM = system()
 
 
 def win_or_lose(func):
@@ -238,22 +239,19 @@ class Api:
             ]
             util.vprint(f"Installed {len(mods)} mods")
             print(f"Installed {len(mods)} mods")
-            merger_set = {}
+            merger_set = set()
             try:
                 for mod in mods:
-                    for merger in mergers.get_mergers_for_mod(mod):
-                        merger_set[merger] = (
-                            None
-                            if not merger.can_partial_remerge()
-                            else merger.get_mod_affected(mod)
-                        )
+                    merger_set.update(
+                        {
+                            m
+                            for m in mod.mergers
+                            if m.NAME not in {m.NAME for m in merger_set}
+                        }
+                    )
                 util.vprint("")
-                util.vprint(
-                    {m.NAME: merger_set[m] for m in merger_set if merger_set[m]}
-                )
-                for merger in merger_set:
-                    if merger_set[merger] is not None:
-                        merger.set_options({"only_these": merger_set[merger]})
+                util.vprint({m.NAME for m in merger_set})
+                for merger in mergers.sort_mergers(merger_set):
                     merger.set_pool(pool)
                     merger.perform_merge()
                 print("Install complete")
@@ -320,20 +318,13 @@ class Api:
                 print("Remerging where needed...")
                 all_mergers = [merger() for merger in mergers.get_mergers()]
                 remergers = set()
-                partials = {}
                 for mod in mods:
                     for merger in all_mergers:
                         if merger.is_mod_logged(mod) and merger.NAME not in {
                             m.NAME for m in remergers
                         }:
                             remergers.add(merger)
-                            if merger.can_partial_remerge():
-                                partials[merger.NAME] = set(
-                                    merger.get_mod_affected(mod)
-                                )
                 for merger in mergers.sort_mergers(remergers):
-                    if merger.NAME in partials:
-                        merger.set_options({"only_these": partials[merger.NAME]})
                     merger.set_pool(pool)
                     merger.perform_merge()
         install.refresh_master_export()
@@ -353,26 +344,26 @@ class Api:
 
     def explore(self, params):
         path = params["mod"]["path"]
-        if system() == "Windows":
+        if SYSTEM == "Windows":
             from os import (
                 startfile,
             )  # pylint: disable=no-name-in-module,import-outside-toplevel
 
             startfile(path)
-        elif system() == "Darwin":
+        elif SYSTEM == "Darwin":
             run(["open", path], check=False)
         else:
             run(["xdg-open", path], check=False)
 
     def explore_master(self, params=None):
         path = util.get_master_modpack_dir()
-        if system() == "Windows":
+        if SYSTEM == "Windows":
             from os import (
                 startfile,
             )  # pylint: disable=no-name-in-module,import-outside-toplevel
 
             startfile(path)
-        elif system() == "Darwin":
+        elif SYSTEM == "Darwin":
             run(["open", path], check=False)
         else:
             run(["xdg-open", path], check=False)
@@ -393,7 +384,7 @@ class Api:
             assert uking.exists()
         except AssertionError:
             raise FileNotFoundError("Your BOTW executable could not be found")
-        if system() == "Windows":
+        if SYSTEM == "Windows":
             cemu_args = [str(cemu), "-g", str(uking)]
         else:
             cemu_args = [
@@ -514,7 +505,7 @@ class Api:
         output = Path(output[0])
         print(f"Saving output file to {str(output)}...")
         x_args = [install.ZPATH, "a", str(output), f'{str(tmp_dir / "*")}']
-        if system() == "Windows":
+        if SYSTEM == "Windows":
             run(
                 x_args,
                 stdout=PIPE,
@@ -601,9 +592,9 @@ def main(debug: bool = False):
 
     no_cef = find_spec("cefpython3") is None or NO_CEF
     gui: str = ""
-    if system() == "Windows" and not no_cef:
+    if SYSTEM == "Windows" and not no_cef:
         gui = "cef"
-    elif system() == "Linux":
+    elif SYSTEM == "Linux":
         gui = "qt"
 
     if not debug:
@@ -616,6 +607,11 @@ def main(debug: bool = False):
 
 def stop_it():
     del globals()["logger"]
+    if SYSTEM == "Windows":
+        Popen(
+            "taskkill /F /IM subprocess.exe /T".split(), stdout=DEVNULL, stderr=DEVNULL
+        )
+        return
 
 
 def main_debug():

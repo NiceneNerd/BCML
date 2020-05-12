@@ -108,11 +108,14 @@ class BcmlRoot extends React.Component {
                 )}</pre>`;
             }
         }
-        this.setState({
-            showProgress: false,
-            showError: true,
-            errorText
-        });
+        this.setState(
+            {
+                showProgress: false,
+                showError: true,
+                errorText
+            },
+            () => this.refreshMods()
+        );
     }
 
     async handleInstall(mods, options) {

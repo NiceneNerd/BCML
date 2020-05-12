@@ -100,6 +100,22 @@ def get_next_priority() -> int:
     return i
 
 
+def _check_modded(file: Path, tmp_dir: Path):
+    try:
+        canon = util.get_canon_name(file.relative_to(tmp_dir).as_posix())
+    except ValueError:
+        util.vprint(f"Ignored unknown file {file.relative_to(tmp_dir).as_posix()}")
+        return None
+    if util.is_file_modded(canon, file, True):
+        util.vprint(f"Found modded file {canon}")
+        return file
+    else:
+        if "Aoc/0010/Map/MainField" in canon:
+            file.unlink()
+        util.vprint(f"Ignored unmodded file {canon}")
+        return None
+
+
 def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]]:
     modded_files = []
     if isinstance(tmp_dir, str):
@@ -133,39 +149,30 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
             ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
 
-    for file in tmp_dir.rglob("**/*"):
-        if file.is_file():
-            canon = util.get_canon_name(file.relative_to(tmp_dir).as_posix())
-            if canon is None:
-                util.vprint(
-                    f"Ignored unknown file {file.relative_to(tmp_dir).as_posix()}"
-                )
-                continue
-            if util.is_file_modded(canon, file, True):
-                modded_files.append(file)
-                util.vprint(f"Found modded file {canon}")
-            else:
-                if "Aoc/0010/Map/MainField" in canon:
-                    file.unlink()
-                util.vprint(f"Ignored unmodded file {canon}")
-                continue
+    this_pool = pool or Pool()
+    results = this_pool.map(
+        partial(_check_modded, tmp_dir=tmp_dir),
+        {f for f in tmp_dir.rglob("**/*") if f.is_file()},
+    )
+    for r in results:
+        if r:
+            modded_files.append(r)
     total = len(modded_files)
     print(f'Found {total} modified file{"s" if total > 1 else ""}')
 
     total = 0
-    sarc_files = [file for file in modded_files if file.suffix in util.SARC_EXTS]
+    sarc_files = {f for f in modded_files if f.suffix in util.SARC_EXTS}
     if sarc_files:
         print(f"Scanning files packed in SARCs...")
-        this_pool = pool or Pool()
         for files in this_pool.imap_unordered(
             partial(find_modded_sarc_files, tmp_dir=tmp_dir), sarc_files
         ):
             total += len(files)
             modded_files.extend(files)
-        if not pool:
-            this_pool.close()
-            this_pool.join()
         print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
+    if not pool:
+        this_pool.close()
+        this_pool.join()
     return modded_files
 
 
@@ -237,10 +244,10 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
             ]
         ):
             merger = merger_class()
+            util.vprint(f"Merger {merger.NAME}, #{i+1} of {len(mergers.get_mergers())}")
             if options is not None and merger.NAME in options["options"]:
                 merger.set_options(options["options"][merger.NAME])
             merger.set_pool(this_pool)
-            util.vprint(f"Merger {merger.NAME}, #{i+1} of {len(mergers.get_mergers())}")
             merger.log_diff(tmp_dir, modded_files)
     except Exception as e:
         this_pool.close()
@@ -518,15 +525,10 @@ def install_mod(
 
     if merge_now:
         all_mergers = set()
-        partials = {}
         for merger in {m() for m in mergers.get_mergers()}:
             if merger.is_mod_logged(output_mod):
                 all_mergers.add(merger)
-                if merger.can_partial_remerge():
-                    partials[merger.NAME] = set(merger.get_mod_affected(output_mod))
         for merger in mergers.sort_mergers(all_mergers):
-            if merger.NAME in partials:
-                merger.set_options({"only_these": partials[merger.NAME]})
             merger.set_pool(this_pool)
             merger.perform_merge()
 
@@ -539,19 +541,14 @@ def install_mod(
 @refresher
 def disable_mod(mod: BcmlMod, wait_merge: bool = False):
     remergers = []
-    partials = {}
     print(f"Disabling {mod.name}...")
     for merger in [merger() for merger in mergers.get_mergers()]:
         if merger.is_mod_logged(mod):
             remergers.append(merger)
-            if merger.can_partial_remerge():
-                partials[merger.NAME] = merger.get_mod_affected(mod)
     (mod.path / ".disabled").write_bytes(b"")
     if not wait_merge:
         print(f"Remerging affected files...")
         for merger in remergers:
-            if merger.NAME in partials:
-                merger.set_options({"only_these": partials[merger.NAME]})
             merger.perform_merge()
     print(f"{mod.name} disabled")
 
@@ -563,15 +560,10 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     if not wait_merge:
         print(f"Remerging affected files...")
         remergers = []
-        partials = {}
         for merger in [merger() for merger in mergers.get_mergers()]:
             if merger.is_mod_logged(mod):
                 remergers.append(merger)
-                if merger.can_partial_remerge():
-                    partials[merger.NAME] = merger.get_mod_affected(mod)
         for merger in remergers:
-            if merger.NAME in partials:
-                merger.set_options({"only_these": partials[merger.NAME]})
             merger.perform_merge()
     print(f"{mod.name} enabled")
 
@@ -579,7 +571,6 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
 @refresher
 def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Uninstalling {mod.name}...")
-    partials = mod.get_partials()
     remergers = set(mod.mergers)
     shutil.rmtree(str(mod.path))
 
@@ -592,8 +583,6 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     else:
         if not wait_merge:
             for merger in mergers.sort_mergers(remergers):
-                if merger.NAME in partials:
-                    merger.set_options({"only_these": partials[merger.NAME]})
                 merger.perform_merge()
 
     print(f"{mod.name} has been uninstalled.")

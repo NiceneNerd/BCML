@@ -490,7 +490,10 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
 
 
 def _calculate_rstb_size(file: Path, root: Path, no_guess: bool = False) -> dict:
-    canon = util.get_canon_name(file.relative_to(root))
+    try:
+        canon = util.get_canon_name(file.relative_to(root))
+    except ValueError:
+        return {}
     if not (file.suffix in RSTB_EXCLUDE_EXTS or canon in RSTB_EXCLUDE_NAMES):
         size = calculate_size(file)
         if size == 0 and not no_guess:
