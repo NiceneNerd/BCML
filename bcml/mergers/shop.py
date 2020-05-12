@@ -404,17 +404,17 @@ class ShopMerger(mergers.Merger):
         if self.is_mod_logged(mod):
             separate_diffs.append(
                 ParameterIO.from_binary(
-                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8")
+                    (mod.path / "logs" / self._log_name).read_bytes()
                 )
             )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 separate_diffs.append(
                     ParameterIO.from_binary(
-                        (opt / "logs" / self._log_name).read_text(encoding="utf-8")
+                        (opt / "logs" / self._log_name).read_bytes()
                     )
                 )
-        return self.consolidate_diffs(separate_diffs)
+        return reduce(pio_merge, separate_diffs)
 
     def get_all_diffs(self) -> list:
         diffs = []
@@ -429,7 +429,7 @@ class ShopMerger(mergers.Merger):
             all_diffs[file_key] = file_list
         consolidated_diffs: dict = {}
         for file_key, diff_list in all_diffs.items():
-            file_name = all_diffs_pio.objects["Filenames"].params[file_key]
+            file_name = all_diffs_pio.objects["Filenames"].params[file_key].v
             nest = reduce(
                 lambda res, cur: {cur: res}, reversed(file_name.split("//")), diff_list
             )
@@ -442,8 +442,8 @@ class ShopMerger(mergers.Merger):
 
     def get_mod_affected(self, mod: util.BcmlMod) -> set:
         files = set()
-        for diff_pio in self.get_mod_diff(mod):
-            files |= set(diff_pio.lists.keys())
+        for _, file_name in self.get_mod_diff(mod).objects["Filenames"].params.items():
+            files.add(file_name)
         return files
 
     def perform_merge(self):
