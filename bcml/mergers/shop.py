@@ -36,7 +36,6 @@ EXT_PARAMS = {
         "ItemAmount",
     ],
 }
-NAME_TABLE = oead.aamp.get_default_name_table()
 
 
 def cache_merged_shop(file: str, data: bytes):
@@ -70,21 +69,6 @@ def fix_itemsorts(pio: ParameterList) -> None:
                 for item_name in nested_sort[idx]:
                     table_list.objects[item_name].params["ItemSort"].v = current_sort
                     current_sort += 1
-
-
-def get_stock_shop(actor_name: str, shop_user: str, file_ext: str) -> ParameterIO:
-    pack_path = "Pack/TitleBG.pack//"
-    actor_path = (
-        f"Actor/{actor_name}.sbactorpack//{EXT_FOLDERS[file_ext]}/{shop_user}{file_ext}"
-    )
-    if util.get_game_file(pack_path + actor_path).exists():
-        s_bytes = util.get_nested_file_bytes(
-            str(util.get_game_file(pack_path + actor_path)), False
-        )
-    else:
-        s_bytes = util.get_nested_file_bytes(str(util.get_game_file(actor_path)), False)
-
-    return ParameterIO.from_binary(s_bytes)
 
 
 def get_named_pio(shop: ParameterIO, shop_type: str) -> ParameterIO:
