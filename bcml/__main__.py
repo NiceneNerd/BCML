@@ -1,6 +1,8 @@
 import base64
 import json
+import os
 import platform
+import socket
 import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
@@ -15,7 +17,7 @@ from threading import Thread
 
 import webview
 
-from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util
+from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util, _oneclick
 from bcml.util import BcmlMod, Messager, MergeError
 from bcml.mergers.rstable import generate_rstb_for_mod
 
@@ -560,6 +562,39 @@ def help_window():
     webview.create_window("BCML Help", url="assets/help.html?page=main")
 
 
+def stop_it():
+    try:
+        del globals()["logger"]
+    except KeyError:
+        pass
+    if SYSTEM == "Windows":
+        Popen(
+            "taskkill /F /IM subprocess.exe /T".split(), stdout=DEVNULL, stderr=DEVNULL
+        )
+        return
+
+
+def oneclick_listener():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", 6666))
+        except socket.error:
+            _oneclick.send_arg(sock)
+            os._exit(0)
+        sock.listen()
+        while True:
+            conn, _ = sock.accept()
+            with conn:
+                while True:
+                    try:
+                        data = conn.recv(1024)
+                    except ConnectionResetError:
+                        break
+                    if not data or data == b".":
+                        break
+                    _oneclick.process_arg(data.decode("utf8"))
+
+
 def main(debug: bool = False):
     set_start_method("spawn", True)
     globals()["logger"] = None
@@ -570,6 +605,10 @@ def main(debug: bool = False):
             rmtree(folder)
     except (FileNotFoundError, OSError, PermissionError):
         pass
+
+    _oneclick.register_handlers()
+    oneclick = Thread(target=oneclick_listener)
+    oneclick.start()
 
     api = Api()
 
@@ -590,7 +629,6 @@ def main(debug: bool = False):
         height=height,
         min_size=(width if width == 750 else 820, 600),
     )
-
     globals()["logger"] = Messager(api.window)
     api.window.closing += stop_it
 
@@ -606,16 +644,10 @@ def main(debug: bool = False):
 
     with redirect_stderr(sys.stdout):
         with redirect_stdout(Messager(api.window)):
-            webview.start(gui=gui, debug=debug, http_server=True)
-
-
-def stop_it():
-    del globals()["logger"]
-    if SYSTEM == "Windows":
-        Popen(
-            "taskkill /F /IM subprocess.exe /T".split(), stdout=DEVNULL, stderr=DEVNULL
-        )
-        return
+            webview.start(
+                gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
+            )
+    stop_it()
 
 
 def main_debug():

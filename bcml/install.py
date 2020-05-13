@@ -354,6 +354,9 @@ def install_mod(
         print(f"Error: {str(mod)} is neither a valid file nor a directory")
         return
 
+    if not options:
+        options = {"options": {}, "disable": []}
+
     this_pool: Pool = None
     try:
         rules = json.loads((tmp_dir / "info.json").read_text("utf-8"))

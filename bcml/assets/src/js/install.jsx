@@ -16,6 +16,10 @@ class InstallModal extends React.Component {
             }
         };
         this.setOptions = this.setOptions.bind(this);
+        window.oneClick = mod =>
+            this.setState({ mods: [...this.state.mods, mod] }, () =>
+                this.props.onOneClick()
+            );
     }
 
     browse() {

@@ -474,6 +474,7 @@ class Mods extends React.Component {
                         );
                     }}
                     onQueue={this.handleQueue}
+                    onOneClick={() => this.setState({ showInstall: true })}
                     onClose={() => this.setState({ showInstall: false })}
                 />
             </>
