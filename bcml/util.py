@@ -828,9 +828,11 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
 
 @lru_cache(None)
 def get_mod_id(mod_name: str, priority: int) -> str:
-    return f"{priority:04}_" + re.sub(
-        r"(?u)[^-\w.]", "", mod_name.strip().replace(" ", "")
-    )
+    return f"{priority:04}_" + get_safe_pathname(mod_name)
+
+
+def get_safe_pathname(name: str, delimiter: str = "") -> str:
+    return re.sub(r"(?u)[^-\w.]", "", name.strip().replace(" ", delimiter))
 
 
 def get_mod_by_priority(priority: int) -> Union[Path, bool]:

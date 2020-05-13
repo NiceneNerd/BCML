@@ -67,7 +67,12 @@ class DevTools extends React.Component {
                     .create_bnp(args)
                     .then(res => {
                         if (!res.success) {
-                            throw res;
+                            if (res.error && res.error == "cancelled") {
+                                this.props.onState({ showProgress: false });
+                                return;
+                            } else {
+                                throw res;
+                            }
                         }
                         this.setState(
                             {
@@ -142,6 +147,22 @@ class DevTools extends React.Component {
                                 flexGrow: 1,
                                 flexDirection: "column"
                             }}>
+                            <Form.Group controlId="folder">
+                                <Form.Label>Mod root folder</Form.Label>
+                                <FolderInput
+                                    isValid={false}
+                                    overlay={
+                                        <Tooltip>
+                                            The folder containing the main mod
+                                            content, should contain "content"
+                                            and/or "aoc" for Wii U/Cemu or
+                                            "TITLEID/romfs" for Switch.
+                                        </Tooltip>
+                                    }
+                                    value={this.state.folder}
+                                    onChange={this.handleChange}
+                                />
+                            </Form.Group>
                             <Form.Group controlId="name">
                                 <Form.Label>Name</Form.Label>
                                 <Form.Control
@@ -172,21 +193,6 @@ class DevTools extends React.Component {
                                     type="number"
                                     step="0.1"
                                     value={this.state.version}
-                                    onChange={this.handleChange}
-                                />
-                            </Form.Group>
-                            <Form.Group controlId="folder">
-                                <Form.Label>Mod root folder</Form.Label>
-                                <FolderInput
-                                    isValid={false}
-                                    overlay={
-                                        <Tooltip>
-                                            The folder containing the main mod
-                                            content, should contain "content"
-                                            and/or "aoc."
-                                        </Tooltip>
-                                    }
-                                    value={this.state.folder}
                                     onChange={this.handleChange}
                                 />
                             </Form.Group>
@@ -264,7 +270,13 @@ class DevTools extends React.Component {
                                     </Button>{" "}
                                     <Button
                                         variant="primary"
-                                        onClick={this.createBnp}>
+                                        onClick={this.createBnp}
+                                        disabled={
+                                            !(
+                                                this.state.folder &&
+                                                this.state.name
+                                            )
+                                        }>
                                         Create BNP
                                     </Button>
                                 </Col>

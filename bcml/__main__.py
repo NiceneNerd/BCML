@@ -454,10 +454,14 @@ class Api:
     @win_or_lose
     def create_bnp(self, params):
         out = self.window.create_file_dialog(
-            webview.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
+            webview.SAVE_DIALOG,
+            file_types=("BOTW Nano Patch (*.bnp)", "All files (*.*)"),
+            save_filename=util.get_safe_pathname(params["name"]) + ".bnp",
         )
         if not out:
-            return
+            e = Exception()
+            setattr(e, "error_text", "cancelled")
+            raise e
         meta = params.copy()
         del meta["folder"]
         meta["options"] = params["selects"]
