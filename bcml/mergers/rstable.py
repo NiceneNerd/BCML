@@ -464,7 +464,7 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
             )
             if ext == ".bdmgparam":
                 size = 0
-            if size == 0 and not no_guess:
+            if size == 0 and (not no_guess or ext in {".bas", ".baslist"}):
                 if ext in util.AAMP_EXTS:
                     size = guess_aamp_size(data, ext)
                 elif ext in {".bfres", ".sbfres"}:
@@ -496,7 +496,7 @@ def _calculate_rstb_size(file: Path, root: Path, no_guess: bool = False) -> dict
         return {}
     if not (file.suffix in RSTB_EXCLUDE_EXTS or canon in RSTB_EXCLUDE_NAMES):
         size = calculate_size(file)
-        if size == 0 and not no_guess:
+        if size == 0 and (not no_guess or file.suffix in {".bas", ".baslist"}):
             if file.suffix in util.AAMP_EXTS:
                 size = guess_aamp_size(file)
             elif file.suffix in {".bfres", ".sbfres"}:
@@ -614,7 +614,10 @@ class RstbMerger(mergers.Merger):
                     size = calculate_size(file)
                     if file.suffix == ".bdmgparam":
                         size = 0
-                    if size == 0 and not self._options.get("no_guess", False):
+                    if size == 0 and (
+                        not self._options.get("no_guess", False)
+                        or file.suffix in {".bas", ".baslist"}
+                    ):
                         if file.suffix in util.AAMP_EXTS:
                             size = guess_aamp_size(file)
                         elif file.suffix in [".bfres", ".sbfres"]:
@@ -648,7 +651,10 @@ class RstbMerger(mergers.Merger):
                 )
                 if ext == ".bdmgparam":
                     rstb_val = 0
-                if rstb_val == 0 and not self._options.get("no_guess", False):
+                if rstb_val == 0 and (
+                    not self._options.get("no_guess", False)
+                    or ext in {".bas", ".baslist"}
+                ):
                     if ext in util.AAMP_EXTS:
                         rstb_val = guess_aamp_size(data, ext)
                     elif ext in {".bfres", ".sbfres"}:
