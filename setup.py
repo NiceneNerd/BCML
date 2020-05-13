@@ -1,10 +1,11 @@
 from setuptools import setup
 from subprocess import run
+from sys import argv
 from pathlib import Path
 from bcml.__version__ import VERSION
 
 installer_cfg = Path("installer.cfg")
-if installer_cfg.exists():
+if installer_cfg.exists() and "sdist" in argv:
     text = installer_cfg.read_text().splitlines()
     text[3] = f"version={VERSION}"
     installer_cfg.write_text("\n".join(text))
