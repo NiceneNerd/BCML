@@ -141,9 +141,9 @@ class QuestMerger(mergers.Merger):
         for name, mod in diffs["mod"].items():
             try:
                 quests[stock_names.index(name)] = mod
-            except ValueError:
+            except (IndexError, ValueError):
                 diffs["add"].append(mod)
-        for delete in diffs["del"]:
+        for delete in reversed(diffs["del"]):
             try:
                 quests.remove(quests[stock_names.index(delete)])
             except ValueError:
