@@ -82,18 +82,17 @@ def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
-    stock_entries = [entry["DataName"] for entry in stock_data[data_type]]
-    mod_entries = [entry["DataName"] for entry in mod_data[data_type]]
+    stock_entries = [entry["DataName"] for entry in stock_data]
+    mod_entries = [entry["DataName"] for entry in mod_data]
     diffs = oead.byml.Hash(
         {
             "add": oead.byml.Hash(
                 {
                     entry["DataName"]: entry
-                    for entry in mod_data[data_type]
+                    for entry in mod_data
                     if (
                         entry["DataName"] not in stock_entries
-                        or entry
-                        != stock_data[data_type][stock_entries.index(entry["DataName"])]
+                        or entry != stock_data[stock_entries.index(entry["DataName"])]
                     )
                 }
             ),
@@ -113,9 +112,10 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
     mod_data = consolidate_gamedata(gamedata, this_pool)
-    results = this_pool.map(
-        partial(diff_gamedata_type, mod_data=mod_data, stock_data=stock_data,),
-        mod_data.keys(),
+    del gamedata
+    results = this_pool.starmap(
+        diff_gamedata_type,
+        ((key, mod_data[key], stock_data[key]) for key in mod_data.keys()),
     )
     diffs = oead.byml.Hash(
         {data_type: diff for d in results for data_type, diff in d.items()}
