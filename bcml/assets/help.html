@@ -8,17 +8,20 @@
     <link rel="stylesheet" href="css/bootstrap.min.css" />
     <title>BCML Help</title>
 </head>
-<body class="p-2">
+<body class="p-2" style="overflow-x: hidden;">
     <div class="row flex-nowrap">
-        <div class="col-xs-3 mr-3">
+        <div class="col-xs-3">
             <nav>
-                <ul>
+                <ul class="list-unstyled py-2 px-4">
                     <li><a href="help.html?page=main">Main Page</a></li>
                     <li><a href="help.html?page=install">Installing Mods</a></li>
+                    <li><a href="help.html?page=mods">Managing Mods</a></li>
+                    <li><a href="help.html?page=bnp">About BNPs</a></li>
+                    <li><a href="help.html?page=trouble">Troubleshooting</a></li>
                 </ul>
             </nav>
         </div>
-        <div class="col-xs-9 markdown-body" id="root"></div>
+        <div class="col-xs-9 markdown-body pr-4" id="root"></div>
     </div>
     <script src="scripts/bundle.js"></script>
 </body>
