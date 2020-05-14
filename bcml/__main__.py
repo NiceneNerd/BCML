@@ -607,7 +607,7 @@ def main(debug: bool = False):
         pass
 
     _oneclick.register_handlers()
-    oneclick = Thread(target=oneclick_listener)
+    oneclick = Thread(target=oneclick_listener, daemon=True)
     oneclick.start()
 
     api = Api()
