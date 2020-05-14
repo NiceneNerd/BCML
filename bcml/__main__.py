@@ -574,27 +574,6 @@ def stop_it():
         return
 
 
-def oneclick_listener():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        try:
-            sock.bind(("127.0.0.1", 6666))
-        except socket.error:
-            _oneclick.send_arg(sock)
-            os._exit(0)
-        sock.listen()
-        while True:
-            conn, _ = sock.accept()
-            with conn:
-                while True:
-                    try:
-                        data = conn.recv(1024)
-                    except ConnectionResetError:
-                        break
-                    if not data or data == b".":
-                        break
-                    _oneclick.process_arg(data.decode("utf8"))
-
-
 def main(debug: bool = False):
     set_start_method("spawn", True)
     globals()["logger"] = None
@@ -607,7 +586,7 @@ def main(debug: bool = False):
         pass
 
     _oneclick.register_handlers()
-    oneclick = Thread(target=oneclick_listener, daemon=True)
+    oneclick = Thread(target=_oneclick.listen, daemon=True)
     oneclick.start()
 
     api = Api()

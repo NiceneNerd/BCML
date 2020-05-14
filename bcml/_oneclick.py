@@ -11,6 +11,27 @@ import webview
 from bcml import util
 
 
+def listen():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", 6666))
+        except socket.error:
+            send_arg(sock)
+            os._exit(0)
+        sock.listen()
+        while True:
+            conn, _ = sock.accept()
+            with conn:
+                while True:
+                    try:
+                        data = conn.recv(1024)
+                    except ConnectionResetError:
+                        break
+                    if not data or data == b".":
+                        break
+                    process_arg(data.decode("utf8"))
+
+
 def send_arg(sock):
     sock.connect(("127.0.0.1", 6666))
     sock.sendall(sys.argv[1].encode("utf8"))
