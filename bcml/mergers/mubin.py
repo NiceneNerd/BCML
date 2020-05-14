@@ -231,7 +231,6 @@ def generate_modded_map_log(
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
     this_pool = pool or Pool()
-    print(f"link_del is {link_del}")
     diffs = oead.byml.Hash(
         {
             map_unit: oead.byml.from_text(diff)

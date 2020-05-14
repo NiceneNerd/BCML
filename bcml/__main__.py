@@ -611,15 +611,14 @@ def main(debug: bool = False):
     globals()["logger"] = Messager(api.window)
     api.window.closing += stop_it
 
-    no_cef = find_spec("cefpython3") is None or NO_CEF
     gui: str = ""
-    if SYSTEM == "Windows" and not no_cef:
+    if SYSTEM == "Windows":
         gui = "cef"
     elif SYSTEM == "Linux":
         gui = "qt"
 
     if not debug:
-        debug = DEBUG if not no_cef else "bcml-debug" in sys.argv
+        debug = DEBUG or "bcml-debug" in sys.argv
 
     with redirect_stderr(sys.stdout):
         with redirect_stdout(Messager(api.window)):
