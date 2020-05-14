@@ -97,11 +97,11 @@ def _linux_create_handler():
     )
     if schema_file.exists():
         return
-    desktop = r"""
+    desktop = f"""
     [Desktop Entry]
     Type=Application
     Name=BCML Schema Handler
-    Exec=bcml %u
+    Exec={sys.executable} -m bcml %u
     StartupNotify=false
     MimeType=x-schema-handler/bcml;
     """
