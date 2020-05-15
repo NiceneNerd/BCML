@@ -566,7 +566,8 @@ def help_window():
     webview.create_window("BCML Help", url="assets/help.html?page=main")
 
 
-def stop_it():
+def stop_it(messager: Messager):
+    messager.save()
     try:
         del globals()["logger"]
     except KeyError:
@@ -627,12 +628,13 @@ def main(debug: bool = False):
     if not debug:
         debug = DEBUG or "bcml-debug" in sys.argv
 
+    messager = Messager(api.window)
     with redirect_stderr(sys.stdout):
-        with redirect_stdout(Messager(api.window)):
+        with redirect_stdout(messager):
             webview.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
             )
-    stop_it()
+    stop_it(messager)
 
 
 def main_debug():

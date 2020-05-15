@@ -20,6 +20,7 @@ from collections.abc import Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from platform import system
+from pprint import pformat
 from typing import Union, List, Dict, ByteString
 
 import oead
@@ -414,16 +415,17 @@ def vprint(content):
         return
     if not isinstance(content, str):
         if isinstance(content, oead.byml.Hash) or isinstance(content, oead.byml.Array):
-            print(oead.byml.to_text(content))
+            content = oead.byml.to_text(content)
         elif isinstance(content, oead.aamp.ParameterIO):
-            print(content.to_text())
+            content = content.to_text()
         else:
-            from pprint import pformat
-
             try:
-                content = pformat(content, compact=True, indent=4)
+                content = json.dumps(content, ensure_ascii=False, indent=2)
             except:  # pylint: disable=bare-except
-                pass
+                try:
+                    content = pformat(content, compact=True, indent=2)
+                except:  # pylint: disable=bare-except
+                    return
     print(f"VERBOSE{content}")
 
 
@@ -1209,26 +1211,25 @@ class MergeError(Exception):
 class Messager:
     def __init__(self, window: Window):
         self.window = window
-        self.log = get_data_dir() / "bcml.log"
+        self.log_file = get_data_dir() / "bcml.log"
+        self.log = []
 
     def write(self, string: str):
-        from bcml.__main__ import LOG
-
         if (
             string.strip("") not in {"", "\n"}
             and not string.startswith("VERBOSE")
             and isinstance(string, str)
         ):
             self.window.evaluate_js(
-                f"try {{ window.onMsg('{string}') }} catch(err) {{}};"
+                f"try {{ window.onMsg(`{string}`) }} catch(err) {{}};"
             )
-        with LOG.open("a", encoding="utf-8") as log_file:
-            if string.startswith("VERBOSE"):
-                string = string[7:]
-            log_file.write(f"{string}\n")
+        self.log.append(string.replace("VERBOSE", ""))
 
     def isatty(self):
         return False
+
+    def save(self):
+        self.log_file.write_text("\n".join(self.log))
 
 
 if system() == "Windows":
