@@ -43,6 +43,7 @@ setup(
         "oead>=1.1.1",
         "pywebview>=3.2,<4.0",
         "pyYaml>=5.3.1",
+        "requests~=2.23.0",
         "rstb>=1.2.0",
         "xxhash>=1.4.3",
     ],

@@ -573,7 +573,10 @@ def stop_it():
         pass
     if SYSTEM == "Windows":
         Popen(
-            "taskkill /F /IM subprocess.exe /T".split(), stdout=DEVNULL, stderr=DEVNULL
+            "taskkill /F /IM subprocess.exe /T".split(),
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+            creationflags=0x08000000,
         )
         return
 
