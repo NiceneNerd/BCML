@@ -257,3 +257,12 @@ class DeepMerger(mergers.Merger):
             pool.close()
             pool.join()
         print("Finished deep merge")
+
+    def get_checkbox_options(self):
+        return []
+
+    def get_mod_edit_info(self, mod: util.BcmlMod):
+        diff = self.get_mod_diff(mod)
+        if not diff:
+            return set()
+        return set(file.v for _, file in diff.objects["FileTable"].params.items())

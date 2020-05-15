@@ -167,6 +167,8 @@ class QuestMerger(mergers.Merger):
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         diff = self.consolidate_diffs(self.get_mod_diff(mod))
+        if not diff:
+            return set()
         return (
             {a["Name"] for a in diff["add"]}
             | set(diff["mod"].keys())

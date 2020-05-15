@@ -566,6 +566,8 @@ class SaveDataMerger(mergers.Merger):
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         diff = self.consolidate_diffs(self.get_mod_diff(mod))
+        if not diff:
+            return set()
         return {entry["DataName"] for entry in diff["add"]} | {
             int(item) for item in diff["del"]
         }
