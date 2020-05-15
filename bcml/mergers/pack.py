@@ -53,7 +53,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
                 file.name.replace(".s", "."), file_data, count_new=True
             ):
                 if (
-                    not Path(file.name).suffix in util.SARC_EXTS
+                    not file.name[file.name.rindex(".") :] in util.SARC_EXTS
                 ) or file.name in SPECIAL:
                     new_sarc.files[file.name] = file_data
                     files_added.add(file.name)

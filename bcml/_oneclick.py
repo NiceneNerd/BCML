@@ -81,7 +81,9 @@ def process_arg(arg: str = None):
         ) as e:
             print(e)
             return
-    webview.windows[0].evaluate_js(f'window.oneClick("{path.resolve().as_posix()}")')
+    webview.windows[0].evaluate_js(
+        f'setTimeout(() => window.oneClick("{path.resolve().as_posix()}"), 500)'
+    )
 
 
 def register_handlers():

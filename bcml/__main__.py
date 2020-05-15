@@ -288,7 +288,7 @@ class Api:
                 for m in mergers.get_mergers_for_mod(new_mod)
                 if m.NAME not in {m.NAME for m in remergers}
             }
-            for merger in remergers:
+            for merger in mergers.sort_mergers(remergers):
                 merger.set_pool(pool)
                 merger.perform_merge()
 

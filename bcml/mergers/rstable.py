@@ -626,7 +626,7 @@ class RstbMerger(mergers.Merger):
             elif isinstance(file, str):
                 parts = file.split("//")
                 if any(
-                    Path(p).suffix in {".ssarc", ".sblarc", ".sbfarc"}
+                    p[p.rindex(".") :] in {".ssarc", ".sblarc", ".sbfarc"}
                     for p in parts[0:-1]
                 ):
                     continue
