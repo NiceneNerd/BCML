@@ -20,6 +20,7 @@ import webview
 from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util, _oneclick
 from bcml.util import BcmlMod, Messager, MergeError
 from bcml.mergers.rstable import generate_rstb_for_mod
+from bcml.__version__ import USER_VERSION
 
 LOG = util.get_data_dir() / "bcml.log"
 SYSTEM = system()
@@ -556,6 +557,9 @@ class Api:
         Popen([exe, "-m", "bcml"], cwd=str(Path().resolve()))
         for win in webview.windows:
             win.destroy()
+
+    def get_version(self):
+        return USER_VERSION
 
 
 def help_window():

@@ -40,7 +40,8 @@ class BcmlRoot extends React.Component {
             showConfirm: false,
             confirmText: "",
             confirmCallback: () => {},
-            showAbout: false
+            showAbout: false,
+            version: "3.0"
         };
         this.selects = null;
         this.backupRef = React.createRef();
@@ -53,9 +54,12 @@ class BcmlRoot extends React.Component {
         this.export = this.export.bind(this);
         this.launchGame = this.launchGame.bind(this);
         this.updateBcml = this.updateBcml.bind(this);
-        window.addEventListener("pywebviewready", () =>
-            setTimeout(this.refreshMods, 150)
-        );
+        window.addEventListener("pywebviewready", () => {
+            setTimeout(this.refreshMods, 150);
+            pywebview.api
+                .get_version()
+                .then(res => this.setState({ version: res }));
+        });
     }
 
     componentDidCatch(error) {
@@ -395,6 +399,7 @@ class BcmlRoot extends React.Component {
                 <AboutDialog
                     show={this.state.showAbout}
                     onClose={() => this.setState({ showAbout: false })}
+                    version={this.state.version}
                 />
                 <SelectsDialog
                     show={this.state.selectMod != null}
@@ -555,7 +560,15 @@ const AboutDialog = props => {
     return (
         <Modal show={props.show} onHide={props.onClose}>
             <Modal.Header>
-                <Modal.Title>About BCML</Modal.Title>
+                <Modal.Title className="d-flex w-100">
+                    <div>About BCML</div>
+                    <div class="flex-grow-1"></div>
+                    <div>
+                        <small>
+                            <Badge variant="secondary">{props.version}</Badge>
+                        </small>
+                    </div>
+                </Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <p>
