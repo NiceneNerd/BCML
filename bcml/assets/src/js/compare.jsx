@@ -126,7 +126,13 @@ class DiffView extends React.Component {
                 {Object.keys(this.props.diff).map((merger, i) => (
                     <Accordion key={merger}>
                         <Card>
-                            <Accordion.Toggle as={Card.Header} eventKey={i}>
+                            <Accordion.Toggle
+                                as={Card.Header}
+                                eventKey={i}
+                                className={
+                                    this.props.diff[merger].length == 0 &&
+                                    "text-secondary"
+                                }>
                                 {merger}
                             </Accordion.Toggle>
                             <Accordion.Collapse eventKey={i}>
