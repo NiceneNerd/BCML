@@ -396,7 +396,7 @@ class Api:
                 "-g",
                 "Z:\\" + str(uking).replace("/", "\\"),
             ]
-        run(cemu_args, cwd=str(util.get_cemu_dir()), check=False)
+        Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
     def remerge(self, params):
