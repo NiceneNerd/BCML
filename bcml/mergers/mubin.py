@@ -251,7 +251,7 @@ def generate_modded_map_log(
 def merge_map(
     map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False
 ) -> {}:
-    map_unit, changes = map_pair[0], oead.byml.from_text(map_pair[1])
+    map_unit, changes = map_pair[0], map_pair[1]
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
     stock_hashes = [int(obj["HashId"]) for obj in new_map["Objs"]]
@@ -471,7 +471,7 @@ class MapMerger(mergers.Merger):
         for mod_diff in diffs:
             for file, diff in mod_diff.items():
                 a_map = Map(*file.split("_"))
-                if a_map not in diffs:
+                if a_map not in a_diffs:
                     a_diffs[a_map] = []
                 a_diffs[a_map].append(diff)
         c_diffs = {}
@@ -494,6 +494,8 @@ class MapMerger(mergers.Merger):
                     c_diffs[file]["mod"][hash_id] = actor
             add_hashes = []
             for mod in reversed(mods):
+                if file == Map("D-6", "Static"):
+                    print("Hello")
                 for actor in mod["add"]:
                     if actor["HashId"] not in add_hashes:
                         add_hashes.append(actor["HashId"])
@@ -551,8 +553,7 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool()
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
-            [(key, oead.byml.to_text(value)) for key, value in map_diffs.items()],
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del), map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
