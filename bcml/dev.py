@@ -321,6 +321,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                 )
                 xh2 = xxhash.xxh64_intdigest(file.read_bytes())
                 if xh1 == xh2:
+                    util.vprint(
+                        f"Removing {file} from option {option_dir.name}, identical to base mod"
+                    )
                     file.unlink()
 
         if not options:
@@ -329,7 +332,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
         try:
             _make_bnp_logs(tmp_dir, options)
-            for option_dir in tmp_dir.glob("options/*"):
+            for option_dir in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:
                 _make_bnp_logs(option_dir, options)
         except Exception as err:  # pylint: disable=broad-except
             err.error_text = (
