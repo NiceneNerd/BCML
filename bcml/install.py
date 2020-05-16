@@ -229,8 +229,8 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
     if not modded_files:
         err = RuntimeError("No modified files were found.")
         err.error_text = (
-            "No modified files were found. This probably means this mod is not in a supported "
-            "format."
+            f"No modified files were found in {str(tmp_dir)}."
+            "This probably means this mod is not in a supported format."
         )
         raise err
 
@@ -550,9 +550,11 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
             remergers.append(merger)
     (mod.path / ".disabled").write_bytes(b"")
     if not wait_merge:
-        print(f"Remerging affected files...")
-        for merger in remergers:
-            merger.perform_merge()
+        with Pool() as pool:
+            print(f"Remerging affected files...")
+            for merger in remergers:
+                merger.set_pool(pool)
+                merger.perform_merge()
     print(f"{mod.name} disabled")
 
 
@@ -562,12 +564,14 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     (mod.path / ".disabled").unlink()
     if not wait_merge:
         print(f"Remerging affected files...")
-        remergers = []
-        for merger in [merger() for merger in mergers.get_mergers()]:
-            if merger.is_mod_logged(mod):
-                remergers.append(merger)
-        for merger in remergers:
-            merger.perform_merge()
+        with Pool() as pool:
+            remergers = []
+            for merger in [merger() for merger in mergers.get_mergers()]:
+                if merger.is_mod_logged(mod):
+                    remergers.append(merger)
+                    merger.set_pool(pool)
+            for merger in remergers:
+                merger.perform_merge()
     print(f"{mod.name} enabled")
 
 
@@ -585,8 +589,10 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
         util.create_bcml_graphicpack_if_needed()
     else:
         if not wait_merge:
-            for merger in mergers.sort_mergers(remergers):
-                merger.perform_merge()
+            with Pool() as pool:
+                for merger in mergers.sort_mergers(remergers):
+                    merger.set_pool(pool)
+                    merger.perform_merge()
 
     print(f"{mod.name} has been uninstalled.")
 
@@ -670,7 +676,11 @@ def link_master_mod(output: Path = None):
         shutil.rmtree(str(output), ignore_errors=True)
     output.mkdir(parents=True, exist_ok=True)
     mod_folders: List[Path] = sorted(
-        [item for item in util.get_modpack_dir().glob("*") if item.is_dir()],
+        [
+            item
+            for item in util.get_modpack_dir().glob("*")
+            if item.is_dir() and not (item / ".disabled").exists()
+        ],
         reverse=True,
     )
     util.vprint(mod_folders)
