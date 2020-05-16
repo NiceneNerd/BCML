@@ -27,6 +27,8 @@ import oead
 import xxhash
 from webview import Window
 
+from bcml import pickles
+
 
 CREATE_NO_WINDOW = 0x08000000
 SARC_EXTS = {
@@ -1236,31 +1238,3 @@ if system() == "Windows":
     ZPATH = str(get_exec_dir() / "helpers" / "7z.exe")
 else:
     ZPATH = str(get_exec_dir() / "helpers" / "7z")
-
-
-def pickle_pio(pio: oead.aamp.ParameterIO):
-    return oead.aamp.ParameterIO.from_binary, (bytes(pio.to_binary()),)
-
-
-def construct_plist(data: bytes) -> oead.aamp.ParameterList:
-    return oead.aamp.ParameterIO.from_binary(data).lists["main"]
-
-
-def pickle_plist(plist: oead.aamp.ParameterList):
-    tmp_pio = oead.aamp.ParameterIO()
-    tmp_pio.lists["main"] = plist
-    return construct_plist, (bytes(tmp_pio.to_binary()),)
-
-
-def construct_byml(data: bytes) -> Union[oead.byml.Hash, oead.byml.Array]:
-    return oead.byml.from_binary(data)
-
-
-def pickle_byml(byml: Union[oead.byml.Hash, oead.byml.Array]):
-    return construct_byml, (bytes(oead.byml.to_binary(byml, big_endian=False)),)
-
-
-copyreg.pickle(oead.aamp.ParameterIO, pickle_pio)
-copyreg.pickle(oead.aamp.ParameterList, pickle_plist)
-copyreg.pickle(oead.byml.Hash, pickle_byml)
-copyreg.pickle(oead.byml.Array, pickle_byml)
