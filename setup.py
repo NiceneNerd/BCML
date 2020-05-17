@@ -39,13 +39,13 @@ setup(
     install_requires=[
         "aamp>=1.4.1",
         "byml>=2.3.1",
-        "cefpython3>=66.0 ; platform_system=='Windows'",
+        "cefpython3~=66.0 ; platform_system=='Windows'",
         "oead>=1.1.1",
-        "pywebview>=3.2,<4.0",
-        "pyYaml>=5.3.1",
+        "pywebview~=3.2",
+        "pyYaml~=5.3.1",
         "requests~=2.23.0",
         "rstb>=1.2.0",
-        "xxhash>=1.4.3",
+        "xxhash~=1.4.3",
     ],
     zip_safe=False,
 )
