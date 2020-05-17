@@ -21,6 +21,7 @@ tmp.py
 __pycache__/
 *.py[cod]
 *$py.class
+bcml-dist.ps1
 
 # C extensions
 *.so
