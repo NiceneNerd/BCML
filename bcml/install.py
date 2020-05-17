@@ -14,7 +14,7 @@ from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
 from platform import system
-from shutil import rmtree
+from shutil import rmtree, copyfile
 from tempfile import TemporaryDirectory
 from typing import List, Union, Callable
 from xml.dom import minidom
@@ -140,13 +140,24 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
             )
             raise err
 
-    aoc_field = tmp_dir / util.get_dlc_path() / "0010" / "Pack" / "AocMainField.pack"
+    aoc_field = (
+        tmp_dir
+        / util.get_dlc_path()
+        / ("0010" if util.get_settings("wiiu") else "")
+        / "Pack"
+        / "AocMainField.pack"
+    )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
-        aoc_pack = oead.Sarc(aoc_field.read_bytes())
-        for file in aoc_pack.get_files():
-            ex_out = tmp_dir / util.get_dlc_path() / "0010" / file.name
-            ex_out.parent.mkdir(parents=True, exist_ok=True)
-            ex_out.write_bytes(file.data)
+        if not (
+            tmp_dir
+            / util.get_dlc_path()
+            / ("0010" if util.get_settings("wiiu") else "")
+        ).rglob("Map/**/?-?_*.smubin"):
+            aoc_pack = oead.Sarc(aoc_field.read_bytes())
+            for file in aoc_pack.get_files():
+                ex_out = tmp_dir / util.get_dlc_path() / "0010" / file.name
+                ex_out.parent.mkdir(parents=True, exist_ok=True)
+                ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
 
     this_pool = pool or Pool()
@@ -616,7 +627,7 @@ def create_backup(name: str = ""):
     else:
         name = re.sub(r"(?u)[^-\w.]", "", name.strip().replace(" ", "_"))
     num_mods = len([d for d in util.get_modpack_dir().glob("*") if d.is_dir()])
-    output = util.get_data_dir() / "backups" / f"{name}---{num_mods - 1}.7z"
+    output = util.get_storage_dir() / "backups" / f"{name}---{num_mods - 1}.7z"
     output.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saving backup {name}...")
     x_args = [ZPATH, "a", str(output), f'{str(util.get_modpack_dir() / "*")}']
@@ -636,7 +647,7 @@ def create_backup(name: str = ""):
 
 
 def get_backups() -> List[Path]:
-    return list((util.get_data_dir() / "backups").glob("*.7z"))
+    return list((util.get_storage_dir() / "backups").glob("*.7z"))
 
 
 def restore_backup(backup: Union[str, Path]):
@@ -667,10 +678,10 @@ def restore_backup(backup: Union[str, Path]):
 
 
 def link_master_mod(output: Path = None):
-    util.create_bcml_graphicpack_if_needed()
     if not output:
         if util.get_settings("no_cemu"):
             return
+        util.create_bcml_graphicpack_if_needed()
         output = util.get_cemu_dir() / "graphicPacks" / "BreathOfTheWild_BCML"
     if output.exists():
         shutil.rmtree(str(output), ignore_errors=True)
@@ -687,7 +698,7 @@ def link_master_mod(output: Path = None):
     shutil.copy(
         str(util.get_master_modpack_dir() / "rules.txt"), str(output / "rules.txt")
     )
-    link_or_copy = os.link
+    link_or_copy = os.link if not util.get_settings("no_hardlinks") else copyfile
     for mod_folder in mod_folders:
         for item in mod_folder.rglob("**/*"):
             rel_path = item.relative_to(mod_folder)
@@ -705,12 +716,12 @@ def link_master_mod(output: Path = None):
             elif item.is_file():
                 try:
                     link_or_copy(str(item), str(output / rel_path))
-                except OSError:
-                    from shutil import (
-                        copyfile as link_or_copy,
-                    )  # pylint: disable=import-outside-toplevel
-
-                    link_or_copy(str(item), str(output / rel_path))
+                except OSError as e:
+                    if link_or_copy == os.link:
+                        link_or_copy = copyfile
+                        link_or_copy(str(item), str(output / rel_path))
+                    else:
+                        raise e
 
 
 def export(output: Path):

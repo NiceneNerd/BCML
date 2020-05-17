@@ -461,6 +461,13 @@ def get_data_dir() -> Path:
     return data_dir
 
 
+def get_storage_dir() -> Path:
+    store_dir = Path(get_settings("store_dir"))
+    if not store_dir.exists():
+        store_dir.mkdir(parents=True, exist_ok=True)
+    return store_dir
+
+
 @lru_cache(None)
 def get_work_dir() -> Path:
     work_dir = get_data_dir() / "work_dir"
@@ -481,33 +488,39 @@ def clear_temp_dir():
             pass
 
 
+DEFAULT_SETTINGS = {
+    "cemu_dir": "",
+    "game_dir": "",
+    "game_dir_nx": "",
+    "update_dir": "",
+    "dlc_dir": "",
+    "dlc_dir_nx": "",
+    "store_dir": str(get_data_dir()),
+    "load_reverse": False,
+    "site_meta": "",
+    "dark_theme": False,
+    "no_guess": False,
+    "lang": "",
+    "no_cemu": False,
+    "wiiu": True,
+    "no_hardlinks": False,
+}
+
+
 def get_settings(name: str = "") -> {}:
     try:
         if not hasattr(get_settings, "settings"):
             settings = {}
             settings_path = get_data_dir() / "settings.json"
             if not settings_path.exists():
-                settings = {
-                    "cemu_dir": "",
-                    "game_dir": "",
-                    "game_dir_nx": "",
-                    "update_dir": "",
-                    "dlc_dir": "",
-                    "dlc_dir_nx": "",
-                    "load_reverse": False,
-                    "site_meta": "",
-                    "dark_theme": False,
-                    "no_guess": False,
-                    "lang": "",
-                    "no_cemu": False,
-                    "wiiu": True,
-                }
+                settings = DEFAULT_SETTINGS.copy()
                 with settings_path.open("w", encoding="utf-8") as s_file:
                     json.dump(settings, s_file)
             else:
                 settings: dict = json.loads(settings_path.read_text())
-                if "game_dir_nx" not in settings:
-                    settings.update({"game_dir_nx": "", "dlc_dir_nx": ""})
+                for k, v in DEFAULT_SETTINGS.items():
+                    if k not in settings:
+                        settings[k] = v
             get_settings.settings = settings
         if name:
             return get_settings.settings.get(name, False)
@@ -716,7 +729,7 @@ def get_dlc_path() -> str:
 
 
 def get_modpack_dir() -> Path:
-    return get_data_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
+    return get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
 
 
 @lru_cache(1024)

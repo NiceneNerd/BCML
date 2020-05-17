@@ -18,15 +18,17 @@ class Settings extends React.Component {
             cemu_dir: "",
             game_dir: "",
             game_dir_nx: "",
-            load_reverse: false,
             update_dir: "",
             dlc_dir: "",
             dlc_dir_nx: "",
+            store_dir: "",
+            load_reverse: false,
             site_meta: "",
             no_guess: false,
             lang: "",
             no_cemu: false,
             wiiu: true,
+            no_hardlinks: false,
             valid: false
         };
         this.handleChange = this.handleChange.bind(this);
@@ -299,8 +301,49 @@ class Settings extends React.Component {
                                 You must select a game language
                             </Form.Control.Feedback>
                         </Form.Group>
+                        <Form.Group controlId="store_dir">
+                            <Form.Label>BCML Data Directory</Form.Label>
+                            <FolderInput
+                                value={this.state.store_dir}
+                                onChange={this.handleChange}
+                                isValid={this.state.store_dir != ""}
+                                overlay={
+                                    <Tooltip>
+                                        The folder where BCML will store
+                                        internal files like installed mods,
+                                        merged data, and backups.
+                                    </Tooltip>
+                                }
+                            />
+                        </Form.Group>
+                        <Form.Control.Feedback type="invalid">
+                            The BCML data folder is required
+                        </Form.Control.Feedback>
                     </Col>
                     <Col>
+                        <br />
+                        <Form.Group controlId="wiiu">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        Turn on Switch mode instead of Wii
+                                        U/Cemu mode
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Use Switch mode"
+                                    checked={!this.state.wiiu}
+                                    onChange={e =>
+                                        this.setState({
+                                            wiiu: !e.target.checked,
+                                            no_cemu: true
+                                        })
+                                    }
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
                         <Form.Group controlId="no_cemu">
                             <OverlayTrigger
                                 overlay={
@@ -341,25 +384,24 @@ class Settings extends React.Component {
                                 />
                             </OverlayTrigger>
                         </Form.Group>
-                        <Form.Group controlId="wiiu">
+                        <Form.Group controlId="no_hardlinks">
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        Turn on Switch mode instead of Wii
-                                        U/Cemu mode
+                                        By default, BCML uses hard links to
+                                        connect installed mods to a single Cemu
+                                        graphic pack. Use this option to disable
+                                        this if it doesn't work and just copy
+                                        the files instead.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
                                 <Form.Check
                                     type="checkbox"
-                                    label="Use Switch mode"
-                                    checked={!this.state.wiiu}
-                                    onChange={e =>
-                                        this.setState({
-                                            wiiu: !e.target.checked,
-                                            no_cemu: true
-                                        })
-                                    }
+                                    disabled={this.state.no_cemu}
+                                    label="Disable hard links for master mod"
+                                    checked={this.state.no_hardlinks}
+                                    onChange={this.handleChange}
                                 />
                             </OverlayTrigger>
                         </Form.Group>

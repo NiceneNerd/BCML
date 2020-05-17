@@ -88,13 +88,15 @@ class Api:
             return False
         else:
             if params["type"] == "cemu_dir":
-                return len(list(path.glob("Cemu*.exe"))) > 0
+                return len(list(path.glob("?emu*.exe"))) > 0
             elif "game_dir" in params["type"]:
                 return (path / "Pack" / "Dungeon000.pack").exists()
             elif params["type"] == "update_dir":
                 return len(list((path / "Actor" / "Pack").glob("*.sbactorpack"))) > 7000
             elif "dlc_dir" in params["type"]:
                 return (path / "Pack" / "AocMainField.pack").exists()
+            elif params["type"] == "store_dir":
+                return True
 
     def get_settings(self, params=None):
         return util.get_settings()
