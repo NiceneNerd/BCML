@@ -261,6 +261,7 @@ class Api:
                     merger.perform_merge()
                 print("Install complete")
             except Exception as err:  # pylint: disable=broad-except
+                pool.terminate()
                 raise MergeError(err)
 
     @win_or_lose
@@ -291,9 +292,13 @@ class Api:
                 for m in mergers.get_mergers_for_mod(new_mod)
                 if m.NAME not in {m.NAME for m in remergers}
             }
-            for merger in mergers.sort_mergers(remergers):
-                merger.set_pool(pool)
-                merger.perform_merge()
+            try:
+                for merger in mergers.sort_mergers(remergers):
+                    merger.set_pool(pool)
+                    merger.perform_merge()
+            except Exception as err:  # pylint: disable=broad-except
+                pool.terminate()
+                raise MergeError(err)
 
     @win_or_lose
     @install.refresher
@@ -329,9 +334,13 @@ class Api:
                             m.NAME for m in remergers
                         }:
                             remergers.add(merger)
-                for merger in mergers.sort_mergers(remergers):
-                    merger.set_pool(pool)
-                    merger.perform_merge()
+                try:
+                    for merger in mergers.sort_mergers(remergers):
+                        merger.set_pool(pool)
+                        merger.perform_merge()
+                except Exception as err:  # pylint: disable=broad-except
+                    pool.terminate()
+                    raise MergeError(err)
         install.refresh_master_export()
 
     @win_or_lose
@@ -502,7 +511,7 @@ class Api:
         )
         if not path:
             return
-        path = Path(path[0])
+        path = Path(path if isinstance(path, str) else path[0])
         if not path.exists():
             return
         tmp_dir = install.open_mod(path)

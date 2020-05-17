@@ -341,6 +341,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                     getattr(err, 'error_text', traceback.format_exc(-5))
                 }</textarea>"""
             )
+            pool.terminate()
             raise err
 
         _clean_sarcs(tmp_dir, hashes, pool)

@@ -9,7 +9,6 @@ if installer_cfg.exists() and "sdist" in argv:
     text = installer_cfg.read_text().splitlines()
     text[3] = f"version={VERSION}"
     installer_cfg.write_text("\n".join(text))
-    run(["pynsist", "installer.cfg"], check=False)
 
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
