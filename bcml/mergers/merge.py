@@ -251,6 +251,7 @@ class DeepMerger(mergers.Merger):
         diffs = self.consolidate_diffs(self.get_all_diffs())
         if not diffs:
             print("No deep merge needed")
+            return
         pool = self._pool or Pool()
         pool.starmap(merge_aamp_files, diffs.items())
         if not self._pool:
