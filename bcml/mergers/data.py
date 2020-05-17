@@ -68,22 +68,18 @@ def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
     return oead.byml.from_binary(game_dict[file])
 
 
-def consolidate_gamedata(gamedata: oead.Sarc, pool: Pool) -> {}:
+def consolidate_gamedata(gamedata: oead.Sarc) -> {}:
     data = {}
-    this_pool = pool or Pool()
     for file in gamedata.get_files():
         util.dict_merge(data, oead.byml.from_binary(file.data))
     del gamedata
-    if not pool:
-        this_pool.close()
-        this_pool.join()
-    util.vprint(data)
     return data
 
 
 def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
-    stock_entries = [entry["DataName"] for entry in stock_data]
-    mod_entries = [entry["DataName"] for entry in mod_data]
+    stock_entries = {entry["DataName"]: entry for entry in stock_data}
+    del stock_data
+    mod_entries = {entry["DataName"] for entry in mod_data}
     diffs = oead.byml.Hash(
         {
             "add": oead.byml.Hash(
@@ -92,7 +88,7 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
                     for entry in mod_data
                     if (
                         entry["DataName"] not in stock_entries
-                        or entry != stock_data[stock_entries.index(entry["DataName"])]
+                        or entry != stock_entries[entry["DataName"]]
                     )
                 }
             ),
@@ -102,7 +98,6 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
         }
     )
     del stock_entries
-    del stock_data
     del mod_entries
     del mod_data
     return oead.byml.Hash({data_type: diffs})
@@ -110,8 +105,8 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     this_pool = pool or Pool()
-    stock_data = consolidate_gamedata(get_stock_gamedata(), this_pool)
-    mod_data = consolidate_gamedata(gamedata, this_pool)
+    stock_data = consolidate_gamedata(get_stock_gamedata())
+    mod_data = consolidate_gamedata(gamedata)
     del gamedata
     results = this_pool.starmap(
         diff_gamedata_type,
@@ -263,7 +258,7 @@ class GameDataMerger(mergers.Merger):
         this_pool = self._pool or Pool()
 
         print("Loading stock gamedata...")
-        gamedata = consolidate_gamedata(get_stock_gamedata(), this_pool)
+        gamedata = consolidate_gamedata(get_stock_gamedata())
         merged_entries = {
             data_type: oead.byml.Hash({entry["DataName"]: entry for entry in entries})
             for data_type, entries in gamedata.items()
