@@ -217,7 +217,7 @@ class BcmlRoot extends React.Component {
                                 () => {
                                     this.backupRef.current.refreshBackups();
                                     if (operation == "restore")
-                                        this.props.onRefresh();
+                                        this.refreshMods();
                                 }
                             );
                         })

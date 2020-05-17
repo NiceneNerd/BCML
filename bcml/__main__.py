@@ -568,8 +568,9 @@ def help_window():
     webview.create_window("BCML Help", url="assets/help.html?page=main")
 
 
-def stop_it(messager: Messager):
-    messager.save()
+def stop_it(messager: Messager = None):
+    if messager:
+        messager.save()
     try:
         del globals()["logger"]
     except KeyError:
