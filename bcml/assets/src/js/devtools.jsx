@@ -221,6 +221,8 @@ class DevTools extends React.Component {
                                         }
                                         trigger="click"
                                         placement="auto"
+                                        rootClose={true}
+                                        rootCloseEvent="mousedown"
                                         overlay={
                                             <OptionsDialog
                                                 options={this.state.options}

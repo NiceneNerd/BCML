@@ -120,6 +120,8 @@ class InstallModal extends React.Component {
                     <OverlayTrigger
                         placement="right"
                         trigger="click"
+                        rootClose={true}
+                        rootCloseEvent="mousedown"
                         overlay={
                             <OptionsDialog
                                 options={this.state.options}
@@ -155,11 +157,13 @@ class InstallModal extends React.Component {
                     <Button
                         variant="success"
                         onClick={() => {
-                            this.props.onInstall(
-                                this.state.mods,
-                                this.state.options
-                            );
-                            this.resetDialog();
+                            setTimeout(() => {
+                                this.props.onInstall(
+                                    this.state.mods,
+                                    this.state.options
+                                );
+                                this.resetDialog();
+                            }, 333);
                         }}
                         disabled={!this.state.mods.length}>
                         Install
