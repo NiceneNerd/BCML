@@ -1161,8 +1161,11 @@ def pio_subtract(
     for key, plist in mod.lists.items():
         if key in merged.lists:
             pio_subtract(merged.lists[key], plist)
-        if len(merged.lists[key].objects) == 0 and len(merged.lists[key].lists) == 0:
-            del merged.lists[key]
+            if (
+                len(merged.lists[key].objects) == 0
+                and len(merged.lists[key].lists) == 0
+            ):
+                del merged.lists[key]
     for key, pobj in mod.objects.items():
         if key in merged.objects:
             merged_pobj = merged.objects[key]
