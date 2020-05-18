@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import traceback
 from base64 import b64decode
+from copy import deepcopy
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -335,6 +336,86 @@ def refresh_master_export():
             )
 
 
+def process_cp_mod(mod: Path):
+    def nx2u(nx_text: str) -> str:
+        return (
+            nx_text.replace("\\", "/")
+            .replace("01007EF00011E000/romfs", "content")
+            .replace("01007EF00011F001/romfs", "aoc/0010")
+        )
+
+    def u2nx(u_text: str) -> str:
+        return (
+            u_text.replace("\\", "/")
+            .replace("content", "01007EF00011E000/romfs")
+            .replace("aoc/0010", "01007EF00011F001/romfs")
+        )
+
+    wiiu = (mod / "content").exists() or (mod / "aoc").exists()
+    easy_logs = [
+        mod / "logs" / "packs.json",
+        mod / "logs" / "rstb.log",
+        mod / "logs" / "deepmerge.yml",
+    ]
+
+    if util.get_settings("wiiu") and not wiiu:
+        if (mod / "01007EF00011E000").exists():
+            shutil.move(mod / "01007EF00011E000" / "romfs", mod / "content")
+            shutil.rmtree(mod / "01007EF00011E000")
+        if (mod / "01007EF00011F001").exists():
+            (mod / "aoc").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "01007EF00011F001" / "romfs", mod / "aoc" / "0010")
+            shutil.rmtree(mod / "01007EF00011F001")
+        for log in easy_logs:
+            if log.exists():
+                log.write_text(nx2u(log.read_text()))
+
+    elif not util.get_settings("wiiu") and wiiu:
+        if (mod / "content").exists():
+            (mod / "01007EF00011E000").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "content", mod / "01007EF00011E000" / "romfs")
+        if (mod / "aoc").exists():
+            (mod / "01007EF00011F001").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "aoc" / "0010", mod / "01007EF00011F001" / "romfs")
+            shutil.rmtree(mod / "aoc")
+        for log in easy_logs:
+            if log.exists():
+                log.write_text(u2nx(log.read_text()))
+
+    aamp_log: Path = mod / "logs" / "deepmerge.aamp"
+    if aamp_log.exists() and util.get_settings("wiiu") != wiiu:
+        pio = oead.aamp.ParameterIO.from_binary(aamp_log.read_bytes())
+        from_content = (
+            "content"
+            if wiiu and not util.get_settings("wiiu")
+            else "01007EF00011E000/romfs"
+        )
+        to_content = (
+            "01007EF00011E000/romfs"
+            if wiiu and not util.get_settings("wiiu")
+            else "content"
+        )
+        from_dlc = (
+            "aoc/0010"
+            if wiiu and not util.get_settings("wiiu")
+            else "01007EF00011F001/romfs"
+        )
+        to_dlc = (
+            "01007EF00011F001/romfs"
+            if wiiu and not util.get_settings("wiiu")
+            else "aoc/0010"
+        )
+        for file_num, file in pio.objects["FileTable"].params.items():
+            old_path = file.v
+            new_path = old_path.replace(from_content, to_content).replace(
+                from_dlc, to_dlc
+            )
+            pio.objects["FileTable"].params[file_num] = oead.aamp.Parameter(new_path)
+            pio.lists[new_path] = deepcopy(pio.lists[old_path])
+            del pio.lists[old_path]
+        aamp_log.write_bytes(pio.to_binary())
+
+
 def install_mod(
     mod: Path,
     options: dict = None,
@@ -343,17 +424,16 @@ def install_mod(
     insert_priority: int = 0,
     merge_now: bool = False,
 ):
-    if insert_priority == 0:
+    if not insert_priority:
         insert_priority = get_next_priority()
-    util.create_bcml_graphicpack_if_needed()
     if isinstance(mod, str):
         mod = Path(mod)
     if mod.is_file():
-        print("Extracting mod...")
+        print("Opening mod...")
         tmp_dir = open_mod(mod)
     elif mod.is_dir():
         if not ((mod / "rules.txt").exists() or (mod / "info.json").exists()):
-            print(f"Cannot open mod at {str(mod)}, no rules.txt found")
+            print(f"Cannot open mod at {str(mod)}, no rules.txt or info.json found")
             return
         print(f"Loading mod from {str(mod)}...")
         tmp_dir = util.get_work_dir() / f"tmp_{mod.name}"
@@ -396,6 +476,10 @@ def install_mod(
                     'If you want to use it, check the "Allow cross-platform install" option.'
                 )
                 raise err
+            else:
+                process_cp_mod(tmp_dir)
+        else:
+            process_cp_mod(tmp_dir)
 
         logs = tmp_dir / "logs"
         if logs.exists():

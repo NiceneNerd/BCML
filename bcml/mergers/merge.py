@@ -114,6 +114,7 @@ def merge_aamp_files(file: str, tree: dict):
     new_data = _merge_in_sarc(sarc, tree)
     if base_file.suffix.startswith(".s") and base_file.suffix != ".ssarc":
         new_data = util.compress(new_data)
+    (util.get_master_modpack_dir() / file).parent.mkdir(parents=True, exist_ok=True)
     (util.get_master_modpack_dir() / file).write_bytes(new_data)
 
 

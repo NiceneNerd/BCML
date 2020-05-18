@@ -176,7 +176,11 @@ class PackMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         print("Loading modded SARC list...")
-        sarcs = self.consolidate_diffs(self.get_all_diffs())
+        sarcs = {
+            s: ss
+            for s, ss in self.consolidate_diffs(self.get_all_diffs()).items()
+            if ss
+        }
         if "only_these" in self._options:
             for sarc_file in self._options["only_these"]:
                 master_path = util.get_master_modpack_dir() / sarc_file
