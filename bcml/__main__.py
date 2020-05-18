@@ -579,6 +579,8 @@ def stop_it(messager: Messager = None):
             stderr=DEVNULL,
             creationflags=0x08000000,
         )
+        rmtree(Path() / "blob_storage", ignore_errors=True)
+        rmtree(Path() / "webrtc_event_logs", ignore_errors=True)
         return
 
 
