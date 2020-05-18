@@ -235,9 +235,7 @@ def generate_modded_map_log(
         {
             map_unit: oead.byml.from_text(diff)
             for map_unit, diff in this_pool.imap_unordered(
-                partial(
-                    get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del
-                ),
+                partial(get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del),
                 modded_maps,
             )
         }
@@ -286,11 +284,7 @@ def merge_map(
                     except (StopIteration, ValueError):
                         util.vprint(f"Could not delete actor with HashId {map_del}")
     new_map["Objs"].extend(
-        [
-            change
-            for change in changes["add"]
-            if int(change["HashId"]) not in stock_hashes
-        ]
+        [change for change in changes["add"] if int(change["HashId"]) not in stock_hashes]
     )
     new_map["Objs"] = sorted(new_map["Objs"], key=lambda actor: int(actor["HashId"]))
 
@@ -307,9 +301,7 @@ def merge_map(
     aoc_bytes = oead.byml.to_binary(new_map, big_endian=util.get_settings("wiiu"))
     aoc_out.write_bytes(util.compress(aoc_bytes))
     new_map["Objs"] = [
-        obj
-        for obj in new_map["Objs"]
-        if not str(obj["UnitConfigName"]).startswith("DLC")
+        obj for obj in new_map["Objs"] if not str(obj["UnitConfigName"]).startswith("DLC")
     ]
     (
         util.get_master_modpack_dir()
@@ -595,12 +587,7 @@ class DungeonStaticMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         dstatic_path = (
-            mod_dir
-            / util.get_dlc_path()
-            / "0010"
-            / "Map"
-            / "CDungeon"
-            / "Static.smubin"
+            mod_dir / util.get_dlc_path() / "0010" / "Map" / "CDungeon" / "Static.smubin"
         )
         if dstatic_path.exists():
             print("Logging changes to shrine entry coordinates...")
@@ -639,9 +626,7 @@ class DungeonStaticMerger(mergers.Merger):
 
     def get_all_diffs(self):
         diffs = []
-        for mod in [
-            mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)
-        ]:
+        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
             diffs.append(self.get_mod_diff(mod))
         return diffs
 

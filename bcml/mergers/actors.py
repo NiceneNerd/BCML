@@ -29,10 +29,7 @@ class ActorInfoMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "actor info",
-            "Merges changes to ActorInfo.product.byml",
-            "actorinfo.yml",
-            {},
+            "actor info", "Merges changes to ActorInfo.product.byml", "actorinfo.yml", {},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):

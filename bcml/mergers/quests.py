@@ -90,11 +90,7 @@ class QuestMerger(mergers.Merger):
         if not diffs:
             return {}
         all_diffs = oead.byml.Hash(
-            {
-                "add": oead.byml.Array(),
-                "mod": oead.byml.Hash(),
-                "del": oead.byml.Array(),
-            }
+            {"add": oead.byml.Array(), "mod": oead.byml.Hash(), "del": oead.byml.Array(),}
         )
         added_quests = set()
         for diff in reversed(diffs):
@@ -170,9 +166,7 @@ class QuestMerger(mergers.Merger):
         if not diff:
             return set()
         return (
-            {a["Name"] for a in diff["add"]}
-            | set(diff["mod"].keys())
-            | set(diff["del"])
+            {a["Name"] for a in diff["add"]} | set(diff["mod"].keys()) | set(diff["del"])
         )
 
     def get_checkbox_options(self):

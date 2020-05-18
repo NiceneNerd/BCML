@@ -386,11 +386,7 @@ class Api:
     def launch_game(self, params=None):
         cemu = next(
             iter(
-                {
-                    f
-                    for f in util.get_cemu_dir().glob("*.exe")
-                    if "cemu" in f.name.lower()
-                }
+                {f for f in util.get_cemu_dir().glob("*.exe") if "cemu" in f.name.lower()}
             )
         )
         uking = util.get_game_dir().parent / "code" / "U-King.rpx"
@@ -546,15 +542,7 @@ class Api:
         else:
             exe = sys.executable
         run(
-            [
-                exe,
-                "-m",
-                "pip",
-                "install",
-                "--upgrade",
-                "--pre" if DEBUG else "",
-                "bcml",
-            ],
+            [exe, "-m", "pip", "install", "--upgrade", "--pre" if DEBUG else "", "bcml",],
             check=True,
             stdout=PIPE,
             stderr=PIPE,

@@ -237,9 +237,7 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml"
     ).exists():
         print("Removing ActorInfo.product.sbyml...")
-        (
-            tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml"
-        ).unlink()
+        (tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml").unlink()
 
     if (tmp_dir / "logs" / "gamedata.yml").exists() or (
         tmp_dir / "logs" / "savedata.yml"
@@ -374,8 +372,6 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             check=True,
         )
     else:
-        subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     shutil.rmtree(tmp_dir, ignore_errors=True)
     print("Conversion complete.")

@@ -98,9 +98,7 @@ class PackMerger(mergers.Merger):
     NAME: str = "packs"
 
     def __init__(self):
-        super().__init__(
-            "packs", "Merges modified files within SARCs", "packs.json", {}
-        )
+        super().__init__("packs", "Merges modified files within SARCs", "packs.json", {})
 
     def can_partial_remerge(self):
         return True
@@ -177,9 +175,7 @@ class PackMerger(mergers.Merger):
     def perform_merge(self):
         print("Loading modded SARC list...")
         sarcs = {
-            s: ss
-            for s, ss in self.consolidate_diffs(self.get_all_diffs()).items()
-            if ss
+            s: ss for s, ss in self.consolidate_diffs(self.get_all_diffs()).items() if ss
         }
         if "only_these" in self._options:
             for sarc_file in self._options["only_these"]:

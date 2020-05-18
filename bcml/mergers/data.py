@@ -36,17 +36,13 @@ def get_stock_savedata() -> oead.Sarc:
 @lru_cache(None)
 def get_gamedata_hashes() -> {}:
     gamedata = get_stock_gamedata()
-    return {
-        file.name: xxhash.xxh64_intdigest(file.data) for file in gamedata.get_files()
-    }
+    return {file.name: xxhash.xxh64_intdigest(file.data) for file in gamedata.get_files()}
 
 
 @lru_cache(None)
 def get_savedata_hashes() -> {}:
     savedata = get_stock_savedata()
-    return {
-        file.name: xxhash.xxh64_intdigest(file.data) for file in savedata.get_files()
-    }
+    return {file.name: xxhash.xxh64_intdigest(file.data) for file in savedata.get_files()}
 
 
 def is_savedata_modded(savedata: oead.Sarc) -> {}:
@@ -268,9 +264,7 @@ class GameDataMerger(mergers.Merger):
         print("Merging changes...")
         for data_type in {d for d in merged_entries if d in modded_entries}:
             util.dict_merge(
-                merged_entries[data_type],
-                modded_entries[data_type]["add"],
-                shallow=True,
+                merged_entries[data_type], modded_entries[data_type]["add"], shallow=True,
             )
             for entry in modded_entries[data_type]["del"]:
                 try:

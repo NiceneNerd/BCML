@@ -78,9 +78,7 @@ def match_language(lang: str, log_dir: Path) -> str:
         return [l for l in LANGUAGES if l in logged_langs][0]
 
 
-def msbt_to_msyt(
-    folder: Path, pool: multiprocessing.Pool = None, do_error: bool = True
-):
+def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool = True):
     """ Converts MSBTs in given temp dir to MSYTs """
     if system() == "Windows":
         subprocess.run(
@@ -108,9 +106,7 @@ def msbt_to_msyt(
             this_pool.close()
             this_pool.join()
     if fix_msbts:
-        print(
-            f"{len(fix_msbts)} MSBT files failed to convert. They will not be merged."
-        )
+        print(f"{len(fix_msbts)} MSBT files failed to convert. They will not be merged.")
         util.vprint(fix_msbts)
     for msbt_file in folder.rglob("**/*.msbt"):
         Path(msbt_file).unlink()
@@ -365,8 +361,7 @@ class TextsMerger(mergers.Merger):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / "logs" / self._log_name).write_text(
-                json.dumps(diff_material, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+                json.dumps(diff_material, ensure_ascii=False, indent=2), encoding="utf-8",
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
@@ -413,11 +408,7 @@ class TextsMerger(mergers.Merger):
                 bootup.unlink()
             return
         util.vprint(
-            {
-                lang: {
-                    file: list(entries.keys()) for file, entries in diffs[lang].items()
-                }
-            }
+            {lang: {file: list(entries.keys()) for file, entries in diffs[lang].items()}}
         )
 
         print(f"Merging modded texts for {lang}...")
@@ -484,4 +475,3 @@ class TextsMerger(mergers.Merger):
         del bootup_sarc
         del msg_sarc
         print(f"{lang} texts merged successfully")
-

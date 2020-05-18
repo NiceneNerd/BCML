@@ -56,9 +56,7 @@ class EventInfoMerger(mergers.Merger):
         ):
             print("Logging modded events...")
             bootup_sarc = oead.Sarc(
-                (
-                    mod_dir / util.get_content_path() / "Pack" / "Bootup.pack"
-                ).read_bytes()
+                (mod_dir / util.get_content_path() / "Pack" / "Bootup.pack").read_bytes()
             )
             event_info = oead.byml.from_binary(
                 util.decompress(

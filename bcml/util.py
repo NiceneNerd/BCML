@@ -554,9 +554,7 @@ def set_cemu_dir(path: Path):
 
 def get_game_dir() -> Path:
     game_dir = str(
-        get_settings("game_dir")
-        if get_settings("wiiu")
-        else get_settings("game_dir_nx")
+        get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
     )
     if not game_dir or not Path(game_dir).is_dir():
         err = FileNotFoundError(
@@ -607,9 +605,7 @@ def set_game_dir(path: Path):
 def get_mlc_dir() -> Path:
     mlc_dir = str(get_settings("mlc_dir"))
     if not mlc_dir or not Path(mlc_dir).is_dir():
-        err = FileNotFoundError(
-            "The Cemu MLC directory has moved or not been saved yet."
-        )
+        err = FileNotFoundError("The Cemu MLC directory has moved or not been saved yet.")
         err.error_text = "The Cemu MLC directory has moved or not been saved yet."
         raise err
     return Path(mlc_dir)
@@ -985,9 +981,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
                         img_match.group(1), str(mod.path / image_path)
                     )
                 else:
-                    raise IndexError(
-                        f"Rule for {url} failed to find the remote preview"
-                    )
+                    raise IndexError(f"Rule for {url} failed to find the remote preview")
             else:
                 raise KeyError(f"No preview image available")
         else:
@@ -1150,9 +1144,7 @@ def create_schema_handler():
     if platform.system() == "Windows":
         import winreg
 
-        with winreg.CreateKey(
-            winreg.HKEY_CURRENT_USER, r"Software\Classes\bcml"
-        ) as key:
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\bcml") as key:
             try:
                 winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER,

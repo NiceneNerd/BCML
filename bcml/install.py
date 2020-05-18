@@ -150,9 +150,7 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         if not (
-            tmp_dir
-            / util.get_dlc_path()
-            / ("0010" if util.get_settings("wiiu") else "")
+            tmp_dir / util.get_dlc_path() / ("0010" if util.get_settings("wiiu") else "")
         ).rglob("Map/**/?-?_*.smubin"):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
@@ -305,10 +303,7 @@ def refresh_master_export():
             if new_cemu and entry.getElementsByTagName("filename"):
                 new_cemu = False
             try:
-                if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
-                ):
+                if "BCML" in entry.getElementsByTagName("filename")[0].childNodes[0].data:
                     break
             except IndexError:
                 if "BCML" in entry.getAttribute("filename"):
@@ -724,9 +719,7 @@ def create_backup(name: str = ""):
             check=True,
         )
     else:
-        subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print(f'Backup "{name}" created')
 
 
@@ -753,9 +746,7 @@ def restore_backup(backup: Union[str, Path]):
             check=True,
         )
     else:
-        subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print("Re-enabling mods in Cemu...")
     refresh_master_export()
     print(f'Backup "{backup.name}" restored')

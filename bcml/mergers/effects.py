@@ -35,9 +35,7 @@ class StatusEffectMerger(mergers.Merger):
             (mod_dir / util.get_content_path() / "Pack" / "Bootup.pack").read_bytes()
         )
         mod_effects = oead.byml.from_binary(
-            util.decompress(
-                bootup_sarc.get_file("Ecosystem/StatusEffectList.sbyml").data
-            )
+            util.decompress(bootup_sarc.get_file("Ecosystem/StatusEffectList.sbyml").data)
         )[0]
         diff = oead.byml.Hash(
             {

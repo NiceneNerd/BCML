@@ -163,9 +163,7 @@ def _convert_text_log(log: Path) -> dict:
 def _convert_text_logs(logs_path: Path):
     diffs = {}
     with Pool() as pool:
-        for diff in pool.imap_unordered(
-            _convert_text_log, logs_path.glob("texts_*.yml")
-        ):
+        for diff in pool.imap_unordered(_convert_text_log, logs_path.glob("texts_*.yml")):
             diffs.update(diff)
     fails = set()
     for text_pack in logs_path.glob("newtexts_*.sarc"):
@@ -177,9 +175,7 @@ def _convert_text_logs(logs_path: Path):
             try:
                 diffs[lang].update({file.name: read_msbt(bytes(file.data))["entries"]})
             except RuntimeError:
-                print(
-                    f"Warning: {file.name} could not be processed and will not be used"
-                )
+                print(f"Warning: {file.name} could not be processed and will not be used")
                 fails.add(file.name)
                 continue
         util.vprint(f"{len(fails)} text files failed to process:\n{fails}")

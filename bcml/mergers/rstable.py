@@ -233,9 +233,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
         if isinstance(file, Path):
             ext = file.suffix
         else:
-            raise ValueError(
-                "AAMP extension must not be blank if passing file as bytes."
-            )
+            raise ValueError("AAMP extension must not be blank if passing file as bytes.")
     ext = ext.replace(".s", ".")
     value: int
     if ext == ".baiprog":
@@ -354,16 +352,10 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
     return int(value)
 
 
-def get_mod_rstb_values(
-    mod: Union[Path, str, BcmlMod], log_name: str = "rstb.log"
-) -> {}:
+def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = "rstb.log") -> {}:
     """ Gets all of the RSTB values for a given mod """
     path = (
-        mod
-        if isinstance(mod, Path)
-        else Path(mod)
-        if isinstance(mod, str)
-        else mod.path
+        mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
     )
     changes = {}
     leave = (path / "logs" / ".leave").exists()
@@ -429,9 +421,7 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
                 )
                 continue
             table.set_size(change, newsize)
-            util.vprint(
-                f"{spaces}Added new RSTB entry for {change} with value {newsize}"
-            )
+            util.vprint(f"{spaces}Added new RSTB entry for {change} with value {newsize}")
             change_count["added"] += 1
     print(
         f'RSTB merge complete: updated {change_count["updated"]} entries, deleted'
@@ -595,9 +585,7 @@ class RstbMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "RSTB",
-            "Merges changes to ResourceSizeTable.product.srsizetable",
-            "rstb.log",
+            "RSTB", "Merges changes to ResourceSizeTable.product.srsizetable", "rstb.log",
         )
         self._options = {"no_guess": False, "leave": False, "shrink": False}
 

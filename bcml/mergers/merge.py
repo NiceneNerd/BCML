@@ -216,9 +216,7 @@ class DeepMerger(mergers.Merger):
                     diff = ParameterIO()
                 merge_plists(
                     diff,
-                    ParameterIO.from_binary(
-                        (opt / "logs" / self._log_name).read_bytes()
-                    ),
+                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
                 )
         return diff
 
