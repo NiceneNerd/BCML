@@ -7,6 +7,8 @@ from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
 from oead import Sarc, SarcWriter, InvalidDataError
 from bcml import util, mergers
 
+HANDLED = {".bdrop"}
+
 
 def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> dict:
     try:
@@ -160,7 +162,7 @@ class DeepMerger(mergers.Merger):
         aamps = {
             m
             for m in modded_files
-            if isinstance(m, str) and m[m.rindex(".") :] in util.AAMP_EXTS
+            if isinstance(m, str) and m[m.rindex(".") :] in (util.AAMP_EXTS - HANDLED)
         }
         if not aamps:
             return None
@@ -245,6 +247,7 @@ class DeepMerger(mergers.Merger):
             )
         return consolidated
 
+    @util.timed
     def perform_merge(self):
         print("Loading deep merge logs...")
         diffs = self.consolidate_diffs(self.get_all_diffs())

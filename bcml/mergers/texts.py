@@ -397,6 +397,7 @@ class TextsMerger(mergers.Merger):
                                 main_diff[lang][file][entry] = msg
         return main_diff
 
+    @util.timed
     def perform_merge(self):
         # pylint: disable=unsupported-assignment-operation
         lang = util.get_settings("lang")

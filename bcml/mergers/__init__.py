@@ -119,6 +119,7 @@ def get_mergers() -> List[Merger]:
         pack,
         texts,
         merge,
+        drop,
         data,
         mubin,
         events,
@@ -131,6 +132,7 @@ def get_mergers() -> List[Merger]:
     return [
         pack.PackMerger,
         merge.DeepMerger,
+        drop.DropMerger,
         texts.TextsMerger,
         actors.ActorInfoMerger,
         mubin.DungeonStaticMerger,
