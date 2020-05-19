@@ -24,7 +24,7 @@ __pycache__/
 bcml-dist.ps1
 
 # C extensions
-*.so
+# *.so
 
 # Distribution / packaging
 .Python
