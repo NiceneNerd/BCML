@@ -1103,6 +1103,9 @@ def create_bcml_graphicpack_if_needed():
             )
 
 
+UNDERRIDE = "UNDERRIDE_CONST"
+
+
 def dict_merge(
     dct: Union[dict, oead.byml.Hash],
     merge_dct: Union[dict, oead.byml.Hash],
@@ -1134,7 +1137,7 @@ def dict_merge(
             else:
                 dct[k].extend(merge_dct[k])
         else:
-            dct[k] = merge_dct[k]
+            dct[k] = merge_dct[k] if merge_dct[k] != UNDERRIDE else dct[k]
 
 
 def create_schema_handler():

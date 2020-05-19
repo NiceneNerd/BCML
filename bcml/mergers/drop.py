@@ -30,7 +30,7 @@ def _drop_to_dict(drop: ParameterIO) -> dict:
             },
         }
         for param, table in drop.objects["Header"].params.items()
-        if param != "TableNum"
+        if param != "TableNum" and str(table.v) in drop.objects
     }
 
 
@@ -65,10 +65,36 @@ def _dict_to_drop(drop_dict: dict) -> ParameterIO:
 
 def log_drop_file(file: str, mod_dir: Path):
     drop = ParameterIO.from_binary(util.get_nested_file_bytes(str(mod_dir) + "/" + file))
+    drop_table = _drop_to_dict(drop)
+    del drop
     try:
-        return {file: _drop_to_dict(drop)}
-    except KeyError as e:
-        raise KeyError(f"Could not find key {e} in file {file}")
+        base_file = file[: file.index("//")]
+        sub_file = file[file.index("//") :]
+        ref_drop = ParameterIO.from_binary(
+            util.get_nested_file_bytes(str(util.get_game_file(base_file)) + sub_file)
+        )
+        ref_table = _drop_to_dict(ref_drop)
+        del ref_drop
+        for table, contents in drop_table.items():
+            if table not in ref_table:
+                continue
+            for item, prob in {
+                (i, p)
+                for i, p in contents["items"].items()
+                if i in ref_table[table]["items"]
+            }:
+                if prob == ref_table[table]["items"][item]:
+                    drop_table[table]["items"][item] = util.UNDERRIDE
+        del ref_table
+    except (
+        FileNotFoundError,
+        oead.InvalidDataError,
+        AttributeError,
+        RuntimeError,
+        ValueError,
+    ):
+        util.vprint(f"Could not load stock {file}")
+    return {file: drop_table}
 
 
 def merge_drop_file(file: str, drop_table: dict):
@@ -86,12 +112,12 @@ def merge_drop_file(file: str, drop_table: dict):
             else:
                 for item in set(ref_drop[table]["items"].keys()):
                     if item not in drop_table[table]["items"]:
-                        del ref_drop[table]["items"]
+                        del ref_drop[table]["items"][item]
         util.dict_merge(ref_drop, drop_table)
         drop_table = ref_drop
     except (FileNotFoundError, AttributeError, RuntimeError):
         pass
-    actor_name = re.search(r"Pack\/(.+)\.sbactorpack").groups()[0]
+    actor_name = re.search(r"Pack\/(.+)\.sbactorpack", file).groups()[0]
     pio = _dict_to_drop(drop_table)
     util.inject_files_into_actor(actor_name, {file.split("//")[-1]: pio.to_binary()})
 
@@ -148,7 +174,7 @@ class DropMerger(mergers.Merger):
     def consolidate_diffs(self, diffs):
         consolidated = {}
         for diff in diffs:
-            util.dict_merge(diff, consolidated)
+            util.dict_merge(consolidated, diff)
         return consolidated
 
     @util.timed
