@@ -347,7 +347,9 @@ def process_cp_mod(mod: Path):
         )
 
     wiiu = (mod / "content").exists() or (mod / "aoc").exists()
-    if wiiu == util.get_settings('wiiu'):
+    if wiiu == util.get_settings("wiiu"):
+        return
+    if (mod / "logs").exists() and len({d for d in mod.glob("*") if d.is_dir()}) == 1:
         return
     easy_logs = [
         mod / "logs" / "packs.json",

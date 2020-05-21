@@ -87,6 +87,7 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
 def merge_plists(
     plist: Union[ParameterList, ParameterIO],
     other_plist: Union[ParameterList, ParameterIO],
+    file_table: bool = False,
 ):
     def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
         for param, value in other_pobj.params.items():
@@ -99,7 +100,14 @@ def merge_plists(
             plist.lists[key] = sublist
     for key, obj in other_plist.objects.items():
         if key in plist.objects:
-            merge_pobj(plist.objects[key], obj)
+            if key != "FileTable" or not file_table:
+                merge_pobj(plist.objects[key], obj)
+            else:
+                file_list = {f.v for i, f in plist.objects[key].params.items()} | {
+                    f.v for i, f in other_plist.objects[key].params.items()
+                }
+                for i, file in enumerate({f for f in file_list if f}):
+                    plist.objects[key].params[f"File{i}"] = file
         else:
             plist.objects[key] = obj
 
@@ -219,6 +227,7 @@ class DeepMerger(mergers.Merger):
                 merge_plists(
                     diff,
                     ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
+                    True,
                 )
         return diff
 
@@ -229,7 +238,7 @@ class DeepMerger(mergers.Merger):
             if diff:
                 if not diffs:
                     diffs = ParameterIO()
-                merge_plists(diffs, diff)
+                merge_plists(diffs, diff, True)
         return diffs
 
     def consolidate_diffs(self, diffs: list):
@@ -237,14 +246,18 @@ class DeepMerger(mergers.Merger):
             return None
         consolidated = {}
         for _, file in diffs.objects["FileTable"].params.items():
-            util.dict_merge(
-                consolidated,
-                reduce(
-                    lambda res, cur: {cur: res},
-                    reversed(file.v.split("//")),
-                    diffs.lists[file.v],
-                ),
-            )
+            try:
+                util.dict_merge(
+                    consolidated,
+                    reduce(
+                        lambda res, cur: {cur: res},
+                        reversed(file.v.split("//")),
+                        diffs.lists[file.v],
+                    ),
+                )
+            except KeyError:
+                util.vprint(diffs)
+                raise Exception(f"{_}: {file} in diff lists: {file.v in diffs.lists}")
         return consolidated
 
     @util.timed
