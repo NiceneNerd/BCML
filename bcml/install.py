@@ -347,6 +347,8 @@ def process_cp_mod(mod: Path):
         )
 
     wiiu = (mod / "content").exists() or (mod / "aoc").exists()
+    if wiiu == util.get_settings('wiiu'):
+        return
     easy_logs = [
         mod / "logs" / "packs.json",
         mod / "logs" / "rstb.log",
@@ -409,6 +411,10 @@ def process_cp_mod(mod: Path):
             pio.lists[new_path] = deepcopy(pio.lists[old_path])
             del pio.lists[old_path]
         aamp_log.write_bytes(pio.to_binary())
+
+    if (mod / "options").exists():
+        for opt in {d for d in (mod / "options").glob("*") if d.is_dir()}:
+            process_cp_mod(opt)
 
 
 def install_mod(
