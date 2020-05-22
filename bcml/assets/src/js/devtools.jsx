@@ -403,7 +403,7 @@ class Dependencies extends React.Component {
                         Select required mods from your installed mods, or
                         manually add an ID
                     </p>
-                    <p>
+                    <div className="my-1">
                         <h5>Installed Mods</h5>
                         <div className="bg-dark p-2 rounded">
                             {this.state.modsLoaded ? (
@@ -437,8 +437,8 @@ class Dependencies extends React.Component {
                                 </div>
                             )}
                         </div>
-                    </p>
-                    <p>
+                    </div>
+                    <div className="my-1">
                         <h5>Add Manual ID</h5>
                         <InputGroup>
                             <FormControl
@@ -467,8 +467,8 @@ class Dependencies extends React.Component {
                                 </Button>
                             </InputGroup.Append>
                         </InputGroup>
-                    </p>
-                    <div>
+                    </div>
+                    <div className="my-1">
                         <h5>Dependencies</h5>
                         <div className="bg-dark d-flex p-2 rounded">
                             {this.state.depends.length > 0 ? (

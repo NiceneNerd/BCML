@@ -17,6 +17,7 @@ import BackupModal from "./backup.jsx";
 import ProgressModal from "./progress.jsx";
 import React from "react";
 import SelectsDialog from "./selects.jsx";
+import AboutDialog from "./about.jsx";
 
 class BcmlRoot extends React.Component {
     constructor() {
@@ -549,70 +550,6 @@ const ConfirmDialog = props => {
                 <Button
                     variant="secondary"
                     onClick={() => props.onClose(false)}>
-                    Close
-                </Button>
-            </Modal.Footer>
-        </Modal>
-    );
-};
-
-const AboutDialog = props => {
-    return (
-        <Modal show={props.show} onHide={props.onClose}>
-            <Modal.Header>
-                <Modal.Title className="d-flex w-100">
-                    <div>About BCML</div>
-                    <div class="flex-grow-1"></div>
-                    <div>
-                        <small>
-                            <Badge variant="secondary">{props.version}</Badge>
-                        </small>
-                    </div>
-                </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <p>
-                    BCML (Breath of the Wild Cross-platform Mod Loader) is a
-                    tool for merging and loading mods for{" "}
-                    <em>The Legend of Zelda: Breath of the Wild</em>. It is
-                    written in Python and ReactJS.
-                </p>
-                <p>
-                    This software is licensed under the terms of the GNU General
-                    Public License, version 3 or later. The source code is
-                    available for free at{" "}
-                    <a href="https://github.com/NiceneNerd/BCML/">
-                        https://github.com/NiceneNerd/BCML/
-                    </a>
-                    .
-                </p>
-                <p>
-                    This software includes the 7-Zip console application 7z.exe
-                    and the library 7z.dll, which are licensed under the GNU
-                    Lesser General Public License. The source code for this
-                    application is available for free at{" "}
-                    <a
-                        target="_blank"
-                        href="https://www.7-zip.org/download.html">
-                        https://www.7-zip.org/download.html
-                    </a>
-                    .
-                </p>
-                <p>
-                    This software includes a modified version of the console
-                    application msyt.exe by Kyle Clemens, &copy; 2018 under the
-                    MIT License. The source code for this application is
-                    available for free at{" "}
-                    <a
-                        target="_blank"
-                        href="https://gitlab.com/jkcclemens/msyt">
-                        https://gitlab.com/jkcclemens/msyt
-                    </a>
-                    .
-                </p>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button onClick={props.onClose} variant="secondary">
                     Close
                 </Button>
             </Modal.Footer>

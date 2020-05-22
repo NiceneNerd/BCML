@@ -623,7 +623,13 @@ def main(debug: bool = False):
 
     gui: str = ""
     if SYSTEM == "Windows":
-        gui = "cef"
+        try:
+            from cefpython3 import cefpython
+
+            del cefpython
+            gui = "cef"
+        except ImportError:
+            pass
     elif SYSTEM == "Linux":
         gui = "qt"
 
