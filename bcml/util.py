@@ -448,6 +448,24 @@ def get_exec_dir() -> Path:
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
 
+@lru_cache(1)
+def get_python_exe() -> str:
+    if get_exec_dir().parent.name == "pkgs":
+        return str(get_exec_dir().parent.parent / "Python" / "python.exe")
+    else:
+        return sys.executable
+
+
+def can_cef() -> bool:
+    try:
+        from cefpython3 import cefpython
+
+        del cefpython
+        return True
+    except ImportError:
+        return False
+
+
 @lru_cache(None)
 def get_data_dir() -> Path:
     import platform
@@ -504,6 +522,7 @@ DEFAULT_SETTINGS = {
     "no_cemu": False,
     "wiiu": True,
     "no_hardlinks": False,
+    "use_cef": False,
 }
 
 

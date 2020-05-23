@@ -15,9 +15,12 @@ class ProgressModal extends React.Component {
                         role="status"
                         className="flex-shrink-0"
                     />
-                    <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
-                        {this.props.status}
-                    </div>
+                    <div
+                        className="m-1 ml-3"
+                        style={{ minHeight: "1rem" }}
+                        dangerouslySetInnerHTML={{
+                            __html: this.props.status
+                        }}></div>
                 </Modal.Body>
             </Modal>
         );

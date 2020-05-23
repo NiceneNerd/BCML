@@ -272,7 +272,14 @@ class FirstRun extends React.Component {
                         </Carousel.Item>
                     </Carousel>
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer
+                    style={{
+                        position: "fixed",
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderTop: 0
+                    }}>
                     {this.state.page > 0 && (
                         <Button
                             className="btn-nav btn-left"

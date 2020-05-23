@@ -29,6 +29,7 @@ class Settings extends React.Component {
             no_cemu: false,
             wiiu: true,
             no_hardlinks: false,
+            use_cef: false,
             valid: false
         };
         this.handleChange = this.handleChange.bind(this);
@@ -349,8 +350,8 @@ class Settings extends React.Component {
                                 overlay={
                                     <Tooltip>
                                         Allows you to use BCML without Cemu on
-                                        your PC. If you do this, you will be to
-                                        be careful about getting the right
+                                        your PC. If you do this, you will need
+                                        to be careful about getting the right
                                         directories for update and DLC files.
                                         You will be able to merge installed mods
                                         with Export.
@@ -405,6 +406,29 @@ class Settings extends React.Component {
                                 />
                             </OverlayTrigger>
                         </Form.Group>
+                        {navigator.userAgent.includes("Windows") && (
+                            <Form.Group controlId="use_cef">
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            By default, BCML will use the
+                                            built-in EdgeHTML renderer for its
+                                            webview UI. If this doesn't work
+                                            well, you can try using the Chromium
+                                            Embedded Framework (CEF) renderer
+                                            instead.
+                                        </Tooltip>
+                                    }
+                                    placement={"left"}>
+                                    <Form.Check
+                                        type="checkbox"
+                                        label="Use CEF renderer"
+                                        checked={this.state.use_cef}
+                                        onChange={this.handleChange}
+                                    />
+                                </OverlayTrigger>
+                            </Form.Group>
+                        )}
                     </Col>
                 </Row>
             </Form>

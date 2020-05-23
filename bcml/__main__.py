@@ -105,6 +105,12 @@ class Api:
         print("Saving settings, BCML will reload momentarily...")
         util.get_settings.settings = params["settings"]
         util.save_settings()
+        if params["settings"]["use_cef"] and not util.can_cef():
+            print(
+                "Installing <code>cefpython3</code>, "
+                "if BCML does not restart, launch it again manually"
+            )
+            self.install_cef()
 
     def old_settings(self):
         old = util.get_data_dir() / "settings.ini"
@@ -536,24 +542,33 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
-        if util.get_exec_dir().parent.name == "pkgs":
-            exe = str(util.get_exec_dir().parent.parent / "Python" / "python.exe")
-            rmtree(util.get_exec_dir(), ignore_errors=True)
-        else:
-            exe = sys.executable
         run(
-            [exe, "-m", "pip", "install", "--upgrade", "--pre" if DEBUG else "", "bcml",],
+            [
+                util.get_python_exe(),
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "--pre" if DEBUG else "",
+                "bcml",
+            ],
             check=True,
             stdout=PIPE,
             stderr=PIPE,
         )
 
+    @win_or_lose
+    def install_cef(self):
+        run(
+            [util.get_python_exe(), "-m", "pip", "install", "cefpython3",],
+            check=True,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+        self.restart()
+
     def restart(self):
-        if util.get_exec_dir().parent.name == "pkgs":
-            exe = str(util.get_exec_dir().parent.parent / "Python" / "python.exe")
-        else:
-            exe = sys.executable
-        Popen([exe, "-m", "bcml"], cwd=str(Path().resolve()))
+        Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
         for win in webview.windows:
             win.destroy()
 
@@ -572,7 +587,7 @@ def stop_it(messager: Messager = None):
         del globals()["logger"]
     except KeyError:
         pass
-    if SYSTEM == "Windows":
+    if SYSTEM == "Windows" and util.get_settings("use_cef"):
         Popen(
             "taskkill /F /IM subprocess.exe /T".split(),
             stdout=DEVNULL,
@@ -622,14 +637,8 @@ def main(debug: bool = False):
     api.window.closing += stop_it
 
     gui: str = ""
-    if SYSTEM == "Windows":
-        try:
-            from cefpython3 import cefpython
-
-            del cefpython
-            gui = "cef"
-        except ImportError:
-            pass
+    if SYSTEM == "Windows" and util.can_cef() and util.get_settings("use_cef"):
+        gui = "cef"
     elif SYSTEM == "Linux":
         gui = "qt"
 
