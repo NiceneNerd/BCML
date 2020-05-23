@@ -651,7 +651,7 @@ def main(debug: bool = False):
             webview.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
             )
-    stop_it(messager)
+    stop_it(messager=messager)
 
 
 def main_debug():

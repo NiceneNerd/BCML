@@ -553,7 +553,7 @@ def get_settings(name: str = "") -> {}:
 
 def save_settings():
     with (get_data_dir() / "settings.json").open("w", encoding="utf-8") as s_file:
-        json.dump(get_settings.settings, s_file)
+        json.dump(get_settings.settings, s_file, indent=4)
 
 
 def get_cemu_dir() -> Path:

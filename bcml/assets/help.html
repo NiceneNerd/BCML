@@ -1,28 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/github-markdown.css" />
-    <link rel="stylesheet" href="css/bootstrap-reboot.min.css" />
-    <link rel="stylesheet" href="css/bootstrap.min.css" />
-    <title>BCML Help</title>
-</head>
-<body class="p-2" style="overflow-x: hidden;">
-    <div class="row flex-nowrap">
-        <div class="col-xs-3">
-            <nav>
-                <ul class="list-unstyled py-2 px-4">
-                    <li><a href="help.html?page=main">Main Page</a></li>
-                    <li><a href="help.html?page=install">Installing Mods</a></li>
-                    <li><a href="help.html?page=mods">Managing Mods</a></li>
-                    <li><a href="help.html?page=bnp">About BNPs</a></li>
-                    <li><a href="help.html?page=trouble">Troubleshooting</a></li>
-                </ul>
-            </nav>
+<html lang="en" style="height: 100vh;">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="css/github-markdown.css" />
+        <link rel="stylesheet" href="css/bootstrap-reboot.min.css" />
+        <link rel="stylesheet" href="css/bootstrap.min.css" />
+        <title>BCML Help</title>
+    </head>
+    <body class="p-2" style="overflow-x: hidden; min-height: 0; height: 100%;">
+        <div
+            class="row flex-nowrap"
+            style="min-height: 0; height: 100%; overflow: hidden;"
+        >
+            <div class="col-xs-4 bg-light py-2" style="white-space: nowrap;">
+                <h5 class="ml-4 my-0">Help Topics</h5>
+                <nav>
+                    <ul class="list-unstyled py-2 px-4">
+                        <li><a href="help.html?page=main">Main Page</a></li>
+                        <li>
+                            <a href="help.html?page=install">Installing Mods</a>
+                        </li>
+                        <li><a href="help.html?page=mods">Managing Mods</a></li>
+                        <li>
+                            <a href="help.html?page=export">Exporting for Console</a>
+                        </li>
+                        <li><a href="help.html?page=bnp">About BNPs</a></li>
+                        <li>
+                            <a href="help.html?page=beware">Do's and Don'ts</a>
+                        </li>
+                        <li>
+                            <a href="help.html?page=trouble">Troubleshooting</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div
+                class="col-xs-8 markdown-body p-4"
+                style="overflow-y: auto;"
+                id="root"
+            ></div>
         </div>
-        <div class="col-xs-9 markdown-body pr-4" id="root"></div>
-    </div>
-    <script src="scripts/bundle.js"></script>
-</body>
+        <script src="scripts/bundle.js"></script>
+    </body>
 </html>
