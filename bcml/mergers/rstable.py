@@ -587,7 +587,7 @@ class RstbMerger(mergers.Merger):
         super().__init__(
             "RSTB", "Merges changes to ResourceSizeTable.product.srsizetable", "rstb.log",
         )
-        self._options = {"no_guess": False, "leave": False, "shrink": False}
+        self._options = {"no_guess": False, "leave": False, "shrink": True}
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
         rstb_diff = {}
@@ -725,7 +725,6 @@ class RstbMerger(mergers.Merger):
     def get_checkbox_options(self) -> List[tuple]:
         return [
             ("leave", "Don't remove RSTB entries for complex file types"),
-            ("shrink", "Shrink RSTB values when smaller than the base game"),
             ("no_guess", "Don't estimate RSTB values for AAMP and BFRES files"),
         ]
 

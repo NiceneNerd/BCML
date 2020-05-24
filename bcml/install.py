@@ -429,24 +429,38 @@ def install_mod(
 ):
     if not insert_priority:
         insert_priority = get_next_priority()
-    if isinstance(mod, str):
-        mod = Path(mod)
-    if mod.is_file():
-        print("Opening mod...")
-        tmp_dir = open_mod(mod)
-    elif mod.is_dir():
-        if not ((mod / "rules.txt").exists() or (mod / "info.json").exists()):
-            print(f"Cannot open mod at {str(mod)}, no rules.txt or info.json found")
+
+    try:
+        if isinstance(mod, str):
+            mod = Path(mod)
+        if mod.is_file():
+            print("Opening mod...")
+            tmp_dir = open_mod(mod)
+        elif mod.is_dir():
+            if not ((mod / "rules.txt").exists() or (mod / "info.json").exists()):
+                print(f"Cannot open mod at {str(mod)}, no rules.txt or info.json found")
+                return
+            print(f"Loading mod from {str(mod)}...")
+            tmp_dir = util.get_work_dir() / f"tmp_{mod.name}"
+            shutil.copytree(str(mod), str(tmp_dir))
+            if (mod / "rules.txt").exists() and not (mod / "info.json").exists():
+                print("Upgrading old mod format...")
+                upgrade.convert_old_mod(mod, delete_old=True)
+        else:
+            print(f"Error: {str(mod)} is neither a valid file nor a directory")
             return
-        print(f"Loading mod from {str(mod)}...")
-        tmp_dir = util.get_work_dir() / f"tmp_{mod.name}"
-        shutil.copytree(str(mod), str(tmp_dir))
-        if (mod / "rules.txt").exists() and not (mod / "info.json").exists():
-            print("Upgrading old mod format...")
-            upgrade.convert_old_mod(mod, delete_old=True)
-    else:
-        print(f"Error: {str(mod)} is neither a valid file nor a directory")
-        return
+    except Exception as err:  # pylint: disable=broad-except
+        if hasattr(err, "error_text"):
+            raise err
+        clean_error = RuntimeError()
+        clean_error.error_text = (
+            f"<p>There was an error opening {mod.name}. "
+            "This could indicate there is a problem with the mod itself, or it is in "
+            "an unsupported format. Here is the error:</p>"
+            '<textarea class="scroller" disabled id="error-msg">'
+            f"{traceback.format_exc(limit=-4, chain=False)}</textarea>"
+        )
+        raise clean_error
 
     if not options:
         options = {"options": {}, "disable": []}
@@ -624,14 +638,24 @@ def install_mod(
                 shutil.rmtree(str(mod_dir))
         raise clean_error
 
-    if merge_now:
-        all_mergers = set()
-        for merger in {m() for m in mergers.get_mergers()}:
-            if merger.is_mod_logged(output_mod):
-                all_mergers.add(merger)
-        for merger in mergers.sort_mergers(all_mergers):
-            merger.set_pool(this_pool)
-            merger.perform_merge()
+    try:
+        if merge_now:
+            all_mergers = set()
+            for merger in {m() for m in mergers.get_mergers()}:
+                if merger.is_mod_logged(output_mod):
+                    all_mergers.add(merger)
+            for merger in mergers.sort_mergers(all_mergers):
+                merger.set_pool(this_pool)
+                merger.perform_merge()
+    except:  # pylint: disable=broad-except
+        clean_error = RuntimeError()
+        clean_error.error_text = (
+            f"There was an error merging your mods after installing {mod_name}. "
+            "It processed and installed successfully, but merging all affected mods "
+            "failed. Note this may leave your game in an unplayable state. "
+            "Here is the error:\n\n"
+            f"{traceback.format_exc(limit=-4, chain=False)}"
+        )
 
     if this_pool and not pool:
         this_pool.close()
