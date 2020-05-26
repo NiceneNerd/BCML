@@ -63,12 +63,10 @@ def open_mod(path: Path) -> Path:
     elif path.suffix.lower() in meta_formats:
         shutil.copytree(path.parent, tmpdir)
     else:
-        err = ValueError()
-        err.error_text = (
+        raise ValueError(
             "The mod provided was not a supported archive (BNP, ZIP, RAR, or 7z) "
             "or meta file (rules.txt or info.json)."
         )
-        raise err
     if not tmpdir.exists():
         raise Exception("No files were extracted.")
 
@@ -81,14 +79,13 @@ def open_mod(path: Path) -> Path:
                 rulesdir = subdir
                 break
         else:
-            err = FileNotFoundError(f'No meta file was found in "{path.name}".')
-            err.error_text = (
+            raise FileNotFoundError(
                 "No <code>info.json</code> or <code>rules.txt</code> file was found in "
-                f'"{path.stem}". This could mean the mod is in an old or unsupported format. For '
-                'information on converting mods, see <a href="https://gamebanana.com/tuts/12493">'
+                f'"{path.stem}". This could mean the mod is in an old or unsupported '
+                "format. For information on converting mods, see "
+                '<a href="https://gamebanana.com/tuts/12493">'
                 "this tutorial</a>."
             )
-            raise err
     print("Looks like an older mod, let's upgrade it...")
     upgrade.convert_old_mod(rulesdir, delete_old=True)
     return rulesdir
@@ -135,11 +132,10 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
         try:
             util.get_aoc_dir()
         except FileNotFoundError as err:
-            err.error_text = (
+            raise FileNotFoundError(
                 "This mod uses DLC files, but BCML cannot locate the DLC folder in "
                 "your game dump."
             )
-            raise err
 
     aoc_field = (
         tmp_dir
@@ -237,12 +233,10 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
     print("Scanning for modified files...")
     modded_files = find_modded_files(tmp_dir, pool=pool)
     if not modded_files:
-        err = RuntimeError("No modified files were found.")
-        err.error_text = (
+        raise RuntimeError(
             f"No modified files were found in {str(tmp_dir)}."
             "This probably means this mod is not in a supported format."
         )
-        raise err
 
     (tmp_dir / "logs").mkdir(parents=True, exist_ok=True)
     try:
@@ -259,11 +253,11 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
                 merger.set_options(options["options"][merger.NAME])
             merger.set_pool(this_pool)
             merger.log_diff(tmp_dir, modded_files)
-    except Exception as e:
+    except:  # pylint: disable=bare-except
         this_pool.close()
         this_pool.join()
         this_pool.terminate()
-        raise e
+        raise
     if not pool:
         this_pool.close()
         this_pool.join()
@@ -450,17 +444,7 @@ def install_mod(
             print(f"Error: {str(mod)} is neither a valid file nor a directory")
             return
     except Exception as err:  # pylint: disable=broad-except
-        if hasattr(err, "error_text"):
-            raise err
-        clean_error = RuntimeError()
-        clean_error.error_text = (
-            f"<p>There was an error opening {mod.name}. "
-            "This could indicate there is a problem with the mod itself, or it is in "
-            "an unsupported format. Here is the error:</p>"
-            '<textarea class="scroller" disabled id="error-msg">'
-            f"{traceback.format_exc(limit=-4, chain=False)}</textarea>"
-        )
-        raise clean_error
+        raise util.InstallError(err) from err
 
     if not options:
         options = {"options": {}, "disable": []}
@@ -475,24 +459,21 @@ def install_mod(
             for depend in rules["depends"]:
                 if not depend in installed_ids:
                     depend_name = b64decode(depend).decode("utf8")
-                    err = InstallError(f"Missing dependency {depend_name}")
-                    err.error_text = (
-                        f"{mod_name} requires {depend_name}, but it is not installed. Please "
-                        f"install {depend_name} and try again."
+                    raise RuntimeError(
+                        f"{mod_name} requires {depend_name}, but it is not installed. "
+                        f"Please install {depend_name} and try again."
                     )
-                    raise err
         if not rules["platform"] == "any":
             friendly_plaform = lambda p: "Wii U" if p == "wiiu" else "Switch"
             user_platform = "wiiu" if util.get_settings("wiiu") else "switch"
             if rules["platform"] != user_platform and not options["options"].get(
                 "general", {}
             ).get("agnostic", False):
-                err = InstallError("Incorrect platform")
-                err.error_text = (
-                    f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not {friendly_plaform(user_platform)}. '
-                    'If you want to use it, check the "Allow cross-platform install" option.'
+                raise ValueError(
+                    f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not '
+                    f" {friendly_plaform(user_platform)}. If you want to use it, check "
+                    'the "Allow cross-platform install" option.'
                 )
-                raise err
             else:
                 process_cp_mod(tmp_dir)
         else:
@@ -512,22 +493,11 @@ def install_mod(
             this_pool = pool or Pool()
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
     except Exception as err:  # pylint: disable=broad-except
-        if hasattr(err, "error_text"):
-            raise err
-        clean_error = RuntimeError()
         try:
             name = mod_name
         except NameError:
             name = "your mod, the name of which could not be detected"
-        clean_error.error_text = (
-            f"<p>There was an error while processing {name}. "
-            "This could indicate there is a problem with the mod itself, "
-            "but it could also reflect a new or unusual edge case BCML does "
-            "not anticipate. Here is the error:</p>"
-            '<textarea class="scroller" disabled id="error-msg">'
-            f"{traceback.format_exc(limit=-4)}</textarea>"
-        )
-        raise clean_error
+        raise util.InstallError(err, name) from err
 
     if selects:
         for opt_dir in {d for d in (tmp_dir / "options").glob("*") if d.is_dir()}:
@@ -595,12 +565,10 @@ def install_mod(
                     except Exception:  # pylint: disable=broad-except
                         pass
                 except Exception:  # pylint: disable=broad-except
-                    err = OSError()
-                    err.error_text = (
-                        "BCML could not transfer your mod from the temp directory to the BCML"
-                        " directory."
+                    raise OSError(
+                        "BCML could not transfer your mod from the temp directory to the"
+                        " BCML directory."
                     )
-                    raise err
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -621,22 +589,13 @@ def install_mod(
             pass
 
         print(f"Enabling {mod_name} in Cemu...")
-    except Exception:  # pylint: disable=broad-except
-        clean_error = RuntimeError()
-        clean_error.error_text = (
-            f"There was an error installing {mod_name}. "
-            "It processed successfully, but could not be added to your BCML "
-            "mods. This may indicate a problem with your BCML installation. "
-            "Here is the error:\n\n"
-            f"{traceback.format_exc(limit=-4)}\n\n"
-            f"{mod_name} is being removed and no changes will be made."
-        )
+    except Exception as err:  # pylint: disable=broad-except
         if mod_dir.exists():
             try:
                 uninstall_mod(mod_dir, wait_merge=True)
             except Exception:  # pylint: disable=broad-except
                 shutil.rmtree(str(mod_dir))
-        raise clean_error
+        raise util.InstallError(err, mod_name) from err
 
     try:
         if merge_now:
@@ -647,15 +606,8 @@ def install_mod(
             for merger in mergers.sort_mergers(all_mergers):
                 merger.set_pool(this_pool)
                 merger.perform_merge()
-    except:  # pylint: disable=broad-except
-        clean_error = RuntimeError()
-        clean_error.error_text = (
-            f"There was an error merging your mods after installing {mod_name}. "
-            "It processed and installed successfully, but merging all affected mods "
-            "failed. Note this may leave your game in an unplayable state. "
-            "Here is the error:\n\n"
-            f"{traceback.format_exc(limit=-4, chain=False)}"
-        )
+    except Exception as err:  # pylint: disable=broad-except
+        raise util.MergeError(err) from err
 
     if this_pool and not pool:
         this_pool.close()
@@ -823,12 +775,12 @@ def link_master_mod(output: Path = None):
             elif item.is_file():
                 try:
                     link_or_copy(str(item), str(output / rel_path))
-                except OSError as e:
+                except OSError:
                     if link_or_copy == os.link:
                         link_or_copy = copyfile
                         link_or_copy(str(item), str(output / rel_path))
                     else:
-                        raise e
+                        raise
 
 
 def export(output: Path):

@@ -333,14 +333,10 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             for option_dir in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:
                 _make_bnp_logs(option_dir, options)
         except Exception as err:  # pylint: disable=broad-except
-            err.error_text = (
-                "There was an error generating change logs for your mod. Error details:"
-                f"""<textarea class="scroller" readonly>{
-                    getattr(err, 'error_text', traceback.format_exc(-5))
-                }</textarea>"""
-            )
             pool.terminate()
-            raise err
+            raise Exception(
+                f"There was an error generating change logs for your mod. {str(err)}"
+            )
 
         _clean_sarcs(tmp_dir, hashes, pool)
         for folder in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:

@@ -71,7 +71,7 @@ class DevTools extends React.Component {
                                 this.props.onState({ showProgress: false });
                                 return;
                             } else {
-                                throw res;
+                                throw res.error;
                             }
                         }
                         this.setState(
@@ -103,7 +103,7 @@ class DevTools extends React.Component {
                         console.log("Hello there");
                         console.log(res);
                         if (!res.success) {
-                            throw res;
+                            throw res.error;
                         }
                         this.props.onState({
                             showProgress: false,
@@ -116,23 +116,20 @@ class DevTools extends React.Component {
     }
 
     upgradeBnp() {
-        this.props.onState(
-            { showProgress: true, progressTitle: "Upgrading BNP" },
-            () => {
-                pywebview.api
-                    .upgrade_bnp()
-                    .then(res => {
-                        if (!res.success) {
-                            throw res;
-                        }
-                        this.props.onState({
-                            showProgress: false,
-                            showDone: true
-                        });
-                    })
-                    .catch(this.props.onError);
-            }
-        );
+        this.props.onState({ showProgress: true, progressTitle: "Upgrading BNP" }, () => {
+            pywebview.api
+                .upgrade_bnp()
+                .then(res => {
+                    if (!res.success) {
+                        throw res.error;
+                    }
+                    this.props.onState({
+                        showProgress: false,
+                        showDone: true
+                    });
+                })
+                .catch(this.props.onError);
+        });
     }
 
     render() {
@@ -153,10 +150,9 @@ class DevTools extends React.Component {
                                     isValid={false}
                                     overlay={
                                         <Tooltip>
-                                            The folder containing the main mod
-                                            content, should contain "content"
-                                            and/or "aoc" for Wii U/Cemu or
-                                            "TITLEID/romfs" for Switch.
+                                            The folder containing the main mod content,
+                                            should contain "content" and/or "aoc" for Wii
+                                            U/Cemu or "TITLEID/romfs" for Switch.
                                         </Tooltip>
                                     }
                                     value={this.state.folder}
@@ -233,9 +229,7 @@ class DevTools extends React.Component {
                                             onClick={() =>
                                                 document
                                                     .querySelector("body")
-                                                    .classList.toggle(
-                                                        "dev-open"
-                                                    )
+                                                    .classList.toggle("dev-open")
                                             }
                                             variant="info"
                                             title="Advanced Options">
@@ -274,10 +268,7 @@ class DevTools extends React.Component {
                                         variant="primary"
                                         onClick={this.createBnp}
                                         disabled={
-                                            !(
-                                                this.state.folder &&
-                                                this.state.name
-                                            )
+                                            !(this.state.folder && this.state.name)
                                         }>
                                         Create BNP
                                     </Button>
@@ -289,34 +280,26 @@ class DevTools extends React.Component {
                         <h4>Other Tools</h4>
                         <Row>
                             <Col>
-                                <Button
-                                    variant="success"
-                                    onClick={this.generateRstb}>
+                                <Button variant="success" onClick={this.generateRstb}>
                                     Generate RSTB for Mod
                                 </Button>
                             </Col>
                             <Col>
                                 <Button
                                     variant="warning"
-                                    onClick={() =>
-                                        this.setState({ showCompare: true })
-                                    }>
+                                    onClick={() => this.setState({ showCompare: true })}>
                                     Compare Mods
                                 </Button>
                             </Col>
                             <Col>
                                 <Button
                                     variant="info"
-                                    onClick={() =>
-                                        pywebview.api.explore_master()
-                                    }>
+                                    onClick={() => pywebview.api.explore_master()}>
                                     View Merged Files
                                 </Button>
                             </Col>
                             <Col>
-                                <Button
-                                    variant="danger"
-                                    onClick={this.upgradeBnp}>
+                                <Button variant="danger" onClick={this.upgradeBnp}>
                                     Upgrade Old BNP
                                 </Button>
                             </Col>
@@ -326,17 +309,13 @@ class DevTools extends React.Component {
                 <Dependencies
                     show={this.state.showDepends}
                     onClose={() => this.setState({ showDepends: false })}
-                    onSet={depends =>
-                        this.setState({ showDepends: false, depends })
-                    }
+                    onSet={depends => this.setState({ showDepends: false, depends })}
                     depends={this.state.depends}
                 />
                 <ModOptions
                     show={this.state.showOptions}
                     onClose={() => this.setState({ showOptions: false })}
-                    onSet={selects =>
-                        this.setState({ showOptions: false, selects })
-                    }
+                    onSet={selects => this.setState({ showOptions: false, selects })}
                     folder={this.state.folder}
                 />
                 <CompareView
@@ -391,17 +370,14 @@ class Dependencies extends React.Component {
 
     render() {
         return (
-            <Modal
-                show={this.props.show}
-                onHide={this.props.onClose}
-                className="depends">
+            <Modal show={this.props.show} onHide={this.props.onClose} className="depends">
                 <Modal.Header closeButton>
                     <Modal.Title>Specify Dependencies</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <p>
-                        Select required mods from your installed mods, or
-                        manually add an ID
+                        Select required mods from your installed mods, or manually add an
+                        ID
                     </p>
                     <div className="my-1">
                         <h5>Installed Mods</h5>
@@ -410,14 +386,9 @@ class Dependencies extends React.Component {
                                 this.state.mods.length > 0 ? (
                                     this.state.mods.map(mod => (
                                         <div key={mod.id} className="d-flex">
-                                            <div className="flex-grow-1">
-                                                {mod.name}
-                                            </div>
+                                            <div className="flex-grow-1">{mod.name}</div>
                                             <div className="add-depend">
-                                                <a
-                                                    onClick={() =>
-                                                        this.addDepend(mod)
-                                                    }>
+                                                <a onClick={() => this.addDepend(mod)}>
                                                     <i className="material-icons text-success">
                                                         add_circle
                                                     </i>
@@ -430,10 +401,7 @@ class Dependencies extends React.Component {
                                 )
                             ) : (
                                 <div className="text-center">
-                                    <Spinner
-                                        variant="secondary"
-                                        animation="border"
-                                    />
+                                    <Spinner variant="secondary" animation="border" />
                                 </div>
                             )}
                         </div>
@@ -481,16 +449,12 @@ class Dependencies extends React.Component {
                                             <span className="flex-grow-1 mr-1">
                                                 {depend.name || depend.id}
                                             </span>
-                                            <a
-                                                onClick={() =>
-                                                    this.removeDepend(depend)
-                                                }>
+                                            <a onClick={() => this.removeDepend(depend)}>
                                                 <i
                                                     className="material-icons text-danger"
                                                     style={{
                                                         fontSize: "16px",
-                                                        verticalAlign:
-                                                            "text-top"
+                                                        verticalAlign: "text-top"
                                                     }}>
                                                     close
                                                 </i>
@@ -499,9 +463,7 @@ class Dependencies extends React.Component {
                                     </h5>
                                 ))
                             ) : (
-                                <span className="text-secondary">
-                                    No dependencies
-                                </span>
+                                <span className="text-secondary">No dependencies</span>
                             )}
                         </div>
                     </div>
@@ -513,9 +475,7 @@ class Dependencies extends React.Component {
                     <Button
                         variant="primary"
                         onClick={() =>
-                            this.props.onSet(
-                                this.state.depends.map(depend => depend.id)
-                            )
+                            this.props.onSet(this.state.depends.map(depend => depend.id))
                         }>
                         OK
                     </Button>
@@ -573,8 +533,7 @@ class ModOptions extends React.Component {
     addSingle() {
         let singles = this.state.singles;
         let group = singles.find(
-            single =>
-                single.name == document.querySelector("#singleGroup").value
+            single => single.name == document.querySelector("#singleGroup").value
         );
         singles.pop(group);
         const folder = document.querySelector("#singleFolder").value;
@@ -644,9 +603,9 @@ class ModOptions extends React.Component {
                 </Modal.Header>
                 <Modal.Body>
                     <p>
-                        Add options for customizing your mod's installation. You
-                        can add any number of multiple choice checkboxes and/or
-                        groups of mutually exclusive choices.
+                        Add options for customizing your mod's installation. You can add
+                        any number of multiple choice checkboxes and/or groups of mutually
+                        exclusive choices.
                     </p>
                     <Tabs defaultActiveKey="multi">
                         <Tab eventKey="multi" title="Multiple Choice">
@@ -657,9 +616,7 @@ class ModOptions extends React.Component {
                                         <Form.Label>Option Folder</Form.Label>
                                         <Form.Control as="select">
                                             {this.state.folders.map(folder => (
-                                                <option
-                                                    key={folder}
-                                                    value={folder}>
+                                                <option key={folder} value={folder}>
                                                     {folder}
                                                 </option>
                                             ))}
@@ -670,9 +627,7 @@ class ModOptions extends React.Component {
                                         <Form.Control placeholder="Name of the option" />
                                     </Form.Group>
                                     <Form.Group controlId="multiDesc">
-                                        <Form.Label>
-                                            Option Description
-                                        </Form.Label>
+                                        <Form.Label>Option Description</Form.Label>
                                         <Form.Control placeholder="Description of the option" />
                                     </Form.Group>
                                     <Form.Group controlId="multiDefault">
@@ -700,17 +655,12 @@ class ModOptions extends React.Component {
                                                     <span className="flex-grow-1 mr-1">
                                                         {opt.name}
                                                     </span>
-                                                    <a
-                                                        onClick={() =>
-                                                            this.delMulti(opt)
-                                                        }>
+                                                    <a onClick={() => this.delMulti(opt)}>
                                                         <i
                                                             className="material-icons text-danger"
                                                             style={{
-                                                                fontSize:
-                                                                    "16px",
-                                                                verticalAlign:
-                                                                    "text-top"
+                                                                fontSize: "16px",
+                                                                verticalAlign: "text-top"
                                                             }}>
                                                             close
                                                         </i>
@@ -736,14 +686,10 @@ class ModOptions extends React.Component {
                                             <Form.Control placeholder="Name of the group" />
                                         </Form.Group>
                                         <Form.Group controlId="groupDesc">
-                                            <Form.Label>
-                                                Group Description
-                                            </Form.Label>
+                                            <Form.Label>Group Description</Form.Label>
                                             <Form.Control placeholder="Description of the group" />
                                         </Form.Group>
-                                        <Button
-                                            size="sm"
-                                            onClick={this.addGroup}>
+                                        <Button size="sm" onClick={this.addGroup}>
                                             Add Group
                                         </Button>
                                     </Form>
@@ -752,35 +698,25 @@ class ModOptions extends React.Component {
                                     <h5>Define Option</h5>
                                     <Form>
                                         <Form.Group controlId="singleFolder">
-                                            <Form.Label>
-                                                Option Folder
-                                            </Form.Label>
+                                            <Form.Label>Option Folder</Form.Label>
                                             <Form.Control as="select">
-                                                {this.state.folders.map(
-                                                    folder => (
-                                                        <option
-                                                            key={folder}
-                                                            value={folder}>
-                                                            {folder}
-                                                        </option>
-                                                    )
-                                                )}
+                                                {this.state.folders.map(folder => (
+                                                    <option key={folder} value={folder}>
+                                                        {folder}
+                                                    </option>
+                                                ))}
                                             </Form.Control>
                                         </Form.Group>
                                         <Form.Group controlId="singleGroup">
-                                            <Form.Label>
-                                                Option Group
-                                            </Form.Label>
+                                            <Form.Label>Option Group</Form.Label>
                                             <Form.Control as="select">
-                                                {this.state.singles.map(
-                                                    single => (
-                                                        <option
-                                                            key={single.name}
-                                                            value={single.name}>
-                                                            {single.name}
-                                                        </option>
-                                                    )
-                                                )}
+                                                {this.state.singles.map(single => (
+                                                    <option
+                                                        key={single.name}
+                                                        value={single.name}>
+                                                        {single.name}
+                                                    </option>
+                                                ))}
                                             </Form.Control>
                                         </Form.Group>
                                         <Form.Group controlId="singleName">
@@ -788,9 +724,7 @@ class ModOptions extends React.Component {
                                             <Form.Control placeholder="Name of the option" />
                                         </Form.Group>
                                         <Form.Group controlId="singleDesc">
-                                            <Form.Label>
-                                                Option Description
-                                            </Form.Label>
+                                            <Form.Label>Option Description</Form.Label>
                                             <Form.Control placeholder="Description of the option" />
                                         </Form.Group>
                                         <Button
@@ -798,9 +732,8 @@ class ModOptions extends React.Component {
                                                 !document.querySelector(
                                                     "#singleFolder"
                                                 ) ||
-                                                !document.querySelector(
-                                                    "#singleFolder"
-                                                ).value
+                                                !document.querySelector("#singleFolder")
+                                                    .value
                                             }
                                             size="sm"
                                             onClick={this.addSingle}>
@@ -828,68 +761,63 @@ class ModOptions extends React.Component {
                                                         <i
                                                             className="material-icons text-danger"
                                                             style={{
-                                                                fontSize:
-                                                                    "16px",
-                                                                verticalAlign:
-                                                                    "text-top"
+                                                                fontSize: "16px",
+                                                                verticalAlign: "text-top"
                                                             }}>
                                                             close
                                                         </i>
                                                     </a>
                                                 </div>
                                                 <div className="mt-1 d-flex">
-                                                    {Object.keys(group.options)
-                                                        .length > 0 ? (
-                                                        Object.keys(
-                                                            group.options
-                                                        ).map(opt => (
-                                                            <h5
-                                                                key={
-                                                                    group
-                                                                        .options[
-                                                                        opt
-                                                                    ].name
-                                                                }>
-                                                                <Badge
-                                                                    variant="dark"
-                                                                    style={{
-                                                                        alignItems:
-                                                                            "center"
-                                                                    }}
-                                                                    className="d-flex mx-1">
-                                                                    <span className="flex-grow-1 mr-1">
-                                                                        {
-                                                                            group
-                                                                                .options[
-                                                                                opt
-                                                                            ]
-                                                                                .name
-                                                                        }
-                                                                    </span>
-                                                                    <a
-                                                                        onClick={() =>
-                                                                            this.delSingle(
+                                                    {Object.keys(group.options).length >
+                                                    0 ? (
+                                                        Object.keys(group.options).map(
+                                                            opt => (
+                                                                <h5
+                                                                    key={
+                                                                        group.options[opt]
+                                                                            .name
+                                                                    }>
+                                                                    <Badge
+                                                                        variant="dark"
+                                                                        style={{
+                                                                            alignItems:
+                                                                                "center"
+                                                                        }}
+                                                                        className="d-flex mx-1">
+                                                                        <span className="flex-grow-1 mr-1">
+                                                                            {
                                                                                 group
                                                                                     .options[
                                                                                     opt
-                                                                                ],
-                                                                                group
-                                                                            )
-                                                                        }>
-                                                                        <i
-                                                                            className="material-icons text-danger"
-                                                                            style={{
-                                                                                fontSize:
-                                                                                    "16px",
-                                                                                verticalAlign:
-                                                                                    "text-top"
-                                                                            }}>
-                                                                            close
-                                                                        </i>
-                                                                    </a>
-                                                                </Badge>
-                                                            </h5>
-                                                        ))
+                                                                                ].name
+                                                                            }
+                                                                        </span>
+                                                                        <a
+                                                                            onClick={() =>
+                                                                                this.delSingle(
+                                                                                    group
+                                                                                        .options[
+                                                                                        opt
+                                                                                    ],
+                                                                                    group
+                                                                                )
+                                                                            }>
+                                                                            <i
+                                                                                className="material-icons text-danger"
+                                                                                style={{
+                                                                                    fontSize:
+                                                                                        "16px",
+                                                                                    verticalAlign:
+                                                                                        "text-top"
+                                                                                }}>
+                                                                                close
+                                                                            </i>
+                                                                        </a>
+                                                                    </Badge>
+                                                                </h5>
+                                                            )
+                                                        )
                                                     ) : (
                                                         <span className="text-dark">
                                                             Empty group

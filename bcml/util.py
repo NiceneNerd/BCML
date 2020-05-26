@@ -456,16 +456,6 @@ def get_python_exe() -> str:
         return sys.executable
 
 
-def can_cef() -> bool:
-    try:
-        from cefpython3 import cefpython
-
-        del cefpython
-        return True
-    except ImportError:
-        return False
-
-
 @lru_cache(None)
 def get_data_dir() -> Path:
     import platform
@@ -522,7 +512,6 @@ DEFAULT_SETTINGS = {
     "no_cemu": False,
     "wiiu": True,
     "no_hardlinks": False,
-    "use_cef": False,
 }
 
 
@@ -559,9 +548,7 @@ def save_settings():
 def get_cemu_dir() -> Path:
     cemu_dir = str(get_settings("cemu_dir"))
     if not cemu_dir or not Path(cemu_dir).is_dir():
-        err = FileNotFoundError("The Cemu directory has moved or not been saved yet.")
-        err.error_text = "The Cemu directory has moved or not been saved yet."
-        raise err
+        raise FileNotFoundError("The Cemu directory has moved or not been saved yet.")
     return Path(cemu_dir)
 
 
@@ -576,11 +563,9 @@ def get_game_dir() -> Path:
         get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
     )
     if not game_dir or not Path(game_dir).is_dir():
-        err = FileNotFoundError(
+        raise FileNotFoundError(
             "The BotW game directory has has moved or not been saved yet."
         )
-        err.error_text = "The BotW game directory has has moved or not been saved yet."
-        raise err
     else:
         return Path(game_dir)
 
@@ -597,12 +582,10 @@ def set_game_dir(path: Path):
 
             set_path = get_cemu_dir() / "settings.xml"
             if not set_path.exists():
-                err = FileNotFoundError("The Cemu settings file could not be found.")
-                err.error_text = (
+                raise FileNotFoundError(
                     "The Cemu settings file could not be found. This usually means your Cemu directory "
                     "is set incorrectly."
                 )
-                raise err
             set_read = ""
             with set_path.open("r") as setfile:
                 for line in setfile:
@@ -624,9 +607,7 @@ def set_game_dir(path: Path):
 def get_mlc_dir() -> Path:
     mlc_dir = str(get_settings("mlc_dir"))
     if not mlc_dir or not Path(mlc_dir).is_dir():
-        err = FileNotFoundError("The Cemu MLC directory has moved or not been saved yet.")
-        err.error_text = "The Cemu MLC directory has moved or not been saved yet."
-        raise err
+        raise FileNotFoundError("The Cemu MLC directory has moved or not been saved yet.")
     return Path(mlc_dir)
 
 
@@ -691,12 +672,10 @@ def get_update_dir() -> Path:
         update_dir = Path(update_str)
         if not update_dir.exists():
             raise FileNotFoundError()
-    except:
-        e = FileNotFoundError(
+    except FileNotFoundError as err:
+        raise FileNotFoundError(
             "The BOTW update directory has moved or has not been saved yet."
-        )
-        e.error_text = "The BOTW update directory has moved or has not been saved yet."
-        raise e
+        ) from err
     return update_dir
 
 
@@ -726,12 +705,10 @@ def get_aoc_dir() -> Path:
         aoc_dir = Path(dlc_str)
         if not aoc_dir.exists():
             raise FileNotFoundError()
-    except:
-        e = FileNotFoundError(
+    except FileNotFoundError as err:
+        raise FileNotFoundError(
             "The BOTW DLC directory has moved or has not been saved yet."
-        )
-        e.error_text = "The BOTW DLC directory has moved or has not been saved yet."
-        raise e
+        ) from err
     return aoc_dir
 
 
@@ -1220,20 +1197,18 @@ class MultiDict(OrderedDict):
 
 
 class InstallError(Exception):
-    error_text: str
-    pass
+    def __init__(self, error_stuff, mod_name: str = "your mod"):
+        super().__init__(
+            f"An error occured when installing {mod_name}. {str(error_stuff)}\n"
+            "Your mod is being removed, and no changes have been made."
+        )
 
 
 class MergeError(Exception):
     def __init__(self, error_stuff):
-        super().__init__(error_stuff)
-        self.error_text = (
-            f"There was a problem merging your mod(s). Details of the error:\n"
-            f"""<textarea class="scroller" readonly id="error-msg">{
-                getattr(error_stuff, "error_text", traceback.format_exc(-5))
-            }</textarea>"""
-            "Note that you this could leave your game in an unplayable state unless you remove"
-            " the mod or mods responsible."
+        super().__init__(
+            f"An error occured when merging your mod(s). {str(error_stuff)}\n"
+            "Note that you this could leave your game in an unplayable state."
         )
 
 

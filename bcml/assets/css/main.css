@@ -2,8 +2,7 @@ html,
 body,
 #root,
 #tabs {
-    font-family: Roboto, "Droid Sans", "Source Sans Pro", "Open Sans",
-        sans-serif;
+    font-family: Roboto, "Droid Sans", "Source Sans Pro", "Open Sans", sans-serif;
     height: 100vh;
     overflow: hidden;
 }
@@ -148,20 +147,21 @@ body,
     white-space: nowrap;
 }
 
-textarea.scroller {
-    background-color: #202020;
+.error-msg {
+    background-color: transparent;
     border: 1px solid #242529;
     color: #ffffff;
-    font-family: "Fira Code", "Source Code Pro", "Droid Mono", "Consolas",
-        "Courier New", Courier, monospace !important;
-    font-size: smaller;
     display: block;
+    font-family: "Fira Code", "Source Code Pro", "Droid Mono", "Consolas", "Courier New",
+        Courier, monospace !important;
+    font-size: smaller;
     margin: 0.5rem 0;
-    padding: 0.5rem 1rem;
-    height: 10rem;
+    max-height: 100%;
+    min-height: -webkit-fill-available;
     overflow: auto;
-    width: 100%;
+    padding: 0.5rem 1rem;
     white-space: pre;
+    width: 100%;
 }
 
 .scroller::-webkit-scrollbar {
@@ -336,11 +336,7 @@ textarea.scroller {
 
 .mod-preview-shadow {
     content: " ";
-    background: linear-gradient(
-        180deg,
-        rgba(33, 33, 33, 0) 0%,
-        rgba(33, 33, 33, 1) 90%
-    );
+    background: linear-gradient(180deg, rgba(33, 33, 33, 0) 0%, rgba(33, 33, 33, 1) 90%);
     position: absolute;
     height: 100%;
     top: 0;

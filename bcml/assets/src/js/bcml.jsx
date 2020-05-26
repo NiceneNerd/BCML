@@ -7,7 +7,9 @@ import {
     OverlayTrigger,
     Tab,
     Tabs,
-    Tooltip
+    Tooltip,
+    Accordion,
+    Card
 } from "react-bootstrap";
 
 import DevTools from "./devtools.jsx";
@@ -34,7 +36,7 @@ class BcmlRoot extends React.Component {
             showDone: false,
             showBackups: false,
             showError: false,
-            errorText: "",
+            error: null,
             showProgress: false,
             progressStatus: "",
             progressTitle: "",
@@ -90,34 +92,17 @@ class BcmlRoot extends React.Component {
         });
     }
 
-    showError(errorText) {
+    showError(error) {
         try {
-            console.error(JSON.stringify(errorText));
+            console.error(JSON.stringify(error));
         } catch (error) {
-            console.log(JSON.stringify(errorText));
-        }
-        if (typeof errorText !== String) {
-            if (errorText.error_text) {
-                errorText = errorText.error;
-            } else {
-                errorText = unescape(
-                    errorText.error
-                        .toString()
-                        .replace(/\\\\/g, "\\")
-                        .replace(/\\n/g, "\n")
-                        .replace(/\\\"/g, '"')
-                        .replace('Error: "', "")
-                );
-                errorText = `Oops, ran into an error. Details:<pre className="scroller">${unescape(
-                    errorText
-                )}</pre>`;
-            }
+            console.log(JSON.stringify(error));
         }
         this.setState(
             {
                 showProgress: false,
                 showError: true,
-                errorText
+                error
             },
             () => this.refreshMods()
         );
@@ -167,7 +152,7 @@ class BcmlRoot extends React.Component {
                     .install_mod({ mods, options, selects: this.state.selects })
                     .then(res => {
                         if (!res.success) {
-                            throw res;
+                            throw res.error;
                         }
                         this.selects = null;
                         this.setState(
@@ -210,7 +195,7 @@ class BcmlRoot extends React.Component {
                     action({ backup })
                         .then(res => {
                             if (!res.success) {
-                                throw res;
+                                throw res.error;
                             }
                             this.setState({ showProgress: false, showDone: true }, () => {
                                 this.backupRef.current.refreshBackups();
@@ -234,7 +219,7 @@ class BcmlRoot extends React.Component {
                 pywebview.api
                     .export()
                     .then(res => {
-                        if (!res.success) throw res;
+                        if (!res.success) throw res.error;
 
                         this.setState({ showProgress: false, showDone: true });
                     })
@@ -262,7 +247,7 @@ class BcmlRoot extends React.Component {
             .launch_game()
             .then(res => {
                 if (!res.success) {
-                    throw res;
+                    throw res.error;
                 }
             })
             .catch(this.props.onError);
@@ -370,7 +355,7 @@ class BcmlRoot extends React.Component {
                 />
                 <ErrorDialog
                     show={this.state.showError}
-                    error={this.state.errorText.toString()}
+                    error={this.state.error}
                     onClose={() => this.setState({ showError: false })}
                 />
                 <ConfirmDialog
@@ -476,6 +461,7 @@ const ErrorDialog = props => {
         <Modal
             show={props.show}
             centered
+            scrollable={true}
             dialogClassName="modal-wide"
             onHide={props.onClose}>
             <Modal.Header closeButton>
@@ -488,29 +474,48 @@ const ErrorDialog = props => {
                             <i className="material-icons">error</i>
                         </Badge>
                     </div>
-                    <div
-                        className="pl-2 flex-grow-1"
-                        style={{ minWidth: "0px" }}
-                        dangerouslySetInnerHTML={{
-                            __html: props.error.replace(/\n/g, "<br>")
-                        }}></div>
+                    <div className="pl-2 flex-grow-1" style={{ minWidth: "0px" }}>
+                        <p>
+                            Oops!{" "}
+                            <span
+                                dangerouslySetInnerHTML={{
+                                    __html: props.error && props.error.short
+                                }}></span>
+                        </p>
+                        <Accordion>
+                            <Card>
+                                <Accordion.Toggle
+                                    as={Card.Header}
+                                    className="row"
+                                    eventKey="0">
+                                    <i className="material-icons">expand_more</i>{" "}
+                                    <span>Error Details</span>
+                                </Accordion.Toggle>
+                                <Accordion.Collapse eventKey="0">
+                                    <Card.Body style={{ padding: 0 }}>
+                                        <textarea readOnly={true} className="error-msg">
+                                            {props.error && props.error.error_text}
+                                        </textarea>
+                                    </Card.Body>
+                                </Accordion.Collapse>
+                            </Card>
+                        </Accordion>
+                    </div>
                 </div>
             </Modal.Body>
             <Modal.Footer>
-                {props.error.includes("error-msg") && (
-                    <OverlayTrigger overlay={<Tooltip>Copy error to clipboard</Tooltip>}>
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => {
-                                document.querySelector("#error-msg").select();
-                                document.execCommand("copy");
-                                window.getSelection().removeAllRanges();
-                            }}>
-                            <i className="material-icons">file_copy</i>
-                        </Button>
-                    </OverlayTrigger>
-                )}
+                <OverlayTrigger overlay={<Tooltip>Copy error to clipboard</Tooltip>}>
+                    <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                            document.querySelector(".error-msg").select();
+                            document.execCommand("copy");
+                            window.getSelection().removeAllRanges();
+                        }}>
+                        <i className="material-icons">file_copy</i>
+                    </Button>
+                </OverlayTrigger>
                 <Button className="py-2" variant="primary" onClick={props.onClose}>
                     OK
                 </Button>

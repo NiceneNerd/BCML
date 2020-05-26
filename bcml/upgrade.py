@@ -33,10 +33,9 @@ def convert_old_mods():
         try:
             convert_old_mod(mod, True)
         except Exception as err:
-            err.error_text = (
+            raise RuntimeError(
                 f"BCML was unable to convert {mod.name[4:]}. Error: {str(err)}"
-            )
-            raise err
+            ) from err
 
 
 def convert_old_mod(mod: Path, delete_old: bool = False):

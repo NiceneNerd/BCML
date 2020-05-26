@@ -18,7 +18,7 @@ from threading import Thread
 import webview
 
 from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util, _oneclick
-from bcml.util import BcmlMod, Messager, MergeError
+from bcml.util import BcmlMod, Messager
 from bcml.mergers.rstable import generate_rstb_for_mod
 from bcml.__version__ import USER_VERSION
 
@@ -31,17 +31,9 @@ def win_or_lose(func):
         try:
             func(*args, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
-            setattr(
-                err,
-                "error_text",
-                getattr(err, "error_text", traceback.format_exc(limit=-5, chain=True)),
-            )
             with LOG.open("a") as log_file:
                 log_file.write(f"\n{err}\n")
-            return {
-                "error": getattr(err, "error_text"),
-                "error_text": hasattr(err, "error_text"),
-            }
+            return {"error": {"short": str(err), "error_text": traceback.format_exc(-5)}}
         return {"success": True}
 
     return status_run
@@ -55,22 +47,14 @@ class Api:
     def sanity_check(self, kwargs=None):
         ver = platform.python_version_tuple()
         if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            err = RuntimeError(
+            raise RuntimeError(
                 f"BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}"
             )
-            err.error_text = (
-                f"BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}"
-            )
-            raise err
         is_64bits = sys.maxsize > 2 ** 32
         if not is_64bits:
-            err = RuntimeError(
+            raise RuntimeError(
                 "BCML requires 64 bit Python, but you appear to be running 32 bit."
             )
-            err.error_text = (
-                "BCML requires 64 bit Python, but you appear to be running 32 bit."
-            )
-            raise err
         settings = util.get_settings()
         util.get_game_dir()
         if settings["wiiu"]:
@@ -105,12 +89,6 @@ class Api:
         print("Saving settings, BCML will reload momentarily...")
         util.get_settings.settings = params["settings"]
         util.save_settings()
-        if params["settings"]["use_cef"] and not util.can_cef():
-            print(
-                "Installing <code>cefpython3</code>, "
-                "if BCML does not restart, launch it again manually"
-            )
-            self.install_cef()
 
     def old_settings(self):
         old = util.get_data_dir() / "settings.ini"
@@ -266,9 +244,9 @@ class Api:
                     merger.set_pool(pool)
                     merger.perform_merge()
                 print("Install complete")
-            except Exception as err:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 pool.terminate()
-                raise MergeError(err)
+                raise
 
     @win_or_lose
     @install.refresher
@@ -302,9 +280,9 @@ class Api:
                 for merger in mergers.sort_mergers(remergers):
                     merger.set_pool(pool)
                     merger.perform_merge()
-            except Exception as err:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 pool.terminate()
-                raise MergeError(err)
+                raise
 
     @win_or_lose
     @install.refresher
@@ -344,9 +322,9 @@ class Api:
                     for merger in mergers.sort_mergers(remergers):
                         merger.set_pool(pool)
                         merger.perform_merge()
-                except Exception as err:  # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     pool.terminate()
-                    raise MergeError(err)
+                    raise
         install.refresh_master_export()
 
     @win_or_lose
@@ -429,7 +407,10 @@ class Api:
                 ][0].perform_merge()
                 install.refresh_master_export()
         except Exception as err:  # pylint: disable=broad-except
-            raise MergeError(err)
+            raise Exception(
+                f"There was an error merging your mods. {str(err)}\n"
+                "Note that this could leave your game in an unplayable state."
+            )
 
     @win_or_lose
     def create_backup(self, params):
@@ -446,9 +427,7 @@ class Api:
     @win_or_lose
     def export(self):
         if not util.get_installed_mods():
-            e = Exception()
-            setattr(e, "error_text", "No mods installed to export.")
-            raise e
+            raise Exception("No mods installed to export.")
         out = self.window.create_file_dialog(
             webview.SAVE_DIALOG,
             file_types=(
@@ -475,9 +454,7 @@ class Api:
             save_filename=util.get_safe_pathname(params["name"]) + ".bnp",
         )
         if not out:
-            e = Exception()
-            setattr(e, "error_text", "cancelled")
-            raise e
+            raise Exception("canceled")
         meta = params.copy()
         del meta["folder"]
         meta["options"] = params["selects"]
@@ -557,16 +534,6 @@ class Api:
             stderr=PIPE,
         )
 
-    @win_or_lose
-    def install_cef(self):
-        run(
-            [util.get_python_exe(), "-m", "pip", "install", "cefpython3",],
-            check=True,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-        self.restart()
-
     def restart(self):
         Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
         for win in webview.windows:
@@ -587,7 +554,7 @@ def stop_it(messager: Messager = None):
         del globals()["logger"]
     except KeyError:
         pass
-    if SYSTEM == "Windows" and util.get_settings("use_cef"):
+    if SYSTEM == "Windows":
         Popen(
             "taskkill /F /IM subprocess.exe /T".split(),
             stdout=DEVNULL,
@@ -637,7 +604,7 @@ def main(debug: bool = False):
     api.window.closing += stop_it
 
     gui: str = ""
-    if SYSTEM == "Windows" and util.can_cef() and util.get_settings("use_cef"):
+    if SYSTEM == "Windows":
         gui = "cef"
     elif SYSTEM == "Linux":
         gui = "qt"
