@@ -1,8 +1,8 @@
+import os
 from setuptools import setup
 from subprocess import run
 from sys import argv
 from pathlib import Path
-from platform import system
 from bcml.__version__ import VERSION
 
 installer_cfg = Path("installer.cfg")
@@ -11,10 +11,9 @@ if installer_cfg.exists() and "sdist" in argv:
     text[3] = f"version={VERSION}"
     installer_cfg.write_text("\n".join(text))
 
-if "install" in argv and system() == "Linux":
-    from os import chmod
-    chmod("bcml/helpers/7z", int("755", 8)))
-    chmod("bcml/helpers/msyt", int("755", 8)))
+if "install" in argv and os.name == "posix":
+    os.chmod("bcml/helpers/7z", int("755", 8))
+    os.chmod("bcml/helpers/msyt", int("755", 8))
 
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
