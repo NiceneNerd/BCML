@@ -55,7 +55,7 @@ the `bcml/assets` folder, run `npm install` to collect dependencies, and then
 run `npm build` or `npm test`.
 
 Finally, back at the root folder, you can install using
-`python setup.py install`.
+`python setup.py install`. You can also run without installing by using `python -m bcml`.
 
 ## Usage and Troubleshooting
 
