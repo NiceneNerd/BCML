@@ -23,7 +23,7 @@ setup(
     version=VERSION,
     author="NiceneNerd",
     author_email="macadamiadaze@gmail.com",
-    description="A mod manager for The Legend of Zelda: Breath of the Wild on Cemu",
+    description="A mod manager for The Legend of Zelda: Breath of the Wild",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/NiceneNerd/BCML",
