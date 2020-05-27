@@ -1,23 +1,24 @@
 import base64
 import json
-import os
 import platform
-import socket
 import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
-from importlib.util import find_spec
 from multiprocessing import Pool, set_start_method
-from os import execlp
 from pathlib import Path
 from platform import system
 from shutil import rmtree
 from subprocess import run, PIPE, Popen, DEVNULL
 from threading import Thread
 
+try:
+    from os import startfile  # pylint: disable=no-name-in-module
+except ImportError:
+    pass
+
 import webview
 
-from bcml import DEBUG, NO_CEF, install, dev, mergers, upgrade, util, _oneclick
+from bcml import DEBUG, install, dev, mergers, upgrade, util, _oneclick
 from bcml.util import BcmlMod, Messager
 from bcml.mergers.rstable import generate_rstb_for_mod
 from bcml.__version__ import USER_VERSION
@@ -40,7 +41,7 @@ def win_or_lose(func):
 
 
 class Api:
-    # pylint: disable=unused-argument
+    # pylint: disable=unused-argument,no-self-use,too-many-public-methods
     window: webview.Window
 
     @win_or_lose
@@ -70,17 +71,17 @@ class Api:
         real_folder = path.exists() and path.is_dir() and params["folder"] != ""
         if not real_folder:
             return False
-        else:
-            if params["type"] == "cemu_dir":
-                return len(list(path.glob("?emu*.exe"))) > 0
-            elif "game_dir" in params["type"]:
-                return (path / "Pack" / "Dungeon000.pack").exists()
-            elif params["type"] == "update_dir":
-                return len(list((path / "Actor" / "Pack").glob("*.sbactorpack"))) > 7000
-            elif "dlc_dir" in params["type"]:
-                return (path / "Pack" / "AocMainField.pack").exists()
-            elif params["type"] == "store_dir":
-                return True
+        if params["type"] == "cemu_dir":
+            return len(list(path.glob("?emu*.exe"))) > 0
+        if "game_dir" in params["type"]:
+            return (path / "Pack" / "Dungeon000.pack").exists()
+        if params["type"] == "update_dir":
+            return len(list((path / "Actor" / "Pack").glob("*.sbactorpack"))) > 7000
+        if "dlc_dir" in params["type"]:
+            return (path / "Pack" / "AocMainField.pack").exists()
+        if params["type"] == "store_dir":
+            return True
+        return True
 
     def get_settings(self, params=None):
         return util.get_settings()
@@ -186,7 +187,7 @@ class Api:
                 {
                     "name": merger.NAME,
                     "friendly": merger.friendly_name,
-                    "options": {k: v for (k, v) in merger.get_checkbox_options()},
+                    "options": dict(merger.get_checkbox_options()),
                 }
             )
         return opts
@@ -343,10 +344,6 @@ class Api:
     def explore(self, params):
         path = params["mod"]["path"]
         if SYSTEM == "Windows":
-            from os import (
-                startfile,
-            )  # pylint: disable=no-name-in-module,import-outside-toplevel
-
             startfile(path)
         elif SYSTEM == "Darwin":
             run(["open", path], check=False)
@@ -356,10 +353,6 @@ class Api:
     def explore_master(self, params=None):
         path = util.get_master_modpack_dir()
         if SYSTEM == "Windows":
-            from os import (
-                startfile,
-            )  # pylint: disable=no-name-in-module,import-outside-toplevel
-
             startfile(path)
         elif SYSTEM == "Darwin":
             run(["open", path], check=False)
@@ -514,8 +507,8 @@ class Api:
             run(x_args, stdout=PIPE, stderr=PIPE, check=True)
 
     def open_help(self):
-        t = Thread(target=help_window)
-        t.start()
+        help_thread = Thread(target=help_window)
+        help_thread.start()
 
     @win_or_lose
     def update_bcml(self):

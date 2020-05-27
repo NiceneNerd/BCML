@@ -1,33 +1,31 @@
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,no-member,too-many-lines,invalid-name
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-import copyreg
-import csv
-from dataclasses import dataclass
 from functools import lru_cache
 import json
 import os
 import re
 import shutil
-import subprocess
 import sys
-import traceback
-import unicodedata
 import urllib.error
 import urllib.request
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
+from io import StringIO
+from multiprocessing import current_process
 from pathlib import Path
 from platform import system
 from pprint import pformat
+from time import time_ns
 from typing import Union, List, Dict, ByteString
+from xml.dom import minidom
 
 import oead
-import xxhash
-from webview import Window
+import xxhash  # pylint: disable=wrong-import-order
+from webview import Window  # pylint: disable=wrong-import-order
 
-from bcml import pickles
+from bcml import pickles, DEBUG  # pylint: disable=unused-import
 
 
 CREATE_NO_WINDOW = 0x08000000
@@ -260,6 +258,7 @@ class BcmlMod:
             (self.path / "info.json").read_text("utf-8"), encoding="utf-8"
         )
         self.priority = self._info["priority"]
+        self._preview = None
 
     def __repr__(self):
         return f"""BcmlMod(name="{
@@ -284,8 +283,8 @@ class BcmlMod:
         }
 
     @staticmethod
-    def from_json(json: dict):
-        return BcmlMod(Path(json["path"]))
+    def from_json(json_data: dict):
+        return BcmlMod(Path(json_data["path"]))
 
     @staticmethod
     def from_info(info_path: Path):
@@ -339,6 +338,7 @@ class BcmlMod:
 
     @property
     def mergers(self) -> list:
+        # pylint: disable=import-outside-toplevel
         from bcml.mergers import get_mergers_for_mod
 
         return get_mergers_for_mod(self)
@@ -378,7 +378,7 @@ class BcmlMod:
                                 f"Rule for {self.url} failed to find the remote preview"
                             )
                     else:
-                        raise KeyError(f"No preview image available")
+                        raise KeyError("No preview image available")
                 else:
                     image_path = self.image
                     if image_path.startswith("http"):
@@ -397,23 +397,13 @@ class BcmlMod:
             self._preview = self.path / image_path
             return self._preview
 
-        def uninstall(self, wait_merge: bool = False):
-            from bcml.install import uninstall_mod
-
-            uninstall_mod(self, wait_merge)
-
-        def get_modded_info() -> {}:
-            pass
-
 
 decompress = oead.yaz0.decompress
 compress = oead.yaz0.compress
 
 
 def vprint(content):
-    from bcml import DEBUG
-
-    if not DEBUG:
+    if not DEBUG or "Pool" in current_process().name:
         return
     if not isinstance(content, str):
         if isinstance(content, oead.byml.Hash) or isinstance(content, oead.byml.Array):
@@ -433,8 +423,6 @@ def vprint(content):
 
 def timed(func):
     def timed_function(*args, **kwargs):
-        from time import time_ns
-
         start = time_ns()
         res = func(*args, **kwargs)
         vprint(f"{func.__qualname__} took {(time_ns() - start) / 1000000000} seconds")
@@ -458,9 +446,7 @@ def get_python_exe() -> str:
 
 @lru_cache(None)
 def get_data_dir() -> Path:
-    import platform
-
-    if platform.system() == "Windows":
+    if system() == "Windows":
         data_dir = Path(os.path.expandvars("%LOCALAPPDATA%")) / "bcml"
     else:
         data_dir = Path.home() / ".config" / "bcml"
@@ -578,13 +564,11 @@ def set_game_dir(path: Path):
         get_mlc_dir()
     except FileNotFoundError:
         try:
-            from xml.dom import minidom
-
             set_path = get_cemu_dir() / "settings.xml"
             if not set_path.exists():
                 raise FileNotFoundError(
-                    "The Cemu settings file could not be found. This usually means your Cemu directory "
-                    "is set incorrectly."
+                    "The Cemu settings file could not be found. This usually means your "
+                    "Cemu directory is set incorrectly."
                 )
             set_read = ""
             with set_path.open("r") as setfile:
@@ -979,7 +963,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
                 else:
                     raise IndexError(f"Rule for {url} failed to find the remote preview")
             else:
-                raise KeyError(f"No preview image available")
+                raise KeyError("No preview image available")
         else:
             image_path = str(rules["Definition"]["image"])
             if image_path.startswith("http"):
@@ -1136,50 +1120,12 @@ def dict_merge(
             dct[k] = merge_dct[k] if merge_dct[k] != UNDERRIDE else dct[k]
 
 
-def create_schema_handler():
-    # pylint: disable=import-error,undefined-variable
-    import platform
-
-    if platform.system() == "Windows":
-        import winreg
-
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\bcml") as key:
-            try:
-                winreg.OpenKey(
-                    winreg.HKEY_CURRENT_USER,
-                    r"Software\Classes\bcml\shell\open\command",
-                    0,
-                    winreg.KEY_READ,
-                )
-            except (WindowsError, OSError):
-                winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
-                with winreg.CreateKey(key, r"shell\open\command") as key2:
-                    if (
-                        Path(os.__file__).parent.parent / "Scripts" / "bcml.exe"
-                    ).exists():
-                        exec_path = (
-                            Path(os.__file__).parent.parent / "Scripts" / "bcml.exe"
-                        )
-                    elif (
-                        Path(__file__).parent.parent.parent / "bin" / "bcml.exe"
-                    ).exists():
-                        exec_path = (
-                            Path(__file__).parent.parent.parent / "bin" / "bcml.exe"
-                        )
-                    else:
-                        return
-                    winreg.SetValueEx(
-                        key2, "", 0, winreg.REG_SZ, f'"{exec_path.resolve()}" "%1"'
-                    )
-
-
 class RulesParser(ConfigParser):
+    # pylint: disable=arguments-differ
     def __init__(self):
         ConfigParser.__init__(self, dict_type=MultiDict)
 
     def write(self, fileobject):
-        from io import StringIO
-
         buf = StringIO()
         ConfigParser.write(self, buf)
         config_str = re.sub(r"\[Preset[0-9]+\]", "[Preset]", buf.getvalue())
@@ -1219,14 +1165,6 @@ class Messager:
         self.log = []
 
     def write(self, string: str):
-        if (
-            string.strip("") not in {"", "\n"}
-            and not string.startswith("VERBOSE")
-            and isinstance(string, str)
-        ):
-            self.window.evaluate_js(
-                f"try {{ window.onMsg(`{string}`) }} catch(err) {{}};"
-            )
         self.log.append(string.replace("VERBOSE", ""))
 
     def isatty(self):
