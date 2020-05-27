@@ -29,7 +29,8 @@ class Settings extends React.Component {
             no_cemu: false,
             wiiu: true,
             no_hardlinks: false,
-            valid: false
+            valid: false,
+            use_cef: false
         };
         this.handleChange = this.handleChange.bind(this);
         this.formRef = React.createRef();
@@ -373,6 +374,28 @@ class Settings extends React.Component {
                                 />
                             </OverlayTrigger>
                         </Form.Group>
+                        {navigator.userAgent.includes("Windows") && (
+                            <Form.Group controlId="use_cef">
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            By default, BCML will use the built-in
+                                            EdgeHTML renderer for its webview UI. If this
+                                            doesn't work well, you can try using the
+                                            Chromium Embedded Framework (CEF) renderer
+                                            instead.
+                                        </Tooltip>
+                                    }
+                                    placement={"left"}>
+                                    <Form.Check
+                                        type="checkbox"
+                                        label="Use CEF renderer"
+                                        checked={this.state.use_cef}
+                                        onChange={this.handleChange}
+                                    />
+                                </OverlayTrigger>
+                            </Form.Group>
+                        )}
                     </Col>
                 </Row>
             </Form>

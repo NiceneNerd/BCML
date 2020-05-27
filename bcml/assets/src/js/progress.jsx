@@ -2,7 +2,7 @@ import { Modal, Spinner } from "react-bootstrap";
 
 import React from "react";
 
-const MESSAGES = [
+let messages = [
     "Finding Koroks",
     "Polishing Master Sword",
     "Dancing with Bokoblins",
@@ -22,6 +22,13 @@ const MESSAGES = [
     "Finding yet more Koroks"
 ];
 
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
 class ProgressModal extends React.Component {
     constructor(props) {
         super(props);
@@ -30,7 +37,8 @@ class ProgressModal extends React.Component {
         };
         setInterval(() => {
             if (this.props.show) {
-                this.setState({ messageIdx: (MESSAGES.length * Math.random()) | 0 });
+                shuffle(messages);
+                this.setState({ messageIdx: (messages.length * Math.random()) | 0 });
             }
         }, 2000);
     }
@@ -44,7 +52,7 @@ class ProgressModal extends React.Component {
                 <Modal.Body className="d-flex align-items-start">
                     <Spinner animation="border" role="status" className="flex-shrink-0" />
                     <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
-                        {MESSAGES[this.state.messageIdx]}…
+                        {messages[this.state.messageIdx]}…
                     </div>
                 </Modal.Body>
             </Modal>

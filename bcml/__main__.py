@@ -9,6 +9,7 @@ from pathlib import Path
 from platform import system
 from shutil import rmtree
 from subprocess import run, PIPE, Popen, DEVNULL
+from time import sleep
 from threading import Thread
 
 try:
@@ -87,9 +88,19 @@ class Api:
         return util.get_settings()
 
     def save_settings(self, params):
+        old_cef = util.get_settings("use_cef")
         print("Saving settings, BCML will reload momentarily...")
         util.get_settings.settings = params["settings"]
         util.save_settings()
+        if params["settings"]["use_cef"] and not util.can_cef():
+            print(
+                "Installing <code>cefpython3</code>, "
+                "if BCML does not restart, launch it again manually"
+            )
+            self.install_cef()
+        if params["settings"]["use_cef"] != old_cef:
+            sleep(1)
+            self.restart()
 
     def old_settings(self):
         old = util.get_data_dir() / "settings.ini"
@@ -527,13 +538,29 @@ class Api:
             stderr=PIPE,
         )
 
+    @win_or_lose
+    def install_cef(self):
+        run(
+            [util.get_python_exe(), "-m", "pip", "install", "cefpython3",],
+            check=True,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+
     def restart(self):
-        Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
+        opener = Thread(target=start_new_instance)
+        opener.start()
         for win in webview.windows:
             win.destroy()
 
     def get_version(self):
         return USER_VERSION
+
+
+def start_new_instance():
+    sleep(0.33)
+    Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
+    return
 
 
 def help_window():
@@ -547,7 +574,7 @@ def stop_it(messager: Messager = None):
         del globals()["logger"]
     except KeyError:
         pass
-    if SYSTEM == "Windows":
+    if SYSTEM == "Windows" and util.get_settings("use_cef"):
         Popen(
             "taskkill /F /IM subprocess.exe /T".split(),
             stdout=DEVNULL,
@@ -571,7 +598,8 @@ def main(debug: bool = False):
         pass
 
     _oneclick.register_handlers()
-    oneclick = Thread(target=_oneclick.listen, daemon=True)
+    oneclick = Thread(target=_oneclick.listen)
+    oneclick.daemon = True
     oneclick.start()
 
     api = Api()
@@ -597,7 +625,7 @@ def main(debug: bool = False):
     api.window.closing += stop_it
 
     gui: str = ""
-    if SYSTEM == "Windows":
+    if SYSTEM == "Windows" and util.get_settings("use_cef") and util.can_cef():
         gui = "cef"
     elif SYSTEM == "Linux":
         gui = "qt"
