@@ -28,19 +28,20 @@ jobs:
               working-directory: ./bcml/assets
               run: |
                   npm install
-                  npm build
-            - name: Build and publish to PyPI
-              env:
-                  TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-                  TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+                  ./node_modules/.bin/webpack --mode production
+            - name: Build artifacts
               run: |
                   python setup.py sdist bdist_wheel
                   rm bcml/helpers/7z.so
                   pynsist installer.cfg
-                  twine upload dist/*
             - name: Upload installer binary
               uses: skx/github-action-publish-binaries@master
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   args: "build/nsis/*.exe"
+            - name: Publish to PyPI
+              env:
+                  TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+                  TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+              run: twine upload dist/*
