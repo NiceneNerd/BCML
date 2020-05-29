@@ -560,7 +560,6 @@ class Api:
 def start_new_instance():
     sleep(0.33)
     Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
-    return
 
 
 def help_window():

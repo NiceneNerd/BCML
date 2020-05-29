@@ -357,9 +357,7 @@ class BcmlMod:
         self.path.rename(self.path.parent.resolve() / self._get_folder_id())
 
     def get_preview(self) -> Path:
-        try:
-            return self._preview
-        except AttributeError:
+        if self._preview is None:
             if not list(self.path.glob("thumbnail.*")):
                 if self.image:
                     if self.url and "gamebanana.com" in self.url:
@@ -395,7 +393,7 @@ class BcmlMod:
                 for thumb in self.path.glob("thumbnail.*"):
                     image_path = thumb
             self._preview = self.path / image_path
-            return self._preview
+        return self._preview
 
 
 decompress = oead.yaz0.decompress
@@ -406,7 +404,7 @@ def vprint(content):
     if not DEBUG or "Pool" in current_process().name:
         return
     if not isinstance(content, str):
-        if isinstance(content, oead.byml.Hash) or isinstance(content, oead.byml.Array):
+        if isinstance(content, (oead.byml.Hash, oead.byml.Array)):
             content = oead.byml.to_text(content)
         elif isinstance(content, oead.aamp.ParameterIO):
             content = content.to_text()
@@ -440,16 +438,16 @@ def get_exec_dir() -> Path:
 def get_python_exe() -> str:
     if get_exec_dir().parent.name == "pkgs":
         return str(get_exec_dir().parent.parent / "Python" / "python.exe")
-    else:
-        return sys.executable
+    return sys.executable
 
 
 def can_cef() -> bool:
     try:
-        from cefpython3 import cefpython
-
+        # fmt: off
+        from cefpython3 import cefpython # pylint: disable=import-outside-toplevel
         del cefpython
         return True
+        # fmt: on
     except ImportError:
         return False
 
@@ -563,8 +561,7 @@ def get_game_dir() -> Path:
         raise FileNotFoundError(
             "The BotW game directory has has moved or not been saved yet."
         )
-    else:
-        return Path(game_dir)
+    return Path(game_dir)
 
 
 def set_game_dir(path: Path):
@@ -653,7 +650,7 @@ def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
     if (mlc_dir / f"{title_id[0][0:7]}E" / title_id[1] / "content").exists():
         return mlc_dir / f"{title_id[0][0:7]}E" / title_id[1] / "content"
     # Then try the legacy layout
-    elif (mlc_dir / title_id[0] / title_id[1] / "content").exists():
+    if (mlc_dir / title_id[0] / title_id[1] / "content").exists():
         return mlc_dir / title_id[0] / title_id[1] / "content"
     return None
 
@@ -683,7 +680,7 @@ def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
     if (mlc_dir / f"{title_id[0][0:7]}C" / title_id[1] / "content" / "0010").exists():
         return mlc_dir / f"{title_id[0][0:7]}C" / title_id[1] / "content" / "0010"
     # Then try the legacy layout
-    elif (mlc_dir / title_id[0] / title_id[1] / "aoc" / "content" / "0010").exists():
+    if (mlc_dir / title_id[0] / title_id[1] / "aoc" / "content" / "0010").exists():
         return mlc_dir / title_id[0] / title_id[1] / "aoc" / "content" / "0010"
     return None
 
@@ -745,19 +742,17 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
             if (aoc_dir / path).exists():
                 return aoc_dir / path
             raise FileNotFoundError(f"{path} not found in DLC files.")
-        else:
-            raise FileNotFoundError(
-                f"{path} is a DLC file, but the DLC directory is missing."
-            )
+        raise FileNotFoundError(
+            f"{path} is a DLC file, but the DLC directory is missing."
+        )
     if get_settings("wiiu"):
         if (update_dir / path).exists():
             return update_dir / path
     if (game_dir / path).exists():
         return game_dir / path
-    elif aoc_dir and (aoc_dir / path).exists():
+    if aoc_dir and (aoc_dir / path).exists():
         return aoc_dir / path
-    else:
-        raise FileNotFoundError(f"File {str(path)} was not found in game dump.")
+    raise FileNotFoundError(f"File {str(path)} was not found in game dump.")
 
 
 def get_nested_file_bytes(file: str, unyaz: bool = True) -> bytes:
@@ -878,8 +873,7 @@ def is_file_sarc(path: str) -> bool:
 def unyaz_if_needed(file_bytes: bytes) -> bytes:
     if file_bytes[0:4] == b"Yaz0":
         return bytes(decompress(file_bytes))
-    else:
-        return file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)
+    return file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)
 
 
 def inject_file_into_sarc(file: str, data: bytes, sarc: str, create_sarc: bool = False):
@@ -952,15 +946,12 @@ def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
 
 
 @lru_cache(None)
-def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
-    if not rules:
-        rules = RulesParser()
-        rules.read(str(mod.path / "rules.txt"))
-    if "url" in rules["Definition"]:
-        url = str(rules["Definition"]["url"])
+def get_mod_preview(mod: BcmlMod) -> Path:
+    if mod.url:
+        url = mod.url
     if not list(mod.path.glob("thumbnail.*")):
-        if "image" not in rules["Definition"]:
-            if "url" in rules["Definition"] and "gamebanana.com" in url:
+        if not mod.image:
+            if url and "gamebanana.com" in url:
                 response = urllib.request.urlopen(url)
                 rdata = response.read().decode()
                 img_match = re.search(
@@ -976,7 +967,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
             else:
                 raise KeyError("No preview image available")
         else:
-            image_path = str(rules["Definition"]["image"])
+            image_path = mod.image
             if image_path.startswith("http"):
                 urllib.request.urlretrieve(
                     image_path,
@@ -985,7 +976,7 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
                 image_path = "thumbnail." + image_path.split(".")[-1]
             if not os.path.isfile(str(mod.path / image_path)):
                 raise FileNotFoundError(
-                    f"Preview {image_path} specified in rules.txt not found"
+                    f"Preview {image_path} specified in meta not found"
                 )
     else:
         for thumb in mod.path.glob("thumbnail.*"):
@@ -993,8 +984,9 @@ def get_mod_preview(mod: BcmlMod, rules: ConfigParser = None) -> Path:
     return mod.path / image_path
 
 
-def get_mod_link_meta(rules: ConfigParser = None):
-    url = str(rules["Definition"]["url"])
+def get_mod_link_meta(mod: BcmlMod):
+    # pylint: disable=too-many-branches
+    url = mod.url
     mod_domain = ""
     if "www." in url:
         mod_domain = url.split(".")[1]
@@ -1002,8 +994,6 @@ def get_mod_link_meta(rules: ConfigParser = None):
         mod_domain = url.split("//")[1].split(".")[0]
     site_name = mod_domain.capitalize()
     fetch_site_meta = True
-    if "site_meta" not in get_settings():
-        set_site_meta("")
     if len(get_settings("site_meta").split(";")) > 1:
         for site_meta in get_settings("site_meta").split(";"):
             if site_meta.split(":")[0] == mod_domain:
@@ -1108,20 +1098,14 @@ def dict_merge(
             dct[k] = merge_dct[k]
         elif (
             k in dct
-            and (isinstance(dct[k], dict) or isinstance(dct[k], oead.byml.Hash))
-            and (
-                isinstance(merge_dct[k], Mapping)
-                or isinstance(merge_dct[k], oead.byml.Hash)
-            )
+            and (isinstance(dct[k], (dict, oead.byml.Hash)))
+            and (isinstance(merge_dct[k], (Mapping, oead.byml.Hash)))
         ):
             dict_merge(dct[k], merge_dct[k])
         elif (
             k in dct
-            and (isinstance(dct[k], list) or isinstance(dct[k], oead.byml.Array))
-            and (
-                isinstance(merge_dct[k], list)
-                or isinstance(merge_dct[k], oead.byml.Array)
-            )
+            and (isinstance(dct[k], (list, oead.byml.Array)))
+            and (isinstance(merge_dct[k], (list, oead.byml.Array)))
         ):
             if overwrite_lists:
                 dct[k] = merge_dct[k]
@@ -1132,7 +1116,7 @@ def dict_merge(
 
 
 class RulesParser(ConfigParser):
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ,too-many-ancestors
     def __init__(self):
         ConfigParser.__init__(self, dict_type=MultiDict)
 
@@ -1178,7 +1162,7 @@ class Messager:
     def write(self, string: str):
         self.log.append(string.replace("VERBOSE", ""))
 
-    def isatty(self):
+    def isatty(self):  # pylint: disable=no-self-use
         return False
 
     def save(self):

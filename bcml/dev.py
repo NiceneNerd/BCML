@@ -1,4 +1,4 @@
-# pylint: disable=unsupported-assignment-operation
+# pylint: disable=unsupported-assignment-operation,no-member
 from base64 import urlsafe_b64encode
 from fnmatch import fnmatch
 from functools import partial
@@ -9,10 +9,9 @@ from platform import system
 from tempfile import TemporaryDirectory
 import shutil
 import subprocess
-import traceback
 
 import oead
-import xxhash
+import xxhash  # pylint: disable=wrong-import-order
 
 from bcml import util, install
 
@@ -222,7 +221,7 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         for file in [
             file
             for file in tmp_dir.rglob("**/*.smubin")
-            if fnmatch(file.name, "[A-Z]-[0-9]_*.smubin")
+            if fnmatch(file.name, "[A-Z]-[0-9]_*.smubin") and "MainField" in file.parts
         ]:
             file.unlink()
 
