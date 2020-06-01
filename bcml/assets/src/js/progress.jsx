@@ -19,7 +19,20 @@ let messages = [
     "Oh, look, more opal",
     "Attempting to climb a mountain in the rain",
     "Thinking about Mipha's slimy embrace",
-    "Finding yet more Koroks"
+    "Finding yet more Koroks",
+    "Disturbing the Monk's Sleep",
+    "Slashing Cuccos since 1991",
+    "Becoming a Pot Lid Hero",
+    "A weapon to surpass Ancient Gear",
+    "Ragdolling like a Goron",
+    "Diamonds are forever",
+    "Not running at 60FPS",
+    "That mountain over there, I can't reach it",
+    "A fistful of rupees",
+    "O Epona, Epona, wherefore art thou Epona?",
+    "The batteries are about to run out again",
+    "The durability on this mod is low",
+    "Oh look, yet another Korok"
 ];
 
 function shuffle(array) {
