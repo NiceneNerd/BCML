@@ -44,6 +44,7 @@ setup(
         "aamp>=1.4.1",
         "byml>=2.3.1",
         "oead>=1.1.1",
+        "pythonnet>=2.5.0rc2; platform_system=='Windows'",
         "pywebview~=3.2",
         "PyYAML~=5.3.1",
         "requests~=2.23.0",
