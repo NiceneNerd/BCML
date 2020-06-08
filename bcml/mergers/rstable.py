@@ -85,9 +85,16 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
 
 def calculate_size(path: Path) -> int:
     try:
-        return calculate_size.rstb_calc.calculate_file_size(
+        size = calculate_size.rstb_calc.calculate_file_size(
             file_name=str(path), wiiu=util.get_settings("wiiu"), force=False
         )
+        if path.suffix == ".bdmgparam":
+            size += 1000
+        if path.suffix == ".hkrb":
+            size += 8
+            if len(data) % 32 == 0:
+                size += 32
+        return size
     except struct.error:
         return 0
 
@@ -453,7 +460,11 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
                 data, wiiu=util.get_settings("wiiu"), ext=ext
             )
             if ext == ".bdmgparam":
-                size = 0
+                size += 1000
+            if ext == ".hkrb":
+                size += 8
+                if len(data) % 32 == 0:
+                    size += 32
             if size == 0 and (not no_guess or ext in {".bas", ".baslist"}):
                 if ext in util.AAMP_EXTS:
                     size = guess_aamp_size(data, ext)
