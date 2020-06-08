@@ -4,6 +4,7 @@
 import csv
 import io
 import os
+import math
 import multiprocessing
 import struct
 import zlib
@@ -179,19 +180,23 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
             if real_size < 500:
                 value = real_size * 7
             elif 500 < real_size <= 750:
+                value = real_size * 5
+            elif 750 < real_size <= 1250:
                 value = real_size * 4
-            elif 750 < real_size <= 2000:
-                value = real_size * 3
+            elif 1250 < real_size <= 2000:
+                value = real_size * 3.5
             elif 2000 < real_size <= 400000:
-                value = real_size * 1.75
+                value = real_size * 2.25
             elif 400000 < real_size <= 600000:
-                value = real_size * 1.7
-            elif 600000 < real_size <= 1500000:
-                value = real_size * 1.6
+                value = real_size * 2.1
+            elif 600000 < real_size <= 1000000:
+                value = real_size * 1.95
+            elif 1000000 < real_size <= 1500000:
+                value = real_size * 1.85
             elif 1500000 < real_size <= 3000000:
-                value = real_size * 1.5
+                value = real_size * 1.66
             else:
-                value = real_size * 1.25
+                value = real_size * 1.45
     else:
         if ".Tex" in name:
             if 50000 < real_size:
@@ -352,15 +357,19 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
             value = real_size * 3.5
     elif ext == ".bdmgparam":
         value = (((-0.0018 * real_size) + 6.6273) * real_size) + 500
+    elif ext == ".bphysics":
+        value = int(
+            (((int(real_size) + 32) & -32) + 0x4E + 0x324)
+            * max(4 * math.floor(real_size / 1388), 3)
+        )
     else:
         value = 0
     if not util.get_settings("wiiu"):
-        value = value * 1.5
+        value *= 1.5
     return int(value)
 
 
 def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = "rstb.log") -> {}:
-    """ Gets all of the RSTB values for a given mod """
     path = (
         mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
     )
