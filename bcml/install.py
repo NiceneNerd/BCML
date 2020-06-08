@@ -328,6 +328,7 @@ def refresh_master_export():
 def process_cp_mod(mod: Path):
     def nx2u(nx_text: str) -> str:
         return (
+            nx_text.replace("\\\\", "/")
             nx_text.replace("\\", "/")
             .replace("01007EF00011E000/romfs", "content")
             .replace("01007EF00011F001/romfs", "aoc/0010")
@@ -335,6 +336,7 @@ def process_cp_mod(mod: Path):
 
     def u2nx(u_text: str) -> str:
         return (
+            u_text.replace("\\\\", "/")
             u_text.replace("\\", "/")
             .replace("content", "01007EF00011E000/romfs")
             .replace("aoc/0010", "01007EF00011F001/romfs")
