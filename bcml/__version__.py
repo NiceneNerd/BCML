@@ -1,10 +1,10 @@
-_major = 3
-_minor = 0
-_patch = "0b14"
+_MAJOR = 3
+_MINOR = 0
+_PATCH = "0b15"
 
-VERSION = f"{_major}.{_minor}.{_patch}"
-USER_VERSION = f"""{_major}.{_minor}.{_patch[0:1]} {
-    'alpha' if _major < 1 else ''
+VERSION = f"{_MAJOR}.{_MINOR}.{_PATCH}"
+USER_VERSION = f"""{_MAJOR}.{_MINOR}.{_PATCH[0:1]} {
+    'alpha' if _MAJOR < 1 else ''
 }{
-    f'beta {_patch[_patch.rindex("b") + 1:]}' if 'b' in _patch else ''
+    f'beta {_PATCH[_PATCH.rindex("b") + 1:]}' if 'b' in _PATCH else ''
 }"""

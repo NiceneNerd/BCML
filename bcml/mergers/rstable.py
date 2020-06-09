@@ -93,7 +93,7 @@ def calculate_size(path: Path) -> int:
             size += 1000
         if path.suffix == ".hkrb":
             size += 8
-            if len(data) % 32 == 0:
+            if path.stat().st_size % 32 == 0:
                 size += 32
         return size
     except struct.error:

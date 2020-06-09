@@ -8,7 +8,6 @@ import os
 import re
 import shutil
 import subprocess
-import traceback
 from base64 import b64decode
 from copy import deepcopy
 from functools import partial
@@ -21,10 +20,9 @@ from typing import List, Union, Callable
 from xml.dom import minidom
 
 import oead
-import xxhash
 
 from bcml import util, mergers, dev, upgrade
-from bcml.util import BcmlMod, ZPATH, InstallError
+from bcml.util import BcmlMod, ZPATH
 
 
 def extract_mod_meta(mod: Path) -> {}:
@@ -131,7 +129,7 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     if (tmp_dir / util.get_dlc_path()).exists:
         try:
             util.get_aoc_dir()
-        except FileNotFoundError as err:
+        except FileNotFoundError:
             raise FileNotFoundError(
                 "This mod uses DLC files, but BCML cannot locate the DLC folder in "
                 "your game dump."
@@ -160,16 +158,16 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
         partial(_check_modded, tmp_dir=tmp_dir),
         {f for f in tmp_dir.rglob("**/*") if f.is_file()},
     )
-    for r in results:
-        if r:
-            modded_files.append(r)
+    for result in results:
+        if result:
+            modded_files.append(result)
     total = len(modded_files)
     print(f'Found {total} modified file{"s" if total > 1 else ""}')
 
     total = 0
     sarc_files = {f for f in modded_files if f.suffix in util.SARC_EXTS}
     if sarc_files:
-        print(f"Scanning files packed in SARCs...")
+        print("Scanning files packed in SARCs...")
         for files in this_pool.imap_unordered(
             partial(find_modded_sarc_files, tmp_dir=tmp_dir), sarc_files
         ):
@@ -306,13 +304,13 @@ def refresh_master_export():
             bcmlentry = settings.createElement("Entry")
             if new_cemu:
                 bcmlentry.setAttribute(
-                    "filename", f"graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
+                    "filename", "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
                 )
             else:
                 entryfile = settings.createElement("filename")
                 entryfile.appendChild(
                     settings.createTextNode(
-                        f"graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
+                        "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
                     )
                 )
                 bcmlentry.appendChild(entryfile)
@@ -329,7 +327,7 @@ def process_cp_mod(mod: Path):
     def nx2u(nx_text: str) -> str:
         return (
             nx_text.replace("\\\\", "/")
-            nx_text.replace("\\", "/")
+            .replace("\\", "/")
             .replace("01007EF00011E000/romfs", "content")
             .replace("01007EF00011F001/romfs", "aoc/0010")
         )
@@ -337,7 +335,7 @@ def process_cp_mod(mod: Path):
     def u2nx(u_text: str) -> str:
         return (
             u_text.replace("\\\\", "/")
-            u_text.replace("\\", "/")
+            .replace("\\", "/")
             .replace("content", "01007EF00011E000/romfs")
             .replace("aoc/0010", "01007EF00011F001/romfs")
         )
@@ -586,7 +584,7 @@ def install_mod(
         output_mod = BcmlMod(mod_dir)
         try:
             util.get_mod_link_meta(rules)
-            util.get_mod_preview(output_mod, rules)
+            util.get_mod_preview(output_mod)
         except Exception:  # pylint: disable=broad-except
             pass
 
@@ -627,7 +625,7 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
     (mod.path / ".disabled").write_bytes(b"")
     if not wait_merge:
         with Pool() as pool:
-            print(f"Remerging affected files...")
+            print("Remerging affected files...")
             for merger in remergers:
                 merger.set_pool(pool)
                 merger.perform_merge()
@@ -639,7 +637,7 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Enabling {mod.name}...")
     (mod.path / ".disabled").unlink()
     if not wait_merge:
-        print(f"Remerging affected files...")
+        print("Remerging affected files...")
         with Pool() as pool:
             remergers = []
             for merger in [merger() for merger in mergers.get_mergers()]:
