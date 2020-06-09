@@ -9,12 +9,12 @@ let messages = [
     "Stealing bananas from Yigas",
     "Eating raw meat like a chad",
     "Thinking about Zelda's warm embrace",
-    "Slaying dozens of Lynels",
+    "Slaying Lynels by the dozen",
     "Spamming Urbosa's Fury",
     "Running away from Guardians",
     "Detonating remote bombs",
     "Avoiding Beedle",
-    "Enacting revenge on Magda",
+    "Exacting revenge on Magda",
     "Debating between Hylia and the Golden Goddesses",
     "Oh, look, more opal",
     "Attempting to climb a mountain in the rain",
@@ -23,16 +23,17 @@ let messages = [
     "Disturbing the Monk's Sleep",
     "Slashing Cuccos since 1991",
     "Becoming a Pot Lid Hero",
-    "A weapon to surpass Ancient Gear",
     "Ragdolling like a Goron",
-    "Diamonds are forever",
     "Not running at 60FPS",
     "That mountain over there, I can't reach it",
-    "A fistful of rupees",
-    "O Epona, Epona, wherefore art thou Epona?",
+    '"O Epona, Epona, wherefore art thou Epona?"',
     "The batteries are about to run out again",
-    "The durability on this mod is low",
-    "Oh look, yet another Korok"
+    "Oh look, yet another Korok",
+    "Cooking only hearty foods",
+    "Friend-zoning Paya",
+    "Hiding secrets from everybody",
+    "Riding a shrine elevator",
+    "Forcing fairies to stay in a cooking pot"
 ];
 
 function shuffle(array) {
@@ -51,7 +52,9 @@ class ProgressModal extends React.Component {
         setInterval(() => {
             if (this.props.show) {
                 shuffle(messages);
-                this.setState({ messageIdx: (messages.length * Math.random()) | 0 });
+                this.setState({
+                    messageIdx: (messages.length * Math.random()) | 0
+                });
             }
         }, 2000);
     }
@@ -63,7 +66,11 @@ class ProgressModal extends React.Component {
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex align-items-start">
-                    <Spinner animation="border" role="status" className="flex-shrink-0" />
+                    <Spinner
+                        animation="border"
+                        role="status"
+                        className="flex-shrink-0"
+                    />
                     <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
                         {messages[this.state.messageIdx]}…
                     </div>

@@ -106,7 +106,7 @@ body,
     border-bottom: 2px solid #fff !important;
 }
 
-.tab-pane > .row {
+.tab-pane>.row {
     overflow: hidden;
     padding: 0 15px;
     height: 100%;
@@ -157,7 +157,7 @@ body,
     font-size: smaller;
     margin: 0.5rem 0;
     max-height: 100%;
-    min-height: -webkit-fill-available;
+    min-height: 100vh;
     overflow: auto;
     padding: 0.5rem 1rem;
     white-space: pre;
@@ -275,7 +275,7 @@ body,
     vertical-align: middle;
 }
 
-#mod-info > div {
+#mod-info>div {
     flex-shrink: 1;
 }
 
@@ -343,7 +343,7 @@ body,
     z-index: 1;
 }
 
-.mod-preview-shadow + .mod-title {
+.mod-preview-shadow+.mod-title {
     position: absolute;
     left: 15px;
     padding: 0;
@@ -624,7 +624,7 @@ Fade {
     background-color: #358039 !important;
 }
 
-.btn-group-xs > .btn,
+.btn-group-xs>.btn,
 .btn-xs {
     padding: 0.2rem 0.25rem;
     font-size: 0.667rem;
@@ -637,7 +637,7 @@ Fade {
     max-width: 75% !important;
 }
 
-.modal-dialog .btn-group-xs > .btn,
+.modal-dialog .btn-group-xs>.btn,
 .modal-dialog .btn-xs {
     padding: 2px;
     font-size: 0.875rem;
@@ -668,11 +668,11 @@ Fade {
     margin: 0.25rem 1rem 0.25rem 0;
 }
 
-.modal-content .accordion > .card {
+.modal-content .accordion>.card {
     background-color: #242529;
 }
 
-.modal-content .accordion > .card .card-header {
+.modal-content .accordion>.card .card-header {
     text-transform: capitalize;
 }
 
