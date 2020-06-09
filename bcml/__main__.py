@@ -240,21 +240,8 @@ class Api:
             ]
             util.vprint(f"Installed {len(mods)} mods")
             print(f"Installed {len(mods)} mods")
-            merger_set = set()
             try:
-                for mod in mods:
-                    merger_set.update(
-                        {
-                            m
-                            for m in mod.mergers
-                            if m.NAME not in {m.NAME for m in merger_set}
-                        }
-                    )
-                util.vprint("")
-                util.vprint({m.NAME for m in merger_set})
-                for merger in mergers.sort_mergers(merger_set):
-                    merger.set_pool(pool)
-                    merger.perform_merge()
+                install.refresh_merges()
                 print("Install complete")
             except Exception:  # pylint: disable=broad-except
                 pool.terminate()
@@ -289,9 +276,7 @@ class Api:
                 if m.NAME not in {m.NAME for m in remergers}
             }
             try:
-                for merger in mergers.sort_mergers(remergers):
-                    merger.set_pool(pool)
-                    merger.perform_merge()
+                install.refresh_merges()
             except Exception:  # pylint: disable=broad-except
                 pool.terminate()
                 raise
@@ -303,7 +288,6 @@ class Api:
             rmtree(folder)
 
     @win_or_lose
-    @install.refresher
     def apply_queue(self, params):
         mods = []
         for move_mod in params["moves"]:
@@ -321,19 +305,9 @@ class Api:
                         pool=pool,
                     )
                 )
-                print("Remerging where needed...")
-                all_mergers = [merger() for merger in mergers.get_mergers()]
-                remergers = set()
-                for mod in mods:
-                    for merger in all_mergers:
-                        if merger.is_mod_logged(mod) and merger.NAME not in {
-                            m.NAME for m in remergers
-                        }:
-                            remergers.add(merger)
+                print("Remerging...")
                 try:
-                    for merger in mergers.sort_mergers(remergers):
-                        merger.set_pool(pool)
-                        merger.perform_merge()
+                    install.refresh_merges()
                 except Exception:  # pylint: disable=broad-except
                     pool.terminate()
                     raise
@@ -394,6 +368,7 @@ class Api:
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
+    @install.refresher
     def remerge(self, params):
         try:
             if not util.get_installed_mods():
@@ -409,7 +384,6 @@ class Api:
                     for m in mergers.get_mergers()
                     if m().friendly_name == params["name"]
                 ][0].perform_merge()
-                install.refresh_master_export()
         except Exception as err:  # pylint: disable=broad-except
             raise Exception(
                 f"There was an error merging your mods. {str(err)}\n"

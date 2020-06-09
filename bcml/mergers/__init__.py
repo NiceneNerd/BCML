@@ -114,12 +114,14 @@ class Merger(metaclass=ABCMeta):
 
 def get_mergers() -> List[Merger]:
     """ Retrieves all available types of mod mergers """
+    # pylint: disable=import-outside-toplevel
 
     from bcml.mergers import (
         pack,
         texts,
         merge,
         drop,
+        shop,
         data,
         mubin,
         events,
@@ -133,6 +135,7 @@ def get_mergers() -> List[Merger]:
         pack.PackMerger,
         merge.DeepMerger,
         drop.DropMerger,
+        shop.ShopMerger,
         texts.TextsMerger,
         actors.ActorInfoMerger,
         mubin.DungeonStaticMerger,
@@ -147,11 +150,11 @@ def get_mergers() -> List[Merger]:
 
 
 def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
-    ms = set()
-    for m in [m() for m in get_mergers()]:
-        if m.is_mod_logged(mod):
-            ms.add(m)
-    return ms
+    mergers = set()
+    for merger in [m() for m in get_mergers()]:
+        if merger.is_mod_logged(mod):
+            mergers.add(merger)
+    return mergers
 
 
 def sort_mergers(mergers: List[Merger]) -> List[Merger]:

@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring,no-member,too-many-lines,invalid-name
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-from functools import lru_cache
 import json
 import os
 import re
@@ -12,6 +11,8 @@ import urllib.request
 from collections import OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
+from copy import deepcopy
+from functools import lru_cache
 from io import StringIO
 from multiprocessing import current_process
 from pathlib import Path
@@ -23,6 +24,7 @@ from xml.dom import minidom
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
+from oead.aamp import ParameterIO, ParameterList
 from webview import Window  # pylint: disable=wrong-import-order
 
 from bcml import pickles, DEBUG  # pylint: disable=unused-import
@@ -327,7 +329,7 @@ class BcmlMod:
         return (self.path / ".disabled").exists()
 
     def _get_folder_id(self):
-        return f"{self.priority}_" + re.sub(
+        return f"{self.priority:04}_" + re.sub(
             r"(?u)[^-\w.]", "", self.name.strip().replace(" ", "")
         )
 
@@ -1113,6 +1115,54 @@ def dict_merge(
                 dct[k].extend(merge_dct[k])
         else:
             dct[k] = merge_dct[k] if merge_dct[k] != UNDERRIDE else dct[k]
+
+
+def pio_merge(
+    ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
+) -> Union[ParameterIO, ParameterList]:
+    if isinstance(ref, ParameterIO):
+        merged = deepcopy(ref)
+    else:
+        merged = ref
+    for key, plist in mod.lists.items():
+        if key not in merged.lists:
+            merged.lists[key] = plist
+        else:
+            merged_list = pio_merge(merged.lists[key], plist)
+            if merged_list.lists or merged_list.objects:
+                merged.lists[key] = merged_list
+    for key, pobj in mod.objects.items():
+        if key not in merged.objects:
+            merged.objects[key] = pobj
+        else:
+            merged_pobj = merged.objects[key]
+            for pkey, param in pobj.params.items():
+                if pkey not in merged_pobj.params or param != merged_pobj.params[pkey]:
+                    merged_pobj.params[pkey] = param
+    return merged
+
+
+def pio_subtract(
+    ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList]
+) -> Union[ParameterIO, ParameterList]:
+    if isinstance(ref, ParameterIO):
+        merged = deepcopy(ref)
+    else:
+        merged = ref
+    for key, plist in mod.lists.items():
+        if key in merged.lists:
+            pio_subtract(merged.lists[key], plist)
+            if len(merged.lists[key].objects) == 0 and len(merged.lists[key].lists) == 0:
+                del merged.lists[key]
+    for key, pobj in mod.objects.items():
+        if key in merged.objects:
+            merged_pobj = merged.objects[key]
+            for pkey in pobj.params:
+                if pkey in merged_pobj.params:
+                    del merged_pobj.params[pkey]
+            if len(merged_pobj.params) == 0:
+                del merged.objects[key]
+    return merged
 
 
 class RulesParser(ConfigParser):

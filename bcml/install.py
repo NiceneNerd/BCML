@@ -624,11 +624,8 @@ def disable_mod(mod: BcmlMod, wait_merge: bool = False):
             remergers.append(merger)
     (mod.path / ".disabled").write_bytes(b"")
     if not wait_merge:
-        with Pool() as pool:
-            print("Remerging affected files...")
-            for merger in remergers:
-                merger.set_pool(pool)
-                merger.perform_merge()
+        print("Remerging...")
+        refresh_merges()
     print(f"{mod.name} disabled")
 
 
@@ -637,22 +634,14 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Enabling {mod.name}...")
     (mod.path / ".disabled").unlink()
     if not wait_merge:
-        print("Remerging affected files...")
-        with Pool() as pool:
-            remergers = []
-            for merger in [merger() for merger in mergers.get_mergers()]:
-                if merger.is_mod_logged(mod):
-                    remergers.append(merger)
-                    merger.set_pool(pool)
-            for merger in remergers:
-                merger.perform_merge()
+        print("Remerging...")
+        refresh_merges()
     print(f"{mod.name} enabled")
 
 
 @refresher
 def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Uninstalling {mod.name}...")
-    remergers = set(mod.mergers)
     shutil.rmtree(str(mod.path))
 
     for fall_mod in [m for m in util.get_installed_mods() if m.priority > mod.priority]:
@@ -663,15 +652,11 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
         util.create_bcml_graphicpack_if_needed()
     else:
         if not wait_merge:
-            with Pool() as pool:
-                for merger in mergers.sort_mergers(remergers):
-                    merger.set_pool(pool)
-                    merger.perform_merge()
+            refresh_merges()
 
     print(f"{mod.name} has been uninstalled.")
 
 
-@refresher
 def refresh_merges():
     print("Cleansing old merges...")
     shutil.rmtree(util.get_master_modpack_dir(), True)
