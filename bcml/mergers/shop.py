@@ -349,6 +349,8 @@ class ShopMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list) -> dict:
+        if not diffs:
+            return {}
         all_diffs_pio: ParameterIO = reduce(util.pio_merge, diffs)
         all_diffs: dict = {}
         for file_key, file_list in all_diffs_pio.lists.items():
