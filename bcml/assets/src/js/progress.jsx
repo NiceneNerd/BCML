@@ -51,12 +51,15 @@ class ProgressModal extends React.Component {
         };
         setInterval(() => {
             if (this.props.show) {
-                shuffle(messages);
                 this.setState({
                     messageIdx: (messages.length * Math.random()) | 0
                 });
             }
         }, 2000);
+    }
+
+    componentDidUpdate() {
+        shuffle(messages);
     }
 
     render() {
@@ -66,11 +69,7 @@ class ProgressModal extends React.Component {
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex align-items-start">
-                    <Spinner
-                        animation="border"
-                        role="status"
-                        className="flex-shrink-0"
-                    />
+                    <Spinner animation="border" role="status" className="flex-shrink-0" />
                     <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
                         {messages[this.state.messageIdx]}…
                     </div>
