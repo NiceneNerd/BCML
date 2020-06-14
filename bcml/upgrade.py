@@ -64,6 +64,7 @@ def convert_old_settings():
         "lang": old_settings["Settings"]["lang"],
         "no_cemu": False,
         "wiiu": True,
+        "use_cef": util.can_cef(),
     }
     setattr(util.get_settings, "settings", settings)
     (util.get_data_dir() / "settings.ini").unlink()
