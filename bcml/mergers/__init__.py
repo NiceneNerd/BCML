@@ -94,11 +94,13 @@ class Merger(metaclass=ABCMeta):
 
     def get_bootup_injection(self) -> (str, bytes):
         """ Gets whatever file this merger needs to inject into `Bootup.pack` """
-        raise NotImplementedError
+        return (None, None)
 
-    def get_mod_affected(self, mod: util.BcmlMod) -> []:
+    def get_mod_affected(
+        self, mod: util.BcmlMod  # pylint: disable=unused-argument
+    ) -> []:
         """ Gets a list of files affected by a mod, if merger supports partial remerge """
-        raise NotImplementedError
+        return []
 
     def perform_merge(self):
         """ Applies one or more patches to the current mod installation """

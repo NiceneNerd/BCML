@@ -1,18 +1,20 @@
 """Provides functions for diffing and merging the BotW Resource Size Table"""
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+# pylint: disable=no-member
 import csv
 import io
-import os
 import math
 import multiprocessing
 import struct
 import zlib
 from copy import deepcopy
 from functools import partial
+from json import dumps
 from pathlib import Path
 from typing import List, Union
 
+# pylint: disable=wrong-import-order
 import oead
 import rstb
 from rstb import ResourceSizeTable
@@ -86,7 +88,7 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
 
 def calculate_size(path: Path) -> int:
     try:
-        size = calculate_size.rstb_calc.calculate_file_size(
+        size = getattr(calculate_size, "rstb_calc").calculate_file_size(
             file_name=str(path), wiiu=util.get_settings("wiiu"), force=False
         )
         if path.suffix == ".bdmgparam":
@@ -125,8 +127,9 @@ def set_size(entry: str, size: int):
 def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
     real_bytes = file if isinstance(file, bytes) else file.read_bytes()
     if real_bytes[0:4] == b"Yaz0":
-        real_bytes = util.decompress(real_bytes)
-    real_size = int(len(real_bytes) * 1.05)
+        real_size = oead.yaz0.get_header(real_bytes[0:16]).uncompressed_size
+    else:
+        real_size = int(len(real_bytes) * 1.05)
     del real_bytes
     if name == "":
         if isinstance(file, Path):
@@ -199,30 +202,30 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
                 value = real_size * 1.45
     else:
         if ".Tex" in name:
-            if 50000 < real_size:
+            if real_size > 50000:
                 value = real_size * 1.2
-            elif 30000 < real_size:
+            elif real_size > 30000:
                 value = real_size * 1.3
-            elif 10000 < real_size:
+            elif real_size > 10000:
                 value = real_size * 1.5
             else:
                 value = real_size * 2
         else:
-            if 4000000 < real_size:
+            if real_size > 4000000:
                 value = real_size * 1.5
-            elif 3000000 < real_size:
+            elif real_size > 3000000:
                 value = real_size * 1.667
-            elif 2000000 < real_size:
+            elif real_size > 2000000:
                 value = real_size * 2.5
-            elif 800000 < real_size:
+            elif real_size > 800000:
                 value = real_size * 3.15
-            elif 100000 < real_size:
+            elif real_size > 100000:
                 value = real_size * 3.5
-            elif 50000 < real_size:
+            elif real_size > 50000:
                 value = real_size * 3.66
-            elif 2500 < real_size:
+            elif real_size > 2500:
                 value = real_size * 4.25
-            elif 1250 < real_size:
+            elif real_size > 1250:
                 value = real_size * 6
             else:
                 value = real_size * 9.5
@@ -517,7 +520,7 @@ def _calculate_rstb_size(file: Path, root: Path, no_guess: bool = False) -> dict
 
 
 def log_merged_files_rstb(pool: multiprocessing.Pool = None):
-    p: multiprocessing.Pool = pool or multiprocessing.Pool()
+    this_pool: multiprocessing.Pool = pool or multiprocessing.Pool()
     print("Updating RSTB for merged files...")
     diffs = {}
     files = {
@@ -526,7 +529,7 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if f.is_file() and f.parent != "logs"
     }
     no_guess = util.get_settings("no_guess")
-    results = p.map(
+    results = this_pool.map(
         partial(
             _calculate_rstb_size, root=util.get_master_modpack_dir(), no_guess=no_guess
         ),
@@ -541,12 +544,12 @@ def log_merged_files_rstb(pool: multiprocessing.Pool = None):
         if (f.suffix in (util.SARC_EXTS - {".ssarc", ".sblarc", ".sbfarc"}))
     }
     if sarc_files:
-        results = p.map(_get_sizes_in_sarc, sarc_files)
+        results = this_pool.map(_get_sizes_in_sarc, sarc_files)
         for result in results:
             diffs.update(result)
     if not pool:
-        p.close()
-        p.join()
+        this_pool.close()
+        this_pool.join()
     (util.get_master_modpack_dir() / "logs").mkdir(parents=True, exist_ok=True)
     with (util.get_master_modpack_dir() / "logs" / "rstb.log").open(
         "w", encoding="utf-8"
@@ -593,8 +596,6 @@ def generate_master_rstb():
 
     rstb_log = util.get_master_modpack_dir() / "logs" / "master-rstb.log"
     rstb_log.parent.mkdir(parents=True, exist_ok=True)
-    from json import dumps
-
     rstb_log.write_text(dumps(rstb_values))
 
 
@@ -676,7 +677,7 @@ class RstbMerger(mergers.Merger):
         diffs = {}
         if isinstance(diff_material, dict):
             diffs = diff_material
-        elif isinstance(diff_material, List):
+        elif isinstance(diff_material, list):
             diffs = self.generate_diff(mod_dir, diff_material)
 
         log_path = mod_dir / "logs" / self._log_name
