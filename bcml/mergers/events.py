@@ -166,6 +166,7 @@ class EventInfoMerger(mergers.Merger):
             create_sarc=True,
         )
         print("Saving event info merge log...")
+        event_merge_log.parent.mkdir(parents=True, exist_ok=True)
         event_merge_log.write_text(str(event_mod_hash))
         merged_events.write_bytes(event_bytes)
 

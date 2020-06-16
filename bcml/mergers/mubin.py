@@ -555,6 +555,7 @@ class MapMerger(mergers.Merger):
             pool.join()
 
         print("Adjusting RSTB...")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("w", encoding="utf-8") as l_file:
             for canon, val in rstb_vals.items():
                 l_file.write(f"{canon},{val}\n")

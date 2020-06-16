@@ -185,7 +185,7 @@ class DropMerger(mergers.Merger):
             print("No drop table merging necessary")
             return
         print("Merging drop table edits...")
-        pool = self._pool or Pool(1)
+        pool = self._pool or Pool()
         pool.starmap(merge_drop_file, diffs.items())
         if not self._pool:
             pool.close()

@@ -135,6 +135,7 @@ class StatusEffectMerger(mergers.Merger):
             create_sarc=True,
         )
         print("Saving status effect merge log...")
+        merged_effects.parent.mkdir(parents=True, exist_ok=True)
         merged_effects.write_bytes(effect_bytes)
 
         print("Updating RSTB...")

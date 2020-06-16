@@ -393,6 +393,7 @@ class ShopMerger(mergers.Merger):
             pool.join()
 
         print("Saving shop merge log...")
+        shop_merge_log.parent.mkdir(parents=True, exist_ok=True)
         with shop_merge_log.open("w") as s_log:
             for file_name in new_shop_files_list:
                 print(file_name, file=s_log)
