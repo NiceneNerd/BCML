@@ -28,7 +28,16 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/NiceneNerd/BCML",
     include_package_data=True,
-    packages=["bcml"],
+    packages=["bcml", "webview", "webview.js", "webview.platforms"],
+    package_dir={"webview": "webview", "bcml": "bcml"},
+    package_data={
+        "webview": [
+            "webview/lib/WebBrowserInterop.x64.dll",
+            "webview/lib/WebBrowserInterop.x86.dll",
+            "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"
+            "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.LICENSE.md",
+        ]
+    },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
         "console_scripts": ["bcml-debug = bcml.__main__:main_debug"],
@@ -45,7 +54,6 @@ setup(
         "byml>=2.3.1",
         "oead>=1.1.1",
         "pythonnet>=2.5.0rc2; platform_system=='Windows'",
-        "pywebview~=3.2",
         "PyYAML~=5.3.1",
         "requests~=2.23.0",
         "rstb>=1.2.0",
