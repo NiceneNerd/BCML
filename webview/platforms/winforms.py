@@ -795,6 +795,18 @@ def create_window(window):
         if is_cef:
             CEF.init(window)
 
+        if windll.shell32.IsUserAnAdmin() != 0:
+            from tkinter.messagebox import showerror
+
+            showerror(
+                "Admin Error",
+                "BCML cannot be run as administrator in EdgeHTML mode. "
+                "Please run without administrator privileges and try again. If you need "
+                'to run BCML as administrator in the future, check the "Use CEF renderer'
+                "\" option in BCML's settings.",
+            )
+            exit(1)
+
         app.EnableVisualStyles()
         app.SetCompatibleTextRenderingDefault(False)
         thread = Thread(ThreadStart(create))

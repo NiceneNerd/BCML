@@ -577,12 +577,18 @@ def main(debug: bool = False):
 
     api = Api()
 
+    gui: str = ""
+    if SYSTEM == "Windows" and util.get_settings("use_cef") and util.can_cef():
+        gui = "cef"
+    elif SYSTEM == "Linux":
+        gui = "qt"
+
     url: str
     if (util.get_data_dir() / "settings.json").exists():
-        url = f"{util.get_exec_dir()}/assets/index.html"
+        url = "assets/index.html"
         width, height = 907, 680
     else:
-        url = f"{util.get_exec_dir()}/assets/index.html?firstrun=yes"
+        url = "assets/index.html?firstrun=yes"
         width, height = 750, 600
 
     api.window = webview.create_window(
@@ -596,12 +602,6 @@ def main(debug: bool = False):
     )
     globals()["logger"] = Messager(api.window)
     api.window.closing += stop_it
-
-    gui: str = ""
-    if SYSTEM == "Windows" and util.get_settings("use_cef") and util.can_cef():
-        gui = "cef"
-    elif SYSTEM == "Linux":
-        gui = "qt"
 
     if not debug:
         debug = DEBUG or "bcml-debug" in sys.argv
