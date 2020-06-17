@@ -195,7 +195,8 @@ def _cef_call(func):
         uid = args[-1]
 
         if uid not in instances:
-            raise Exception("CEF window with uid {0} does not exist".format(uid))
+            print("CEF window with uid {0} does not exist".format(uid))
+            return
 
         return func(*args, **kwargs)
 
@@ -286,7 +287,10 @@ def load_url(url, uid):
 
 @_cef_call
 def evaluate_js(code, uid):
-    instance = instances[uid]
+    try:
+        instance = instances[uid]
+    except KeyError:
+        pass
     return instance.evaluate_js(code)
 
 

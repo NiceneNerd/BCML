@@ -19,17 +19,15 @@ There are three ways to install BCML.
 
 ### PyPI
 
-Install Python 3.7+ (**64 bit version**), then run `pip install bcml`. Note that
-3.8 is only supported on Linux. Windows users need to use 3.7 until
-[Python.NET](https://github.com/pythonnet/pythonnet) is updated with wheels for
-3.8.
+Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then run
+`pip install bcml`.
 
 ### Windows Installer
 
 Download the setup executable from the
-[latest GitHub release](https://github.com/NiceneNerd/BCML/releases) or from
+[latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
 [GameBanana](https://gamebanana.com/tools/6624). Double click to run and install
-BCML. Note: It is highly recommended that you do not use "Install for all
+BCML. Note: It is *highly* recommended that you do not use "Install for all
 users."
 
 ### Building from Source
@@ -37,12 +35,11 @@ users."
 Building from source requires, in addition to the general prerequisites:
 
 -   Python 3.7+ 64 bit
--   Node.js 14
+-   Node.js v14
 -   The following Python packages:
     -   aamp>=1.4.1
     -   byml>=2.3.1
     -   oead>=1.1.1
-    -   pywebview~=3.2
     -   pyYaml~=5.3.1
     -   requests~=2.23.0
     -   rstb>=1.2.0
@@ -78,7 +75,7 @@ for it and submitting a PR.
 ## License
 
 This software is licensed under the terms of the GNU General Public License,
-version 3 or later.
+version 3 or later. The source is publicly available on GitHub.
 
 This software includes the 7-Zip console application `7z.exe` and the library
 `7z.dll`, which are licensed under the GNU Lesser General Public License. The
@@ -90,3 +87,8 @@ This software includes a lightly modified copy of the console application
 code for this application is available for free at
 [https://gitlab.com/jkcclemens/msyt](https://gitlab.com/jkcclemens/msyt). The
 only change is a replacement of `serde_yaml` with `serde_json`.
+
+This software includes part of a modified copy of the `pywebview` Python package,
+copyrighted 2020 Roman Sirokov under the BSD-3-Clause License. The source code
+for the original library is available for free at
+[https://github.com/r0x0r/pywebview](https://github.com/r0x0r/pywebview).
