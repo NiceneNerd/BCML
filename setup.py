@@ -31,12 +31,20 @@ setup(
     packages=["bcml", "webview", "webview.js", "webview.platforms"],
     package_dir={"webview": "webview", "bcml": "bcml"},
     package_data={
+        "bcml": [
+            "bcml/lib/concrt140.dll",
+            "bcml/lib/msvcp140.dll",
+            "bcml/lib/vcamp140.dll",
+            "bcml/lib/vccorlib140.dll",
+            "bcml/lib/vcomp140.dll",
+            "bcml/lib/vcruntime140.dll",
+        ],
         "webview": [
             "webview/lib/WebBrowserInterop.x64.dll",
             "webview/lib/WebBrowserInterop.x86.dll",
             "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"
             "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.LICENSE.md",
-        ]
+        ],
     },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],

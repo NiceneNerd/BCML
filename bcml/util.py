@@ -431,9 +431,19 @@ def timed(func):
     return timed_function
 
 
-@lru_cache(None)
+@lru_cache(1)
 def get_exec_dir() -> Path:
     return Path(os.path.dirname(os.path.realpath(__file__)))
+
+
+@lru_cache(1)
+def get_url_base() -> str:
+    exec_dir = get_exec_dir()
+    if "pkgs" in exec_dir.parts:
+        os.chdir(exec_dir.parent.parent)
+        return (exec_dir.relative_to(Path.cwd()) / "assets").as_posix()
+    else:
+        return "assets"
 
 
 @lru_cache(1)

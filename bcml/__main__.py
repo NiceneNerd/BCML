@@ -1,3 +1,18 @@
+# fmt: off
+try:
+    import oead
+    oead
+except:
+    from tkinter.messagebox import showerror
+    showerror(
+        "Dependency Error",
+        "The latest (2019) Visual C++ redistributable for x64 is required to run BCML. "
+        "Please download it from the following link and try again: \n"
+        "https://aka.ms/vs/16/release/vc_redist.x64.exe",
+    )
+    exit(1)
+# fmt: on
+
 import base64
 import json
 import platform
@@ -5,10 +20,11 @@ import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import Pool, set_start_method
+from os import chdir
 from pathlib import Path
 from platform import system
-from shutil import rmtree
 from subprocess import run, PIPE, Popen, DEVNULL
+from shutil import rmtree
 from time import sleep
 from threading import Thread
 
@@ -16,7 +32,6 @@ try:
     from os import startfile  # pylint: disable=no-name-in-module
 except ImportError:
     pass
-
 import webview
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util, _oneclick
@@ -537,7 +552,7 @@ def start_new_instance():
 
 
 def help_window():
-    webview.create_window("BCML Help", url="assets/help.html?page=main")
+    webview.create_window("BCML Help", url=f"{util.get_url_base()}/help.html?page=main")
 
 
 def stop_it(messager: Messager = None):
@@ -583,12 +598,12 @@ def main(debug: bool = False):
     elif SYSTEM == "Linux":
         gui = "qt"
 
-    url: str
+    base = util.get_url_base()
     if (util.get_data_dir() / "settings.json").exists():
-        url = "assets/index.html"
+        url = f"{base}/index.html"
         width, height = 907, 680
     else:
-        url = "assets/index.html?firstrun=yes"
+        url = f"{base}/index.html?firstrun=yes"
         width, height = 750, 600
 
     api.window = webview.create_window(
