@@ -192,6 +192,13 @@ def escape_string(string):
     )
 
 
+def transform_url(url):
+    if url and "://" not in url:
+        return base_uri(url)
+    else:
+        return url
+
+
 def make_unicode(string):
     """
     Python 2 and 3 compatibility function that converts a string to Unicode. In case of Unicode, the string is returned

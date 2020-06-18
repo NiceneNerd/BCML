@@ -437,16 +437,6 @@ def get_exec_dir() -> Path:
 
 
 @lru_cache(1)
-def get_url_base() -> str:
-    exec_dir = get_exec_dir()
-    if "pkgs" in exec_dir.parts:
-        os.chdir(exec_dir.parent.parent)
-        return (exec_dir.relative_to(Path.cwd()) / "assets").as_posix()
-    else:
-        return "assets"
-
-
-@lru_cache(1)
 def get_python_exe() -> str:
     if get_exec_dir().parent.name == "pkgs":
         return str(get_exec_dir().parent.parent / "Python" / "python.exe")

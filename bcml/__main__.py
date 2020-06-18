@@ -1,14 +1,15 @@
 # fmt: off
 try:
     import oead
-    oead
-except:
-    from tkinter.messagebox import showerror
-    showerror(
-        "Dependency Error",
-        "The latest (2019) Visual C++ redistributable for x64 is required to run BCML. "
-        "Please download it from the following link and try again: \n"
+except ImportError:
+    import ctypes
+    ctypes.windll.user32.MessageBoxW(
+        0,
+        "The latest (2019) Visual C++ redistributable is required to run BCML. Please "
+        "download it from the following link and try again:\n"
         "https://aka.ms/vs/16/release/vc_redist.x64.exe",
+        "Dependency Error",
+        0x0 | 0x10
     )
     exit(1)
 # fmt: on
@@ -20,7 +21,6 @@ import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import Pool, set_start_method
-from os import chdir
 from pathlib import Path
 from platform import system
 from subprocess import run, PIPE, Popen, DEVNULL
@@ -37,10 +37,12 @@ import webview
 from bcml import DEBUG, install, dev, mergers, upgrade, util, _oneclick
 from bcml.util import BcmlMod, Messager
 from bcml.mergers.rstable import generate_rstb_for_mod
+from bcml._server import start_server
 from bcml.__version__ import USER_VERSION
 
 LOG = util.get_data_dir() / "bcml.log"
 SYSTEM = system()
+HOST = "http://localhost:8777"
 
 
 def win_or_lose(func):
@@ -552,7 +554,7 @@ def start_new_instance():
 
 
 def help_window():
-    webview.create_window("BCML Help", url=f"{util.get_url_base()}/help.html?page=main")
+    webview.create_window("BCML Help", url=f"{HOST}/help.html?page=main")
 
 
 def stop_it(messager: Messager = None):
@@ -590,6 +592,10 @@ def main(debug: bool = False):
     oneclick.daemon = True
     oneclick.start()
 
+    server = Thread(target=start_server)
+    server.daemon = True
+    server.start()
+
     api = Api()
 
     gui: str = ""
@@ -598,12 +604,11 @@ def main(debug: bool = False):
     elif SYSTEM == "Linux":
         gui = "qt"
 
-    base = util.get_url_base()
     if (util.get_data_dir() / "settings.json").exists():
-        url = f"{base}/index.html"
+        url = f"{HOST}/index.html"
         width, height = 907, 680
     else:
-        url = f"{base}/index.html?firstrun=yes"
+        url = f"{HOST}/index.html?firstrun=yes"
         width, height = 750, 600
 
     api.window = webview.create_window(

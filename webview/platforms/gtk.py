@@ -156,8 +156,8 @@ class BrowserView:
         self.webview.set_opacity(0.0)
         scrolled_window.add(self.webview)
 
-        if window.real_url is not None:
-            self.webview.load_uri(window.real_url)
+        if window.url is not None:
+            self.webview.load_uri(window.url)
         elif window.html:
             self.webview.load_html(window.html, "")
         else:

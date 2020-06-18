@@ -31,7 +31,6 @@ from webview.util import (
 )
 from webview.window import Window
 from .localization import localization as original_localization
-from .wsgi import Routing, StaticFiles, StaticResources
 
 
 __all__ = (

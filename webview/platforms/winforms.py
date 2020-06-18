@@ -28,7 +28,7 @@ from webview import (
     _user_agent,
 )
 from webview.guilib import forced_gui_
-from webview.serving import resolve_url
+from webview.http_server import start_server
 from webview.util import (
     parse_api_js,
     interop_dll_path,
@@ -168,8 +168,8 @@ class BrowserView:
             self.web_browser.DownloadComplete += self.on_download_complete
             self.web_browser.DocumentCompleted += self.on_document_completed
 
-            if window.real_url:
-                self.web_browser.Navigate(window.real_url)
+            if window.url:
+                self.web_browser.Navigate(window.url)
             elif window.html:
                 self.web_browser.DocumentText = window.html
             else:
@@ -310,8 +310,8 @@ class BrowserView:
 
             _allow_localhost()
 
-            if window.real_url:
-                self.load_url(window.real_url)
+            if window.url:
+                self.load_url(window.url)
             elif window.html:
                 self.load_html(window.html, "")
             else:
@@ -342,7 +342,7 @@ class BrowserView:
             if self.httpd:
                 self.httpd.shutdown()
 
-            url = resolve_url("file://" + self.temp_html)
+            url, _ = start_server("file://" + self.temp_html)
             self.ishtml = True
             self.web_view.Navigate(url)
 
@@ -351,7 +351,7 @@ class BrowserView:
 
             # WebViewControl as of 5.1.1 crashes on file:// urls. Stupid workaround to make it work
             if url.startswith("file://"):
-                url = resolve_url(self.url)
+                url = start_server(self.url)
 
             self.web_view.Navigate(url)
 
@@ -410,7 +410,7 @@ class BrowserView:
         def __init__(self, window):
             self.uid = window.uid
             self.pywebview_window = window
-            self.real_url = None
+            self.url = None
             self.Text = window.title
             self.Size = Size(window.initial_width, window.initial_height)
             self.MinimumSize = Size(window.min_size[0], window.min_size[1])
@@ -446,7 +446,7 @@ class BrowserView:
             self.closing = window.closing
             self.shown = window.shown
             self.loaded = window.loaded
-            self.url = window.real_url
+            self.url = window.url
             self.text_select = window.text_select
             self.on_top = window.on_top
 
@@ -796,14 +796,16 @@ def create_window(window):
             CEF.init(window)
 
         if windll.shell32.IsUserAnAdmin() != 0:
-            from tkinter.messagebox import showerror
+            import ctypes
 
-            showerror(
-                "Admin Error",
+            ctypes.windll.user32.MessageBoxW(
+                0,
                 "BCML cannot be run as administrator in EdgeHTML mode. "
                 "Please run without administrator privileges and try again. If you need "
                 'to run BCML as administrator in the future, check the "Use CEF renderer'
                 "\" option in BCML's settings.",
+                "Permissions Error",
+                0x0 | 0x10,
             )
             exit(1)
 
