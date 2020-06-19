@@ -1,6 +1,7 @@
 # fmt: off
 try:
     import oead
+    del oead
 except ImportError:
     import ctypes
     ctypes.windll.user32.MessageBoxW(
@@ -21,6 +22,7 @@ import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import Pool, set_start_method
+from os import chmod  # pylint: disable=ungrouped-imports
 from pathlib import Path
 from platform import system
 from subprocess import run, PIPE, Popen, DEVNULL
@@ -584,6 +586,9 @@ def main(debug: bool = False):
         LOG.write_text("")
         for folder in util.get_work_dir().glob("*"):
             rmtree(folder)
+        if SYSTEM != "Windows":
+            chmod(util.get_exec_dir() / "bcml/helpers/7z", int("755", 8))
+            chmod(util.get_exec_dir() / "bcml/helpers/msyt", int("755", 8))
     except (FileNotFoundError, OSError, PermissionError):
         pass
 
