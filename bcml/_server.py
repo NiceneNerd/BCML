@@ -12,6 +12,6 @@ class BcmlRequestHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def start_server():
-    with socketserver.TCPServer(("", 8777), BcmlRequestHandler) as httpd:
+def start_server(port: int):
+    with socketserver.TCPServer(("", port), BcmlRequestHandler) as httpd:
         httpd.serve_forever()

@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import sys
 import urllib.error
 import urllib.request
@@ -1163,6 +1164,14 @@ def pio_subtract(
             if len(merged_pobj.params) == 0:
                 del merged.objects[key]
     return merged
+
+
+def get_open_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 
 class RulesParser(ConfigParser):

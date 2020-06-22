@@ -71,7 +71,8 @@ def main(debug: bool = False):
     oneclick.daemon = True
     oneclick.start()
 
-    server = Process(target=start_server)
+    server_port = util.get_open_port()
+    server = Process(target=start_server, args=(server_port,))
     server.daemon = True
     server.start()
 
