@@ -21,7 +21,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import set_start_method, Process
 from os import chmod  # pylint: disable=ungrouped-imports
 from pathlib import Path
-from subprocess import Popen, DEVNULL
+from subprocess import Popen, DEVNULL, run, PIPE
 from shutil import rmtree
 from threading import Thread
 
@@ -31,6 +31,30 @@ from bcml import DEBUG, util, _oneclick
 from bcml.util import Messager, LOG, SYSTEM
 from bcml._api import Api
 from bcml._server import start_server
+
+
+def install_cef():
+    if util.can_cef():
+        print("CEF is already installed.")
+        sys.exit(0)
+    print("Installing and enabling CEF renderer...")
+    process = Popen(
+        [util.get_python_exe(), "-m", "pip", "install", "cefpython3"],
+        stdout=PIPE,
+        universal_newlines=True,
+    )
+    for line in iter(process.stdout.readline, ""):
+        print(f"  {line}", end="")
+    process.stdout.close()
+    if process.wait() > 0:
+        sys.exit(1)
+    util.get_settings()["use_cef"] = True
+    util.save_settings()
+    print(
+        "CEF render has been enabled successfully. "
+        "Please run BCML again to see changes."
+    )
+    sys.exit(0)
 
 
 def stop_it(messager: Messager = None):

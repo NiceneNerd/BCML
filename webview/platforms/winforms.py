@@ -106,11 +106,17 @@ elif is_edge:
     logger.debug("Using WinForms / EdgeHTML")
     renderer = "edgehtml"
 else:
-    clr.AddReference(interop_dll_path("WebBrowserInterop.dll"))
-    from WebBrowserInterop import IWebBrowserInterop, WebBrowserEx
+    import ctypes
 
-    logger.debug("Using WinForms / MSHTML")
-    renderer = "mshtml"
+    ctypes.windll.user32.MessageBoxW(
+        0,
+        "The most recent webview available on your system is not supported by BCML. "
+        "You will need to use the CEF renderer. Please run `bcml-install-cef` from "
+        "the Command Prompt or PowerShell and then try again.",
+        "BCML Webview Error",
+        0x0 | 0x10,
+    )
+    sys.exit(1)
 
 
 class BrowserView:
@@ -803,7 +809,9 @@ def create_window(window):
                 "BCML cannot be run as administrator in EdgeHTML mode. "
                 "Please run without administrator privileges and try again. If you need "
                 'to run BCML as administrator in the future, check the "Use CEF renderer'
-                "\" option in BCML's settings.",
+                "\" option in BCML's settings. If admin privileges for any reason can't"
+                " be disabled, run `bcml-install-cef` to switch to CEF from the Command "
+                "Prompt or PowerShell.",
                 "Permissions Error",
                 0x0 | 0x10,
             )

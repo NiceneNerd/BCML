@@ -31,14 +31,6 @@ setup(
     packages=["bcml", "webview", "webview.js", "webview.platforms"],
     package_dir={"webview": "webview", "bcml": "bcml"},
     package_data={
-        "bcml": [
-            "bcml/lib/concrt140.dll",
-            "bcml/lib/msvcp140.dll",
-            "bcml/lib/vcamp140.dll",
-            "bcml/lib/vccorlib140.dll",
-            "bcml/lib/vcomp140.dll",
-            "bcml/lib/vcruntime140.dll",
-        ],
         "webview": [
             "webview/lib/WebBrowserInterop.x64.dll",
             "webview/lib/WebBrowserInterop.x86.dll",
@@ -48,7 +40,10 @@ setup(
     },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": ["bcml-debug = bcml.__main__:main_debug"],
+        "console_scripts": [
+            "bcml-debug = bcml.__main__:main_debug",
+            "bcml-install-cef = bcml.__main__:install_cef",
+        ],
     },
     classifiers=[
         "Development Status :: 4 - Beta",
