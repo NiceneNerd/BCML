@@ -748,12 +748,13 @@ def link_master_mod(output: Path = None):
             rel_path = item.relative_to(mod_folder)
             exists = (output / rel_path).exists()
             is_log = str(rel_path).startswith("logs")
+            is_meta = str(rel_path).startswith("meta")
             is_extra = (
                 len(rel_path.parts) == 1
                 and rel_path.suffix != ".txt"
                 and not item.is_dir()
             )
-            if exists or is_log or is_extra:
+            if exists or is_log or is_extra or is_meta:
                 continue
             if item.is_dir():
                 (output / rel_path).mkdir(parents=True, exist_ok=True)
