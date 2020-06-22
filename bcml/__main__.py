@@ -17,7 +17,7 @@ except ImportError:
 
 import sys
 from contextlib import redirect_stderr, redirect_stdout
-from multiprocessing import set_start_method
+from multiprocessing import set_start_method, Process
 from os import chmod  # pylint: disable=ungrouped-imports
 from pathlib import Path
 from subprocess import Popen, DEVNULL
@@ -70,7 +70,7 @@ def main(debug: bool = False):
     oneclick.daemon = True
     oneclick.start()
 
-    server = Thread(target=start_server)
+    server = Process(target=start_server)
     server.daemon = True
     server.start()
 
