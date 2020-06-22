@@ -28,7 +28,7 @@ from threading import Thread
 import webview
 
 from bcml import DEBUG, util, _oneclick
-from bcml.util import Messager, LOG, HOST, SYSTEM
+from bcml.util import Messager, LOG, SYSTEM
 from bcml._api import Api
 from bcml._server import start_server
 
@@ -75,8 +75,9 @@ def main(debug: bool = False):
     server = Process(target=start_server, args=(server_port,))
     server.daemon = True
     server.start()
+    host = f"http://localhost:{server_port}"
 
-    api = Api()
+    api = Api(host)
 
     gui: str = ""
     if SYSTEM == "Windows" and util.get_settings("use_cef") and util.can_cef():
@@ -85,10 +86,10 @@ def main(debug: bool = False):
         gui = "qt"
 
     if (util.get_data_dir() / "settings.json").exists():
-        url = f"{HOST}/index.html"
+        url = f"{host}/index.html"
         width, height = 907, 680
     else:
-        url = f"{HOST}/index.html?firstrun=yes"
+        url = f"{host}/index.html?firstrun=yes"
         width, height = 750, 600
 
     api.window = webview.create_window(

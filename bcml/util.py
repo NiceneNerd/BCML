@@ -1235,4 +1235,3 @@ else:
 
 LOG = get_data_dir() / "bcml.log"
 SYSTEM = system()
-HOST = "http://localhost:8777"

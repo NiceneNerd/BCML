@@ -34,7 +34,7 @@ except ImportError:
 import webview
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
-from bcml.util import BcmlMod, LOG, HOST, SYSTEM
+from bcml.util import BcmlMod, LOG, SYSTEM
 from bcml.mergers.rstable import generate_rstb_for_mod
 from bcml.__version__ import USER_VERSION
 
@@ -57,13 +57,17 @@ def start_new_instance():
     Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
 
 
-def help_window():
-    webview.create_window("BCML Help", url=f"{HOST}/help.html?page=main")
+def help_window(host: str):
+    webview.create_window("BCML Help", url=f"{host}/help.html?page=main")
 
 
 class Api:
     # pylint: disable=unused-argument,no-self-use,too-many-public-methods
     window: webview.Window
+    host: str
+
+    def __init__(self, host: str):
+        self.host = host
 
     @win_or_lose
     def sanity_check(self, kwargs=None):
@@ -512,7 +516,7 @@ class Api:
             run(x_args, stdout=PIPE, stderr=PIPE, check=True)
 
     def open_help(self):
-        help_thread = Thread(target=help_window)
+        help_thread = Thread(target=help_window, args=(self.host,))
         help_thread.start()
 
     @win_or_lose
