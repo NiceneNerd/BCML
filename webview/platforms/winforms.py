@@ -807,7 +807,7 @@ def create_window(window):
                 "Permissions Error",
                 0x0 | 0x10,
             )
-            exit(1)
+            sys.exit(1)
 
         app.EnableVisualStyles()
         app.SetCompatibleTextRenderingDefault(False)

@@ -4,6 +4,7 @@ try:
     del oead
 except ImportError:
     import ctypes
+    import sys
     ctypes.windll.user32.MessageBoxW(
         0,
         "The latest (2019) Visual C++ redistributable is required to run BCML. Please "
@@ -12,7 +13,7 @@ except ImportError:
         "Dependency Error",
         0x0 | 0x10
     )
-    exit(1)
+    sys.exit(1)
 # fmt: on
 
 import sys
