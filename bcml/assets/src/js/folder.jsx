@@ -20,9 +20,7 @@ class FolderInput extends React.Component {
                 folder: this.state.value,
                 type: this.idRef.current.id
             })
-            .then(valid =>
-                this.setState({ valid: valid && this.props.isValid })
-            );
+            .then(valid => this.setState({ valid: valid && this.props.isValid }));
         this.id = this.idRef.current.id;
         this.setState({ value: this.props.value, valid });
     }
@@ -32,9 +30,7 @@ class FolderInput extends React.Component {
             this.setState({ value: nextProps.value }, () => {
                 pywebview.api
                     .dir_exists({ folder: this.state.value, type: this.id })
-                    .then(valid =>
-                        this.setState({ valid: valid && this.props.isValid })
-                    );
+                    .then(valid => this.setState({ valid: valid && this.props.isValid }));
             });
         }
     }
@@ -46,16 +42,12 @@ class FolderInput extends React.Component {
             });
             pywebview.api
                 .dir_exists({ folder: this.state.value, type: this.id })
-                .then(valid =>
-                    this.setState({ valid: valid && this.props.isValid })
-                );
+                .then(valid => this.setState({ valid: valid && this.props.isValid }));
         }
     }
 
     folderPick() {
-        pywebview.api
-            .get_folder()
-            .then(folder => this.setState({ value: folder }));
+        pywebview.api.get_folder().then(folder => this.setState({ value: folder }));
     }
 
     handleChange(e) {
@@ -72,7 +64,7 @@ class FolderInput extends React.Component {
                     placement={this.props.placement || "right"}>
                     <Form.Control
                         disabled={this.props.disabled}
-                        placeholder="Select a directory"
+                        placeholder={this.props.placeholder || "Select a directory"}
                         value={this.state.value}
                         onChange={this.handleChange}
                         ref={this.idRef}

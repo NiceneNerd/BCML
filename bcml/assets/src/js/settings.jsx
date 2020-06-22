@@ -92,6 +92,7 @@ class Settings extends React.Component {
                                 value={this.state.cemu_dir}
                                 disabled={!this.state.wiiu || this.state.no_cemu}
                                 onChange={this.handleChange}
+                                placeholder='Tip: folder should contain "Cemu.exe"'
                                 isValid={this.state.cemu_dir != "" || this.state.no_cemu}
                                 overlay={
                                     <Tooltip>
@@ -122,6 +123,7 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.game_dir}
                                 onChange={this.handleChange}
+                                placeholder='Tip: should end in "content"'
                                 isValid={this.state.game_dir != "" || !this.state.wiiu}
                                 overlay={
                                     <Tooltip>
@@ -173,6 +175,7 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.update_dir}
                                 onChange={this.handleChange}
+                                placeholder={`Tip: should end in "content", usually in Cemu's MLC folder`}
                                 isValid={this.state.update_dir != "" || !this.state.wiiu}
                                 disabled={!this.state.wiiu}
                                 overlay={
@@ -207,6 +210,7 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.dlc_dir}
                                 onChange={this.handleChange}
+                                placeholder={`Tip: should end in "0010", usually in Cemu's MLC folder`}
                                 isValid={true}
                                 overlay={
                                     <Tooltip>
