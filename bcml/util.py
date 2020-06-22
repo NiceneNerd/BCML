@@ -1223,3 +1223,7 @@ if system() == "Windows":
     ZPATH = str(get_exec_dir() / "helpers" / "7z.exe")
 else:
     ZPATH = shutil.which("7z") or str(get_exec_dir() / "helpers" / "7z")
+
+LOG = get_data_dir() / "bcml.log"
+SYSTEM = system()
+HOST = "http://localhost:8777"
