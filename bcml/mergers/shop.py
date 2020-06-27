@@ -313,7 +313,7 @@ class ShopMerger(mergers.Merger):
 
                 file_names.params[oead.aamp.Name(file).hash] = Parameter(file)
                 diffs.lists[file] = gen_diffs(ref_pio, mod_pio)
-            except (FileNotFoundError, KeyError):
+            except (FileNotFoundError, KeyError, AttributeError):
                 continue
         diffs.objects["Filenames"] = file_names
         return diffs
