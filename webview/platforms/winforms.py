@@ -800,22 +800,22 @@ def create_window(window):
 
         if is_cef:
             CEF.init(window)
+        else:
+            if windll.shell32.IsUserAnAdmin() != 0:
+                import ctypes
 
-        if windll.shell32.IsUserAnAdmin() != 0:
-            import ctypes
-
-            ctypes.windll.user32.MessageBoxW(
-                0,
-                "BCML cannot be run as administrator in EdgeHTML mode. "
-                "Please run without administrator privileges and try again. If you need "
-                'to run BCML as administrator in the future, check the "Use CEF renderer'
-                "\" option in BCML's settings. If admin privileges for any reason can't"
-                " be disabled, run `bcml-install-cef` to switch to CEF from the Command "
-                "Prompt or PowerShell.",
-                "Permissions Error",
-                0x0 | 0x10,
-            )
-            sys.exit(1)
+                ctypes.windll.user32.MessageBoxW(
+                    0,
+                    "BCML cannot be run as administrator in EdgeHTML mode. "
+                    "Please run without administrator privileges and try again. If you need "
+                    'to run BCML as administrator in the future, check the "Use CEF renderer'
+                    "\" option in BCML's settings. If admin privileges for any reason can't"
+                    " be disabled, run `bcml-install-cef` to switch to CEF from the Command "
+                    "Prompt or PowerShell.",
+                    "Permissions Error",
+                    0x0 | 0x10,
+                )
+                sys.exit(1)
 
         app.EnableVisualStyles()
         app.SetCompatibleTextRenderingDefault(False)
