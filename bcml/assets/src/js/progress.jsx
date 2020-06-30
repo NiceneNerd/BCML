@@ -33,6 +33,17 @@ let messages = [
     "Friend-zoning Paya",
     "Hiding secrets from everybody",
     "Riding a shrine elevator",
+    "Bow-spinning your mod",
+    "Eating a Royal Claymore",
+    "Ignoring the old man",
+    "Selling the Sheika Slate",
+    "Annoying the monks",
+    "Pushing Master Kohga",
+    "Deleting the Great Plateau",
+    "Befriending Ganon",
+    "Going back to bed",
+    "100 more years never hurt anyone",
+    "Changing name and joining a construction company",
     "Forcing fairies to stay in a cooking pot"
 ];
 
