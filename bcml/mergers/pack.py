@@ -60,7 +60,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
                 else:
                     if file.name not in nested_sarcs:
                         nested_sarcs[file.name] = []
-                        nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
+                    nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
     util.vprint(set(nested_sarcs.keys()))
     for file, sarcs in nested_sarcs.items():
         if not sarcs:
