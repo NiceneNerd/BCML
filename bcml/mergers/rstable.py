@@ -94,9 +94,7 @@ def calculate_size(path: Path) -> int:
         if path.suffix == ".bdmgparam":
             size += 1000
         if path.suffix == ".hkrb":
-            size += 8
-            if path.stat().st_size % 32 == 0:
-                size += 32
+            size += 40
         return size
     except struct.error:
         return 0
@@ -474,9 +472,7 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
             if ext == ".bdmgparam":
                 size += 1000
             if ext == ".hkrb":
-                size += 8
-                if len(data) % 32 == 0:
-                    size += 32
+                size += 40
             if size == 0 and (not no_guess or ext in {".bas", ".baslist"}):
                 if ext in util.AAMP_EXTS:
                     size = guess_aamp_size(data, ext)
