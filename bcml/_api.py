@@ -182,6 +182,7 @@ class Api:
                 m.NAME.upper() for m in mergers.get_mergers() if m().is_mod_logged(mod)
             ],
             "desc": mod.description,
+            "processed": (mod.path / ".processed").exists(),
             "image": img,
             "url": mod.url,
         }
@@ -307,6 +308,20 @@ class Api:
 
     @win_or_lose
     @install.refresher
+    def reprocess(self, params):
+        mod = BcmlMod.from_json(params["mod"])
+        rmtree(mod.path / "logs")
+        if (mod.path / "options.json").exists():
+            options = json.loads(
+                (mod.path / "options.json").read_text(), encoding="utf-8"
+            )
+        else:
+            options = {}
+        install.generate_logs(mod.path, options)
+        install.refresh_merges()
+
+    @win_or_lose
+    @install.refresher
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob("*") if d.is_dir()}:
             rmtree(folder)
@@ -349,6 +364,8 @@ class Api:
             install.uninstall_mod(mod)
         elif action == "update":
             self.update_mod(params)
+        elif action == "reprocess":
+            self.reprocess(params)
 
     def explore(self, params):
         path = params["mod"]["path"]

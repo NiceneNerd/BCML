@@ -8,6 +8,7 @@ class ModInfo extends React.Component {
         this.state = {
             image: "",
             desc: "",
+            processed: false,
             url: "",
             changes: [],
             loading: false
@@ -31,7 +32,13 @@ class ModInfo extends React.Component {
 
     updateInfo() {
         if (!this.props.mod) {
-            this.setState({ image: "", description: "", changes: [], url: "" });
+            this.setState({
+                image: "",
+                description: "",
+                changes: [],
+                url: "",
+                processed: false
+            });
         } else {
             const mod = JSON.stringify(this.props.mod);
             if (!(mod in this.modInfos)) {
@@ -140,6 +147,19 @@ class ModInfo extends React.Component {
                         <i className="material-icons">update</i>{" "}
                         <span>Update</span>
                     </Button>
+                    {this.state.processed && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            title="Reprocess"
+                            disabled={!this.props.mod}
+                            onClick={() =>
+                                this.props.onAction(this.props.mod, "reprocess")
+                            }>
+                            <i className="material-icons">refresh</i>{" "}
+                            <span>Reprocess</span>
+                        </Button>
+                    )}
                     <Button
                         variant="danger"
                         size="sm"

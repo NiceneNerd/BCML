@@ -492,6 +492,7 @@ def install_mod(
         else:
             this_pool = pool or Pool()
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
+            (tmp_dir / ".processed").touch()
     except Exception as err:  # pylint: disable=broad-except
         try:
             name = mod_name

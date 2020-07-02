@@ -21,9 +21,10 @@ from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import set_start_method, Process
 from os import chmod  # pylint: disable=ungrouped-imports
 from pathlib import Path
-from subprocess import Popen, DEVNULL, run, PIPE
+from subprocess import Popen, DEVNULL, PIPE
 from shutil import rmtree
 from threading import Thread
+from time import sleep
 
 import webviewb
 
@@ -134,6 +135,7 @@ def main(debug: bool = False):
     messager = Messager(api.window)
     with redirect_stderr(sys.stdout):
         with redirect_stdout(messager):
+            sleep(0.5)
             webviewb.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
             )
