@@ -619,6 +619,8 @@ class RstbMerger(mergers.Merger):
                     size = calculate_size(file)
                     if file.suffix == ".bdmgparam":
                         size = 0
+                    elif file.suffix == ".hkrb":
+                        size += 40
                     if size == 0 and (
                         not self._options.get("no_guess", False)
                         or file.suffix in {".bas", ".baslist"}
@@ -656,6 +658,8 @@ class RstbMerger(mergers.Merger):
                 )
                 if ext == ".bdmgparam":
                     rstb_val = 0
+                elif ext == ".hkrb":
+                    rstb_val += 40
                 if rstb_val == 0 and (
                     not self._options.get("no_guess", False)
                     or ext in {".bas", ".baslist"}
