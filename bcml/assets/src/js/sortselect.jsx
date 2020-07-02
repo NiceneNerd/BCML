@@ -12,12 +12,18 @@ class ModSelect extends React.Component {
     }
 
     componentDidMount() {
-        this.setState({ mods: this.props.mods });
+        this.setState({
+            mods: this.props.mods,
+            selectedItems: [this.props.mods[0].priority]
+        });
     }
 
     static getDerivedStateFromProps(nextProps, prevState) {
         if (JSON.stringify(nextProps.mods) != JSON.stringify(prevState.mods)) {
-            return { mods: nextProps.mods };
+            return {
+                mods: nextProps.mods,
+                selectedItems: [nextProps.mods[0].priority]
+            };
         } else return null;
     }
 

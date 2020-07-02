@@ -1,9 +1,7 @@
 import {
-    Badge,
     Button,
     ButtonGroup,
     Dropdown,
-    Modal,
     OverlayTrigger,
     Tooltip,
     Spinner
@@ -32,7 +30,10 @@ class Mods extends React.Component {
             pywebview.api
                 .get_setup()
                 .then(setup =>
-                    this.setState({ mergersReady: true, ...setup }, this.sanityCheck)
+                    this.setState(
+                        { mergersReady: true, ...setup },
+                        this.sanityCheck
+                    )
                 )
         );
         this.sanityCheck = this.sanityCheck.bind(this);
@@ -40,6 +41,15 @@ class Mods extends React.Component {
         this.handleQueue = this.handleQueue.bind(this);
         this.applyQueue = this.applyQueue.bind(this);
         this.uninstallAll = this.uninstallAll.bind(this);
+        this.defaultSelect = this.defaultSelect.bind(this);
+    }
+
+    defaultSelect() {
+        if (this.state.mods.length > 0) {
+            return [this.state.mods[0]];
+        } else {
+            return [];
+        }
     }
 
     sanityCheck() {
@@ -51,7 +61,10 @@ class Mods extends React.Component {
             .catch(err => {
                 console.error(err);
                 this.props.onError(err);
-                setTimeout(() => (window.location = "index.html?firstrun=true"), 1500);
+                setTimeout(
+                    () => (window.location = "index.html?firstrun=true"),
+                    1500
+                );
             });
     }
 
@@ -61,7 +74,7 @@ class Mods extends React.Component {
 
     static getDerivedStateFromProps(nextProps, prevState) {
         if (JSON.stringify(nextProps.mods) != JSON.stringify(prevState.mods)) {
-            return { mods: nextProps.mods };
+            return { mods: nextProps.mods, selectedMods: [nextProps.mods[0]] };
         } else return null;
     }
 
@@ -100,15 +113,18 @@ class Mods extends React.Component {
                                 if (!res.success) {
                                     throw res.error;
                                 }
-                                this.setState({ selectedMods: [] }, () => {
-                                    this.props.onState(
-                                        {
-                                            showProgress: false,
-                                            showDone: true
-                                        },
-                                        () => this.props.onRefresh()
-                                    );
-                                });
+                                this.setState(
+                                    { selectedMods: this.defaultSelect() },
+                                    () => {
+                                        this.props.onState(
+                                            {
+                                                showProgress: false,
+                                                showDone: true
+                                            },
+                                            () => this.props.onRefresh()
+                                        );
+                                    }
+                                );
                             })
                             .catch(this.props.onError);
                     }
@@ -134,7 +150,7 @@ class Mods extends React.Component {
                         }
                         this.setState(
                             {
-                                selectedMods: []
+                                selectedMods: this.defaultSelect()
                             },
                             () =>
                                 this.props.onState({
@@ -171,7 +187,9 @@ class Mods extends React.Component {
                                     },
                                     () => {
                                         this.props.onRefresh();
-                                        this.setState({ selectedMods: [] });
+                                        this.setState({
+                                            selectedMods: this.defaultSelect()
+                                        });
                                     }
                                 );
                             })
@@ -188,7 +206,10 @@ class Mods extends React.Component {
             async () => {
                 let installs = [];
                 let moves = [];
-                for (const [i, mod] of this.state.mods.slice().reverse().entries()) {
+                for (const [
+                    i,
+                    mod
+                ] of this.state.mods.slice().reverse().entries()) {
                     if (mod.path.startsWith("QUEUE")) installs.push(mod);
                     else {
                         const newPriority = !this.state.sortReverse
@@ -209,7 +230,7 @@ class Mods extends React.Component {
                                 this.setState(
                                     {
                                         showHandle: false,
-                                        selectedMods: [],
+                                        selectedMods: this.defaultSelect(),
                                         dirty: false
                                     },
                                     () => this.props.onRefresh()
@@ -288,7 +309,8 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                sortReverse: !this.state.sortReverse
+                                                sortReverse: !this.state
+                                                    .sortReverse
                                             })
                                         }>
                                         <i
@@ -314,19 +336,27 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showHandle: !this.state.showHandle
+                                                showHandle: !this.state
+                                                    .showHandle
                                             })
                                         }>
-                                        <i className="material-icons">reorder</i>
+                                        <i className="material-icons">
+                                            reorder
+                                        </i>
                                     </Button>
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <OverlayTrigger overlay={<Tooltip>Remerge</Tooltip>}>
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Remerge</Tooltip>}>
                                     <Button
                                         variant="secondary"
-                                        onClick={() => this.handleRemerge("all")}>
-                                        <i className="material-icons">refresh</i>
+                                        onClick={() =>
+                                            this.handleRemerge("all")
+                                        }>
+                                        <i className="material-icons">
+                                            refresh
+                                        </i>
                                     </Button>
                                 </OverlayTrigger>
                                 <Dropdown.Toggle
@@ -340,7 +370,9 @@ class Mods extends React.Component {
                                         this.state.mergers.map(m => (
                                             <Dropdown.Item
                                                 key={m}
-                                                onClick={() => this.handleRemerge(m)}>
+                                                onClick={() =>
+                                                    this.handleRemerge(m)
+                                                }>
                                                 Remerge {m}
                                             </Dropdown.Item>
                                         ))}
@@ -348,25 +380,38 @@ class Mods extends React.Component {
                             </Dropdown>
                             <ButtonGroup size="xs">
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Backup and restore</Tooltip>}>
+                                    overlay={
+                                        <Tooltip>Backup and restore</Tooltip>
+                                    }>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onBackup}>
-                                        <i className="material-icons">restore</i>
+                                        <i className="material-icons">
+                                            restore
+                                        </i>
                                     </Button>
                                 </OverlayTrigger>
-                                <OverlayTrigger overlay={<Tooltip>Export</Tooltip>}>
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Export</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onExport}
                                         className="pr-1">
-                                        <i className="material-icons">open_in_browser</i>
+                                        <i className="material-icons">
+                                            open_in_browser
+                                        </i>
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Uninstall all mods</Tooltip>}>
-                                    <Button variant="danger" onClick={this.uninstallAll}>
-                                        <i className="material-icons">delete_sweep</i>
+                                    overlay={
+                                        <Tooltip>Uninstall all mods</Tooltip>
+                                    }>
+                                    <Button
+                                        variant="danger"
+                                        onClick={this.uninstallAll}>
+                                        <i className="material-icons">
+                                            delete_sweep
+                                        </i>
                                     </Button>
                                 </OverlayTrigger>
                             </ButtonGroup>
@@ -374,7 +419,9 @@ class Mods extends React.Component {
                             {this.state.hasCemu && (
                                 <OverlayTrigger
                                     overlay={
-                                        <Tooltip>Launch Breath of the Wild</Tooltip>
+                                        <Tooltip>
+                                            Launch Breath of the Wild
+                                        </Tooltip>
                                     }>
                                     <Button
                                         variant="primary"
