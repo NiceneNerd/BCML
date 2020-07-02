@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-pywebview is a lightweight cross-platform wrapper around a webview component that allows to display HTML content in its
+pywebview is a lightweight cross-platform wrapper around a webviewb component that allows to display HTML content in its
 own dedicated window. Works on Windows, OS X and Linux and compatible with Python 2 and 3.
 
 (C) 2014-2019 Roman Sirokov and contributors
@@ -18,9 +18,9 @@ import re
 import threading
 from uuid import uuid4
 
-from webview.event import Event
-from webview.guilib import initialize
-from webview.util import (
+from webviewb.event import Event
+from webviewb.guilib import initialize
+from webviewb.util import (
     _token,
     base_uri,
     parse_file_type,
@@ -29,7 +29,7 @@ from webview.util import (
     escape_line_breaks,
     WebViewException,
 )
-from webview.window import Window
+from webviewb.window import Window
 from .localization import localization as original_localization
 
 
@@ -181,7 +181,7 @@ def create_window(
     :param minimized: Display window minimized
     :param on_top: Keep window above other windows (required OS: Windows)
     :param confirm_close: Display a window close confirmation dialog. Default is False
-    :param background_color: Background color as a hex string that is displayed before the content of webview is loaded. Default is white.
+    :param background_color: Background color as a hex string that is displayed before the content of webviewb is loaded. Default is white.
     :param text_select: Allow text selection on page. Default is False.
     :return: window object.
     """

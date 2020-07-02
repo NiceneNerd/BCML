@@ -28,14 +28,14 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/NiceneNerd/BCML",
     include_package_data=True,
-    packages=["bcml", "webview", "webview.js", "webview.platforms"],
-    package_dir={"webview": "webview", "bcml": "bcml"},
+    packages=["bcml", "webviewb", "webviewb.js", "webviewb.platforms"],
+    package_dir={"webviewb": "webviewb", "bcml": "bcml"},
     package_data={
-        "webview": [
-            "webview/lib/WebBrowserInterop.x64.dll",
-            "webview/lib/WebBrowserInterop.x86.dll",
-            "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"
-            "webview/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.LICENSE.md",
+        "webviewb": [
+            "webviewb/lib/WebBrowserInterop.x64.dll",
+            "webviewb/lib/WebBrowserInterop.x86.dll",
+            "webviewb/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"
+            "webviewb/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.LICENSE.md",
         ],
     },
     entry_points={

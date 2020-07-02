@@ -3,9 +3,9 @@ import logging
 import os
 from functools import wraps
 
-from webview.event import Event
-from webview.http_server import start_server
-from webview.util import (
+from webviewb.event import Event
+from webviewb.http_server import start_server
+from webviewb.util import (
     base_uri,
     parse_file_type,
     escape_string,
@@ -226,7 +226,7 @@ class Window:
     @_loaded_call
     def get_current_url(self):
         """
-        Get the URL currently loaded in the target webview
+        Get the URL currently loaded in the target webviewb
         """
         return self.gui.get_current_url(self.uid)
 

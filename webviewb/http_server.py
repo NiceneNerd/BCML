@@ -1,4 +1,4 @@
-import webview
+import webviewb
 import os
 import sys
 import socket
@@ -15,11 +15,12 @@ except ImportError:
     from http.server import SimpleHTTPRequestHandler, HTTPServer
     from socketserver import ThreadingMixIn
 
-from webview.util import base_uri
+from webviewb.util import base_uri
 
-logger = logging.getLogger('pywebview')
+logger = logging.getLogger("pywebview")
 
 port = None
+
 
 def _get_random_port():
     def random_port():
@@ -27,11 +28,11 @@ def _get_random_port():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
-            sock.bind(('localhost', port))
+            sock.bind(("localhost", port))
             result = port
         except:
             result = None
-            logger.warning('Port %s is in use' % port)
+            logger.warning("Port %s is in use" % port)
         finally:
             sock.close()
 
@@ -52,7 +53,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
         return fullpath
 
     def log_message(self, format, *args):
-        if os.environ.get('PYWEBVIEW_LOG') == 'debug':
+        if os.environ.get("PYWEBVIEW_LOG") == "debug":
             super(HTTPHandler, self).log_message(format, *args)
 
 
@@ -69,12 +70,12 @@ def start_server(url):
 
     global port
 
-    base_path = os.path.dirname(url.replace('file://', ''))
+    base_path = os.path.dirname(url.replace("file://", ""))
     if not os.path.exists(base_path):
-        raise IOError('Directory %s is not found' % base_path)
+        raise IOError("Directory %s is not found" % base_path)
 
     port = _get_random_port()
-    server_address = ('localhost', port)
+    server_address = ("localhost", port)
 
     httpd = ThreadedHTTPServer(server_address, HTTPHandler)
     httpd.base_path = base_path
@@ -83,7 +84,7 @@ def start_server(url):
     t.daemon = True
     t.start()
 
-    new_url = 'http://localhost:{0}/{1}'.format(port, os.path.basename(url))
-    logger.debug('HTTP server started on http://localhost:{0}'.format(port))
+    new_url = "http://localhost:{0}/{1}".format(port, os.path.basename(url))
+    logger.debug("HTTP server started on http://localhost:{0}".format(port))
 
     return new_url, httpd

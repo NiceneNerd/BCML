@@ -7,7 +7,7 @@ from platform import system
 from subprocess import run
 from tempfile import mkdtemp
 
-import webview
+import webviewb
 from bcml import util
 
 
@@ -81,7 +81,7 @@ def process_arg(arg: str = None):
         ) as e:
             print(e)
             return
-    webview.windows[0].evaluate_js(
+    webviewb.windows[0].evaluate_js(
         f'setTimeout(() => window.oneClick("{path.resolve().as_posix()}"), 500)'
     )
 

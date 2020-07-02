@@ -13,10 +13,10 @@ from cefpython3 import cefpython as cef
 from copy import copy
 from time import sleep
 
-from webview.js.css import disable_text_select
-from webview.js import dom
-from webview import _debug, _user_agent
-from webview.util import parse_api_js, default_html, js_bridge_call
+from webviewb.js.css import disable_text_select
+from webviewb.js import dom
+from webviewb import _debug, _user_agent
+from webviewb.util import parse_api_js, default_html, js_bridge_call
 
 
 sys.excepthook = cef.ExceptHook

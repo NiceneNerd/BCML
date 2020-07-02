@@ -15,11 +15,11 @@ from uuid import uuid1
 from copy import deepcopy
 from threading import Semaphore, Event
 
-from webview import _debug, _user_agent, OPEN_DIALOG, FOLDER_DIALOG, SAVE_DIALOG, windows
-from webview.localization import localization
-from webview.window import Window
-from webview.util import convert_string, default_html, parse_api_js, js_bridge_call
-from webview.js.css import disable_text_select
+from webviewb import _debug, _user_agent, OPEN_DIALOG, FOLDER_DIALOG, SAVE_DIALOG, windows
+from webviewb.localization import localization
+from webviewb.window import Window
+from webviewb.util import convert_string, default_html, parse_api_js, js_bridge_call
+from webviewb.js.css import disable_text_select
 
 
 logger = logging.getLogger("pywebview")
@@ -121,7 +121,7 @@ class BrowserView(QMainWindow):
 
             menu.exec_(event.globalPos())
 
-        # Create a new webview window pointing at the Remote debugger server
+        # Create a new webviewb window pointing at the Remote debugger server
         def show_inspector(self):
             uid = self.parent().uid + "-inspector"
             try:

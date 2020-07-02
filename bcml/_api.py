@@ -31,7 +31,7 @@ try:
     from os import startfile  # pylint: disable=no-name-in-module
 except ImportError:
     pass
-import webview
+import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
 from bcml.util import BcmlMod, LOG, SYSTEM
@@ -58,12 +58,12 @@ def start_new_instance():
 
 
 def help_window(host: str):
-    webview.create_window("BCML Help", url=f"{host}/help.html?page=main")
+    webviewb.create_window("BCML Help", url=f"{host}/help.html?page=main")
 
 
 class Api:
     # pylint: disable=unused-argument,no-self-use,too-many-public-methods
-    window: webview.Window
+    window: webviewb.Window
     host: str
 
     def __init__(self, host: str):
@@ -89,7 +89,7 @@ class Api:
             util.get_cemu_dir()
 
     def get_folder(self):
-        return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
+        return self.window.create_file_dialog(webviewb.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
         path = Path(params["folder"])
@@ -431,7 +431,7 @@ class Api:
         if not util.get_installed_mods():
             raise Exception("No mods installed to export.")
         out = self.window.create_file_dialog(
-            webview.SAVE_DIALOG,
+            webviewb.SAVE_DIALOG,
             file_types=(
                 f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
                 "BOTW Nano Patch (*.bnp)",
@@ -451,7 +451,7 @@ class Api:
     @win_or_lose
     def create_bnp(self, params):
         out = self.window.create_file_dialog(
-            webview.SAVE_DIALOG,
+            webviewb.SAVE_DIALOG,
             file_types=("BOTW Nano Patch (*.bnp)", "All files (*.*)"),
             save_filename=util.get_safe_pathname(params["name"]) + ".bnp",
         )
@@ -497,7 +497,7 @@ class Api:
             return
         tmp_dir = install.open_mod(path)
         output = self.window.create_file_dialog(
-            webview.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
+            webviewb.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
         )
         if not output:
             return
@@ -548,7 +548,7 @@ class Api:
     def restart(self):
         opener = Thread(target=start_new_instance)
         opener.start()
-        for win in webview.windows:
+        for win in webviewb.windows:
             win.destroy()
 
     def get_version(self):

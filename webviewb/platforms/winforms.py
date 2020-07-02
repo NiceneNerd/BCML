@@ -18,7 +18,7 @@ from threading import Event, Semaphore
 from ctypes import windll
 from uuid import uuid4
 
-from webview import (
+from webviewb import (
     WebViewException,
     windows,
     OPEN_DIALOG,
@@ -27,9 +27,9 @@ from webview import (
     _debug,
     _user_agent,
 )
-from webview.guilib import forced_gui_
-from webview.http_server import start_server
-from webview.util import (
+from webviewb.guilib import forced_gui_
+from webviewb.http_server import start_server
+from webviewb.util import (
     parse_api_js,
     interop_dll_path,
     parse_file_type,
@@ -37,9 +37,9 @@ from webview.util import (
     default_html,
     js_bridge_call,
 )
-from webview.js import alert
-from webview.js.css import disable_text_select
-from webview.localization import localization
+from webviewb.js import alert
+from webviewb.js.css import disable_text_select
+from webviewb.localization import localization
 
 import clr
 
@@ -306,7 +306,7 @@ class BrowserView:
             self.web_view.NewWindowRequested += self.on_new_window_request
             self.web_view.NavigationCompleted += self.on_navigation_completed
 
-            # This must be before loading URL. Otherwise the webview will remain empty
+            # This must be before loading URL. Otherwise the webviewb will remain empty
             life.EndInit()
 
             self.httpd = None  # HTTP server for load_html

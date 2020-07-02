@@ -2,7 +2,7 @@ import logging
 import os
 import platform
 
-from webview.util import WebViewException
+from webviewb.util import WebViewException
 
 logger = logging.getLogger("pywebview")
 guilib = None
@@ -14,7 +14,7 @@ def initialize(forced_gui=None):
         global guilib
 
         try:
-            import webview.platforms.gtk as guilib
+            import webviewb.platforms.gtk as guilib
 
             logger.debug("Using GTK")
 
@@ -28,7 +28,7 @@ def initialize(forced_gui=None):
         global guilib
 
         try:
-            import webview.platforms.qt as guilib
+            import webviewb.platforms.qt as guilib
 
             return True
         except ImportError as e:
@@ -39,7 +39,7 @@ def initialize(forced_gui=None):
         global guilib
 
         try:
-            import webview.platforms.winforms as guilib
+            import webviewb.platforms.winforms as guilib
 
             return True
         except ImportError as e:

@@ -18,7 +18,7 @@ from platform import architecture
 from threading import Thread
 from uuid import uuid4
 
-import webview
+import webviewb
 
 from .js import api, npo, dom, event, drag
 
@@ -138,7 +138,7 @@ def parse_api_js(window, platform, uid=""):
         + event.src
         + api.src % (_token, platform, uid, func_list)
         + dom.src
-        + drag.src % webview.DRAG_REGION_SELECTOR
+        + drag.src % webviewb.DRAG_REGION_SELECTOR
     )
     return js_code
 

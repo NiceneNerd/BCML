@@ -16,8 +16,8 @@ except ImportError:
 
 from uuid import uuid1
 from threading import Event, Semaphore, Lock
-from webview.localization import localization
-from webview import (
+from webviewb.localization import localization
+from webviewb import (
     _debug,
     _user_agent,
     OPEN_DIALOG,
@@ -27,8 +27,8 @@ from webview import (
     escape_string,
     windows,
 )
-from webview.util import parse_api_js, default_html, js_bridge_call
-from webview.js.css import disable_text_select
+from webviewb.util import parse_api_js, default_html, js_bridge_call
+from webviewb.js.css import disable_text_select
 
 logger = logging.getLogger("pywebview")
 
@@ -125,43 +125,43 @@ class BrowserView:
         self.js_bridge = BrowserView.JSBridge(window)
         self.text_select = window.text_select
 
-        self.webview = webkit.WebView()
-        self.webview.connect("notify::visible", self.on_webview_ready)
-        self.webview.connect("load_changed", self.on_load_finish)
-        self.webview.connect("notify::title", self.on_title_change)
-        self.webview.connect("decide-policy", self.on_navigation)
+        self.webviewb = webkit.WebView()
+        self.webviewb.connect("notify::visible", self.on_webview_ready)
+        self.webviewb.connect("load_changed", self.on_load_finish)
+        self.webviewb.connect("notify::title", self.on_title_change)
+        self.webviewb.connect("decide-policy", self.on_navigation)
 
         user_agent = settings.get("user_agent") or _user_agent
         if user_agent:
-            self.webview.get_settings().props.user_agent = user_agent
+            self.webviewb.get_settings().props.user_agent = user_agent
 
         if window.frameless:
             self.window.set_decorated(False)
             if window.easy_drag:
                 self.move_progress = False
-                self.webview.connect("button-release-event", self.on_mouse_release)
-                self.webview.connect("button-press-event", self.on_mouse_press)
+                self.webviewb.connect("button-release-event", self.on_mouse_release)
+                self.webviewb.connect("button-press-event", self.on_mouse_press)
                 self.window.connect("motion-notify-event", self.on_mouse_move)
 
         if window.on_top:
             self.window.set_keep_above(True)
 
         if _debug:
-            self.webview.get_settings().props.enable_developer_extras = True
+            self.webviewb.get_settings().props.enable_developer_extras = True
         else:
-            self.webview.connect(
+            self.webviewb.connect(
                 "context-menu", lambda a, b, c, d: True
             )  # Disable context menu
 
-        self.webview.set_opacity(0.0)
-        scrolled_window.add(self.webview)
+        self.webviewb.set_opacity(0.0)
+        scrolled_window.add(self.webviewb)
 
         if window.url is not None:
-            self.webview.load_uri(window.url)
+            self.webviewb.load_uri(window.url)
         elif window.html:
-            self.webview.load_html(window.html, "")
+            self.webviewb.load_html(window.html, "")
         else:
-            self.webview.load_html(default_html, "")
+            self.webviewb.load_html(default_html, "")
 
         if window.fullscreen:
             self.toggle_fullscreen()
@@ -206,18 +206,18 @@ class BrowserView:
         if "shown" in dir(self):
             self.shown.set()
 
-    def on_load_finish(self, webview, status):
-        # Show the webview if it's not already visible
-        if not webview.props.opacity:
-            glib.idle_add(webview.set_opacity, 1.0)
+    def on_load_finish(self, webviewb, status):
+        # Show the webviewb if it's not already visible
+        if not webviewb.props.opacity:
+            glib.idle_add(webviewb.set_opacity, 1.0)
 
         if status == webkit.LoadEvent.FINISHED:
             if not self.text_select:
-                webview.run_javascript(disable_text_select)
+                webviewb.run_javascript(disable_text_select)
             self._set_js_api()
 
-    def on_title_change(self, webview, title):
-        title = webview.get_title()
+    def on_title_change(self, webviewb, title):
+        title = webviewb.get_title()
 
         try:
             js_data = json.loads(title)
@@ -243,14 +243,14 @@ class BrowserView:
                 code = 'pywebview._bridge.return_val = "{0}";'.format(
                     escape_string(str(return_val))
                 )
-                webview.run_javascript(code)
+                webviewb.run_javascript(code)
 
         except ValueError:  # Python 2
             logger.debug("GTK: JSON decode failed:\n %s" % title)
         except json.JSONDecodeError:  # Python 3
             logger.debug("GTK: JSON decode failed:\n %s" % title)
 
-    def on_navigation(self, webview, decision, decision_type):
+    def on_navigation(self, webviewb, decision, decision_type):
         if type(decision) == webkit.NavigationPolicyDecision:
             uri = decision.get_request().get_uri()
 
@@ -374,24 +374,24 @@ class BrowserView:
 
     def get_current_url(self):
         self.loaded.wait()
-        uri = self.webview.get_uri()
+        uri = self.webviewb.get_uri()
         return uri if uri != "about:blank" else None
 
     def load_url(self, url):
         self.loaded.clear()
-        self.webview.load_uri(url)
+        self.webviewb.load_uri(url)
 
     def load_html(self, content, base_uri):
         self.loaded.clear()
-        self.webview.load_html(content, base_uri)
+        self.webviewb.load_html(content, base_uri)
 
     def evaluate_js(self, script):
         def _evaluate_js():
             callback = None if old_webkit else _callback
-            self.webview.run_javascript(script, None, callback, None)
+            self.webviewb.run_javascript(script, None, callback, None)
 
-        def _callback(webview, task, data):
-            value = webview.run_javascript_finish(task)
+        def _callback(webviewb, task, data):
+            value = webviewb.run_javascript_finish(task)
             if value:
                 self.js_results[unique_id]["result"] = value.get_js_value().to_string()
             else:
@@ -431,7 +431,7 @@ class BrowserView:
 
     def _set_js_api(self):
         def create_bridge():
-            self.webview.run_javascript(
+            self.webviewb.run_javascript(
                 parse_api_js(self.js_bridge.window, "gtk", uid=self.js_bridge.uid)
             )
             self.loaded.set()
