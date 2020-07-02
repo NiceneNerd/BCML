@@ -37,6 +37,8 @@ from bcml._server import start_server
 def install_cef():
     if util.can_cef():
         print("CEF is already installed.")
+        util.get_settings()["use_cef"] = True
+        util.save_settings()
         sys.exit(0)
     print("Installing and enabling CEF renderer...")
     process = Popen(
