@@ -447,17 +447,20 @@ def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
     return table
 
 
-def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
+def _get_sizes_in_sarc(file: Union[Path, oead.Sarc], is_aoc: bool = False) -> {}:
     calc = rstb.SizeCalculator()
     sizes = {}
     no_guess = util.get_settings("no_guess")
     if isinstance(file, Path):
+        is_aoc = util.get_dlc_path() in file.as_posix()
         try:
             file = oead.Sarc(file.read_bytes())
         except (RuntimeError, oead.InvalidDataError):
             return {}
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace(".s", ".")
+        if is_aoc:
+            canon = f"Aoc/0010/{canon}"
         if data[0:4] == b"Yaz0":
             data = util.decompress(data)
         ext = Path(canon).suffix
@@ -491,7 +494,7 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc]) -> {}:
                     nest_sarc = oead.Sarc(data)
                 except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
-                sizes.update(_get_sizes_in_sarc(nest_sarc))
+                sizes.update(_get_sizes_in_sarc(nest_sarc, is_aoc))
                 del nest_sarc
         del data
     del file
@@ -617,10 +620,6 @@ class RstbMerger(mergers.Merger):
                     and canon not in RSTB_EXCLUDE_NAMES
                 ):
                     size = calculate_size(file)
-                    if file.suffix == ".bdmgparam":
-                        size = 0
-                    elif file.suffix == ".hkrb":
-                        size += 40
                     if size == 0 and (
                         not self._options.get("no_guess", False)
                         or file.suffix in {".bas", ".baslist"}
@@ -690,6 +689,8 @@ class RstbMerger(mergers.Merger):
                     path = diff.relative_to(mod_dir).as_posix()
                 elif isinstance(diff, str):
                     canon = diff.split("//")[-1].replace(".s", ".")
+                    if util.get_dlc_path() in diff:
+                        canon = f"Aoc/0010/{canon}"
                     path = diff
                 if ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
                     log.write(f"{canon},{value},{path}\n")
