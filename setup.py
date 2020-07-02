@@ -1,8 +1,8 @@
+# pylint: disable=invalid-name
 import os
-from setuptools import setup
-from subprocess import run
 from sys import argv
 from pathlib import Path
+from setuptools import setup
 from bcml.__version__ import VERSION
 
 installer_cfg = Path("installer.cfg")

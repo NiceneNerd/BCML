@@ -1,3 +1,4 @@
+# pylint: skip-file
 import inspect
 import logging
 import os

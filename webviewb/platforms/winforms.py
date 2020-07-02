@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=import-error
+# pylint: skip-file
 """
 (C) 2014-2019 Roman Sirokov and contributors
 Licensed under BSD license

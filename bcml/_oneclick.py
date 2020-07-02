@@ -1,5 +1,4 @@
 import os
-import requests
 import socket
 import sys
 from pathlib import Path
@@ -7,6 +6,7 @@ from platform import system
 from subprocess import run
 from tempfile import mkdtemp
 
+import requests
 import webviewb
 from bcml import util
 
@@ -17,7 +17,7 @@ def listen():
             sock.bind(("127.0.0.1", 6666))
         except socket.error:
             send_arg(sock)
-            os._exit(0)
+            os._exit(0)  # pylint: disable=protected-access
         sock.listen()
         while True:
             conn, _ = sock.accept()
@@ -78,8 +78,8 @@ def process_arg(arg: str = None):
             OSError,
             requests.ConnectionError,
             requests.RequestException,
-        ) as e:
-            print(e)
+        ) as err:
+            print(err)
             return
     webviewb.windows[0].evaluate_js(
         f'setTimeout(() => window.oneClick("{path.resolve().as_posix()}"), 500)'
@@ -108,10 +108,14 @@ def _linux_create_handler():
     MimeType=x-schema-handler/bcml;
     """
     schema_file.write_text(desktop)
-    run(f"xdg-mime default '{schema_file.as_posix()}' x-scheme-handler/bcml".split())
+    run(
+        f"xdg-mime default '{schema_file.as_posix()}' x-scheme-handler/bcml".split(),
+        check=True,
+    )
 
 
 def _win_create_handler():
+    # pylint: disable=import-error,import-outside-toplevel,undefined-variable
     import winreg
 
     if (util.get_exec_dir().parent.parent.parent / "Scripts" / "bcml.exe").exists():

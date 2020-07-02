@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# pylint: skip-file
 localization = {
     "global.quitConfirmation": u"Do you really want to quit?",
     "global.ok": u"OK",

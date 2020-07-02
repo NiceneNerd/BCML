@@ -1,3 +1,4 @@
+# pylint: skip-file
 import webviewb
 import os
 import sys

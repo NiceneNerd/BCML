@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+# pylint: skip-file
 """
 pywebview is a lightweight cross-platform wrapper around a webviewb component that allows to display HTML content in its
 own dedicated window. Works on Windows, OS X and Linux and compatible with Python 2 and 3.
 
 (C) 2014-2019 Roman Sirokov and contributors
-Licensed under BSD license
+Licensed under BSD licensew
 
 http://github.com/r0x0r/pywebview/
 """
