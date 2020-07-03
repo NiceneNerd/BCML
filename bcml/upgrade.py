@@ -143,9 +143,13 @@ def _convert_aamp_log(log: Path):
     pio = ParameterIO("log", 0)
     root = ParameterList()
     for file, plist in doc.items():
+        if not plist.lists:
+            continue
         root.set_list(file, plist.list("param_root"))
     file_table = ParameterObject()
     for i, file in enumerate(doc):
+        if not doc[file].lists:
+            continue
         file_table.set_param(f"File{i}", file)
     root.set_object("FileTable", file_table)
     pio.set_list("param_root", root)
