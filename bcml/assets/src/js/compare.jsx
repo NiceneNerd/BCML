@@ -20,12 +20,19 @@ class CompareView extends React.Component {
             mods: []
         };
         this.setMod = this.setMod.bind(this);
+        this.loadMods = this.loadMods.bind(this);
     }
 
-    componentDidMount() {
-        pywebview.api.get_mods({ disabled: true }).then(mods => {
-            this.setState({ mods });
+    async loadMods() {
+        this.setState({
+            mods: await pywebview.api.get_mods({ disabled: true })
         });
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.show != prevProps.show) {
+            this.loadMods();
+        }
     }
 
     async setMod(number, mod) {

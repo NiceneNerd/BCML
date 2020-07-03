@@ -370,8 +370,10 @@ class ShopMerger(mergers.Merger):
 
     def get_mod_affected(self, mod: util.BcmlMod) -> set:
         files = set()
-        for _, file_name in self.get_mod_diff(mod).objects["Filenames"].params.items():
-            files.add(file_name)
+        diff = self.get_mod_diff(mod)
+        if diff:
+            for _, file_name in diff.objects["Filenames"].params.items():
+                files.add(file_name)
         return files
 
     def perform_merge(self):
