@@ -1,19 +1,15 @@
 """Provides functions for diffing and merging SARC packs"""
+# pylint: disable=unsupported-assignment-operation
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-import io
 import json
-import os
-from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 
 import oead
-import xxhash
 
-from bcml import data, util, mergers
-from bcml.util import BcmlMod
+from bcml import util, mergers
 
 SPECIAL = {
     "GameData/gamedata.ssarc",
@@ -22,9 +18,13 @@ SPECIAL = {
     "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
 }
 
+EXCLUDE_EXTS = {".sbeventpack"}
+
 
 def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
     opened_sarcs: List[oead.Sarc] = []
+    if "Bootup.pack" in file_name:
+        print()
     if isinstance(sarcs[0], Path):
         for i, sarc_path in enumerate(sarcs):
             sarcs[i] = sarc_path.read_bytes()
@@ -53,7 +53,8 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
                 file.name.replace(".s", "."), file_data, count_new=True
             ):
                 if (
-                    not file.name[file.name.rindex(".") :] in util.SARC_EXTS
+                    not file.name[file.name.rindex(".") :]
+                    in util.SARC_EXTS - EXCLUDE_EXTS
                 ) or file.name in SPECIAL:
                     new_sarc.files[file.name] = file_data
                     files_added.add(file.name)
@@ -116,7 +117,8 @@ class PackMerger(mergers.Merger):
         ]:
             canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
             if canon and not any(
-                ex in file.name for ex in ["Dungeon", "Bootup_", "AocMainField"]
+                ex in file.name
+                for ex in ["Dungeon", "Bootup_", "AocMainField", "beventpack"]
             ):
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs

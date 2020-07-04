@@ -860,6 +860,8 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
         if isinstance(file, Path)
         else bytes(file)
     )
+    if contents[0:4] == b"Yaz0":
+        contents = decompress(contents)
     table = get_hash_table(get_settings("wiiu"))
     if name not in table:
         return count_new
