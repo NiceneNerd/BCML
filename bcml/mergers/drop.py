@@ -25,7 +25,9 @@ def _drop_to_dict(drop: ParameterIO) -> dict:
                 ]
                 .params[f"ItemProbability{i:02}"]
                 .v
-                for i in range(1, drop.objects[str(table.v)].params["ColumnNum"].v + 1)
+                for i in range(
+                    1, int((len(drop.objects[str(table.v)].params) - 5) / 2) + 1
+                )
                 if f"ItemName{i:02}" in drop.objects[str(table.v)].params
             },
         }
@@ -42,7 +44,7 @@ def _dict_to_drop(drop_dict: dict) -> ParameterIO:
     for i, table in enumerate(drop_dict.keys()):
         header.params[f"Table{i + 1:02}"] = Parameter(oead.FixedSafeString64(table))
     pio.objects["Header"] = header
-    for table, contents in drop_dict.items():
+    for i, (table, contents) in enumerate(drop_dict.items()):
         header.params[f"Table{i:02}"] = table
         table_obj = ParameterObject()
         table_obj.params["RepeatNumMin"] = Parameter(contents["repeat_num_min"])
@@ -127,7 +129,7 @@ class DropMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "drop merger", "Merges changes to drop tables", "drops.yml", options={}
+            "drop merger", "Merges changes to drop tables", "drops.json", options={}
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):

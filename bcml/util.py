@@ -1117,7 +1117,9 @@ def dict_merge(
             else:
                 dct[k].extend(merge_dct[k])
         else:
-            dct[k] = merge_dct[k] if merge_dct[k] != UNDERRIDE else dct[k]
+            dct[k] = (
+                merge_dct[k] if (merge_dct[k] != UNDERRIDE or k not in dct) else dct[k]
+            )
 
 
 def pio_merge(

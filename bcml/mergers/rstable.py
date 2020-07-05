@@ -607,7 +607,7 @@ class RstbMerger(mergers.Merger):
         super().__init__(
             "RSTB", "Merges changes to ResourceSizeTable.product.srsizetable", "rstb.log",
         )
-        self._options = {"no_guess": False, "leave": False, "shrink": True}
+        self._options = {"no_guess": False, "leave": False, "shrink": False}
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
         rstb_diff = {}
@@ -703,7 +703,7 @@ class RstbMerger(mergers.Merger):
     def get_mod_diff(self, mod: util.BcmlMod):
         if not self._options:
             self._options["leave"] = (mod.path / "logs" / ".leave").exists()
-            self._options["shrink"] = (mod.path / "logs" / ".shrink").exists()
+            # self._options["shrink"] = (mod.path / "logs" / ".shrink").exists()
         stock_rstb = get_stock_rstb()
 
         mod_diffs = {}
@@ -719,7 +719,7 @@ class RstbMerger(mergers.Merger):
                     if stock_rstb.is_in_table(name):
                         old_size = stock_rstb.get_size(name)
                     if (size == 0 and self._options["leave"]) or (
-                        size < old_size and self._options["shrink"]
+                        size < old_size and not self._options["shrink"]
                     ):
                         continue
                     diffs[row[0]] = int(row[1])
