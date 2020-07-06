@@ -14,7 +14,7 @@ from bcml import util, mergers
 SPECIAL = {
     "GameData/gamedata.ssarc",
     "GameData/savedataformat.ssarc",
-    "Layout/Common.sblarc",
+    # "Layout/Common.sblarc", We'll try doing this
     "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
 }
 
