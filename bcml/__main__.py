@@ -83,13 +83,13 @@ def main(debug: bool = False):
     set_start_method("spawn", True)
     globals()["logger"] = None
     try:
+        if SYSTEM != "Windows":
+            chmod(util.get_exec_dir() / "helpers/msyt", int("755", 8))
+            chmod(util.get_exec_dir() / "helpers/7z", int("755", 8))
         LOG.parent.mkdir(parents=True, exist_ok=True)
         LOG.write_text("")
         for folder in util.get_work_dir().glob("*"):
             rmtree(folder)
-        if SYSTEM != "Windows":
-            chmod(util.get_exec_dir() / "bcml/helpers/7z", int("755", 8))
-            chmod(util.get_exec_dir() / "bcml/helpers/msyt", int("755", 8))
     except (FileNotFoundError, OSError, PermissionError):
         pass
 
