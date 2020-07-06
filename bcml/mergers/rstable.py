@@ -92,7 +92,7 @@ def calculate_size(path: Path) -> int:
             file_name=str(path), wiiu=util.get_settings("wiiu"), force=False
         )
         if path.suffix == ".bdmgparam":
-            size += 1000
+            size = 0
         if path.suffix == ".hkrb":
             size += 40
         return size
@@ -357,7 +357,7 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
         else:
             value = real_size * 3.5
     elif ext == ".bdmgparam":
-        value = (((-0.0018 * real_size) + 6.6273) * real_size) + 500
+        value = (((-0.0018 * real_size) + 6.6273) * real_size) + 750
     elif ext == ".bphysics":
         value = int(
             (((int(real_size) + 32) & -32) + 0x4E + 0x324)
@@ -473,7 +473,7 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc], is_aoc: bool = False) -> {}
                 data, wiiu=util.get_settings("wiiu"), ext=ext
             )
             if ext == ".bdmgparam":
-                size += 1000
+                size = 0
             if ext == ".hkrb":
                 size += 40
             if size == 0 and (not no_guess or ext in {".bas", ".baslist"}):
