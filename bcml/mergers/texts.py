@@ -369,8 +369,9 @@ class TextsMerger(mergers.Merger):
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         diffs = set()
-        for files in self.get_mod_diff(mod).values():
-            diffs |= set(files.keys())
+        if self.is_mod_logged(mod):
+            for files in self.get_mod_diff(mod).values():
+                diffs |= set(files.keys())
         return diffs
 
     def get_all_diffs(self):
