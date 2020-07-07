@@ -17,7 +17,7 @@ from functools import lru_cache
 from io import StringIO
 from multiprocessing import current_process
 from pathlib import Path
-from platform import system
+from platform import system, python_version_tuple
 from pprint import pformat
 from time import time_ns
 from typing import Union, List, Dict, ByteString
@@ -430,6 +430,25 @@ def timed(func):
         return res
 
     return timed_function
+
+
+def sanity_check():
+    ver = python_version_tuple()
+    if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
+        raise RuntimeError(
+            f"BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}"
+        )
+    is_64bits = sys.maxsize > 2 ** 32
+    if not is_64bits:
+        raise RuntimeError(
+            "BCML requires 64 bit Python, but you appear to be running 32 bit."
+        )
+    settings = get_settings()
+    get_game_dir()
+    if settings["wiiu"]:
+        get_update_dir()
+    if not settings["no_cemu"]:
+        get_cemu_dir()
 
 
 @lru_cache(1)

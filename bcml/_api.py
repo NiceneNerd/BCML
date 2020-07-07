@@ -71,22 +71,7 @@ class Api:
 
     @win_or_lose
     def sanity_check(self, kwargs=None):
-        ver = platform.python_version_tuple()
-        if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
-            raise RuntimeError(
-                f"BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}"
-            )
-        is_64bits = sys.maxsize > 2 ** 32
-        if not is_64bits:
-            raise RuntimeError(
-                "BCML requires 64 bit Python, but you appear to be running 32 bit."
-            )
-        settings = util.get_settings()
-        util.get_game_dir()
-        if settings["wiiu"]:
-            util.get_update_dir()
-        if not settings["no_cemu"]:
-            util.get_cemu_dir()
+        util.sanity_check()
 
     def get_folder(self):
         return self.window.create_file_dialog(webviewb.FOLDER_DIALOG)[0]
