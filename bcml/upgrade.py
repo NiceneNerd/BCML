@@ -28,7 +28,9 @@ def convert_old_mods():
         shutil.copytree(old_path, mod_dir)
         shutil.rmtree(old_path, ignore_errors=True)
     print("Converting old mods...")
-    for mod in {d for d in mod_dir.glob("*") if d.is_dir() and d.name != "9999_BCML"}:
+    for mod in sorted(
+        {d for d in mod_dir.glob("*") if d.is_dir() and d.name != "9999_BCML"}
+    ):
         print(f"Converting {mod.name[4:]}")
         try:
             convert_old_mod(mod, True)
