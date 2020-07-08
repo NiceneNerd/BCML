@@ -7,6 +7,7 @@ recursive-exclude bcml/mergers/__pycache__ *
 include bcml/assets/index.html
 include bcml/assets/logo-smaller.png
 recursive-include bcml/assets/css *.css
+recursive-include bcml/assets/help *
 recursive-include bcml/assets/icon *
 recursive-include bcml/assets/scripts *.js
 recursive-exclude bcml/assets/src *
