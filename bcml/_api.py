@@ -17,8 +17,6 @@ except ImportError:
 
 import base64
 import json
-import platform
-import sys
 import traceback
 from multiprocessing import Pool
 from pathlib import Path
@@ -97,19 +95,9 @@ class Api:
         return util.get_settings()
 
     def save_settings(self, params):
-        old_cef = util.get_settings("use_cef")
         print("Saving settings, BCML will reload momentarily...")
         util.get_settings.settings = params["settings"]
         util.save_settings()
-        if params["settings"]["use_cef"] and not util.can_cef():
-            print(
-                "Installing <code>cefpython3</code>, "
-                "if BCML does not restart, launch it again manually"
-            )
-            self.install_cef()
-        if params["settings"]["use_cef"] != old_cef:
-            sleep(1)
-            self.restart()
 
     def old_settings(self):
         old = util.get_data_dir() / "settings.ini"
@@ -533,15 +521,6 @@ class Api:
                 "--pre" if DEBUG else "",
                 "bcml",
             ],
-            check=True,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-
-    @win_or_lose
-    def install_cef(self):
-        run(
-            [util.get_python_exe(), "-m", "pip", "install", "cefpython3",],
             check=True,
             stdout=PIPE,
             stderr=PIPE,

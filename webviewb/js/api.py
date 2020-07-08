@@ -25,12 +25,9 @@ window.pywebview = {
     _bridge: {
         call: function (funcName, params, id) {
             switch(window.pywebview.platform) {
-                case 'mshtml':
                 case 'cef':
                 case 'qtwebkit':
                     return window.external.call(funcName, params, id);
-                case 'edgehtml':
-                    return window.external.notify(JSON.stringify([funcName, params, id]));
                 case 'qtwebengine':
                     new QWebChannel(qt.webChannelTransport, function(channel) {
                         channel.objects.external.call(funcName, JSON.stringify(params), id);

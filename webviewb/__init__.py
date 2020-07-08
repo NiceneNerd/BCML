@@ -122,10 +122,6 @@ def start(
 
     guilib = initialize(gui)
 
-    # thanks to the buggy EdgeHTML, http server must be used for local urls
-    if guilib.renderer == "edgehtml":
-        http_server = True
-
     for window in windows:
         window._initialize(guilib, multiprocessing, http_server)
 

@@ -10,35 +10,19 @@ http://github.com/r0x0r/pywebview/
 import os
 import sys
 import logging
-import json
-import shutil
-import tempfile
-import webbrowser
-from threading import Event, Semaphore
+from threading import Event
 from ctypes import windll
-from uuid import uuid4
 
 from webviewb import (
-    WebViewException,
     windows,
     OPEN_DIALOG,
     FOLDER_DIALOG,
     SAVE_DIALOG,
-    _debug,
-    _user_agent,
 )
-from webviewb.guilib import forced_gui_
-from webviewb.http_server import start_server
 from webviewb.util import (
-    parse_api_js,
-    interop_dll_path,
     parse_file_type,
     inject_base_uri,
-    default_html,
-    js_bridge_call,
 )
-from webviewb.js import alert
-from webviewb.js.css import disable_text_select
 from webviewb.localization import localization
 
 import clr
@@ -48,9 +32,9 @@ clr.AddReference("System.Collections")
 clr.AddReference("System.Threading")
 
 import System.Windows.Forms as WinForms
-from System import IntPtr, Int32, Func, Type, Environment, Uri
+from System import IntPtr, Int32, Func, Type
 from System.Threading import Thread, ThreadStart, ApartmentState
-from System.Drawing import Size, Point, Icon, Color, ColorTranslator, SizeF
+from System.Drawing import Size, Icon, ColorTranslator, SizeF
 
 
 logger = logging.getLogger("pywebview")
@@ -58,359 +42,16 @@ logger = logging.getLogger("pywebview")
 settings = {}
 
 
-def _is_edge():
-    try:
-        import _winreg as winreg  # Python 2
-    except ImportError:
-        import winreg  # Python 3
+from . import cef as CEF
 
-    try:
-        net_key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full",
-        )
-        version, _ = winreg.QueryValueEx(net_key, "Release")
+IWebBrowserInterop = object
 
-        windows_key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
-        )
-        build, _ = winreg.QueryValueEx(windows_key, "CurrentBuild")
-        build = int(build)
-
-        return version >= 394802 and build >= 17134  # .NET 4.6.2 + Windows 10 1803
-    except Exception as e:
-        logger.exception(e)
-        return False
-    finally:
-        winreg.CloseKey(net_key)
-
-
-is_cef = forced_gui_ == "cef"
-is_edge = _is_edge() and forced_gui_ != "mshtml"
-
-
-if is_cef:
-    from . import cef as CEF
-
-    IWebBrowserInterop = object
-
-    logger.debug("Using WinForms / CEF")
-    renderer = "cef"
-elif is_edge:
-    clr.AddReference(interop_dll_path("Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"))
-    from Microsoft.Toolkit.Forms.UI.Controls import WebView
-    from System.ComponentModel import ISupportInitialize
-
-    IWebBrowserInterop = object
-
-    logger.debug("Using WinForms / EdgeHTML")
-    renderer = "edgehtml"
-else:
-    import ctypes
-
-    ctypes.windll.user32.MessageBoxW(
-        0,
-        "The most recent webview available on your system is not supported by BCML. "
-        "You will need to use the CEF renderer. Please run `bcml-install-cef` from "
-        "the Command Prompt or PowerShell and then try again.",
-        "BCML Webview Error",
-        0x0 | 0x10,
-    )
-    sys.exit(1)
+logger.debug("Using WinForms / CEF")
+renderer = "cef"
 
 
 class BrowserView:
     instances = {}
-
-    class MSHTML:
-        class JSBridge(IWebBrowserInterop):
-            __namespace__ = "BrowserView.MSHTML.JSBridge"
-            window = None
-
-            def call(self, func_name, param, value_id):
-                return js_bridge_call(self.window, func_name, param, value_id)
-
-            def alert(self, message):
-                BrowserView.alert(message)
-
-            def console(self, message):
-                print(message)
-
-        def __init__(self, form, window):
-            self.pywebview_window = window
-            self.web_browser = WebBrowserEx()
-            self.web_browser.Dock = WinForms.DockStyle.Fill
-            self.web_browser.ScriptErrorsSuppressed = not _debug
-            self.web_browser.IsWebBrowserContextMenuEnabled = _debug
-            self.web_browser.WebBrowserShortcutsEnabled = False
-            self.web_browser.DpiAware = True
-
-            user_agent = _user_agent or settings.get("user_agent")
-            if user_agent:
-                self.web_browser.ChangeUserAgent(user_agent)
-
-            self.web_browser.ScriptErrorsSuppressed = not _debug
-            self.web_browser.IsWebBrowserContextMenuEnabled = _debug
-
-            self.js_result_semaphore = Semaphore(0)
-            self.js_bridge = BrowserView.MSHTML.JSBridge()
-            self.js_bridge.window = window
-
-            self.web_browser.ObjectForScripting = self.js_bridge
-
-            # HACK. Hiding the WebBrowser is needed in order to show a non-default background color. Tweaking the Visible property
-            # results in showing a non-responsive control, until it is loaded fully. To avoid this, we need to disable this behaviour
-            # for the default background color.
-            if window.background_color != "#FFFFFF":
-                self.web_browser.Visible = False
-                self.first_load = True
-            else:
-                self.first_load = False
-
-            self.cancel_back = False
-            self.web_browser.PreviewKeyDown += self.on_preview_keydown
-            self.web_browser.Navigating += self.on_navigating
-            self.web_browser.NewWindow3 += self.on_new_window
-            self.web_browser.DownloadComplete += self.on_download_complete
-            self.web_browser.DocumentCompleted += self.on_document_completed
-
-            if window.url:
-                self.web_browser.Navigate(window.url)
-            elif window.html:
-                self.web_browser.DocumentText = window.html
-            else:
-                self.web_browser.DocumentText = default_html
-
-            self.form = form
-            form.Controls.Add(self.web_browser)
-
-        def evaluate_js(self, script):
-            result = self.web_browser.Document.InvokeScript("eval", (script,))
-            self.js_result = (
-                None if result is None or result is "null" else json.loads(result)
-            )
-            self.js_result_semaphore.release()
-
-        def load_html(self, content, base_uri):
-            self.web_browser.DocumentText = inject_base_uri(content, base_uri)
-            self.pywebview_window.loaded.clear()
-
-        def load_url(self, url):
-            self.web_browser.Navigate(url)
-
-        def on_preview_keydown(self, sender, args):
-            if args.KeyCode == WinForms.Keys.Back:
-                self.cancel_back = True
-            elif args.KeyCode == WinForms.Keys.Delete:
-                self.web_browser.Document.ExecCommand("Delete", False, None)
-            elif (
-                args.Modifiers == WinForms.Keys.Control
-                and args.KeyCode == WinForms.Keys.C
-            ):
-                self.web_browser.Document.ExecCommand("Copy", False, None)
-            elif (
-                args.Modifiers == WinForms.Keys.Control
-                and args.KeyCode == WinForms.Keys.X
-            ):
-                self.web_browser.Document.ExecCommand("Cut", False, None)
-            elif (
-                args.Modifiers == WinForms.Keys.Control
-                and args.KeyCode == WinForms.Keys.V
-            ):
-                self.web_browser.Document.ExecCommand("Paste", False, None)
-            elif (
-                args.Modifiers == WinForms.Keys.Control
-                and args.KeyCode == WinForms.Keys.Z
-            ):
-                self.web_browser.Document.ExecCommand("Undo", False, None)
-            elif (
-                args.Modifiers == WinForms.Keys.Control
-                and args.KeyCode == WinForms.Keys.A
-            ):
-                self.web_browser.Document.ExecCommand("selectAll", False, None)
-
-        def on_new_window(self, sender, args):
-            args.Cancel = True
-            webbrowser.open(args.Url)
-
-        def on_download_complete(self, sender, args):
-            pass
-
-        def on_navigating(self, sender, args):
-            if self.cancel_back:
-                args.Cancel = True
-                self.cancel_back = False
-
-        def on_document_completed(self, sender, args):
-            document = self.web_browser.Document
-            document.InvokeScript("eval", (alert.src,))
-
-            if _debug:
-                document.InvokeScript(
-                    "eval",
-                    (
-                        "window.console = { log: function(msg) { window.external.console(JSON.stringify(msg)) }}",
-                    ),
-                )
-
-            if self.first_load:
-                self.web_browser.Visible = True
-                self.first_load = False
-
-            self.url = (
-                None
-                if args.Url.AbsoluteUri == "about:blank"
-                else str(args.Url.AbsoluteUri)
-            )
-
-            document.InvokeScript(
-                "eval", (parse_api_js(self.pywebview_window, "mshtml"),)
-            )
-
-            if not self.pywebview_window.text_select:
-                document.InvokeScript("eval", (disable_text_select,))
-            self.pywebview_window.loaded.set()
-
-            if self.pywebview_window.easy_drag:
-                document.MouseMove += self.on_mouse_move
-
-        def on_mouse_move(self, sender, e):
-            if e.MouseButtonsPressed == WinForms.MouseButtons.Left:
-                WebBrowserEx.ReleaseCapture()
-                windll.user32.SendMessageW(
-                    self.form.Handle.ToInt32(),
-                    WebBrowserEx.WM_NCLBUTTONDOWN,
-                    WebBrowserEx.HT_CAPTION,
-                    6,
-                )
-
-    class EdgeHTML:
-        def __init__(self, form, window):
-            self.pywebview_window = window
-            self.web_view = WebView()
-
-            life = ISupportInitialize(self.web_view)
-            life.BeginInit()
-            form.Controls.Add(self.web_view)
-
-            self.js_result_semaphore = Semaphore(0)
-            self.web_view.Dock = WinForms.DockStyle.Fill
-            self.web_view.DpiAware = True
-            self.web_view.IsIndexedDBEnabled = True
-            self.web_view.IsJavaScriptEnabled = True
-            self.web_view.IsScriptNotifyAllowed = True
-            self.web_view.IsPrivateNetworkClientServerCapabilityEnabled = True
-            self.web_view.DefaultBackgroundColor = form.BackColor
-
-            self.web_view.ScriptNotify += self.on_script_notify
-            self.web_view.NewWindowRequested += self.on_new_window_request
-            self.web_view.NavigationCompleted += self.on_navigation_completed
-
-            # This must be before loading URL. Otherwise the webviewb will remain empty
-            life.EndInit()
-
-            self.httpd = None  # HTTP server for load_html
-            self.tmpdir = None
-            self.url = None
-            self.ishtml = False
-
-            _allow_localhost()
-
-            if window.url:
-                self.load_url(window.url)
-            elif window.html:
-                self.load_html(window.html, "")
-            else:
-                self.load_html(default_html, "")
-
-        def evaluate_js(self, script):
-            try:
-                result = self.web_view.InvokeScript("eval", (script,))
-            except Exception as e:
-                logger.exception("Error occurred in script")
-                result = None
-
-            self.js_result = (
-                None if result is None or result == "" else json.loads(result)
-            )
-            self.js_result_semaphore.release()
-
-        def get_current_url(self):
-            return self.url
-
-        def load_html(self, html, base_uri):
-            self.tmpdir = tempfile.mkdtemp()
-            self.temp_html = os.path.join(self.tmpdir, "index.html")
-
-            with open(self.temp_html, "w", encoding="utf-8") as f:
-                f.write(inject_base_uri(html, base_uri))
-
-            if self.httpd:
-                self.httpd.shutdown()
-
-            url, _ = start_server("file://" + self.temp_html)
-            self.ishtml = True
-            self.web_view.Navigate(url)
-
-        def load_url(self, url):
-            self.ishtml = False
-
-            # WebViewControl as of 5.1.1 crashes on file:// urls. Stupid workaround to make it work
-            if url.startswith("file://"):
-                url = start_server(self.url)
-
-            self.web_view.Navigate(url)
-
-        def on_script_notify(self, _, args):
-            try:
-                func_name, func_param, value_id = json.loads(args.Value)
-
-                if func_name == "alert":
-                    WinForms.MessageBox.Show(func_param)
-                elif func_name == "console":
-                    print(func_param)
-                else:
-                    js_bridge_call(self.pywebview_window, func_name, func_param, value_id)
-            except Exception as e:
-                logger.exception("Exception occured during on_script_notify")
-
-        def on_new_window_request(self, _, args):
-            webbrowser.open(str(args.get_Uri()))
-            args.set_Handled(True)
-
-        def on_navigation_completed(self, _, args):
-            try:
-                if self.tmpdir and os.path.exists(self.tmpdir):
-                    shutil.rmtree(self.tmpdir)
-                    self.tmpdir = None
-            except Exception as e:
-                logger.exception("Failed deleting %s" % self.tmpdir)
-
-            url = str(args.Uri)
-            self.url = None if self.ishtml else url
-            self.web_view.InvokeScript(
-                "eval",
-                (
-                    'window.alert = (msg) => window.external.notify(JSON.stringify(["alert", msg+"", ""]))',
-                ),
-            )
-
-            if _debug:
-                self.web_view.InvokeScript(
-                    "eval",
-                    (
-                        'window.console = { log: (msg) => window.external.notify(JSON.stringify(["console", msg+"", ""]))}',
-                    ),
-                )
-
-            self.web_view.InvokeScript(
-                "eval", (parse_api_js(self.pywebview_window, "edgehtml"),)
-            )
-
-            if not self.pywebview_window.text_select:
-                self.web_view.InvokeScript("eval", (disable_text_select,))
-
-            self.pywebview_window.loaded.set()
 
     class BrowserForm(WinForms.Form):
         def __init__(self, window):
@@ -463,32 +104,20 @@ class BrowserView:
             if window.frameless:
                 self.frameless = window.frameless
                 self.FormBorderStyle = 0
-            if is_cef:
-                CEF.create_browser(window, self.Handle.ToInt32(), BrowserView.alert)
-            elif is_edge:
-                self.browser = BrowserView.EdgeHTML(self, window)
-            else:
-                self.browser = BrowserView.MSHTML(self, window)
+            CEF.create_browser(window, self.Handle.ToInt32(), BrowserView.alert)
 
             self.Shown += self.on_shown
             self.FormClosed += self.on_close
             self.FormClosing += self.on_closing
 
-            if is_cef:
-                self.Resize += self.on_resize
-
-        def on_shown(self, sender, args):
-            if not is_cef:
-                self.shown.set()
+            self.Resize += self.on_resize
 
         def on_close(self, sender, args):
             def _shutdown():
-                if is_cef:
-                    CEF.shutdown()
+                CEF.shutdown()
                 WinForms.Application.Exit()
 
-            if is_cef:
-                CEF.close_window(self.uid)
+            CEF.close_window(self.uid)
 
             del BrowserView.instances[self.uid]
 
@@ -792,30 +421,10 @@ def create_window(window):
     app = WinForms.Application
 
     if window.uid == "master":
-        if not is_edge and not is_cef:
-            _set_ie_mode()
-
         if sys.getwindowsversion().major >= 6:
             windll.user32.SetProcessDPIAware()
 
-        if is_cef:
-            CEF.init(window)
-        else:
-            if windll.shell32.IsUserAnAdmin() != 0:
-                import ctypes
-
-                ctypes.windll.user32.MessageBoxW(
-                    0,
-                    "BCML cannot be run as administrator in EdgeHTML mode. "
-                    "Please run without administrator privileges and try again. If you need "
-                    'to run BCML as administrator in the future, check the "Use CEF renderer'
-                    "\" option in BCML's settings. If admin privileges for any reason can't"
-                    " be disabled, run `bcml-install-cef` to switch to CEF from the Command "
-                    "Prompt or PowerShell.",
-                    "Permissions Error",
-                    0x0 | 0x10,
-                )
-                sys.exit(1)
+        CEF.init(window)
 
         app.EnableVisualStyles()
         app.SetCompatibleTextRenderingDefault(False)
@@ -902,30 +511,19 @@ def create_file_dialog(
 
 
 def get_current_url(uid):
-    if is_cef:
-        return CEF.get_current_url(uid)
-    else:
-        window = BrowserView.instances[uid]
-        window.loaded.wait()
-        return window.browser.url
+    return CEF.get_current_url(uid)
 
 
 def load_url(url, uid):
     window = BrowserView.instances[uid]
     window.loaded.clear()
 
-    if is_cef:
-        CEF.load_url(url, uid)
-    else:
-        window.load_url(url)
+    CEF.load_url(url, uid)
 
 
 def load_html(content, base_uri, uid):
-    if is_cef:
-        CEF.load_html(inject_base_uri(content, base_uri), uid)
-        return
-    else:
-        BrowserView.instances[uid].load_html(content, base_uri)
+    CEF.load_html(inject_base_uri(content, base_uri), uid)
+    return
 
 
 def show(uid):
@@ -975,15 +573,9 @@ def destroy_window(uid):
     window = BrowserView.instances[uid]
     window.Invoke(Func[Type](_close))
 
-    if not is_cef:
-        window.browser.js_result_semaphore.release()
-
 
 def evaluate_js(script, uid):
-    if is_cef:
-        return CEF.evaluate_js(script, uid)
-    else:
-        return BrowserView.instances[uid].evaluate_js(script)
+    return CEF.evaluate_js(script, uid)
 
 
 def get_position(uid):

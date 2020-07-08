@@ -63,7 +63,7 @@ def initialize(forced_gui=None):
         forced_gui = (
             os.environ["PYWEBVIEW_GUI"].lower()
             if "PYWEBVIEW_GUI" in os.environ
-            and os.environ["PYWEBVIEW_GUI"].lower() in ["qt", "gtk", "cef", "mshtml"]
+            and os.environ["PYWEBVIEW_GUI"].lower() in ["qt", "gtk", "cef"]
             else None
         )
 

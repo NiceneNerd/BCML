@@ -463,17 +463,6 @@ def get_python_exe() -> str:
     return sys.executable
 
 
-def can_cef() -> bool:
-    try:
-        # fmt: off
-        from cefpython3 import cefpython # pylint: disable=import-outside-toplevel
-        del cefpython
-        return True
-        # fmt: on
-    except ImportError:
-        return False
-
-
 @lru_cache(None)
 def get_data_dir() -> Path:
     if system() == "Windows":
@@ -528,7 +517,6 @@ DEFAULT_SETTINGS = {
     "no_cemu": False,
     "wiiu": True,
     "no_hardlinks": False,
-    "use_cef": False,
 }
 
 

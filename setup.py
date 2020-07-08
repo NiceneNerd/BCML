@@ -40,10 +40,7 @@ setup(
     },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": [
-            "bcml-debug = bcml.__main__:main_debug",
-            "bcml-install-cef = bcml.__main__:install_cef",
-        ],
+        "console_scripts": ["bcml-debug = bcml.__main__:main_debug",],
     },
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -55,6 +52,7 @@ setup(
     install_requires=[
         "aamp>=1.4.1",
         "byml>=2.3.1",
+        "cefpython3~=66.0",
         "oead>=1.1.1",
         "pythonnet>=2.5.0rc2; platform_system=='Windows'",
         "PyYAML~=5.3.1",
@@ -62,6 +60,5 @@ setup(
         "rstb>=1.2.0",
         "xxhash~=1.4.3",
     ],
-    extras_require={"cef": ["cefpython3~=66.0"]},
     zip_safe=False,
 )
