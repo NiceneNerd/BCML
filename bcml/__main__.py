@@ -26,7 +26,7 @@ from shutil import rmtree
 from threading import Thread
 from time import sleep
 
-import webviewb
+import webviewb as webview
 
 from bcml import DEBUG, util, _oneclick
 from bcml.util import Messager, LOG, SYSTEM
@@ -127,7 +127,7 @@ def main(debug: bool = False):
         url = f"{host}/index.html?firstrun=yes"
         width, height = 750, 600
 
-    api.window = webviewb.create_window(
+    api.window = webview.create_window(
         "BOTW Cross-Platform Mod Loader",
         url=url,
         js_api=api,
@@ -146,7 +146,7 @@ def main(debug: bool = False):
     with redirect_stderr(sys.stdout):
         with redirect_stdout(messager):
             sleep(0.5)
-            webviewb.start(
+            webview.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
             )
     stop_it(messager=messager)
