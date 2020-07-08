@@ -56,7 +56,7 @@ def start_new_instance():
 
 
 def help_window(host: str):
-    webviewb.create_window("BCML Help", url=f"{host}/help.html?page=main")
+    webviewb.create_window("BCML Help", url=f"{host}/help/")
 
 
 class Api:

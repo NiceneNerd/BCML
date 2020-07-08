@@ -2,6 +2,7 @@
 /mods
 /.vscode
 data/master.srsizetable
+/bcml/assets/help
 /helpers/__pycache__
 /tmp
 error.log

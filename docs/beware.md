@@ -6,7 +6,7 @@
     you can also use it as a way to run different mod "profiles."
 -   **Do** read the tooltips throughout the UI for helpful information, especially when
     picking game folders.
--   **Do** read the [Troubleshooting](help.html?page=troubleshooting) page first if you
+-   **Do** read the [Troubleshooting](trouble.md) page first if you
     have problems.
 -   **Do** use the "Copy to Clipboard" icon button on the error dialog when reporting
     errors.

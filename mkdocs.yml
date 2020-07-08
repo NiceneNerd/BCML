@@ -1,0 +1,15 @@
+site_name: BCML Help
+nav:
+    - Home: index.md
+    - Installing Mods: install.md
+    - Managing Mods: mods.md
+    - Exporting for Console: export.md
+    - About BNPs: bnp.md
+    - "Do's and Dont's": beware.md
+    - Troubleshooting: trouble.md
+    - Licenses:
+          - BCML: LICENSE.md
+          - 7-Zip: license/7z.md
+          - MSYT: license/msyt.md
+          - pywebview: license/pywebview.md
+theme: material

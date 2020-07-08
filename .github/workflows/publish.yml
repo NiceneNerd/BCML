@@ -22,13 +22,15 @@ jobs:
             - name: Install Python dependencies
               run: |
                   python -m pip install --upgrade pip
-                  pip install setuptools wheel twine pynsist
+                  pip install setuptools wheel twine pynsist mkdocs mkdocs-material
                   sudo apt install nsis
             - name: Generate webpack bundle
               working-directory: ./bcml/assets
               run: |
                   npm install
                   ./node_modules/.bin/webpack --mode production
+            - name: Build docs
+              run: mkdocs build -d ./bcml/assets/help
             - name: Build artifacts
               run: |
                   python setup.py sdist bdist_wheel
