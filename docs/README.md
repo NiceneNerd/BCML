@@ -40,6 +40,8 @@ Building from source requires, in addition to the general prerequisites:
     -   aamp>=1.4.1
     -   byml>=2.3.1
     -   oead>=1.1.1
+    -   mkdocs>=1.1.2
+    -   mkdocs-material>=5.4.0
     -   pyYaml~=5.3.1
     -   requests~=2.23.0
     -   rstb>=1.2.0
@@ -47,18 +49,23 @@ Building from source requires, in addition to the general prerequisites:
     -   xxhash~=1.4.3
     -   wheel~=0.34.2
 
-To build from source, you will first need to prepare the webpack bundle. Enter
-the `bcml/assets` folder, run `npm install` to collect dependencies, and then
-run `npm build` or `npm test`.
+Steps to build from source:
 
-Finally, back at the root folder, you can install using
-`python setup.py install`. You can also run without installing by using `python -m bcml`.
+1. Prepare the webpack bundle
+   1. Open terminal to `bcml/assets`
+   2. Run `npm install`
+   3. Run `npm build` (or `npm test` to watch while editing)
+2. Build the docs
+   1. Open terminal to repo root folder
+   2. Run `mkdocs build -d bcml/assets/help`
+3. Install BCML with `python setup.py install` or run without installing with
+   `python -m bcml`
 
 ## Usage and Troubleshooting
 
 For information on how to use BCML, see the Help dialog in-app or read the
 documentation
-[on the repo](https://github.com/NiceneNerd/BCML/tree/master/bcml/assets/help).
+[on the repo](https://github.com/NiceneNerd/BCML/tree/master/bcml/docs).
 For issues and troubleshooting, please check the official
 [Troubleshooting](https://github.com/NiceneNerd/BCML/wiki/Troubleshooting) page.
 

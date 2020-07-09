@@ -112,6 +112,9 @@ class BrowserView:
 
             self.Resize += self.on_resize
 
+        def on_shown(self, sender, args):
+            return
+
         def on_close(self, sender, args):
             def _shutdown():
                 CEF.shutdown()
