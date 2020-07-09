@@ -467,6 +467,26 @@ class Api:
             return
         generate_rstb_for_mod(mod)
 
+    @win_or_lose
+    def bnp_to_gfx(self, params=None):
+        try:
+            bnp = Path(self.file_pick({"multiple": False})[0])
+        except IndexError:
+            return
+        with util.TempModContext():
+            install.install_mod(bnp, merge_now=True)
+            out = self.window.create_file_dialog(
+                webviewb.SAVE_DIALOG,
+                file_types=(
+                    f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
+                    "BOTW Nano Patch (*.bnp)",
+                ),
+                save_filename=f"{bnp.stem}.zip",
+            )
+            if out:
+                output = Path(out if isinstance(out, str) else out[0])
+                install.export(output)
+
     def get_mod_edits(self, params=None):
         mod = BcmlMod.from_json(params["mod"])
         edits = {}

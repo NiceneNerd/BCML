@@ -12,6 +12,7 @@ import urllib.request
 from collections import OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
+from contextlib import AbstractContextManager
 from copy import deepcopy
 from functools import lru_cache
 from io import StringIO
@@ -19,6 +20,7 @@ from multiprocessing import current_process
 from pathlib import Path
 from platform import system, python_version_tuple
 from pprint import pformat
+from tempfile import mkdtemp
 from time import time_ns
 from typing import Union, List, Dict, ByteString
 from xml.dom import minidom
@@ -569,7 +571,7 @@ def get_game_dir() -> Path:
     )
     if not game_dir or not Path(game_dir).is_dir():
         raise FileNotFoundError(
-            "The BotW game directory has has moved or not been saved yet."
+            "The BOTW game directory has has moved or not been saved yet."
         )
     return Path(game_dir)
 
@@ -722,11 +724,29 @@ def get_dlc_path() -> str:
     return "aoc" if get_settings("wiiu") else "01007EF00011F001/romfs"
 
 
+class TempModContext(AbstractContextManager):
+    _tmpdir: Path
+
+    def __init__(self, path: Path = None):
+        self._tmpdir = path or Path(mkdtemp())
+
+    def __enter__(self):
+        setattr(get_modpack_dir, "tmp", self._tmpdir)
+
+    def __exit__(self, exctype, excinst, exctb):
+        delattr(get_modpack_dir, "tmp")
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+
+
 def get_modpack_dir() -> Path:
-    return get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
+    return getattr(
+        get_modpack_dir,
+        "tmp",
+        get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx"),
+    )
 
 
-@lru_cache(1024)
+@lru_cache(None)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).replace("\\", "/").startswith(f"{get_content_path()}/"):
         path = Path(str(path).replace("\\", "/").replace(f"{get_content_path()}/", ""))

@@ -33,6 +33,8 @@ from bcml.util import Messager, LOG, SYSTEM
 from bcml._api import Api
 from bcml._server import start_server
 
+logger = None  # pylint: disable=invalid-name
+
 
 def stop_it(messager: Messager = None):
     if messager:
@@ -55,7 +57,9 @@ def stop_it(messager: Messager = None):
 
 def main(debug: bool = False):
     set_start_method("spawn", True)
-    globals()["logger"] = None
+    global logger  # pylint: disable=invalid-name,global-statement
+    logger = None
+
     try:
         if SYSTEM != "Windows":
             chmod(util.get_exec_dir() / "helpers/msyt", int("755", 8))
@@ -106,7 +110,7 @@ def main(debug: bool = False):
         height=height,
         min_size=(width if width == 750 else 820, 600),
     )
-    globals()["logger"] = Messager(api.window)
+    logger = Messager(api.window)
     api.window.closing += stop_it
 
     if not debug:
