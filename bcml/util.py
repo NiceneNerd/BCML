@@ -175,6 +175,7 @@ AAMP_EXTS = {
     ".sbvege",
     ".bactcapt",
     ".sbactcapt",
+    ".bwinfo",
 }
 BYML_EXTS = {
     ".bgdata",
