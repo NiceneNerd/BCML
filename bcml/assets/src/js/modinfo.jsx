@@ -199,6 +199,9 @@ class ModInfo extends React.Component {
                                     </a>
                                 </span>
                             )}
+                            <span>
+                                <strong>Date:</strong> {this.props.mod.date}
+                            </span>
                         </>
                     ) : (
                         "No mod selected"

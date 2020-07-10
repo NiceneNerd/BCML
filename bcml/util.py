@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from configparser import ConfigParser
 from contextlib import AbstractContextManager
 from copy import deepcopy
+from datetime import datetime
 from functools import lru_cache
 from io import StringIO
 from multiprocessing import current_process
@@ -281,6 +282,7 @@ class BcmlMod:
     def to_json(self) -> dict:
         return {
             "name": self.name,
+            "date": self.date,
             "priority": self.priority,
             "path": str(self.path),
             "disabled": (self.path / ".disabled").exists(),
@@ -302,6 +304,12 @@ class BcmlMod:
     @property
     def id(self) -> str:
         return self._info["id"]
+
+    @property
+    def date(self) -> str:
+        return datetime.fromtimestamp((self.path / "info.json").stat().st_mtime).strftime(
+            "%m/%d/%Y %-I:%M %p"
+        )
 
     @property
     def description(self) -> str:

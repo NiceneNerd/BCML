@@ -155,6 +155,7 @@ class Api:
                 m.NAME.upper() for m in mergers.get_mergers() if m().is_mod_logged(mod)
             ],
             "desc": mod.description,
+            "date": mod.date,
             "processed": (mod.path / ".processed").exists(),
             "image": img,
             "url": mod.url,
