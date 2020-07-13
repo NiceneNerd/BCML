@@ -556,9 +556,9 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
-        run(
+        result = run(
             [
-                util.get_python_exe(),
+                util.get_python_exe().replace("pythonw", "python"),
                 "-m",
                 "pip",
                 "install",
@@ -566,10 +566,12 @@ class Api:
                 "--pre" if DEBUG else "",
                 "bcml",
             ],
-            check=True,
-            stdout=PIPE,
-            stderr=PIPE,
+            capture_output=True,
+            check=False,
+            text=True,
         )
+        if result.stderr:
+            raise RuntimeError(result.stderr)
 
     def restart(self):
         opener = Thread(target=start_new_instance)
