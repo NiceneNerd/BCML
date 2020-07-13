@@ -455,6 +455,7 @@ def sanity_check():
             "BCML requires 64 bit Python, but you appear to be running 32 bit."
         )
     settings = get_settings()
+    get_storage_dir()
     get_game_dir()
     if settings["wiiu"]:
         get_update_dir()
@@ -486,7 +487,10 @@ def get_data_dir() -> Path:
 
 
 def get_storage_dir() -> Path:
-    store_dir = Path(get_settings("store_dir"))
+    folder = get_settings("store_dir")
+    if not folder:
+        raise FileNotFoundError("No storage folder available")
+    store_dir = Path(folder)
     if not store_dir.exists():
         store_dir.mkdir(parents=True, exist_ok=True)
     return store_dir
