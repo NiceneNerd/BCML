@@ -21,7 +21,7 @@ import traceback
 from multiprocessing import Pool
 from pathlib import Path
 from subprocess import run, PIPE, Popen
-from shutil import rmtree
+from shutil import rmtree, copyfile
 from time import sleep
 from threading import Thread
 
@@ -33,7 +33,6 @@ import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
 from bcml.util import BcmlMod, LOG, SYSTEM
-from bcml.mergers.rstable import generate_rstb_for_mod
 from bcml.__version__ import USER_VERSION
 
 
@@ -466,7 +465,32 @@ class Api:
             assert mod.exists()
         except (FileNotFoundError, IndexError, AssertionError):
             return
-        generate_rstb_for_mod(mod)
+        with util.TempModContext():
+            install.install_mod(
+                mod,
+                merge_now=True,
+                options={
+                    "disable": [
+                        m().NAME for m in mergers.get_mergers() if m.NAME != "rstb"
+                    ],
+                    "options": {},
+                },
+            )
+            (mod / util.get_content_path() / "System" / "Resource").mkdir(
+                parents=True, exist_ok=True
+            )
+            copyfile(
+                util.get_master_modpack_dir()
+                / util.get_content_path()
+                / "System"
+                / "Resource"
+                / "ResourceSizeTable.product.srsizetable",
+                mod
+                / util.get_content_path()
+                / "System"
+                / "Resource"
+                / "ResourceSizeTable.product.srsizetable",
+            )
 
     @win_or_lose
     def bnp_to_gfx(self, params=None):
