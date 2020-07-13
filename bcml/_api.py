@@ -466,15 +466,20 @@ class Api:
         except (FileNotFoundError, IndexError, AssertionError):
             return
         with util.TempModContext():
+            if not ((mod / "info.json").exists() or (mod / "rules.txt").exists()):
+                (mod / "rules.txt").write_text(
+                    """
+                    [Definition]
+                    titleIds = 00050000101C9300,00050000101C9400,00050000101C9500
+                    name = TEMP
+                    path = "The Legend of Zelda: Breath of the Wild/Mods/TEMP"
+                    description = TEMP
+                    version = 4
+                    fsPriority = 100
+                    """
+                )
             install.install_mod(
-                mod,
-                merge_now=True,
-                options={
-                    "disable": [
-                        m().NAME for m in mergers.get_mergers() if m.NAME != "rstb"
-                    ],
-                    "options": {},
-                },
+                mod, merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
