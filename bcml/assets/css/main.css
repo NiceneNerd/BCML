@@ -612,6 +612,12 @@ Fade {
     background-color: #00796b !important;
 }
 
+.alert-info {
+    color: #ffffff !important;
+    background-color: #009688 !important;
+    border-color: #00796b !important;
+}
+
 .btn-success {
     background-color: #43a047 !important;
 }

@@ -1,4 +1,4 @@
-import { Button, Carousel, Modal, Spinner } from "react-bootstrap";
+import { Alert, Button, Carousel, Modal, Spinner } from "react-bootstrap";
 
 import React from "react";
 import Settings from "./settings.jsx";
@@ -105,30 +105,33 @@ class FirstRun extends React.Component {
                                 }}
                             />
                             <p className="mt-4 mb-1">
-                                Thank you for installing BCML. It appears that this is
-                                your first time running it, or you have upgraded from an
-                                old version. We'll need to do a few things to get you set
-                                up.
+                                Thank you for installing BCML. It appears that
+                                this is your first time running it, or you have
+                                upgraded from an old version. We'll need to do a
+                                few things to get you set up.
                             </p>
                         </Carousel.Item>
                         <Carousel.Item>
                             <h2>
-                                <i className="material-icons">settings</i> Import Settings
+                                <i className="material-icons">settings</i>{" "}
+                                Import Settings
                             </h2>
                             {this.state.oldSettings ? (
                                 <div>
                                     <p>
-                                        It looks like you are upgrading from a previous
-                                        version of BCML. BCML has attempted to import your
-                                        old settings. Result:
+                                        It looks like you are upgrading from a
+                                        previous version of BCML. BCML has
+                                        attempted to import your old settings.
+                                        Result:
                                     </p>
                                     <p>{this.state.converted}</p>
                                 </div>
                             ) : (
                                 <div>
-                                    Let's see, it doesn't look like you are upgrading from
-                                    a previous version of BCML. Alright then, we'll set
-                                    you up from scratch on the next page.
+                                    Let's see, it doesn't look like you are
+                                    upgrading from a previous version of BCML.
+                                    Alright then, we'll set you up from scratch
+                                    on the next page.
                                 </div>
                             )}
                         </Carousel.Item>
@@ -137,13 +140,15 @@ class FirstRun extends React.Component {
                                 <>
                                     {this.state.oldSettings ? (
                                         <p>
-                                            Take a look at your imported settings and
-                                            check that everything seems right.
+                                            Take a look at your imported
+                                            settings and check that everything
+                                            seems right.
                                         </p>
                                     ) : (
                                         <p>
-                                            Take a moment to configure your basic
-                                            settings. If you need help, consult the BCML{" "}
+                                            Take a moment to configure your
+                                            basic settings. If you need help,
+                                            consult the BCML{" "}
                                             <a
                                                 href="https://github.com/NiceneNerd/BCML/blob/master/docs/README.md#readme"
                                                 title="BCML/README.md on GitHub"
@@ -157,7 +162,8 @@ class FirstRun extends React.Component {
                                                 target="_blank">
                                                 Troubleshooting
                                             </a>{" "}
-                                            page. Folders will turn green when valid.
+                                            page. Folders will turn green when
+                                            valid.
                                         </p>
                                     )}
                                     <Settings
@@ -175,28 +181,37 @@ class FirstRun extends React.Component {
                         {this.state.oldMods > 0 && (
                             <Carousel.Item>
                                 <h2>
-                                    <i className="material-icons">double_arrow</i> Import
-                                    Mods
+                                    <i className="material-icons">
+                                        double_arrow
+                                    </i>{" "}
+                                    Import Mods
                                 </h2>
                                 <p>
-                                    It looks like you have {this.state.oldMods} mods from
-                                    a previous version of BCML. If you like, you can
-                                    import them into your new BCML version, or you can
-                                    just delete or ignore them. (Note that ignoring them
-                                    is not recommended.)
+                                    It looks like you have {this.state.oldMods}{" "}
+                                    mods from a previous version of BCML. If you
+                                    like, you can import them into your new BCML
+                                    version, or you can just delete or ignore
+                                    them. (Note that ignoring them is not
+                                    recommended.)
                                 </p>
                                 <div className="d-flex mb-2">
                                     <Button
                                         variant="success"
                                         size="sm"
-                                        onClick={() => this.handleMods("convert")}>
-                                        <i className="material-icons">double_arrow</i>{" "}
+                                        onClick={() =>
+                                            this.handleMods("convert")
+                                        }>
+                                        <i className="material-icons">
+                                            double_arrow
+                                        </i>{" "}
                                         <span>Import</span>
                                     </Button>
                                     <Button
                                         variant="danger"
                                         size="sm"
-                                        onClick={() => this.handleMods("delete")}>
+                                        onClick={() =>
+                                            this.handleMods("delete")
+                                        }>
                                         <i className="material-icons">delete</i>{" "}
                                         <span>Delete</span>
                                     </Button>
@@ -209,7 +224,9 @@ class FirstRun extends React.Component {
                                                 handlingMods: true
                                             })
                                         }>
-                                        <i className="material-icons">warning</i>{" "}
+                                        <i className="material-icons">
+                                            warning
+                                        </i>{" "}
                                         <span>Ignore</span>
                                     </Button>
                                 </div>
@@ -231,7 +248,11 @@ class FirstRun extends React.Component {
                                                 </h3>
                                                 <p className="p-1">
                                                     <strong>
-                                                        Uh-oh! {this.state.handledError}
+                                                        Uh-oh!{" "}
+                                                        {
+                                                            this.state
+                                                                .handledError
+                                                        }
                                                     </strong>
                                                 </p>
                                             </>
@@ -242,7 +263,9 @@ class FirstRun extends React.Component {
                                                         check_circle
                                                     </i>
                                                 </h3>
-                                                <p className="p-1">Alright, done!</p>
+                                                <p className="p-1">
+                                                    Alright, done!
+                                                </p>
                                             </>
                                         ))}
                                 </div>
@@ -254,20 +277,23 @@ class FirstRun extends React.Component {
                                 &nbsp;Setup Complete
                             </h2>
                             <p>
-                                Alright, it looks like everything is set up. Time to start
-                                installing mods!
+                                Alright, it looks like everything is set up.
+                                Time to start installing mods!
                             </p>
-                            <p>
-                                Don't forget that, if you run into any problems, you
-                                should check the{" "}
-                                <a
-                                    href="https://github.com/NiceneNerd/BCML/wiki/Troubleshooting"
-                                    title="Troubleshooting · NiceneNerd/BCML Wiki"
-                                    target="_blank">
-                                    Troubleshooting
-                                </a>{" "}
-                                page on the wiki.
-                            </p>
+                            <Alert variant="info">
+                                <p>
+                                    If you're a first time BCML user or
+                                    upgrading from 2.8, it's probably worth
+                                    taking a look at{" "}
+                                    <strong>the in-app help</strong>, located in
+                                    the overflow menu. If you run into any
+                                    problems, first try{" "}
+                                    <strong>the in-app help</strong> and
+                                    consider{" "}
+                                    <strong>clicking the Remerge button</strong>
+                                    .
+                                </p>
+                            </Alert>
                         </Carousel.Item>
                     </Carousel>
                 </Modal.Body>
@@ -280,7 +306,9 @@ class FirstRun extends React.Component {
                         borderTop: 0
                     }}>
                     {this.state.page > 0 && (
-                        <Button className="btn-nav btn-left" onClick={this.goBack}>
+                        <Button
+                            className="btn-nav btn-left"
+                            onClick={this.goBack}>
                             <i className="material-icons">arrow_back</i>
                         </Button>
                     )}
@@ -296,7 +324,9 @@ class FirstRun extends React.Component {
                         ) : (
                             <Button
                                 className="btn-nav"
-                                onClick={() => this.setState({ savingSettings: true })}>
+                                onClick={() =>
+                                    this.setState({ savingSettings: true })
+                                }>
                                 <i className="material-icons">save</i>
                             </Button>
                         )

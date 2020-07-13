@@ -59,7 +59,9 @@ class BcmlRoot extends React.Component {
         this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () => {
             setTimeout(this.refreshMods, 150);
-            pywebview.api.get_version().then(res => this.setState({ version: res }));
+            pywebview.api
+                .get_version()
+                .then(res => this.setState({ version: res }));
         });
     }
 
@@ -88,7 +90,9 @@ class BcmlRoot extends React.Component {
             showConfirm: true,
             confirmText: message,
             confirmCallback: yesNo =>
-                this.setState({ showConfirm: false }, () => (yesNo ? callback() : null))
+                this.setState({ showConfirm: false }, () =>
+                    yesNo ? callback() : null
+                )
         });
     }
 
@@ -133,7 +137,8 @@ class BcmlRoot extends React.Component {
         const num_selects = Object.keys(this.selects).length;
         if (
             num_selects > 0 &&
-            (!this.state.selects || num_selects > Object.keys(this.state.selects).length)
+            (!this.state.selects ||
+                num_selects > Object.keys(this.state.selects).length)
         ) {
             this.installArgs = { mods, options };
             this.setState({
@@ -197,10 +202,14 @@ class BcmlRoot extends React.Component {
                             if (!res.success) {
                                 throw res.error;
                             }
-                            this.setState({ showProgress: false, showDone: true }, () => {
-                                this.backupRef.current.refreshBackups();
-                                if (operation == "restore") this.refreshMods();
-                            });
+                            this.setState(
+                                { showProgress: false, showDone: true },
+                                () => {
+                                    this.backupRef.current.refreshBackups();
+                                    if (operation == "restore")
+                                        this.refreshMods();
+                                }
+                            );
                         })
                         .catch(this.showError)
             );
@@ -289,13 +298,18 @@ class BcmlRoot extends React.Component {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        <Dropdown.Item onClick={() => pywebview.api.open_help()}>
+                        <Dropdown.Item
+                            onClick={() => pywebview.api.open_help()}>
                             Help
                         </Dropdown.Item>
                         <Dropdown.Item onClick={this.updateBcml}>
                             Update BCML
                         </Dropdown.Item>
-                        <Dropdown.Item onClick={() => this.setState({ showAbout: true })}>
+                        <Dropdown.Item as="a" href="/index.html?firstrun">
+                            Run Setup Wizard
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                            onClick={() => this.setState({ showAbout: true })}>
                             About
                         </Dropdown.Item>
                     </Dropdown.Menu>
@@ -304,7 +318,9 @@ class BcmlRoot extends React.Component {
                     <Tab eventKey="mod-list" title="Mods">
                         <Mods
                             mods={this.state.mods}
-                            onBackup={() => this.setState({ showBackups: true })}
+                            onBackup={() =>
+                                this.setState({ showBackups: true })
+                            }
                             loaded={this.state.modsLoaded}
                             onRefresh={this.refreshMods}
                             onConfirm={this.confirm}
@@ -337,7 +353,9 @@ class BcmlRoot extends React.Component {
                         />
                         <Button
                             className="fab"
-                            onClick={() => this.setState({ savingSettings: true })}>
+                            onClick={() =>
+                                this.setState({ savingSettings: true })
+                            }>
                             <i className="material-icons">save</i>
                         </Button>
                     </Tab>
@@ -437,7 +455,11 @@ class DoneDialog extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show} size="sm" centered onHide={this.props.onClose}>
+            <Modal
+                show={this.props.show}
+                size="sm"
+                centered
+                onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>Done!</Modal.Title>
                 </Modal.Header>
@@ -474,7 +496,9 @@ const ErrorDialog = props => {
                             <i className="material-icons">error</i>
                         </Badge>
                     </div>
-                    <div className="pl-2 flex-grow-1" style={{ minWidth: "0px" }}>
+                    <div
+                        className="pl-2 flex-grow-1"
+                        style={{ minWidth: "0px" }}>
                         <p>
                             Oops!{" "}
                             <span
@@ -488,13 +512,18 @@ const ErrorDialog = props => {
                                     as={Card.Header}
                                     className="row"
                                     eventKey="0">
-                                    <i className="material-icons">expand_more</i>{" "}
+                                    <i className="material-icons">
+                                        expand_more
+                                    </i>{" "}
                                     <span>Error Details</span>
                                 </Accordion.Toggle>
                                 <Accordion.Collapse eventKey="0">
                                     <Card.Body style={{ padding: 0 }}>
-                                        <textarea readOnly={true} className="error-msg">
-                                            {props.error && props.error.error_text}
+                                        <textarea
+                                            readOnly={true}
+                                            className="error-msg">
+                                            {props.error &&
+                                                props.error.error_text}
                                         </textarea>
                                     </Card.Body>
                                 </Accordion.Collapse>
@@ -504,7 +533,8 @@ const ErrorDialog = props => {
                 </div>
             </Modal.Body>
             <Modal.Footer>
-                <OverlayTrigger overlay={<Tooltip>Copy error to clipboard</Tooltip>}>
+                <OverlayTrigger
+                    overlay={<Tooltip>Copy error to clipboard</Tooltip>}>
                     <Button
                         variant="danger"
                         size="sm"
@@ -516,7 +546,10 @@ const ErrorDialog = props => {
                         <i className="material-icons">file_copy</i>
                     </Button>
                 </OverlayTrigger>
-                <Button className="py-2" variant="primary" onClick={props.onClose}>
+                <Button
+                    className="py-2"
+                    variant="primary"
+                    onClick={props.onClose}>
                     OK
                 </Button>
             </Modal.Footer>
@@ -533,7 +566,9 @@ const ConfirmDialog = props => {
             <Modal.Body>{props.message}</Modal.Body>
             <Modal.Footer>
                 <Button onClick={() => props.onClose(true)}>OK</Button>
-                <Button variant="secondary" onClick={() => props.onClose(false)}>
+                <Button
+                    variant="secondary"
+                    onClick={() => props.onClose(false)}>
                     Close
                 </Button>
             </Modal.Footer>
