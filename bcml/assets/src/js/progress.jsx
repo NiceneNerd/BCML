@@ -36,11 +36,11 @@ let messages = [
     "Bow-spinning your mod",
     "Eating a Royal Claymore",
     "Ignoring the old man",
-    "Selling the Sheika Slate",
+    "Selling the Sheikah Slate",
     "Annoying the monks",
     "Pushing Master Kohga",
     "Deleting the Great Plateau",
-    "Befriending Ganon",
+    "Moisturizing Ganon",
     "Going back to bed",
     "100 more years never hurt anyone",
     "Changing name and joining a construction company",
@@ -69,8 +69,8 @@ class ProgressModal extends React.Component {
         }, 2000);
     }
 
-    componentDidUpdate() {
-        shuffle(messages);
+    componentDidUpdate(prevProps) {
+        if (prevProps.show != this.props.show) shuffle(messages);
     }
 
     render() {
@@ -80,7 +80,11 @@ class ProgressModal extends React.Component {
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex align-items-start">
-                    <Spinner animation="border" role="status" className="flex-shrink-0" />
+                    <Spinner
+                        animation="border"
+                        role="status"
+                        className="flex-shrink-0"
+                    />
                     <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
                         {messages[this.state.messageIdx]}…
                     </div>
