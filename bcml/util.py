@@ -28,7 +28,7 @@ from xml.dom import minidom
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
-from oead.aamp import ParameterIO, ParameterList
+from oead.aamp import ParameterIO, ParameterList # pylint:disable=import-error
 from webviewb import Window  # pylint: disable=wrong-import-order
 
 from bcml import pickles, DEBUG  # pylint: disable=unused-import

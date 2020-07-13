@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Union, List
 
 import oead
-from oead.byml import Hash, Array  # pylint: disable=unresolved-import
+from oead.byml import Hash, Array  # pylint: disable=import-error
 import rstb
 import rstb.util
 
@@ -124,7 +124,8 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
             try:
                 map_bytes = bytes(
                     map_pack.get_file(
-                        f"Map/MainField/{map_unit.section}/{map_unit.section}_{map_unit.type}.smubin"
+                        f"Map/MainField/{map_unit.section}/"
+                        f"{map_unit.section}_{map_unit.type}.smubin"
                     ).data
                 )
             except AttributeError:
@@ -497,7 +498,6 @@ class MapMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         no_del = self._options.get("no_del", False)
-        link_del = self._options.get("link_del", False)
         aoc_pack = (
             util.get_master_modpack_dir()
             / util.get_dlc_path()
