@@ -65,7 +65,6 @@ def main(debug: bool = False):
             chmod(util.get_exec_dir() / "helpers/msyt", int("755", 8))
             chmod(util.get_exec_dir() / "helpers/7z", int("755", 8))
         LOG.parent.mkdir(parents=True, exist_ok=True)
-        LOG.write_text("")
         for folder in util.get_work_dir().glob("*"):
             rmtree(folder)
     except (FileNotFoundError, OSError, PermissionError):
