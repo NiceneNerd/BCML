@@ -78,7 +78,7 @@ def match_language(lang: str, log_dir: Path) -> str:
         return [l for l in LANGUAGES if l in logged_langs][0]
 
 
-def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool = True):
+def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
     """ Converts MSBTs in given temp dir to MSYTs """
     if system() == "Windows":
         subprocess.run(
@@ -96,7 +96,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool
     if fix_msbts:
         print("Some MSBTs failed to convert. Trying again individually...")
         this_pool = pool or multiprocessing.Pool()
-        this_pool.map(partial(_msyt_file, do_error=do_error), fix_msbts)
+        this_pool.map(partial(_msyt_file), fix_msbts)
         fix_msbts = [
             msbt
             for msbt in folder.rglob("**/*.msbt")
@@ -113,7 +113,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None, do_error: bool
     return fix_msbts
 
 
-def _msyt_file(file, output: Path = None, do_error: bool = True):
+def _msyt_file(file, output: Path = None):
     m_args = [MSYT_PATH, "export", str(file)]
     if output:
         m_args += ["--output", str(output)]
@@ -121,15 +121,13 @@ def _msyt_file(file, output: Path = None, do_error: bool = True):
         result = subprocess.run(
             m_args,
             creationflags=util.CREATE_NO_WINDOW,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            text=True,
             check=False,
         )
     else:
-        result = subprocess.run(
-            m_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
-        )
-    if result.stderr and do_error:
+        result = subprocess.run(m_args, capture_output=True, text=True, check=False)
+    if result.stderr:
         raise RuntimeError(
             (
                 result.stderr.decode("utf-8")
@@ -161,41 +159,19 @@ def extract_refs(language: str, tmp_dir: Path, files: set = None):
         x_args.extend(files)
     else:
         x_args.append(language)
+    result: subprocess.CompletedProcess
     if system() == "Windows":
         result = subprocess.run(
             x_args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             creationflags=util.CREATE_NO_WINDOW,
             check=False,
+            text=True,
         )
     else:
-        result = subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
-        )
+        result = subprocess.run(x_args, capture_output=True, text=True, check=False)
     if result.stderr:
-        raise RuntimeError(result.stderr.decode("utf8"))
-
-
-# def diff_msyt(file_data: tuple, ref_dir: Path) -> {}:
-#     file: str = file_data[0].replace('\\', '/')
-#     text: str = file_data[1].decode('utf8')
-#     if not (ref_dir / file).exists():
-#         return {
-#             file: json.loads(text, encoding='utf-8')['entries']
-#         }
-#     ref_text = (ref_dir / file).read_text()
-#     data = json.loads(text, encoding='utf-8')
-#     ref_data = json.loads(ref_text, encoding='utf-8')
-#     del ref_text
-#     del text
-#     return {
-#         file: {
-#             entry: value for entry, value in data['entries'].items() if (
-#                 entry not in ref_data['entries'] or value != ref_data['entries'][entry]
-#             )
-#         }
-#     }
+        raise RuntimeError(result.stderr)
 
 
 def diff_msyt(msyt: Path, hashes: dict, mod_out: Path, ref_dir: Path):
@@ -255,7 +231,7 @@ def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
         del msg_sarc
 
         print("Converting texts to MSYT...")
-        msbt_to_msyt(mod_out, pool=pool, do_error=False)
+        msbt_to_msyt(mod_out, pool=pool)
         hashes = get_text_hashes(language)
         ref_lang = "XXen" if language.endswith("en") else language
         print("Extracting reference texts...")
@@ -436,17 +412,23 @@ class TextsMerger(mergers.Merger):
                 "-o",
                 str(tmp_dir),
             ]
+            result: subprocess.CompletedProcess
             if system() == "Windows":
-                subprocess.run(
+                result = subprocess.run(
                     m_args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    capture_output=True,
                     creationflags=util.CREATE_NO_WINDOW,
                     check=False,
+                    text=True,
                 )
+
             else:
-                subprocess.run(
-                    m_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+                result = subprocess.run(
+                    m_args, capture_output=True, check=False, text=True,
+                )
+            if result.stderr:
+                raise RuntimeError(
+                    f"There was an error merging game texts. {result.stderr}"
                 )
 
             msg_sarc = oead.SarcWriter(
