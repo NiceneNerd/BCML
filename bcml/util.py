@@ -28,7 +28,7 @@ from xml.dom import minidom
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
-from oead.aamp import ParameterIO, ParameterList # pylint:disable=import-error
+from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webviewb import Window  # pylint: disable=wrong-import-order
 
 from bcml import pickles, DEBUG  # pylint: disable=unused-import
@@ -308,8 +308,11 @@ class BcmlMod:
 
     @property
     def date(self) -> str:
+        format_str = (
+            "%m/%d/%Y %#I:%M %p" if system() == "Windows" else "%m/%d/%Y %-I:%M %p"
+        )
         return datetime.fromtimestamp((self.path / "info.json").stat().st_mtime).strftime(
-            "%m/%d/%Y %-I:%M %p"
+            format_str
         )
 
     @property
