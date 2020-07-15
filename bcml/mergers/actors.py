@@ -162,9 +162,18 @@ class ActorInfoMerger(mergers.Merger):
                 for x in sorted(new_hashes | set(stock_actors.keys()))
             ]
         )
-        actorinfo["Actors"] = sorted(
-            actorinfo["Actors"], key=lambda x: crc32(x["name"].encode("utf-8"))
-        )
+        try:
+            actorinfo["Actors"] = sorted(
+                actorinfo["Actors"], key=lambda x: crc32(x["name"].encode("utf-8"))
+            )
+        except KeyError as err:
+            if str(err) == "":
+                raise RuntimeError(
+                    "Your actor info mods could not be merged. "
+                    "This usually indicates a corrupt game dump."
+                ) from err
+            else:
+                raise
 
         print("Saving new actor info...")
         actor_path.parent.mkdir(parents=True, exist_ok=True)
