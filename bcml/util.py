@@ -552,6 +552,8 @@ def get_settings(name: str = "") -> {}:
                 for k, v in DEFAULT_SETTINGS.items():
                     if k not in settings:
                         settings[k] = v
+                if settings["store_dir"] == "":
+                    settings["store_dir"] = str(get_data_dir())
             get_settings.settings = settings
         if name:
             return get_settings.settings.get(name, False)
@@ -585,11 +587,17 @@ def get_game_dir() -> Path:
     game_dir = str(
         get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
     )
-    if not game_dir or not Path(game_dir).is_dir():
+    game_path = Path(game_dir)
+    if not game_dir or not game_path.is_dir():
         raise FileNotFoundError(
-            "The BOTW game directory has has moved or not been saved yet."
+            "The BOTW game dump directory has not been set or does not exist."
         )
-    return Path(game_dir)
+    if not (game_path / "Pack" / "Dungeon000.pack").exists():
+        raise FileNotFoundError(
+            "The BOTW game dump directory is not set correctly."
+            "See the in-app help to correct this."
+        )
+    return game_path
 
 
 def set_game_dir(path: Path):
@@ -685,17 +693,23 @@ def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
 
 @lru_cache(None)
 def get_update_dir() -> Path:
-    try:
-        update_str = get_settings("update_dir")
-        if not update_str:
-            raise FileNotFoundError()
-        update_dir = Path(update_str)
-        if not update_dir.exists():
-            raise FileNotFoundError()
-    except FileNotFoundError as err:
+    update_str = get_settings("update_dir")
+    if not update_str:
         raise FileNotFoundError(
-            "The BOTW update directory has moved or has not been saved yet."
-        ) from err
+            "The BOTW update directory has not been set or does not exist"
+        )
+    update_dir = Path(update_str)
+    if not update_dir.exists():
+        raise FileNotFoundError(
+            "The BOTW update directory has not been set or does not exist"
+        )
+    if not (
+        update_dir / "Actor" / "Pack" / "FldObj_MountainSnow_A_M_02.sbactorpack"
+    ).exists():
+        raise FileNotFoundError(
+            "The BOTW update directory is set incorrectly or missing files."
+            "See the in-app help to correct this."
+        )
     return update_dir
 
 
@@ -714,21 +728,21 @@ def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
 
 
 def get_aoc_dir() -> Path:
-    try:
-        dlc_str = (
-            get_settings("dlc_dir")
-            if get_settings("wiiu")
-            else get_settings("dlc_dir_nx")
-        )
-        if not dlc_str:
-            raise FileNotFoundError()
-        aoc_dir = Path(dlc_str)
-        if not aoc_dir.exists():
-            raise FileNotFoundError()
-    except FileNotFoundError as err:
+    dlc_str = (
+        get_settings("dlc_dir") if get_settings("wiiu") else get_settings("dlc_dir_nx")
+    )
+    if not dlc_str:
+        raise FileNotFoundError("The BOTW DLC directory has not been set.")
+    aoc_dir = Path(dlc_str)
+    if not aoc_dir.exists():
         raise FileNotFoundError(
-            "The BOTW DLC directory has moved or has not been saved yet."
-        ) from err
+            "The BOTW DLC directory has not been set or does not exist."
+        )
+    if not (aoc_dir / "Pack" / "AocMainField.pack").exists():
+        raise FileNotFoundError(
+            "The BOTW DLC directory is set incorrectly or missing files."
+            "See the in-app help to correct this."
+        )
     return aoc_dir
 
 
