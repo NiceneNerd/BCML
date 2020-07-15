@@ -113,18 +113,15 @@ class Mods extends React.Component {
                                 if (!res.success) {
                                     throw res.error;
                                 }
-                                this.setState(
-                                    { selectedMods: this.defaultSelect() },
-                                    () => {
-                                        this.props.onState(
-                                            {
-                                                showProgress: false,
-                                                showDone: true
-                                            },
-                                            () => this.props.onRefresh()
-                                        );
-                                    }
-                                );
+                                this.setState({ selectedMods: [] }, () => {
+                                    this.props.onState(
+                                        {
+                                            showProgress: false,
+                                            showDone: true
+                                        },
+                                        () => this.props.onRefresh()
+                                    );
+                                });
                             })
                             .catch(this.props.onError);
                     }
@@ -150,7 +147,7 @@ class Mods extends React.Component {
                         }
                         this.setState(
                             {
-                                selectedMods: this.defaultSelect()
+                                selectedMods: []
                             },
                             () =>
                                 this.props.onState({
@@ -188,7 +185,7 @@ class Mods extends React.Component {
                                     () => {
                                         this.props.onRefresh();
                                         this.setState({
-                                            selectedMods: this.defaultSelect()
+                                            selectedMods: []
                                         });
                                     }
                                 );
@@ -230,7 +227,7 @@ class Mods extends React.Component {
                                 this.setState(
                                     {
                                         showHandle: false,
-                                        selectedMods: this.defaultSelect(),
+                                        selectedMods: [],
                                         dirty: false
                                     },
                                     () => this.props.onRefresh()
