@@ -2,28 +2,26 @@
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 # pylint: disable=no-member
-import csv
+import json
 import io
 import math
-import multiprocessing
 import struct
-import zlib
 from copy import deepcopy
-from functools import partial
-from json import dumps
+from functools import partial, reduce
+from multiprocessing import Pool
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, ByteString, Dict
 
 # pylint: disable=wrong-import-order
 import oead
 import rstb
-from rstb import ResourceSizeTable
 from rstb.util import read_rstb
 
-from bcml import util, install, mergers
-from bcml.util import BcmlMod
+from bcml import util, mergers
 
-RSTB_EXCLUDE_EXTS = {
+Contents = Union[List[str], Dict[str, Union[Dict, List[str]]]]
+
+EXCLUDE_EXTS = {
     ".pack",
     ".bgdata",
     ".txt",
@@ -37,40 +35,38 @@ RSTB_EXCLUDE_EXTS = {
     ".py",
     ".sh",
 }
-RSTB_EXCLUDE_NAMES = {"Actor/ActorInfo.product.byml"}
+EXCLUDE_NAMES = {"Actor/ActorInfo.product.byml"}
+SARC_EXCLUDES = {
+    ".sarc",
+    ".ssarc",
+    ".blarc",
+    ".sblarc",
+    ".bfarc",
+    ".sbfarc",
+}
 
 
-def generate_rstb_for_mod(mod: Path):
-    files = install.find_modded_files(mod)
-    merger = RstbMerger()
-    diff = merger.generate_diff(mod, files)
-    print("Creating RSTB...")
-    table = get_stock_rstb()
-    for file, value in diff.items():
-        canon: str
-        if isinstance(file, Path):
-            canon = util.get_canon_name(file.relative_to(mod))
-        else:
-            canon = file.split("//")[-1].replace(".s", ".")
-        if (
-            not (table.is_in_table(canon) and value <= table.get_size(canon))
-            and value > 0
-        ):
-            table.set_size(canon, value)
-    print("Writing RSTB...")
-    rstb_path = (
-        mod
-        / util.get_content_path()
-        / "System"
-        / "Resource"
-        / "ResourceSizeTable.srsizetable"
-    )
-    rstb_path.parent.mkdir(parents=True, exist_ok=True)
-    buf = io.BytesIO()
-    table.write(buf, util.get_settings("wiiu"))
-    rstb_path.write_bytes(util.compress(buf.getvalue()))
-    del buf
-    del table
+def calculate_size(
+    path: Union[Path, str], data: ByteString = None, guess: bool = True
+) -> int:
+    ext = path.suffix if isinstance(path, Path) else path[path.rindex(".") :]
+    data = util.unyaz_if_needed(path.read_bytes() if isinstance(path, Path) else data)
+    try:
+        size = getattr(calculate_size, "calculator").calculate_file_size_with_ext(
+            data, wiiu=util.get_settings("wiiu"), ext=ext, force=False
+        )
+        if ext == ".bdmgparam":
+            size = 0
+        if ext == ".hkrb":
+            size += 40
+        if size == 0 and guess:
+            if ext in util.AAMP_EXTS:
+                size = guess_aamp_size(data, ext)
+            elif ext in {".bfres", ".sbfres"}:
+                size = guess_bfres_size(data, str(path))
+        return size
+    except struct.error:
+        return 0
 
 
 def get_stock_rstb() -> rstb.ResourceSizeTable:
@@ -84,23 +80,6 @@ def get_stock_rstb() -> rstb.ResourceSizeTable:
             util.get_settings("wiiu"),
         )
     return deepcopy(get_stock_rstb.table)
-
-
-def calculate_size(path: Path) -> int:
-    try:
-        size = getattr(calculate_size, "rstb_calc").calculate_file_size(
-            file_name=str(path), wiiu=util.get_settings("wiiu"), force=False
-        )
-        if path.suffix == ".bdmgparam":
-            size = 0
-        if path.suffix == ".hkrb":
-            size += 40
-        return size
-    except struct.error:
-        return 0
-
-
-setattr(calculate_size, "rstb_calc", rstb.SizeCalculator())
 
 
 def set_size(entry: str, size: int):
@@ -122,8 +101,14 @@ def set_size(entry: str, size: int):
     rstb_path.write_bytes(util.compress(buf.getvalue()))
 
 
-def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
-    real_bytes = file if isinstance(file, bytes) else file.read_bytes()
+def guess_bfres_size(file: Union[Path, ByteString], name: str = "") -> int:
+    real_bytes = (
+        file
+        if isinstance(file, bytes)
+        else file.tobytes()
+        if isinstance(file, memoryview)
+        else file.read_bytes()
+    )
     if real_bytes[0:4] == b"Yaz0":
         real_size = oead.yaz0.get_header(real_bytes[0:16]).uncompressed_size
     else:
@@ -230,10 +215,10 @@ def guess_bfres_size(file: Union[Path, bytes], name: str = "") -> int:
     return int(value)
 
 
-def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
+def guess_aamp_size(file: Union[Path, ByteString], ext: str = "") -> int:
     real_bytes = (
         file
-        if isinstance(file, bytes)
+        if isinstance(file, bytes) or isinstance(file, oead.Bytes)
         else file.tobytes()
         if isinstance(file, memoryview)
         else file.read_bytes()
@@ -370,92 +355,61 @@ def guess_aamp_size(file: Union[Path, bytes], ext: str = "") -> int:
     return int(value)
 
 
-def get_mod_rstb_values(mod: Union[Path, str, BcmlMod], log_name: str = "rstb.log") -> {}:
-    path = (
-        mod if isinstance(mod, Path) else Path(mod) if isinstance(mod, str) else mod.path
-    )
-    changes = {}
-    leave = (path / "logs" / ".leave").exists()
-    shrink = (path / "logs" / ".shrink").exists()
-    with (path / "logs" / log_name).open("r") as l_file:
-        log_loop = csv.reader(l_file)
-        for row in log_loop:
-            if row[0] != "name":
-                changes[row[0]] = {"size": row[1], "leave": leave, "shrink": shrink}
-    return changes
+def _get_modded_file_size(file: Path, mod_dir: Path, guess: bool) -> Dict[str, int]:
+    canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
+    if file.suffix not in EXCLUDE_EXTS and canon not in EXCLUDE_NAMES:
+        return {
+            canon: calculate_size(
+                file, guess=guess or file.suffix in {".bas", ".baslist"},
+            )
+        }
+    return {}
 
 
-def merge_rstb(table: ResourceSizeTable, changes: dict) -> ResourceSizeTable:
-    spaces = "  "
-    change_count = {"updated": 0, "deleted": 0, "added": 0, "warning": 0}
-    for change in changes:
-        if zlib.crc32(change.encode()) in table.crc32_map:
-            newsize = int(changes[change]["size"])
-            if newsize == 0:
-                if not changes[change]["leave"]:
-                    if change.endswith(".bas") or change.endswith(".baslist"):
-                        print(
-                            f"{spaces}WARNING: Could not calculate or safely remove RSTB size for"
-                            f"{change}. This may need to be corrected manually, or the game could "
-                            "become unstable"
-                        )
-                        change_count["warning"] += 1
-                        continue
-                    else:
-                        table.delete_entry(change)
-                        util.vprint(f"{spaces}Deleted RSTB entry for {change}")
-                        change_count["deleted"] += 1
-                        continue
-                else:
-                    util.vprint(f"{spaces}Skipped deleting RSTB entry for {change}")
+def _get_nest_file_sizes(
+    file: str, contents: Contents, mod_dir: Path, guess: bool,
+) -> Dict[str, int]:
+    def get_sizes_in_sarc(
+        sarc: oead.Sarc, contents: Contents, guess: bool, dlc: bool
+    ) -> Dict[str, int]:
+        prefix = "" if not dlc else "Aoc/0010/"
+        vals = {}
+        if isinstance(contents, list):
+            for file in contents:
+                canon = prefix + file.replace(".s", ".")
+                vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
+        elif isinstance(contents, dict):
+            for subpath, subcontents in contents.items():
+                data = util.unyaz_if_needed(sarc.get_file(subpath).data)
+                canon = prefix + subpath.replace(".s", ".")
+                vals[canon] = calculate_size(canon, data, guess)
+                try:
+                    subsarc = oead.Sarc(data)
+                except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
-            oldsize = table.get_size(change)
-            if newsize <= oldsize:
-                if changes[change]["shrink"]:
-                    table.set_size(change, newsize)
-                    util.vprint(
-                        f"{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}"
-                    )
-                    change_count["updated"] += 1
-                    continue
-                else:
-                    util.vprint(f"{spaces}Skipped updating RSTB entry for {change}")
-                    continue
-            elif newsize > oldsize:
-                table.set_size(change, newsize)
-                util.vprint(
-                    f"{spaces}Updated RSTB entry for {change} from {oldsize} to {newsize}"
-                )
-                change_count["updated"] += 1
-        else:
-            try:
-                newsize = int(changes[change]["size"])
-            except ValueError:
-                newsize = int(float(changes[change]["size"]))
-            if newsize == 0:
-                util.vprint(
-                    f"{spaces}Could not calculate size for new entry {change}, skipped"
-                )
-                continue
-            table.set_size(change, newsize)
-            util.vprint(f"{spaces}Added new RSTB entry for {change} with value {newsize}")
-            change_count["added"] += 1
-    print(
-        f'RSTB merge complete: updated {change_count["updated"]} entries, deleted'
-        f' {change_count["deleted"]} entries, added {change_count["added"]} entries'
-    )
-    return table
+                vals.update(get_sizes_in_sarc(subsarc, subcontents, guess, dlc))
+        return vals
+
+    dlc = util.get_dlc_path() in file
+    vals = {}
+    try:
+        sarc = oead.Sarc(util.unyaz_if_needed((mod_dir / file).read_bytes()))
+    except (ValueError, RuntimeError, oead.InvalidDataError):
+        return {}
+    vals.update(get_sizes_in_sarc(sarc, contents, guess, dlc))
+    return vals
 
 
-def _get_sizes_in_sarc(file: Union[Path, oead.Sarc], is_aoc: bool = False) -> {}:
-    calc = rstb.SizeCalculator()
+def _get_sizes_in_sarc(
+    file: Union[Path, oead.Sarc], guess: bool, is_aoc: bool = False
+) -> {}:
     sizes = {}
-    no_guess = util.get_settings("no_guess")
     if isinstance(file, Path):
         is_aoc = util.get_dlc_path() in file.as_posix()
         try:
-            file = oead.Sarc(file.read_bytes())
+            file = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
         except (RuntimeError, oead.InvalidDataError):
+            print(file)
             return {}
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace(".s", ".")
@@ -466,136 +420,20 @@ def _get_sizes_in_sarc(file: Union[Path, oead.Sarc], is_aoc: bool = False) -> {}
         ext = Path(canon).suffix
         if (
             util.is_file_modded(canon, data)
-            and ext not in RSTB_EXCLUDE_EXTS
-            and canon not in RSTB_EXCLUDE_NAMES
+            and ext not in EXCLUDE_EXTS
+            and canon not in EXCLUDE_NAMES
         ):
-            size = calc.calculate_file_size_with_ext(
-                data, wiiu=util.get_settings("wiiu"), ext=ext
-            )
-            if ext == ".bdmgparam":
-                size = 0
-            if ext == ".hkrb":
-                size += 40
-            if size == 0 and (not no_guess or ext in {".bas", ".baslist"}):
-                if ext in util.AAMP_EXTS:
-                    size = guess_aamp_size(data, ext)
-                elif ext in {".bfres", ".sbfres"}:
-                    size = guess_bfres_size(data, canon)
-            sizes[canon] = size
-            if ext in util.SARC_EXTS and not ext not in {
-                ".sarc",
-                ".blarc",
-                ".bfarc",
-                ".ssarc",
-                ".sbfarc",
-                ".sblarc",
-            }:
+            sizes[canon] = calculate_size(canon, data, guess=guess)
+            if ext in util.SARC_EXTS - SARC_EXCLUDES:
                 try:
                     nest_sarc = oead.Sarc(data)
                 except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
-                sizes.update(_get_sizes_in_sarc(nest_sarc, is_aoc))
+                sizes.update(_get_sizes_in_sarc(nest_sarc, is_aoc, guess))
                 del nest_sarc
         del data
     del file
     return sizes
-
-
-def _calculate_rstb_size(file: Path, root: Path, no_guess: bool = False) -> dict:
-    try:
-        canon = util.get_canon_name(file.relative_to(root))
-    except ValueError:
-        return {}
-    if not (file.suffix in RSTB_EXCLUDE_EXTS or canon in RSTB_EXCLUDE_NAMES):
-        size = calculate_size(file)
-        if size == 0 and (not no_guess or file.suffix in {".bas", ".baslist"}):
-            if file.suffix in util.AAMP_EXTS:
-                size = guess_aamp_size(file)
-            elif file.suffix in {".bfres", ".sbfres"}:
-                size = guess_bfres_size(file)
-        if canon:
-            return {canon: size}
-    return {}
-
-
-def log_merged_files_rstb(pool: multiprocessing.Pool = None):
-    this_pool: multiprocessing.Pool = pool or multiprocessing.Pool()
-    print("Updating RSTB for merged files...")
-    diffs = {}
-    files = {
-        f
-        for f in util.get_master_modpack_dir().rglob("**/*")
-        if f.is_file() and f.parent != "logs"
-    }
-    no_guess = util.get_settings("no_guess")
-    results = this_pool.map(
-        partial(
-            _calculate_rstb_size, root=util.get_master_modpack_dir(), no_guess=no_guess
-        ),
-        files,
-    )
-    for result in results:
-        diffs.update(result)
-    print("Updating RSTB for merged SARCs...")
-    sarc_files = {
-        f
-        for f in files
-        if (f.suffix in (util.SARC_EXTS - {".ssarc", ".sblarc", ".sbfarc"}))
-    }
-    if sarc_files:
-        results = this_pool.map(_get_sizes_in_sarc, sarc_files)
-        for result in results:
-            diffs.update(result)
-    if not pool:
-        this_pool.close()
-        this_pool.join()
-    (util.get_master_modpack_dir() / "logs").mkdir(parents=True, exist_ok=True)
-    with (util.get_master_modpack_dir() / "logs" / "rstb.log").open(
-        "w", encoding="utf-8"
-    ) as log:
-        log.write("name,size,path\n")
-        for canon, size in diffs.items():
-            log.write(f"{canon},{size},//\n")
-
-
-def generate_master_rstb():
-    print("Merging RSTB changes...")
-    if (util.get_master_modpack_dir() / "logs" / "master-rstb.log").exists():
-        (util.get_master_modpack_dir() / "logs" / "master-rstb.log").unlink()
-
-    table = get_stock_rstb()
-    rstb_values = {}
-    for mod in util.get_installed_mods():
-        rstb_values.update(get_mod_rstb_values(mod))
-    if (util.get_master_modpack_dir() / "logs" / "rstb.log").exists():
-        rstb_values.update(get_mod_rstb_values(util.get_master_modpack_dir()))
-
-    table = merge_rstb(table, rstb_values)
-
-    for bootup_pack in util.get_master_modpack_dir().glob(
-        f"{util.get_content_path()}/Pack/Bootup_*.pack"
-    ):
-        lang = util.get_file_language(bootup_pack)
-        if table.is_in_table(f"Message/Msg_{lang}.product.sarc"):
-            table.delete_entry(f"Message/Msg_{lang}.product.sarc")
-
-    rstb_path = (
-        util.get_master_modpack_dir()
-        / util.get_content_path()
-        / "System"
-        / "Resource"
-        / "ResourceSizeTable.product.srsizetable"
-    )
-    if not rstb_path.exists():
-        rstb_path.parent.mkdir(parents=True, exist_ok=True)
-    with rstb_path.open("wb") as r_file:
-        with io.BytesIO() as buf:
-            table.write(buf, util.get_settings("wiiu"))
-            r_file.write(util.compress(buf.getvalue()))
-
-    rstb_log = util.get_master_modpack_dir() / "logs" / "master-rstb.log"
-    rstb_log.parent.mkdir(parents=True, exist_ok=True)
-    rstb_log.write_text(dumps(rstb_values))
 
 
 class RstbMerger(mergers.Merger):
@@ -605,132 +443,96 @@ class RstbMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "RSTB", "Merges changes to ResourceSizeTable.product.srsizetable", "rstb.log",
+            "RSTB",
+            "Merges changes to ResourceSizeTable.product.srsizetable",
+            "rstb.json",
         )
         self._options = {"no_guess": False, "leave": False, "shrink": False}
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
-        rstb_diff = {}
-        open_sarcs = {}
-        for file in modded_files:
-            if isinstance(file, Path):
-                canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-                if (
-                    Path(canon).suffix not in RSTB_EXCLUDE_EXTS
-                    and canon not in RSTB_EXCLUDE_NAMES
-                ):
-                    size = calculate_size(file)
-                    if size == 0 and (
-                        not self._options.get("no_guess", False)
-                        or file.suffix in {".bas", ".baslist"}
-                    ):
-                        if file.suffix in util.AAMP_EXTS:
-                            size = guess_aamp_size(file)
-                        elif file.suffix in [".bfres", ".sbfres"]:
-                            size = guess_bfres_size(file)
-                    rstb_diff[file] = size
-            elif isinstance(file, str):
-                parts = file.split("//")
-                if any(
-                    p[p.rindex(".") :] in {".ssarc", ".sblarc", ".sbfarc"}
-                    for p in parts[0:-1]
-                ):
-                    continue
-                name = parts[-1]
-                if parts[0] not in open_sarcs:
-                    open_sarcs[parts[0]] = oead.Sarc(
-                        util.unyaz_if_needed((mod_dir / parts[0]).read_bytes())
-                    )
-                for part in parts[1:-1]:
-                    if part not in open_sarcs:
-                        open_sarcs[part] = oead.Sarc(
-                            util.unyaz_if_needed(
-                                open_sarcs[parts[parts.index(part) - 1]]
-                                .get_file(part)
-                                .data
-                            )
-                        )
-                ext = Path(name).suffix
-                data = util.unyaz_if_needed(open_sarcs[parts[-2]].get_file(name).data)
-                rstb_val = rstb.SizeCalculator().calculate_file_size_with_ext(
-                    bytes(data), wiiu=util.get_settings("wiiu"), ext=ext
+        diff = {}
+        nested_files = {}
+        pool = self._pool or Pool()
+        for nest in {n for n in modded_files if isinstance(n, str)}:
+            util.dict_merge(
+                nested_files,
+                reduce(
+                    lambda res, cur: {cur: res} if res is not None else [cur],
+                    reversed(nest.split("//")),
+                    None,
+                ),
+            )
+        table = get_stock_rstb()
+        diff.update(
+            {
+                k: v
+                for r in pool.map(
+                    partial(
+                        _get_modded_file_size,
+                        mod_dir=mod_dir,
+                        guess=not self._options.get("no_guess", False),
+                    ),
+                    {f for f in modded_files if isinstance(f, Path)},
                 )
-                if ext == ".bdmgparam":
-                    rstb_val = 0
-                elif ext == ".hkrb":
-                    rstb_val += 40
-                if rstb_val == 0 and (
-                    not self._options.get("no_guess", False)
-                    or ext in {".bas", ".baslist"}
-                ):
-                    if ext in util.AAMP_EXTS:
-                        rstb_val = guess_aamp_size(data, ext)
-                    elif ext in {".bfres", ".sbfres"}:
-                        rstb_val = guess_bfres_size(data, name)
-                rstb_diff[file] = rstb_val
-        for open_sarc in open_sarcs:
-            del open_sarc
-        return rstb_diff
+                for k, v in r.items()
+                if r is not None
+                and not (
+                    table.is_in_table(k)
+                    and (
+                        (v < table.get_size(k) and not self._options.get("shrink", False))
+                        or (v == 0 and not self._options.get("leave", False))
+                    )
+                )
+            }
+        )
+        diff.update(
+            {
+                k: v
+                for r in pool.starmap(
+                    partial(
+                        _get_nest_file_sizes,
+                        guess=not self._options.get("no_guess", False),
+                        mod_dir=mod_dir,
+                    ),
+                    nested_files.items(),
+                )
+                for k, v in r.items()
+                if r is not None
+                and not (
+                    table.is_in_table(k)
+                    and (
+                        (v < table.get_size(k) and not self._options.get("shrink", False))
+                        or (v == 0 and not self._options.get("leave", False))
+                    )
+                )
+            }
+        )
+        if not self._pool:
+            pool.close()
+            pool.join()
+        return diff
 
     def log_diff(self, mod_dir: Path, diff_material):
-        diffs = {}
-        if isinstance(diff_material, dict):
-            diffs = diff_material
-        elif isinstance(diff_material, list):
-            diffs = self.generate_diff(mod_dir, diff_material)
-
-        log_path = mod_dir / "logs" / self._log_name
-        with log_path.open("w", encoding="utf-8") as log:
-            log.write("name,rstb,path\n")
-            for diff, value in diffs.items():
-                ext = Path(diff).suffix
-                if isinstance(diff, Path):
-                    canon = util.get_canon_name(str(diff.relative_to(mod_dir)))
-                    path = diff.relative_to(mod_dir).as_posix()
-                elif isinstance(diff, str):
-                    canon = diff.split("//")[-1].replace(".s", ".")
-                    if util.get_dlc_path() in diff:
-                        canon = f"Aoc/0010/{canon}"
-                    path = diff
-                if ext not in RSTB_EXCLUDE_EXTS and canon not in RSTB_EXCLUDE_NAMES:
-                    log.write(f"{canon},{value},{path}\n")
-
-        if "leave" in self._options and self._options["leave"]:
-            (mod_dir / "logs" / ".leave").write_bytes(b"")
-        if "shrink" in self._options and self._options["shrink"]:
-            (mod_dir / "logs" / ".shrink").write_bytes(b"")
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            (mod_dir / "logs" / self._log_name).write_text(
+                json.dumps(diff_material, indent=2, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        if not self._options:
-            self._options["leave"] = (mod.path / "logs" / ".leave").exists()
-            # self._options["shrink"] = (mod.path / "logs" / ".shrink").exists()
-        stock_rstb = get_stock_rstb()
-
-        mod_diffs = {}
-
-        def read_log(log_path: Path) -> {}:
-            diffs = {}
-            with log_path.open("r", encoding="utf-8") as log:
-                for line in log.readlines()[1:]:
-                    row = line.split(",")
-                    name = row[0]
-                    size = int(row[1])
-                    old_size = 0
-                    if stock_rstb.is_in_table(name):
-                        old_size = stock_rstb.get_size(name)
-                    if (size == 0 and self._options["leave"]) or (
-                        size < old_size and not self._options["shrink"]
-                    ):
-                        continue
-                    diffs[row[0]] = int(row[1])
-            return diffs
-
+        diff = {}
         if self.is_mod_logged(mod):
-            mod_diffs.update(read_log(mod.path / "logs" / self._log_name))
+            diff.update(
+                json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+            )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                mod_diffs.update(read_log(opt / "logs" / self._log_name))
-        return mod_diffs
+                diff.update(
+                    json.loads((opt / "logs" / self._log_name).read_text("utf-8"))
+                )
+        return diff
 
     def get_all_diffs(self):
         diffs = []
@@ -747,14 +549,94 @@ class RstbMerger(mergers.Merger):
     def get_checkbox_options(self) -> List[tuple]:
         return [
             ("leave", "Don't remove RSTB entries for complex file types"),
+            ("shrink", "Shrink RSTB values when smaller than stock"),
             ("no_guess", "Don't estimate RSTB values for AAMP and BFRES files"),
         ]
 
     @util.timed
     def perform_merge(self):
-        print("Perfoming RSTB merge...")
-        log_merged_files_rstb(self._pool)
-        generate_master_rstb()
+        pool = self._pool or Pool()
+        table = get_stock_rstb()
+        diffs = self.consolidate_diffs(self.get_all_diffs())
+        master = util.get_master_modpack_dir()
+        master_files = {
+            f for f in master.rglob("**/*") if f.is_file() and "logs" not in f.parts
+        }
+        diffs.update(
+            {
+                k: v
+                for r in pool.map(
+                    partial(
+                        _get_modded_file_size,
+                        mod_dir=master,
+                        guess=not self._options.get("no_guess", False),
+                    ),
+                    {f for f in master_files if f.suffix not in EXCLUDE_EXTS},
+                )
+                for k, v in r.items()
+                if r is not None
+                and not (
+                    table.is_in_table(k)
+                    and (
+                        (v < table.get_size(k) and not self._options.get("shrink", False))
+                        or (v == 0 and not self._options.get("leave", False))
+                    )
+                )
+            }
+        )
+
+        diffs.update(
+            {
+                k: v
+                for r in pool.map(
+                    partial(_get_sizes_in_sarc, guess=not util.get_settings("no_guess"),),
+                    {
+                        f
+                        for f in master_files
+                        if f.suffix in util.SARC_EXTS - SARC_EXCLUDES
+                    },
+                )
+                for k, v in r.items()
+                if r is not None
+                and not (
+                    table.is_in_table(k)
+                    and (
+                        (v < table.get_size(k) and not self._options.get("shrink", False))
+                        or (v == 0 and not self._options.get("leave", False))
+                    )
+                )
+            }
+        )
+
+        for canon, size in diffs.copy().items():
+            if size == 0 and table.is_in_table(canon):
+                table.delete_entry(canon)
+            elif table.is_in_table(canon) and size < table.get_size(canon):
+                del diffs[canon]
+                continue
+            else:
+                table.set_size(canon, size)
+        if table.is_in_table(f"Message/Msg_{util.get_settings('lang')}.product.sarc"):
+            table.delete_entry(f"Message/Msg_{util.get_settings('lang')}.product.sarc")
+
+        out = (
+            master
+            / util.get_content_path()
+            / "System"
+            / "Resource"
+            / "ResourceSizeTable.product.srsizetable"
+        )
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with io.BytesIO() as buf:
+            table.write(buf, util.get_settings("wiiu"))
+            out.write_bytes(util.compress(buf.getvalue()))
+
+        log = master / "logs" / "rstb.json"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(json.dumps(diffs, ensure_ascii=False, indent=2, sort_keys=True))
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return set(self.get_mod_diff(mod).keys())
+
+
+setattr(calculate_size, "calculator", rstb.SizeCalculator())

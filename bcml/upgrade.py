@@ -103,6 +103,9 @@ def convert_old_logs(mod_dir: Path):
     if (mod_dir / "logs" / "packs.log").exists():
         print("Upgrading pack log...")
         _convert_pack_log(mod_dir)
+    if (mod_dir / "logs" / "rstb.log").exists():
+        print("Upgrading RSTB log...")
+        _convert_rstb_log(mod_dir)
     if (mod_dir / "logs").glob("*texts*"):
         print("Upgrading text logs...")
         _convert_text_logs(mod_dir / "logs")
@@ -121,6 +124,23 @@ def convert_old_logs(mod_dir: Path):
             _convert_map_log(log)
         else:
             pass
+
+
+def _convert_rstb_log(mod: Path):
+    diff = {}
+    with (mod / "logs" / "rstb.log").open("r", encoding="utf-8") as rlog:
+        reader = csv.reader(rlog)
+        for row in reader:
+            if str(row[0]) == "name":
+                continue
+            try:
+                diff[str(row[0])] = int(row[1])
+            except ValueError:
+                diff[str(row[0])] = int(float(row[1]))
+    (mod / "logs" / "rstb.log").unlink()
+    (mod / "logs" / "rstb.json").write_text(
+        json.dumps(diff, ensure_ascii=False, sort_keys=True, indent=2)
+    )
 
 
 def _convert_pack_log(mod: Path):

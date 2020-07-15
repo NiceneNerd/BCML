@@ -128,11 +128,14 @@ def _msyt_file(file, output: Path = None):
     else:
         result = subprocess.run(m_args, capture_output=True, text=True, check=False)
     if result.stderr:
-        raise RuntimeError(
+        raise ValueError(
+            f"The MSBT file <code>{file}</code> could not be read."
+            "Please contact the mod developer for assistance."
+        ) from RuntimeError(
             (
-                result.stderr.decode("utf-8")
-                .replace("an error occurred - see below for details", "")
+                result.stderr.replace("an error occurred - see below for details", "")
                 .replace("\n", " ")
+                .capitalize()
             )
         )
 
@@ -341,7 +344,17 @@ class TextsMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        return json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+        diff = {}
+        if self.is_mod_logged(mod):
+            util.dict_merge(
+                diff, json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+            )
+        for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
+            if (opt / "logs" / self._log_name).exists():
+                util.dict_merge(
+                    diff, json.loads((opt / "logs" / self._log_name).read_text("utf-8"))
+                )
+        return diff
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         diffs = set()

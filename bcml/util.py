@@ -867,7 +867,7 @@ def get_canon_name(file: str, allow_no_source: bool = False) -> str:
     elif "content/" in name and "/aoc" not in name:
         name = name.replace("content/", "")
     elif not allow_no_source:
-        raise ValueError("A canonical path must begin with a valid content directory.")
+        raise ValueError(f"{file} does not begin with a valid content directory.")
     return name
 
 

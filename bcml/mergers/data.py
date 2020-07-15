@@ -4,7 +4,7 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 # pylint: disable=unsupported-assignment-operation
-from functools import partial, lru_cache
+from functools import lru_cache
 from math import ceil
 from multiprocessing import Pool
 from operator import itemgetter
@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import List, Union
 
 import oead
-import rstb
-import rstb.util
 import xxhash
 
 from bcml import util, mergers
@@ -105,8 +103,7 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     mod_data = consolidate_gamedata(gamedata)
     del gamedata
     results = this_pool.starmap(
-        diff_gamedata_type,
-        ((key, mod_data[key], stock_data[key]) for key in mod_data.keys()),
+        diff_gamedata_type, ((key, mod_data[key], stock_data[key]) for key in mod_data),
     )
     diffs = oead.byml.Hash(
         {data_type: diff for d in results for data_type, diff in d.items()}
@@ -251,7 +248,6 @@ class GameDataMerger(mergers.Merger):
                 if xxhash.xxh64_hexdigest(str(modded_entries)) == l_file.read():
                     print("No gamedata merging necessary.")
                     return
-        this_pool = self._pool or Pool()
 
         print("Loading stock gamedata...")
         gamedata = consolidate_gamedata(get_stock_gamedata())
@@ -312,9 +308,7 @@ class GameDataMerger(mergers.Merger):
         print("Updating RSTB...")
         rstable.set_size(
             "GameData/gamedata.sarc",
-            rstable.calculate_size.rstb_calc.calculate_file_size_with_ext(
-                new_gamedata_bytes, util.get_settings("wiiu"), ".sarc"
-            ),
+            rstable.calculate_size("GameData/gamedata.sarc", new_gamedata_bytes),
         )
         del new_gamedata_bytes
 
@@ -527,9 +521,7 @@ class SaveDataMerger(mergers.Merger):
         print("Updating RSTB...")
         rstable.set_size(
             "GameData/savedataformat.sarc",
-            rstable.calculate_size.rstb_calc.calculate_file_size_with_ext(
-                new_save_bytes, util.get_settings("wiiu"), ".sarc"
-            ),
+            rstable.calculate_size("GameData/savedataformat.sarc", new_save_bytes),
         )
         del new_save_bytes
 
