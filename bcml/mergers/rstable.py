@@ -380,6 +380,8 @@ def _get_nest_file_sizes(
                 vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
         elif isinstance(contents, dict):
             for subpath, subcontents in contents.items():
+                if subpath[subpath.rindex(".") :] in SARC_EXCLUDES:
+                    continue
                 data = util.unyaz_if_needed(sarc.get_file(subpath).data)
                 canon = prefix + subpath.replace(".s", ".")
                 vals[canon] = calculate_size(canon, data, guess)
