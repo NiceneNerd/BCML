@@ -1,21 +1,12 @@
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
-from copy import deepcopy
-from functools import partial
-from io import BytesIO
-from math import ceil
-from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union
 from zlib import crc32
 
 import oead
-import rstb
-import rstb.util
-import xxhash
 
 from bcml import util, mergers
-from bcml.mergers import rstable
 from bcml.util import BcmlMod
 
 
@@ -46,7 +37,16 @@ class ActorInfoMerger(mergers.Merger):
         except StopIteration:
             return {}
         print("Detecting modified actor info entries...")
-        actorinfo = oead.byml.from_binary(util.decompress(actor_file.read_bytes()))
+        data = util.decompress(actor_file.read_bytes())
+        try:
+            actorinfo = oead.byml.from_binary(data)
+        except oead.InvalidDataError:
+            data = bytearray(data)
+            data[3] = 2
+            try:
+                actorinfo = oead.byml.from_binary(data)
+            except oead.InvalidDataError as err:
+                raise ValueError("This mod contains a corrupt actor info file.") from err
         del actor_file
         stock_actorinfo = get_stock_actorinfo()
         stock_actors = {actor["name"]: actor for actor in stock_actorinfo["Actors"]}
