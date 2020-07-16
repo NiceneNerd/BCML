@@ -376,20 +376,24 @@ def _get_nest_file_sizes(
         vals = {}
         if isinstance(contents, list):
             for file in contents:
+                if file[file.rindex(".") :] in EXCLUDE_EXTS:
+                    continue
                 canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
         elif isinstance(contents, dict):
             for subpath, subcontents in contents.items():
-                if subpath[subpath.rindex(".") :] in SARC_EXCLUDES:
+                ext = subpath[subpath.rindex(".") :]
+                if ext in EXCLUDE_EXTS:
                     continue
                 data = util.unyaz_if_needed(sarc.get_file(subpath).data)
                 canon = prefix + subpath.replace(".s", ".")
                 vals[canon] = calculate_size(canon, data, guess)
-                try:
-                    subsarc = oead.Sarc(data)
-                except (ValueError, RuntimeError, oead.InvalidDataError):
-                    continue
-                vals.update(get_sizes_in_sarc(subsarc, subcontents, guess, dlc))
+                if ext not in SARC_EXCLUDES:
+                    try:
+                        subsarc = oead.Sarc(data)
+                    except (ValueError, RuntimeError, oead.InvalidDataError):
+                        continue
+                    vals.update(get_sizes_in_sarc(subsarc, subcontents, guess, dlc))
         return vals
 
     dlc = util.get_dlc_path() in file
