@@ -116,15 +116,6 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     modded_files = []
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
-    rstb_path = (
-        tmp_dir
-        / util.get_content_path()
-        / "System"
-        / "Resource"
-        / "ResourceSizeTable.product.srsizetable"
-    )
-    if rstb_path.exists():
-        rstb_path.unlink()
 
     if (tmp_dir / util.get_dlc_path()).exists:
         try:
@@ -436,6 +427,8 @@ def install_mod(
                 return
             print(f"Loading mod from {str(mod)}...")
             tmp_dir = util.get_work_dir() / f"tmp_{mod.name}"
+            if tmp_dir.exists():
+                shutil.rmtree(tmp_dir)
             shutil.copytree(str(mod), str(tmp_dir))
             if (mod / "rules.txt").exists() and not (mod / "info.json").exists():
                 print("Upgrading old mod format...")
@@ -542,6 +535,16 @@ def install_mod(
                         else:
                             out.unlink()
                             os.link(file, out)
+
+    rstb_path = (
+        tmp_dir
+        / util.get_content_path()
+        / "System"
+        / "Resource"
+        / "ResourceSizeTable.product.srsizetable"
+    )
+    if rstb_path.exists():
+        rstb_path.unlink()
 
     priority = insert_priority
     print(f"Assigned mod priority of {priority}")
@@ -763,7 +766,7 @@ def link_master_mod(output: Path = None):
                 try:
                     link_or_copy(str(item), str(output / rel_path))
                 except OSError:
-                    if link_or_copy == os.link:
+                    if link_or_copy is os.link:
                         link_or_copy = copyfile
                         link_or_copy(str(item), str(output / rel_path))
                     else:
