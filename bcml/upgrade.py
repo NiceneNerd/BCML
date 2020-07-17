@@ -11,9 +11,9 @@ import yaml
 from aamp import yaml_util as ayu
 from aamp import ParameterIO, ParameterObject, ParameterList, Writer
 from byml import yaml_util as byu
-from oead import aamp as oamp
-from bcml import util
+from bcml import util, install
 from bcml.mergers.texts import read_msbt
+from bcml.mergers.rstable import RstbMerger
 from bcml.util import RulesParser
 
 
@@ -127,20 +127,12 @@ def convert_old_logs(mod_dir: Path):
 
 
 def _convert_rstb_log(mod: Path):
-    diff = {}
-    with (mod / "logs" / "rstb.log").open("r", encoding="utf-8") as rlog:
-        reader = csv.reader(rlog)
-        for row in reader:
-            if str(row[0]) == "name":
-                continue
-            try:
-                diff[str(row[0])] = int(row[1])
-            except ValueError:
-                diff[str(row[0])] = int(float(row[1]))
     (mod / "logs" / "rstb.log").unlink()
-    (mod / "logs" / "rstb.json").write_text(
-        json.dumps(diff, ensure_ascii=False, sort_keys=True, indent=2)
-    )
+    with Pool() as pool:
+        files = install.find_modded_files(mod, pool=pool)
+        merger = RstbMerger()
+        merger.set_pool(pool)
+        merger.log_diff(mod, files)
 
 
 def _convert_pack_log(mod: Path):
