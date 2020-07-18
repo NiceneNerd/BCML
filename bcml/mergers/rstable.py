@@ -415,12 +415,10 @@ def _get_sizes_in_sarc(
         try:
             file = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
         except (RuntimeError, oead.InvalidDataError):
-            print(file)
+            print(f"{file} could not be opened")
             return {}
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace(".s", ".")
-        if is_aoc:
-            canon = f"Aoc/0010/{canon}"
         if data[0:4] == b"Yaz0":
             data = util.decompress(data)
         ext = Path(canon).suffix
@@ -435,7 +433,7 @@ def _get_sizes_in_sarc(
                     nest_sarc = oead.Sarc(data)
                 except (ValueError, RuntimeError, oead.InvalidDataError):
                     continue
-                sizes.update(_get_sizes_in_sarc(nest_sarc, is_aoc, guess))
+                sizes.update(_get_sizes_in_sarc(nest_sarc, guess, is_aoc=is_aoc))
                 del nest_sarc
         del data
     del file
