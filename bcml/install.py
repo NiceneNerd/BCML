@@ -15,7 +15,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from platform import system
 from shutil import rmtree, copyfile
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 from typing import List, Union, Callable
 from xml.dom import minidom
 
@@ -426,7 +426,7 @@ def install_mod(
                 print(f"Cannot open mod at {str(mod)}, no rules.txt or info.json found")
                 return
             print(f"Loading mod from {str(mod)}...")
-            tmp_dir = util.get_work_dir() / f"tmp_{mod.name}"
+            tmp_dir = Path(mkdtemp())
             if tmp_dir.exists():
                 shutil.rmtree(tmp_dir)
             shutil.copytree(str(mod), str(tmp_dir))

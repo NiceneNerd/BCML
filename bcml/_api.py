@@ -467,16 +467,19 @@ class Api:
             return
         with util.TempModContext():
             if not ((mod / "info.json").exists() or (mod / "rules.txt").exists()):
-                (mod / "rules.txt").write_text(
-                    """
-                    [Definition]
-                    titleIds = 00050000101C9300,00050000101C9400,00050000101C9500
-                    name = TEMP
-                    path = "The Legend of Zelda: Breath of the Wild/Mods/TEMP"
-                    description = TEMP
-                    version = 4
-                    fsPriority = 100
-                    """
+                (mod / "info.json").write_text(
+                    json.dumps(
+                        {
+                            "name": "Temp",
+                            "desc": "Temp pack",
+                            "url": "",
+                            "image": "",
+                            "version": 1.0,
+                            "depends": [],
+                            "options": {},
+                            "platform": "wiiu" if util.get_settings("wiiu") else "switch",
+                        }
+                    )
                 )
             install.install_mod(
                 mod, merge_now=True,
