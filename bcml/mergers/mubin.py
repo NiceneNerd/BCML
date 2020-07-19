@@ -38,8 +38,9 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> H
     map_bytes = None
     if force_vanilla:
         try:
-            update = util.get_update_dir()
-            if not util.get_settings("wiiu"):
+            if util.get_settings("wiiu"):
+                update = util.get_update_dir()
+            else:
                 update = util.get_game_dir()
             map_path = (
                 update / "Map/MainField/"
