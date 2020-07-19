@@ -138,7 +138,8 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
                             file.relative_to(tmp_dir)
                         )
                         for file in final_packs
-                    }
+                    },
+                    indent=2,
                 )
             )
         else:

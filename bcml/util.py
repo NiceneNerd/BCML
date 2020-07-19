@@ -350,7 +350,7 @@ class BcmlMod:
 
     def _save_changes(self):
         self.info_path.write_text(
-            json.dumps(self._info, ensure_ascii=False), encoding="utf-8"
+            json.dumps(self._info, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
     @property
@@ -567,7 +567,7 @@ def get_settings(name: str = "") -> {}:
 
 def save_settings():
     with (get_data_dir() / "settings.json").open("w", encoding="utf-8") as s_file:
-        json.dump(get_settings.settings, s_file, indent=4)
+        json.dump(get_settings.settings, s_file, indent=2)
 
 
 def get_cemu_dir() -> Path:

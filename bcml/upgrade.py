@@ -92,7 +92,7 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
     except KeyError:
         info["priority"] = int(getattr(rules["Definition"], "fspriority", 100))
     (rules_path.parent / "info.json").write_text(
-        json.dumps(info, ensure_ascii=False, indent=4)
+        json.dumps(info, ensure_ascii=False, indent=2)
     )
     if delete_old:
         rules_path.unlink()
@@ -145,7 +145,7 @@ def _convert_pack_log(mod: Path):
             packs[str(row[0])] = Path(str(row[1])).as_posix().replace("\\", "/")
     (mod / "logs" / "packs.log").unlink()
     (mod / "logs" / "packs.json").write_text(
-        json.dumps(packs, ensure_ascii=False), encoding="utf-8"
+        json.dumps(packs, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
 
@@ -198,7 +198,7 @@ def _convert_text_logs(logs_path: Path):
         util.vprint(f"{len(fails)} text files failed to process:\n{fails}")
         text_pack.unlink()
     (logs_path / "texts.json").write_text(
-        json.dumps(diffs, ensure_ascii=False), encoding="utf-8"
+        json.dumps(diffs, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
 

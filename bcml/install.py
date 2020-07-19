@@ -579,10 +579,10 @@ def install_mod(
 
         rules["priority"] = priority
         (mod_dir / "info.json").write_text(
-            json.dumps(rules, ensure_ascii=False), encoding="utf-8"
+            json.dumps(rules, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         (mod_dir / "options.json").write_text(
-            json.dumps(options, ensure_ascii=False), encoding="utf-8"
+            json.dumps(options, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         output_mod = BcmlMod(mod_dir)
