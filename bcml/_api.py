@@ -183,13 +183,7 @@ class Api:
         )
 
     def get_options(self):
-        opts = [
-            {
-                "name": "general",
-                "friendly": "general options",
-                "options": {"agnostic": "Allow cross-platform install"},
-            }
-        ]
+        opts = []
         for merger in mergers.get_mergers():
             merger = merger()
             opts.append(

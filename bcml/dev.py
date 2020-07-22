@@ -1,5 +1,6 @@
 # pylint: disable=unsupported-assignment-operation,no-member
 from base64 import urlsafe_b64encode
+from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial
 from json import dumps
@@ -371,3 +372,93 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     shutil.rmtree(tmp_dir, ignore_errors=True)
     print("Conversion complete.")
+
+
+def process_cp_mod(mod: Path):
+    def nx2u(nx_text: str) -> str:
+        return (
+            nx_text.replace("\\\\", "/")
+            .replace("\\", "/")
+            .replace("01007EF00011E000/romfs", "content")
+            .replace("01007EF00011F001/romfs", "aoc/0010")
+        )
+
+    def u2nx(u_text: str) -> str:
+        return (
+            u_text.replace("\\\\", "/")
+            .replace("\\", "/")
+            .replace("content", "01007EF00011E000/romfs")
+            .replace("aoc/0010", "01007EF00011F001/romfs")
+        )
+
+    wiiu = (mod / "content").exists() or (mod / "aoc").exists()
+    if wiiu == util.get_settings("wiiu"):
+        return
+    if (mod / "logs").exists() and len({d for d in mod.glob("*") if d.is_dir()}) == 1:
+        return
+    easy_logs = [
+        mod / "logs" / "packs.json",
+        mod / "logs" / "rstb.log",
+        mod / "logs" / "deepmerge.yml",
+    ]
+
+    if util.get_settings("wiiu") and not wiiu:
+        if (mod / "01007EF00011E000").exists():
+            shutil.move(mod / "01007EF00011E000" / "romfs", mod / "content")
+            shutil.rmtree(mod / "01007EF00011E000")
+        if (mod / "01007EF00011F001").exists():
+            (mod / "aoc").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "01007EF00011F001" / "romfs", mod / "aoc" / "0010")
+            shutil.rmtree(mod / "01007EF00011F001")
+        for log in easy_logs:
+            if log.exists():
+                log.write_text(nx2u(log.read_text()))
+
+    elif not util.get_settings("wiiu") and wiiu:
+        if (mod / "content").exists():
+            (mod / "01007EF00011E000").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "content", mod / "01007EF00011E000" / "romfs")
+        if (mod / "aoc").exists():
+            (mod / "01007EF00011F001").mkdir(parents=True, exist_ok=True)
+            shutil.move(mod / "aoc" / "0010", mod / "01007EF00011F001" / "romfs")
+            shutil.rmtree(mod / "aoc")
+        for log in easy_logs:
+            if log.exists():
+                log.write_text(u2nx(log.read_text()))
+
+    aamp_log: Path = mod / "logs" / "deepmerge.aamp"
+    if aamp_log.exists() and util.get_settings("wiiu") != wiiu:
+        pio = oead.aamp.ParameterIO.from_binary(aamp_log.read_bytes())
+        from_content = (
+            "content"
+            if wiiu and not util.get_settings("wiiu")
+            else "01007EF00011E000/romfs"
+        )
+        to_content = (
+            "01007EF00011E000/romfs"
+            if wiiu and not util.get_settings("wiiu")
+            else "content"
+        )
+        from_dlc = (
+            "aoc/0010"
+            if wiiu and not util.get_settings("wiiu")
+            else "01007EF00011F001/romfs"
+        )
+        to_dlc = (
+            "01007EF00011F001/romfs"
+            if wiiu and not util.get_settings("wiiu")
+            else "aoc/0010"
+        )
+        for file_num, file in pio.objects["FileTable"].params.items():
+            old_path = file.v
+            new_path = old_path.replace(from_content, to_content).replace(
+                from_dlc, to_dlc
+            )
+            pio.objects["FileTable"].params[file_num] = oead.aamp.Parameter(new_path)
+            pio.lists[new_path] = deepcopy(pio.lists[old_path])
+            del pio.lists[old_path]
+        aamp_log.write_bytes(pio.to_binary())
+
+    if (mod / "options").exists():
+        for opt in {d for d in (mod / "options").glob("*") if d.is_dir()}:
+            process_cp_mod(opt)
