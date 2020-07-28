@@ -58,10 +58,11 @@ class BcmlRoot extends React.Component {
         this.launchGame = this.launchGame.bind(this);
         this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () => {
-            setTimeout(this.refreshMods, 150);
-            pywebview.api
-                .get_version()
-                .then(res => this.setState({ version: res }));
+            setTimeout(async () => {
+                let version = await pywebview.api.get_ver();
+                this.setState({ version });
+                this.refreshMods();
+            }, 125);
         });
     }
 

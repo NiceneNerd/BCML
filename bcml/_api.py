@@ -66,6 +66,9 @@ class Api:
     def __init__(self, host: str):
         self.host = host
 
+    def get_ver(self, params=None):
+        return USER_VERSION
+
     @win_or_lose
     def sanity_check(self, kwargs=None):
         util.sanity_check()
@@ -580,6 +583,3 @@ class Api:
         opener.start()
         for win in webviewb.windows:
             win.destroy()
-
-    def get_version(self):
-        return USER_VERSION
