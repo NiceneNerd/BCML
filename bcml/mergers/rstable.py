@@ -483,8 +483,8 @@ class RstbMerger(mergers.Merger):
                 and not (
                     table.is_in_table(k)
                     and (
-                        (v < table.get_size(k) and not self._options.get("shrink", False))
-                        or (v == 0 and not self._options.get("leave", False))
+                        (v == 0 and self._options.get("leave", False))
+                        or (v < table.get_size(k) and self._options.get("shrink", False))
                     )
                 )
             }
@@ -505,8 +505,8 @@ class RstbMerger(mergers.Merger):
                 and not (
                     table.is_in_table(k)
                     and (
-                        (v < table.get_size(k) and not self._options.get("shrink", False))
-                        or (v == 0 and not self._options.get("leave", False))
+                        (v == 0 and self._options.get("leave", False))
+                        or (v < table.get_size(k) and self._options.get("shrink", False))
                     )
                 )
             }
@@ -582,8 +582,8 @@ class RstbMerger(mergers.Merger):
                 and not (
                     table.is_in_table(k)
                     and (
-                        (v < table.get_size(k) and not self._options.get("shrink", False))
-                        or (v == 0 and not self._options.get("leave", False))
+                        (v == 0 and self._options.get("leave", False))
+                        or (v < table.get_size(k) and self._options.get("shrink", False))
                     )
                 )
             }
@@ -605,8 +605,8 @@ class RstbMerger(mergers.Merger):
                 and not (
                     table.is_in_table(k)
                     and (
-                        (v < table.get_size(k) and not self._options.get("shrink", False))
-                        or (v == 0 and not self._options.get("leave", False))
+                        (v == 0 and self._options.get("leave", False))
+                        or (v < table.get_size(k) and self._options.get("shrink", False))
                     )
                 )
             }
