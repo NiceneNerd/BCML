@@ -561,6 +561,9 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
+        parent = util.get_exec_dir().parent
+        if parent.name == "pkgs":
+            (parent / "bcml").rename(parent / "bcml.bak")
         result = run(
             [
                 util.get_python_exe().replace("pythonw", "python"),
