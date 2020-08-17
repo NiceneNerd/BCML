@@ -99,7 +99,7 @@ it, feel free to try writing a merger for it and submitting a PR.
 ## License
 
 This software is licensed under the terms of the GNU General Public License, version 3 or later. The
-source is publicly available on GitHub.
+source is publicly available on [GitHub](https://github.com/NiceneNerd/BCML).
 
 This software includes the 7-Zip console application `7z.exe` and the library `7z.dll`, which are
 licensed under the GNU Lesser General Public License. The source code for this application is
