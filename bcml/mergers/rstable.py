@@ -485,7 +485,7 @@ class RstbMerger(mergers.Merger):
                     and (
                         (v == 0 and self._options.get("leave", False))
                         or (
-                            v < table.get_size(k)
+                            0 < v < table.get_size(k)
                             and not self._options.get("shrink", False)
                         )
                     )
@@ -510,7 +510,7 @@ class RstbMerger(mergers.Merger):
                     and (
                         (v == 0 and self._options.get("leave", False))
                         or (
-                            v < table.get_size(k)
+                            0 < v < table.get_size(k)
                             and not self._options.get("shrink", False)
                         )
                     )
@@ -590,7 +590,7 @@ class RstbMerger(mergers.Merger):
                     and (
                         (v == 0 and self._options.get("leave", False))
                         or (
-                            v < table.get_size(k)
+                            0 < v < table.get_size(k)
                             and not self._options.get("shrink", False)
                         )
                     )
@@ -616,7 +616,7 @@ class RstbMerger(mergers.Merger):
                     and (
                         (v == 0 and self._options.get("leave", False))
                         or (
-                            v < table.get_size(k)
+                            0 < v < table.get_size(k)
                             and not self._options.get("shrink", False)
                         )
                     )
