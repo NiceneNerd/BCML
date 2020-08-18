@@ -20,8 +20,10 @@ import json
 import traceback
 from multiprocessing import Pool
 from pathlib import Path
+from platform import system
 from subprocess import run, PIPE, Popen
 from shutil import rmtree, copyfile
+from tempfile import mkdtemp
 from time import sleep
 from threading import Thread
 
@@ -32,7 +34,7 @@ except ImportError:
 import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
-from bcml.util import BcmlMod, LOG, SYSTEM
+from bcml.util import BcmlMod, LOG, SYSTEM, ZPATH
 from bcml.__version__ import USER_VERSION
 
 
@@ -408,6 +410,35 @@ class Api:
     @win_or_lose
     def restore_backup(self, params):
         install.restore_backup(params["backup"])
+
+    @win_or_lose
+    @install.refresher
+    def restore_old_backup(self, params):
+        if (util.get_cemu_dir() / "bcml_backups").exists():
+            open_dir = util.get_cemu_dir() / "bcml_backups"
+        else:
+            open_dir = Path.home()
+        try:
+            file = Path(
+                self.window.create_file_dialog(
+                    directory=open_dir,
+                    file_types=("BCML Backups (*.7z)", "All Files (*.*)"),
+                )[0]
+            )
+        except IndexError:
+            return
+        tmp_dir = Path(mkdtemp())
+        x_args = [ZPATH, "x", str(file), f"-o{str(tmp_dir)}"]
+        if system() == "Windows":
+            run(
+                x_args,
+                capture_output=True,
+                creationflags=util.CREATE_NO_WINDOW,
+                check=True,
+            )
+        else:
+            run(x_args, capture_output=True, check=True)
+        upgrade.convert_old_mods(tmp_dir)
 
     @win_or_lose
     def delete_backup(self, params):

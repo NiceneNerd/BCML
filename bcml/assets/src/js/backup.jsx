@@ -39,6 +39,7 @@ class BackupModal extends React.Component {
                         Here you can backup and restore entire mod
                         configurations. The backups are complete and exact: what
                         you restore will be identical to what you backed up.
+                        (Note that this is not guaranteed for 2.8 backups.)
                     </p>
                     <hr />
                     <div className="h5">Create Backup</div>
@@ -106,6 +107,10 @@ class BackupModal extends React.Component {
                     )}
                 </Modal.Body>
                 <Modal.Footer>
+                    {/* <Button variant="info" onClick={this.props.onOldRestore}>
+                        Restore 2.8 Backup
+                    </Button> */}
+                    <div className="flex-grow-1"></div>
                     <Button variant="secondary" onClick={this.props.onClose}>
                         Close
                     </Button>

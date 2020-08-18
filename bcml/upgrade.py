@@ -17,9 +17,9 @@ from bcml.mergers.rstable import RstbMerger
 from bcml.util import RulesParser
 
 
-def convert_old_mods():
+def convert_old_mods(source: Path = None):
     mod_dir = util.get_modpack_dir()
-    old_path = util.get_cemu_dir() / "graphicPacks" / "BCML"
+    old_path = source or util.get_cemu_dir() / "graphicPacks" / "BCML"
     print("Moving old mods...")
     shutil.rmtree(mod_dir, ignore_errors=True)
     try:
