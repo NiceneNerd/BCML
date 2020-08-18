@@ -98,9 +98,7 @@ class ModInfo extends React.Component {
                         size="sm"
                         title="Explore"
                         disabled={!this.props.mod}
-                        onClick={() =>
-                            this.props.onAction(this.props.mod, "explore")
-                        }>
+                        onClick={() => this.props.onAction("explore")}>
                         <i className="material-icons">folder_open</i>{" "}
                         <span>Explore</span>
                     </Button>
@@ -111,12 +109,7 @@ class ModInfo extends React.Component {
                                 size="sm"
                                 title="Enable"
                                 disabled={!this.props.mod}
-                                onClick={() =>
-                                    this.props.onAction(
-                                        this.props.mod,
-                                        "enable"
-                                    )
-                                }>
+                                onClick={() => this.props.onAction("enable")}>
                                 <i className="material-icons">check_box</i>{" "}
                                 <span>Enable</span>
                             </Button>
@@ -126,12 +119,7 @@ class ModInfo extends React.Component {
                                 size="sm"
                                 title="Disable"
                                 disabled={!this.props.mod}
-                                onClick={() =>
-                                    this.props.onAction(
-                                        this.props.mod,
-                                        "disable"
-                                    )
-                                }>
+                                onClick={() => this.props.onAction("disable")}>
                                 <i className="material-icons">block</i>{" "}
                                 <span>Disable</span>
                             </Button>
@@ -141,9 +129,7 @@ class ModInfo extends React.Component {
                         size="sm"
                         title="Update"
                         disabled={!this.props.mod}
-                        onClick={() =>
-                            this.props.onAction(this.props.mod, "update")
-                        }>
+                        onClick={() => this.props.onAction("update")}>
                         <i className="material-icons">update</i>{" "}
                         <span>Update</span>
                     </Button>
@@ -153,9 +139,7 @@ class ModInfo extends React.Component {
                             size="sm"
                             title="Reprocess"
                             disabled={!this.props.mod}
-                            onClick={() =>
-                                this.props.onAction(this.props.mod, "reprocess")
-                            }>
+                            onClick={() => this.props.onAction("reprocess")}>
                             <i className="material-icons">refresh</i>{" "}
                             <span>Reprocess</span>
                         </Button>
@@ -165,9 +149,7 @@ class ModInfo extends React.Component {
                         size="sm"
                         title="Uninstall"
                         disabled={!this.props.mod}
-                        onClick={() =>
-                            this.props.onAction(this.props.mod, "uninstall")
-                        }>
+                        onClick={() => this.props.onAction("uninstall")}>
                         <i className="material-icons">delete</i>{" "}
                         <span>Uninstall</span>
                     </Button>

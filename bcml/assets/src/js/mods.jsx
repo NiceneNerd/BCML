@@ -94,44 +94,48 @@ class Mods extends React.Component {
         });
     }
 
-    handleAction(mod, action) {
-        if (action == "explore") {
-            pywebview.api.explore({ mod: mod });
-        } else {
-            let verb = action.replace(/^\w/, c => c.toUpperCase());
-            if (verb.endsWith("e")) verb = verb.substring(0, verb.length - 1);
-            const task = () =>
-                this.props.onState(
-                    {
-                        showProgress: true,
-                        progressTitle: `${verb}ing ${mod.name}`
-                    },
-                    () => {
-                        pywebview.api
-                            .mod_action({ mod, action })
-                            .then(res => {
-                                if (!res.success) {
-                                    throw res.error;
-                                }
-                                this.setState({ selectedMods: [] }, () => {
-                                    this.props.onState(
-                                        {
-                                            showProgress: false,
-                                            showDone: true
-                                        },
-                                        () => this.props.onRefresh()
-                                    );
-                                });
-                            })
-                            .catch(this.props.onError);
-                    }
-                );
-            if (["enable", "update"].includes(action)) task();
-            else
-                this.props.onConfirm(
-                    `Are you sure you want to ${action} ${mod.name}?`,
-                    task
-                );
+    handleAction(action) {
+        for (const mod of this.state.selectedMods) {
+            console.log(mod);
+            if (action == "explore") {
+                pywebview.api.explore({ mod: mod });
+            } else {
+                let verb = action.replace(/^\w/, c => c.toUpperCase());
+                if (verb.endsWith("e"))
+                    verb = verb.substring(0, verb.length - 1);
+                const task = () =>
+                    this.props.onState(
+                        {
+                            showProgress: true,
+                            progressTitle: `${verb}ing ${mod.name}`
+                        },
+                        () => {
+                            pywebview.api
+                                .mod_action({ mod, action })
+                                .then(res => {
+                                    if (!res.success) {
+                                        throw res.error;
+                                    }
+                                    this.setState({ selectedMods: [] }, () => {
+                                        this.props.onState(
+                                            {
+                                                showProgress: false,
+                                                showDone: true
+                                            },
+                                            () => this.props.onRefresh()
+                                        );
+                                    });
+                                })
+                                .catch(this.props.onError);
+                        }
+                    );
+                if (["enable", "update"].includes(action)) task();
+                else
+                    this.props.onConfirm(
+                        `Are you sure you want to ${action} ${mod.name}?`,
+                        task
+                    );
+            }
         }
     }
 
