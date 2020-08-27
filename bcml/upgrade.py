@@ -61,6 +61,7 @@ def convert_old_settings():
         "update_dir": str(update_dir or ""),
         "dlc_dir": str(dlc_dir or ""),
         "dlc_dir_nx": "",
+        "store_dir": str(util.get_data_dir()),
         "site_meta": old_settings["Settings"]["site_meta"],
         "no_guess": old_settings["Settings"]["guess_merge"] == "False",
         "lang": old_settings["Settings"]["lang"],
