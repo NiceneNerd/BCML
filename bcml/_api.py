@@ -595,23 +595,41 @@ class Api:
         parent = util.get_exec_dir().parent
         if parent.name == "pkgs":
             (parent / "bcml").rename(parent / "bcml.bak")
-        result = run(
-            [
-                util.get_python_exe().replace("pythonw", "python"),
-                "-m",
-                "pip",
-                "install",
-                "--disable-pip-version-check",
-                "--no-warn-script-location",
-                "--upgrade",
-                "--pre" if DEBUG else "",
-                "bcml",
-            ],
-            creationflags=util.CREATE_NO_WINDOW,
-            capture_output=True,
-            check=False,
-            text=True,
-        )
+        if SYSTEM == "Windows":
+            result = run(
+                [
+                    util.get_python_exe().replace("pythonw", "python"),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--disable-pip-version-check",
+                    "--no-warn-script-location",
+                    "--upgrade",
+                    "--pre" if DEBUG else "",
+                    "bcml",
+                ],
+                creationflags=util.CREATE_NO_WINDOW,
+                capture_output=True,
+                check=False,
+                text=True,
+            )
+        else:
+            result = run(
+                [
+                    util.get_python_exe().replace("pythonw", "python"),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--disable-pip-version-check",
+                    "--no-warn-script-location",
+                    "--upgrade",
+                    "--pre" if DEBUG else "",
+                    "bcml",
+                ],
+                capture_output=True,
+                check=False,
+                text=True,
+            )
         if result.stderr:
             raise RuntimeError(result.stderr)
 
