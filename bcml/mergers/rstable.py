@@ -214,11 +214,9 @@ class RstbMerger(mergers.Merger):
             "rstb.json",
         )
         self._options = {"no_guess": False}
-        self._table = get_stock_rstb()
+        self._table = None
 
     def should_exclude(self, canon: str, val: int) -> bool:
-        if ".hksc" in canon:
-            print(canon)
         if canon in EXCLUDE_NAMES:
             return True
         if canon[canon.rindex(".") :] in EXCLUDE_EXTS:
@@ -233,6 +231,8 @@ class RstbMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Path]):
         diff = {}
         nested_files = {}
+        if not self._table:
+            self._table = get_stock_rstb()
         pool = self._pool or Pool()
         for nest in {n for n in modded_files if isinstance(n, str)}:
             util.dict_merge(
@@ -320,7 +320,8 @@ class RstbMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         pool = self._pool or Pool()
-        table = get_stock_rstb()
+        if not self._table:
+            self._table = get_stock_rstb()
         diffs = self.consolidate_diffs(self.get_all_diffs())
         master = util.get_master_modpack_dir()
         master_files = {
@@ -335,7 +336,7 @@ class RstbMerger(mergers.Merger):
                         mod_dir=master,
                         guess=not self._options.get("no_guess", False),
                     ),
-                    master_files,
+                    {f for f in master_files if f.suffix not in EXCLUDE_EXTS},
                 )
                 for k, v in r.items()
                 if r is not None and not self.should_exclude(k, v)
@@ -357,6 +358,7 @@ class RstbMerger(mergers.Merger):
                 if r is not None and not self.should_exclude(k, v)
             }
         )
+        table = self._table
         for canon, size in diffs.copy().items():
             if size == 0:
                 if table.is_in_table(canon):

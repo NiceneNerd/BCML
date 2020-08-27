@@ -443,10 +443,14 @@ class DoneDialog extends React.Component {
         this.launch_game = this.launch_game.bind(this);
     }
 
-    componentDidUpdate() {
-        try {
-            pywebview.api.get_setup().then(res => this.setState({ ...res }));
-        } catch (error) {}
+    componentDidUpdate(prevProps) {
+        if (this.props.show != prevProps.show) {
+            try {
+                pywebview.api
+                    .get_setup()
+                    .then(res => this.setState({ ...res }));
+            } catch (error) {}
+        }
     }
 
     launch_game() {
