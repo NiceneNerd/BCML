@@ -418,7 +418,7 @@ compress = oead.yaz0.compress
 
 
 def vprint(content):
-    if not DEBUG or "Pool" in current_process().name:
+    if "Pool" in current_process().name:
         return
     if not isinstance(content, str):
         if isinstance(content, (oead.byml.Hash, oead.byml.Array)):
