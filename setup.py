@@ -52,6 +52,7 @@ setup(
     install_requires=[
         "aamp>=1.4.1",
         "byml>=2.3.1",
+        "botw-utils==0.2.2",
         "cefpython3~=66.0",
         "oead>=1.1.1",
         "pythonnet>=2.5.0rc2; platform_system=='Windows'",
