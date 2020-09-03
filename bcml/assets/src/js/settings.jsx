@@ -41,6 +41,7 @@ class Settings extends React.Component {
             (this.state.game_dir_nx != "" || this.state.wiiu) &&
             (this.state.update_dir != "" || !this.state.wiiu) &&
             this.state.lang != "" &&
+            this.state.store_dir != "" &&
             (this.state.cemu_dir != "" || this.state.no_cemu) &&
             this.formRef.current.checkValidity()
         );
