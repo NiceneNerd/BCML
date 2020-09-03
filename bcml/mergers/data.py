@@ -441,7 +441,7 @@ class SaveDataMerger(mergers.Merger):
         merged_entries = oead.byml.Array(
             sorted(
                 {
-                    entry
+                    entry["HashValue"].v: entry
                     for entry in [
                         *[
                             e
@@ -451,7 +451,7 @@ class SaveDataMerger(mergers.Merger):
                         *new_entries["add"],
                     ]
                     if entry not in new_entries["del"]
-                },
+                }.values(),
                 key=itemgetter("HashValue"),
             )
         )
