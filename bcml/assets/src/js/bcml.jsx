@@ -348,9 +348,15 @@ class BcmlRoot extends React.Component {
                                     showError: true,
                                     error: {
                                         short:
-                                            "Your settings are not valid and cannot be saved. Check that all required fields are completed and green before submitting.",
+                                            "Your settings are not valid and cannot be saved. " +
+                                            "Check that all required fields are completed and " +
+                                            "green before submitting. If you have trouble, " +
+                                            "the in-app help.",
                                         error_text:
-                                            "Your settings are not valid and cannot be saved. Check that all required fields are completed and green before submitting."
+                                            "Your settings are not valid and cannot be saved. " +
+                                            "Check that all required fields are completed and " +
+                                            "green before submitting. If you have trouble, " +
+                                            "the in-app help."
                                     }
                                 })
                             }
