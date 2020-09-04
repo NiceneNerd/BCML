@@ -454,7 +454,7 @@ def install_mod(
     mod_dir = util.get_modpack_dir() / mod_id
 
     try:
-        for existing_mod in util.get_installed_mods():
+        for existing_mod in util.get_installed_mods(True):
             if existing_mod.priority >= priority:
                 existing_mod.change_priority(existing_mod.priority + 1)
 
@@ -550,7 +550,9 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Uninstalling {mod.name}...")
     shutil.rmtree(str(mod.path))
 
-    for fall_mod in [m for m in util.get_installed_mods() if m.priority > mod.priority]:
+    for fall_mod in [
+        m for m in util.get_installed_mods(True) if m.priority > mod.priority
+    ]:
         fall_mod.change_priority(fall_mod.priority - 1)
 
     if not util.get_installed_mods():
@@ -645,9 +647,10 @@ def link_master_mod(output: Path = None):
         reverse=True,
     )
     util.vprint(mod_folders)
-    shutil.copy(
-        str(util.get_master_modpack_dir() / "rules.txt"), str(output / "rules.txt")
-    )
+    if not util.get_settings("no_cemu"):
+        shutil.copy(
+            str(util.get_master_modpack_dir() / "rules.txt"), str(output / "rules.txt")
+        )
     link_or_copy = os.link if not util.get_settings("no_hardlinks") else copyfile
     for mod_folder in mod_folders:
         for item in mod_folder.rglob("**/*"):
