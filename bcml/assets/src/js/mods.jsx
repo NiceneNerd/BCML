@@ -30,10 +30,7 @@ class Mods extends React.Component {
             pywebview.api
                 .get_setup()
                 .then(setup =>
-                    this.setState(
-                        { mergersReady: true, ...setup },
-                        this.sanityCheck
-                    )
+                    this.setState({ mergersReady: true, ...setup }, this.sanityCheck)
                 )
         );
         this.sanityCheck = this.sanityCheck.bind(this);
@@ -61,10 +58,7 @@ class Mods extends React.Component {
             .catch(err => {
                 console.error(err);
                 this.props.onError(err);
-                setTimeout(
-                    () => (window.location = "index.html?firstrun=true"),
-                    1500
-                );
+                setTimeout(() => (window.location = "index.html?firstrun=true"), 1500);
             });
     }
 
@@ -101,8 +95,7 @@ class Mods extends React.Component {
                 pywebview.api.explore({ mod: mod });
             } else {
                 let verb = action.replace(/^\w/, c => c.toUpperCase());
-                if (verb.endsWith("e"))
-                    verb = verb.substring(0, verb.length - 1);
+                if (verb.endsWith("e")) verb = verb.substring(0, verb.length - 1);
                 const task = () =>
                     this.props.onState(
                         {
@@ -207,15 +200,10 @@ class Mods extends React.Component {
             async () => {
                 let installs = [];
                 let moves = [];
-                for (const [
-                    i,
-                    mod
-                ] of this.state.mods.slice().reverse().entries()) {
+                for (const [i, mod] of this.state.mods.slice().reverse().entries()) {
                     if (mod.path.startsWith("QUEUE")) installs.push(mod);
                     else {
-                        const newPriority = !this.state.sortReverse
-                            ? i + 100
-                            : this.state.mods.length - i - 1 + 100;
+                        const newPriority = this.state.mods.length - i - 1 + 100;
                         if (mod.priority != newPriority)
                             moves.push({ mod, priority: newPriority });
                     }
@@ -308,10 +296,10 @@ class Mods extends React.Component {
                                     }>
                                     <Button
                                         variant="secondary"
+                                        disabled={this.state.showHandle}
                                         onClick={() =>
                                             this.setState({
-                                                sortReverse: !this.state
-                                                    .sortReverse
+                                                sortReverse: !this.state.sortReverse
                                             })
                                         }>
                                         <i
@@ -337,27 +325,19 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showHandle: !this.state
-                                                    .showHandle
+                                                showHandle: !this.state.showHandle
                                             })
                                         }>
-                                        <i className="material-icons">
-                                            reorder
-                                        </i>
+                                        <i className="material-icons">reorder</i>
                                     </Button>
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <OverlayTrigger
-                                    overlay={<Tooltip>Remerge</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Remerge</Tooltip>}>
                                     <Button
                                         variant="secondary"
-                                        onClick={() =>
-                                            this.handleRemerge("all")
-                                        }>
-                                        <i className="material-icons">
-                                            refresh
-                                        </i>
+                                        onClick={() => this.handleRemerge("all")}>
+                                        <i className="material-icons">refresh</i>
                                     </Button>
                                 </OverlayTrigger>
                                 <Dropdown.Toggle
@@ -371,9 +351,7 @@ class Mods extends React.Component {
                                         this.state.mergers.map(m => (
                                             <Dropdown.Item
                                                 key={m}
-                                                onClick={() =>
-                                                    this.handleRemerge(m)
-                                                }>
+                                                onClick={() => this.handleRemerge(m)}>
                                                 Remerge {m}
                                             </Dropdown.Item>
                                         ))}
@@ -381,38 +359,25 @@ class Mods extends React.Component {
                             </Dropdown>
                             <ButtonGroup size="xs">
                                 <OverlayTrigger
-                                    overlay={
-                                        <Tooltip>Backup and restore</Tooltip>
-                                    }>
+                                    overlay={<Tooltip>Backup and restore</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onBackup}>
-                                        <i className="material-icons">
-                                            restore
-                                        </i>
+                                        <i className="material-icons">restore</i>
                                     </Button>
                                 </OverlayTrigger>
-                                <OverlayTrigger
-                                    overlay={<Tooltip>Export</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Export</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onExport}
                                         className="pr-1">
-                                        <i className="material-icons">
-                                            open_in_browser
-                                        </i>
+                                        <i className="material-icons">open_in_browser</i>
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={
-                                        <Tooltip>Uninstall all mods</Tooltip>
-                                    }>
-                                    <Button
-                                        variant="danger"
-                                        onClick={this.uninstallAll}>
-                                        <i className="material-icons">
-                                            delete_sweep
-                                        </i>
+                                    overlay={<Tooltip>Uninstall all mods</Tooltip>}>
+                                    <Button variant="danger" onClick={this.uninstallAll}>
+                                        <i className="material-icons">delete_sweep</i>
                                     </Button>
                                 </OverlayTrigger>
                             </ButtonGroup>
@@ -420,9 +385,7 @@ class Mods extends React.Component {
                             {this.state.hasCemu && (
                                 <OverlayTrigger
                                     overlay={
-                                        <Tooltip>
-                                            Launch Breath of the Wild
-                                        </Tooltip>
+                                        <Tooltip>Launch Breath of the Wild</Tooltip>
                                     }>
                                     <Button
                                         variant="primary"
