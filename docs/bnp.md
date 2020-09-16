@@ -73,14 +73,14 @@ For developers, it might be helpful to understand exactly how a BNP works. A BNP
 normal game content folders, using the structure documented above. When creating a BNP, BCML scans
 the mod content for edited files. Then, for any file supported by one of BCML's mergers, BCML will
 analyze the file and compare it to the version from the vanilla game. Each merger will create a log
-file (e.g. `rstb.log`) of changes detected and store it in a `logs` folder at the root of the BNP.
+file (e.g. `rstb.json`) of changes detected and store it in a `logs` folder at the root of the BNP.
 If the changes made to a file can be completely reproduced from the log alone, that file will be
 deleted from the BNP. This includes files inside of SARC archives. Files which are not in the
 vanilla game, or modified files for which there is no merger in BCML, will be left alone.
 
 The end result is a 7z archive containing (1) one or more content folders with only edited files not
 handled by BCML remaining and (2) a set of merger logs. Most of the logs are stored as YAML files,
-though JSON and CSV are also used. This means a BNP can be opened and extracted with 7-Zip, and many
+though JSON is also used. This means a BNP can be opened and extracted with 7-Zip, and many
 of the logs will be readable to anyone familiar with YAML-based BOTW modding tools.
 
 When the BNP is installed, BCML will extract its contents into an internal mods directory and
