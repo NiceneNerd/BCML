@@ -33,7 +33,7 @@ let messages = [
     "Friend-zoning Paya",
     "Hiding secrets from everybody",
     "Riding a shrine elevator",
-    "Bow-spinning your mod",
+    "Bow-spinning mods",
     "Eating a Royal Claymore",
     "Ignoring the old man",
     "Selling the Sheikah Slate",
@@ -44,7 +44,19 @@ let messages = [
     "Going back to bed",
     "100 more years never hurt anyone",
     "Changing name and joining a construction company",
-    "Forcing fairies to stay in a cooking pot"
+    "Trapping fairies in cooking pot",
+    "Flushing Hetsu's gift",
+    "Bullet time? What's a bullet?",
+    "Pretending to remember Zelda",
+    "I can't go any farther",
+    '"Linkle, you\'re going the wrong way!"',
+    "Believe it or not, real progress updates are not an option",
+    "BCML tip: When in doubt, remerge",
+    "BCML tip: The in-app help has a lot of information",
+    "BCML tip: To reorder your mods, click the Show Sort Handles toggle",
+    "BCML tip: Ctrl-Click to select multiple mods",
+    "BCML tip: Higher number priority overrides lower number priority",
+    "BCML tip: When using a set of related mods, put the base mod beneath the addons"
 ];
 
 function shuffle(array) {
@@ -57,20 +69,28 @@ function shuffle(array) {
 class ProgressModal extends React.Component {
     constructor(props) {
         super(props);
+        this.timer = null;
         this.state = {
             messageIdx: 0
         };
-        setInterval(() => {
-            if (this.props.show) {
-                this.setState({
-                    messageIdx: (messages.length * Math.random()) | 0
-                });
-            }
-        }, 2000);
     }
 
     componentDidUpdate(prevProps) {
-        if (prevProps.show != this.props.show) shuffle(messages);
+        if (!prevProps.show && this.props.show) {
+            shuffle(messages);
+            this.timer = setInterval(() => {
+                if (this.props.show) {
+                    this.setState({
+                        messageIdx:
+                            this.state.messageIdx < messages.length - 1
+                                ? this.state.messageIdx + 1
+                                : 0
+                    });
+                }
+            }, 2000);
+        } else if (prevProps.show && !this.props.show) {
+            clearInterval(this.timer);
+        }
     }
 
     render() {
@@ -80,11 +100,7 @@ class ProgressModal extends React.Component {
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex align-items-start">
-                    <Spinner
-                        animation="border"
-                        role="status"
-                        className="flex-shrink-0"
-                    />
+                    <Spinner animation="border" role="status" className="flex-shrink-0" />
                     <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
                         {messages[this.state.messageIdx]}…
                     </div>
