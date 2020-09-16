@@ -594,7 +594,7 @@ def get_game_dir() -> Path:
         )
     if not (game_path / "Pack" / "Dungeon000.pack").exists():
         raise FileNotFoundError(
-            "The BOTW game dump directory is not set correctly."
+            "The BOTW game dump directory is not set correctly. "
             "See the in-app help to correct this."
         )
     return game_path
@@ -707,7 +707,7 @@ def get_update_dir() -> Path:
         update_dir / "Actor" / "Pack" / "FldObj_MountainSnow_A_M_02.sbactorpack"
     ).exists():
         raise FileNotFoundError(
-            "The BOTW update directory is set incorrectly or missing files."
+            "The BOTW update directory is set incorrectly or missing files. "
             "See the in-app help to correct this."
         )
     return update_dir
@@ -740,7 +740,7 @@ def get_aoc_dir() -> Path:
         )
     if not (aoc_dir / "Pack" / "AocMainField.pack").exists():
         raise FileNotFoundError(
-            "The BOTW DLC directory is set incorrectly or missing files."
+            "The BOTW DLC directory is set incorrectly or missing files. "
             "See the in-app help to correct this."
         )
     return aoc_dir

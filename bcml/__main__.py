@@ -81,17 +81,9 @@ def main(debug: bool = False):
 
     api = Api(host)
 
-    def is_sane():
-        try:
-            util.sanity_check()
-            return True
-        except Exception as err:  # pylint: disable=broad-except
-            print(err)
-            return False
-
     gui = "cef" if SYSTEM == "Windows" else "qt"
 
-    if (util.get_data_dir() / "settings.json").exists() and is_sane():
+    if (util.get_data_dir() / "settings.json").exists():
         url = f"{host}/index.html"
         width, height = 907, 680
     else:
