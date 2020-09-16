@@ -20,24 +20,22 @@ from bcml.util import RulesParser
 def convert_old_mods(source: Path = None):
     mod_dir = util.get_modpack_dir()
     old_path = source or util.get_cemu_dir() / "graphicPacks" / "BCML"
-    print("Moving old mods...")
+    print("Copying old mods...")
     shutil.rmtree(mod_dir, ignore_errors=True)
-    try:
-        shutil.move(old_path, mod_dir)
-    except OSError:
-        shutil.copytree(old_path, mod_dir)
-        shutil.rmtree(old_path, ignore_errors=True)
+    shutil.copytree(old_path, mod_dir)
     print("Converting old mods...")
-    for mod in sorted(
-        {d for d in mod_dir.glob("*") if d.is_dir() and d.name != "9999_BCML"}
+    for i, mod in enumerate(
+        sorted({d for d in mod_dir.glob("*") if d.is_dir() and d.name != "9999_BCML"})
     ):
         print(f"Converting {mod.name[4:]}")
         try:
             convert_old_mod(mod, True)
         except Exception as err:
             raise RuntimeError(
-                f"BCML was unable to convert {mod.name[4:]}. Error: {str(err)}"
+                f"BCML was unable to convert {mod.name[4:]}. Error: {str(err)}. Your old "
+                f"mods have not been modified. {i} mod(s) were successfully imported."
             ) from err
+    shutil.rmtree(old_path, ignore_errors=True)
 
 
 def convert_old_mod(mod: Path, delete_old: bool = False):
