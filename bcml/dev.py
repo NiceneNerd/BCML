@@ -277,9 +277,14 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
         (tmp_dir / util.get_content_path()).exists()
         or (tmp_dir / util.get_dlc_path()).exists()
     ):
-        raise FileNotFoundError(
-            "This mod does not appear to have a valid folder structure"
-        )
+        if (tmp_dir.parent / util.get_content_path()).exists():
+            tmp_dir = tmp_dir.parent
+        elif util.get_settings("wiiu") and (tmp_dir / "Content").exists():
+            (tmp_dir / "Content").rename(tmp_dir / "content")
+        else:
+            raise FileNotFoundError(
+                "This mod does not appear to have a valid folder structure"
+            )
 
     if (tmp_dir / "rules.txt").exists():
         (tmp_dir / "rules.txt").unlink()
