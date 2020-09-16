@@ -38,6 +38,7 @@ class BcmlRoot extends React.Component {
         this.selects = null;
         this.backupRef = React.createRef();
         this.handleBackups = this.handleBackups.bind(this);
+        this.handleOldRestore = this.handleOldRestore.bind(this);
         this.handleInstall = this.handleInstall.bind(this);
         this.saveSettings = this.saveSettings.bind(this);
         this.showError = this.showError.bind(this);
@@ -199,6 +200,30 @@ class BcmlRoot extends React.Component {
         if (operation == "delete")
             this.confirm("Are you sure you want to delete this backup?", task);
         else task();
+    }
+
+    handleOldRestore() {
+        this.setState(
+            {
+                showProgress: true,
+                showBackups: false,
+                progressTitle: "Restoring BCML 2.8 Backup"
+            },
+            () => {
+                pywebview.api
+                    .restore_old_backup()
+                    .then(res => {
+                        if (!res.success) {
+                            throw res.error;
+                        }
+
+                        this.setState({ showProgress: false, showDone: true }, () =>
+                            this.refreshMods()
+                        );
+                    })
+                    .catch(this.showError);
+            }
+        );
     }
 
     export() {
@@ -373,6 +398,7 @@ class BcmlRoot extends React.Component {
                     ref={this.backupRef}
                     onCreate={this.handleBackups}
                     onRestore={this.handleBackups}
+                    onOldRestore={this.handleOldRestore}
                     onDelete={this.handleBackups}
                     onClose={() => this.setState({ showBackups: false })}
                 />

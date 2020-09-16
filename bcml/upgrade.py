@@ -31,6 +31,8 @@ def convert_old_mods(source: Path = None):
         try:
             convert_old_mod(mod, True)
         except Exception as err:
+            shutil.rmtree(mod)
+            install.refresh_merges()
             raise RuntimeError(
                 f"BCML was unable to convert {mod.name[4:]}. Error: {str(err)}. Your old "
                 f"mods have not been modified. {i} mod(s) were successfully imported."

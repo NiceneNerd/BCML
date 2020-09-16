@@ -412,7 +412,7 @@ class Api:
 
     @win_or_lose
     @install.refresher
-    def restore_old_backup(self, params):
+    def restore_old_backup(self, params=None):
         if (util.get_cemu_dir() / "bcml_backups").exists():
             open_dir = util.get_cemu_dir() / "bcml_backups"
         else:
@@ -420,7 +420,7 @@ class Api:
         try:
             file = Path(
                 self.window.create_file_dialog(
-                    directory=open_dir,
+                    directory=str(open_dir),
                     file_types=("BCML Backups (*.7z)", "All Files (*.*)"),
                 )[0]
             )
