@@ -636,8 +636,19 @@ def link_master_mod(output: Path = None):
             return
         output = util.get_cemu_dir() / "graphicPacks" / "BreathOfTheWild_BCML"
     if output.exists():
-        shutil.rmtree(str(output), ignore_errors=True)
-    output.mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(output, ignore_errors=True)
+    try:
+        output.mkdir(parents=True, exist_ok=True)
+        if not util.get_settings("no_cemu"):
+            shutil.copy(util.get_master_modpack_dir() / "rules.txt", output / "rules.txt")
+    except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
+        raise RuntimeError(
+            "There was a problem creating the master BCML graphic pack. "
+            "It may be a one time fluke, so try remerging and/or restarting BCML. "
+            "If the problem persists, good luck, because it's something wonky about your "
+            "PC, I guess."
+        ) from err
+
     mod_folders: List[Path] = sorted(
         [
             item
@@ -647,10 +658,6 @@ def link_master_mod(output: Path = None):
         reverse=True,
     )
     util.vprint(mod_folders)
-    if not util.get_settings("no_cemu"):
-        shutil.copy(
-            str(util.get_master_modpack_dir() / "rules.txt"), str(output / "rules.txt")
-        )
     link_or_copy = os.link if not util.get_settings("no_hardlinks") else copyfile
     for mod_folder in mod_folders:
         for item in mod_folder.rglob("**/*"):
@@ -683,22 +690,28 @@ def export(output: Path):
     tmp_dir = util.get_work_dir() / "tmp_export"
     if tmp_dir.drive != util.get_modpack_dir().drive:
         tmp_dir = Path(util.get_modpack_dir().drive) / "tmp_bcml_export"
+    if tmp_dir.exists():
+        try:
+            rmtree(tmp_dir)
+        except (OSError, FileNotFoundError, PermissionError) as err:
+            raise RuntimeError(
+                "There was a problem cleaning the temporary export directory. This may be"
+                " a fluke, so consider restarting BCML and trying again."
+            ) from err
     link_master_mod(tmp_dir)
     print("Adding rules.txt...")
     rules_path = tmp_dir / "rules.txt"
     mods = util.get_installed_mods()
     if util.get_settings("wiiu"):
-        with rules_path.open("w", encoding="utf-8") as rules:
-            rules.writelines(
-                [
-                    "[Definition]\n",
-                    "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n",
-                    "name = Exported BCML Mod\n",
-                    "path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n",
-                    f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n',
-                    "version = 4\n",
-                ]
-            )
+        rules_path.write_text(
+            "[Definition]\n"
+            "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
+            "name = Exported BCML Mod\n"
+            "path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n"
+            f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n'
+            "version = 4\n",
+            encoding="utf-8",
+        )
     if output.suffix == ".bnp" or output.name.endswith(".bnp.7z"):
         print("Exporting BNP...")
         dev.create_bnp_mod(
@@ -722,4 +735,4 @@ def export(output: Path):
             subprocess.run(
                 x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
             )
-    rmtree(str(tmp_dir), True)
+    rmtree(tmp_dir, True)

@@ -1134,16 +1134,16 @@ def create_bcml_graphicpack_if_needed():
     (bcml_mod_dir / "logs").mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / "rules.txt"
     if not (rules.exists() or get_settings("no_cemu")):
-        with rules.open("w", encoding="utf-8") as r_file:
-            r_file.write(
-                "[Definition]\n"
-                "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
-                "name = BCML\n"
-                "path = The Legend of Zelda: Breath of the Wild/Mods/BCML\n"
-                "description = Complete pack of mods merged using BCML\n"
-                "version = 4\n"
-                "fsPriority = 9999"
-            )
+        rules.write_text(
+            "[Definition]\n"
+            "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
+            "name = BCML\n"
+            "path = The Legend of Zelda: Breath of the Wild/Mods/BCML\n"
+            "description = Complete pack of mods merged using BCML\n"
+            "version = 4\n"
+            "fsPriority = 9999",
+            encoding="utf-8",
+        )
 
 
 UNDERRIDE = "UNDERRIDE_CONST"
