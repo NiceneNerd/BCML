@@ -320,15 +320,16 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
                 for f in option_dir.rglob("**/*")
                 if (f.is_file() and (tmp_dir / f.relative_to(option_dir)).exists())
             }:
-                xh1 = xxhash.xxh64_intdigest(
-                    (tmp_dir / file.relative_to(option_dir)).read_bytes()
-                )
-                xh2 = xxhash.xxh64_intdigest(file.read_bytes())
-                if xh1 == xh2:
+                data1 = (tmp_dir / file.relative_to(option_dir)).read_bytes()
+                data2 = file.read_bytes()
+                if data1 == data2:
                     util.vprint(
-                        f"Removing {file} from option {option_dir.name}, identical to base mod"
+                        f"Removing {file} from option {option_dir.name}, "
+                        "identical to base mod"
                     )
                     file.unlink()
+                del data1
+                del data2
 
         if not options:
             options = {"disable": [], "options": {}}
