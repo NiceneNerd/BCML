@@ -3,16 +3,15 @@ try:
     import oead
     del oead
 except ImportError:
-    import ctypes
-    ctypes.windll.user32.MessageBoxW(
-        0,
+    import sys
+    from bcml import native_msg
+    native_msg(
         "The latest (2019) Visual C++ redistributable is required to run BCML. Please "
         "download it from the following link and try again:\n"
         "https://aka.ms/vs/16/release/vc_redist.x64.exe",
-        "Dependency Error",
-        0x0 | 0x10
+        "Dependency Error"
     )
-    exit(1)
+    sys.exit(1)
 # fmt: on
 
 import base64
