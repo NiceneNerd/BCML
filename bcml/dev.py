@@ -327,7 +327,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
         if not options:
             options = {"disable": [], "options": {}}
-        options["options"]["texts"] = {"user_only": False}
+        options["options"]["texts"] = {"all_langs": True}
 
         try:
             _make_bnp_logs(tmp_dir, options)

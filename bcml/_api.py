@@ -535,7 +535,11 @@ class Api:
         except IndexError:
             return
         with util.TempModContext():
-            install.install_mod(bnp, merge_now=True)
+            install.install_mod(
+                bnp,
+                merge_now=True,
+                options={"options": {"texts": {"all_langs": True}}, "disable": []},
+            )
             out = self.window.create_file_dialog(
                 webviewb.SAVE_DIALOG,
                 file_types=(

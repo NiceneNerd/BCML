@@ -283,12 +283,12 @@ class TextsMerger(mergers.Merger):
     """ A merger for game texts """
     NAME: str = "texts"
 
-    def __init__(self, user_only: bool = True):
+    def __init__(self, all_langs: bool = True):
         super().__init__(
             "game texts",
             "Merges changes to game texts",
             "texts.json",
-            options={"user_only": user_only},
+            options={"all_langs": all_langs},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
@@ -309,7 +309,7 @@ class TextsMerger(mergers.Merger):
         language_map = {}
         save_langs = (
             LANGUAGES
-            if not self._options.get("user_only", True)
+            if self._options.get("all_langs", False)
             else [util.get_settings("lang")]
         )
         for lang in save_langs:
@@ -390,85 +390,102 @@ class TextsMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         # pylint: disable=unsupported-assignment-operation
-        lang = util.get_settings("lang")
-        print("Loading text mods...")
-        diffs = self.consolidate_diffs(self.get_all_diffs())
-        if not diffs or lang not in diffs:
-            print("No text merge necessary")
-            for bootup in util.get_master_modpack_dir().rglob("**/Bootup_????.pack"):
-                bootup.unlink()
-            return
-        util.vprint(
-            {lang: {file: list(entries.keys()) for file, entries in diffs[lang].items()}}
+        langs = (
+            {util.get_settings("lang")}
+            if not self._options["all_langs"]
+            else get_user_languages()
         )
+        for lang in langs:
+            print("Loading text mods...")
+            diffs = self.consolidate_diffs(self.get_all_diffs())
+            if not diffs or lang not in diffs:
+                print("No text merge necessary")
+                for bootup in util.get_master_modpack_dir().rglob("**/Bootup_????.pack"):
+                    bootup.unlink()
+                return
+            util.vprint(
+                {
+                    lang: {
+                        file: list(entries.keys())
+                        for file, entries in diffs[lang].items()
+                    }
+                }
+            )
 
-        print(f"Merging modded texts for {lang}...")
-        saved_files = set()
-        with TemporaryDirectory() as tmp:
-            tmp_dir = Path(tmp)
-            ref_lang = "XXen" if lang.endswith("en") else lang
-            extract_refs(ref_lang, tmp_dir)
-            tmp_dir = tmp_dir / "refs" / ref_lang
-            this_pool = self._pool or multiprocessing.Pool()
-            this_pool.map(partial(merge_msyt, tmp_dir=tmp_dir), diffs[lang].items())
-            if not self._pool:
-                this_pool.close()
-                this_pool.join()
+            print(f"Merging modded texts for {lang}...")
+            saved_files = set()
+            with TemporaryDirectory() as tmp:
+                tmp_dir = Path(tmp)
+                ref_lang = "XXen" if lang.endswith("en") else lang
+                extract_refs(ref_lang, tmp_dir)
+                tmp_dir = tmp_dir / "refs" / ref_lang
+                this_pool = self._pool or multiprocessing.Pool()
+                this_pool.map(partial(merge_msyt, tmp_dir=tmp_dir), diffs[lang].items())
+                if not self._pool:
+                    this_pool.close()
+                    this_pool.join()
 
-            m_args = [
-                MSYT_PATH,
-                "create",
-                "-d",
-                str(tmp_dir),
-                "-p",
-                "wiiu" if util.get_settings("wiiu") else "switch",
-                "-o",
-                str(tmp_dir),
-            ]
-            result: subprocess.CompletedProcess
-            if system() == "Windows":
-                result = subprocess.run(
-                    m_args,
-                    capture_output=True,
-                    creationflags=util.CREATE_NO_WINDOW,
-                    check=False,
-                    text=True,
+                m_args = [
+                    MSYT_PATH,
+                    "create",
+                    "-d",
+                    str(tmp_dir),
+                    "-p",
+                    "wiiu" if util.get_settings("wiiu") else "switch",
+                    "-o",
+                    str(tmp_dir),
+                ]
+                result: subprocess.CompletedProcess
+                if system() == "Windows":
+                    result = subprocess.run(
+                        m_args,
+                        capture_output=True,
+                        creationflags=util.CREATE_NO_WINDOW,
+                        check=False,
+                        text=True,
+                    )
+
+                else:
+                    result = subprocess.run(
+                        m_args, capture_output=True, check=False, text=True,
+                    )
+                if result.stderr:
+                    raise RuntimeError(
+                        f"There was an error merging game texts. {result.stderr}"
+                    )
+
+                msg_sarc = oead.SarcWriter(
+                    endian=oead.Endianness.Big
+                    if util.get_settings("wiiu")
+                    else oead.Endianness.Little
                 )
-
-            else:
-                result = subprocess.run(
-                    m_args, capture_output=True, check=False, text=True,
-                )
-            if result.stderr:
-                raise RuntimeError(
-                    f"There was an error merging game texts. {result.stderr}"
-                )
-
-            msg_sarc = oead.SarcWriter(
+                for file in tmp_dir.rglob("**/*.msbt"):
+                    msg_sarc.files[
+                        file.relative_to(tmp_dir).as_posix()
+                    ] = file.read_bytes()
+                    saved_files.add(file.relative_to(tmp_dir).as_posix())
+            bootup_sarc = oead.SarcWriter(
                 endian=oead.Endianness.Big
                 if util.get_settings("wiiu")
                 else oead.Endianness.Little
             )
-            for file in tmp_dir.rglob("**/*.msbt"):
-                msg_sarc.files[file.relative_to(tmp_dir).as_posix()] = file.read_bytes()
-                saved_files.add(file.relative_to(tmp_dir).as_posix())
-        bootup_sarc = oead.SarcWriter(
-            endian=oead.Endianness.Big
-            if util.get_settings("wiiu")
-            else oead.Endianness.Little
-        )
-        bootup_sarc.files[f"Message/Msg_{lang}.product.ssarc"] = util.compress(
-            msg_sarc.write()[1]
-        )
+            bootup_sarc.files[f"Message/Msg_{lang}.product.ssarc"] = util.compress(
+                msg_sarc.write()[1]
+            )
 
-        bootup_path = (
-            util.get_master_modpack_dir()
-            / util.get_content_path()
-            / "Pack"
-            / f"Bootup_{lang}.pack"
-        )
-        bootup_path.parent.mkdir(parents=True, exist_ok=True)
-        bootup_path.write_bytes(bootup_sarc.write()[1])
-        del bootup_sarc
-        del msg_sarc
-        print(f"{lang} texts merged successfully")
+            bootup_path = (
+                util.get_master_modpack_dir()
+                / util.get_content_path()
+                / "Pack"
+                / f"Bootup_{lang}.pack"
+            )
+            bootup_path.parent.mkdir(parents=True, exist_ok=True)
+            bootup_path.write_bytes(bootup_sarc.write()[1])
+            del bootup_sarc
+            del msg_sarc
+            print(f"{lang} texts merged successfully")
+
+    def get_checkbox_options(self) -> List[tuple]:
+        return [
+            ("all_langs", "Merge texts for all game languages"),
+        ]
