@@ -13,7 +13,7 @@ Check here for some basic help for common problems.
 #### BCML is installed, how do I open it?
 
 If you installed using the Windows installer, there should be a BCML shortcut in your
-Start Menu. If you using PIP, run `bcml` from the command line.
+Start Menu. If you installed using pip, run `bcml` from the command line.
 
 #### Why won't BCML accept my folders?
 
@@ -21,8 +21,8 @@ Here are the rules for the folders you need to set in BCML:
 
 ##### Cemu
 
-(Optional) Must be the folder which contains `Cemu.exe` and `settings.xml`. For some Cemu
-installations, this will be inside a folder named `BIN`.
+(Optional) Must be the folder which directly contains `Cemu.exe` and `settings.xml`. For
+some Cemu installations, this may be inside a folder named `BIN`.
 
 ##### Base Game
 
@@ -32,7 +32,9 @@ the title ID that ends in `0`. You must pass BCML the `content` folder directly,
 `C:\Game Dumps\The Legend of Zelda Breath of the Wild [ALZE]\content`.
 
 For Switch, this will be the `romfs` folder under the base game title ID, e.g.
-`C:\Game Dumps\BOTW\01007EF00011E000/romfs`.
+`C:\Game Dumps\BOTW\01007EF00011E000\romfs`.
+
+You can tell this folder is set correctly if it contains the file `Pack/Dungeon000.pack`.
 
 ##### Update
 
@@ -43,6 +45,9 @@ storage. For Cemu/Wii U, the first half of the title ID will end in the letter E
 Switch users should not need an update folder, because dumping will ordinarily merge the
 base game and update files.
 
+You can tell this folder is set correctly if it contains approximately 7000 files in the
+folder `Actor/Pack`.
+
 ##### DLC
 
 *(Optional)* Must be the folder containing the latest paid DLC files for BOTW. For Cemu
@@ -51,6 +56,8 @@ of the title ID will end in the letter C. Example (*make sure to include the `00
  `C:\Cemu\mlc01\usr\title\0005000E\101C9400\content\0010`
 For Switch, this will be the `romfs` folder under the supported DLC title ID, e.g.
  `C:\Game Dumps\BOTW\01007EF00011F001\romfs`
+
+ You can tell this folder is set correctly if it contains `Pack/AocMainField.pack`.
 
 ### Installing Mods
 
@@ -83,11 +90,12 @@ Cemu 1.15, and if you still have issues, try deleting `settings.xml` from the Ce
 
 ### Creating BNPs
 
-#### No modified files were found. This means the mod is probably not in a support format.
+#### No modified files were found. This means the mod is probably not in a supported format.
 
 If you haven't already looked, check the [BNP help page](bnp.md) for help with the correct
 folder structure for a BNP mod. If it still doesn't work, make sure to check the casing of
-the folder names, as they are in fact case-sensitive.
+the folder names, as they are in fact case-sensitive (e.g. `content/Actor` works but
+`Content/actor` does not).
 
 ## Problems In Game
 
@@ -97,9 +105,11 @@ through BCML, the first thing you should try is using the Remerge button.***
 ### I've installed my mods in BCML, but they don't take effect in-game
 
 Make sure that the BCML graphic pack is enabled in Cemu. BCML attempts to do this
-automatically, but sometimes it can fail. If the graphic pack is enabled but you still see
-no effects from any mods, it could be a bug involving hard links and file permissions. To
-avoid this, check the "Disable hard links for master mod" option in BCML's setttings.
+automatically, but sometimes it can fail. The graphic pack will appear in the Cemu menu
+under `The Legend of Zelda: Breath of the Wild/Mods/BCML`. If the graphic pack is enabled
+but you still see no effects from any mods, it could be a bug involving hard links and
+file permissions. To avoid this, check the "Disable hard links for master mod" option in
+BCML's setttings.
 
 ### Cemu crashes immediately after compiling shaders
 
@@ -110,7 +120,8 @@ There are a few possible causes:
 2. Your load order is backwards.
 3. Your game language in BCML does not match the region and language you use in BOTW.
 4. Your game directory settings in BCML are set incorrectly.
-5. Your game dump is corrupt.
+5. There is something wrong with one of your mods itself.
+6. Your game dump is corrupt.
 
 ### I installed the Linkle mod, and it kind of works, but Linkle looks mixed with Link
 
