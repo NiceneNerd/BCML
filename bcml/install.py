@@ -630,10 +630,10 @@ def restore_backup(backup: Union[str, Path]):
 
 
 def link_master_mod(output: Path = None):
+    util.create_bcml_graphicpack_if_needed()
     if not output:
         if util.get_settings("no_cemu"):
             return
-        util.create_bcml_graphicpack_if_needed()
         output = util.get_cemu_dir() / "graphicPacks" / "BreathOfTheWild_BCML"
     if output.exists():
         shutil.rmtree(str(output), ignore_errors=True)

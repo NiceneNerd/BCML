@@ -1133,7 +1133,7 @@ def create_bcml_graphicpack_if_needed():
     bcml_mod_dir = get_modpack_dir() / "9999_BCML"
     (bcml_mod_dir / "logs").mkdir(parents=True, exist_ok=True)
     rules = bcml_mod_dir / "rules.txt"
-    if not rules.exists():
+    if not (rules.exists() or get_settings("no_cemu")):
         with rules.open("w", encoding="utf-8") as r_file:
             r_file.write(
                 "[Definition]\n"
