@@ -2,6 +2,7 @@ import { Alert, Button, Carousel, Modal, Spinner } from "react-bootstrap";
 
 import React from "react";
 import Settings from "./settings.jsx";
+import ErrorDialog from "./error.jsx";
 
 class FirstRun extends React.Component {
     pageCount = 4;
@@ -19,7 +20,9 @@ class FirstRun extends React.Component {
             handlingMods: false,
             modsHandled: false,
             handledError: null,
-            modProgress: ""
+            modProgress: "",
+            error: null,
+            showError: false
         };
         this.goBack = () => {
             const page = this.state.page - 1;
@@ -35,6 +38,19 @@ class FirstRun extends React.Component {
         this.goHome = () => (window.location = "index.html");
         this.checkSettings = this.checkSettings.bind(this);
         this.saveSettings = this.saveSettings.bind(this);
+        this.showError = this.showError.bind(this);
+    }
+
+    showError(error) {
+        try {
+            console.error(JSON.stringify(error));
+        } catch (error) {
+            console.log(JSON.stringify(error));
+        }
+        this.setState({
+            showError: true,
+            error
+        });
     }
 
     checkSettings() {
@@ -49,14 +65,17 @@ class FirstRun extends React.Component {
 
     saveSettings(settings) {
         this.setState({ settingsValid: true, savingSettings: false }, () =>
-            pywebview.api.save_settings({ settings }).then(() =>
-                pywebview.api.get_old_mods().then(num => {
-                    this.setState({ oldMods: num });
-                    if (num > 0) {
-                        this.pageCount = 5;
-                    }
-                })
-            )
+            pywebview.api
+                .save_settings({ settings })
+                .then(() =>
+                    pywebview.api.get_old_mods().then(num => {
+                        this.setState({ oldMods: num });
+                        if (num > 0) {
+                            this.pageCount = 5;
+                        }
+                    })
+                )
+                .catch(this.showError)
         );
     }
 
@@ -68,14 +87,14 @@ class FirstRun extends React.Component {
                     .convert_old_mods()
                     .then(() => this.setState({ modsHandled: true }))
                     .catch(err =>
-                        this.setState({ modsHandled: true, handledError: err })
+                        this.setState({ modsHandled: true, showError: true, error: err })
                     );
             } else if (action == "delete") {
                 pywebview.api
                     .delete_old_mods()
                     .then(() => this.setState({ modsHandled: true }))
                     .catch(err =>
-                        this.setState({ modsHandled: true, handledError: err })
+                        this.setState({ modsHandled: true, showError: true, error: err })
                     );
             }
         });
@@ -105,33 +124,30 @@ class FirstRun extends React.Component {
                                 }}
                             />
                             <p className="mt-4 mb-1">
-                                Thank you for installing BCML. It appears that
-                                this is your first time running it, or you have
-                                upgraded from an old version. We'll need to do a
-                                few things to get you set up.
+                                Thank you for installing BCML. It appears that this is
+                                your first time running it, or you have upgraded from an
+                                old version. We'll need to do a few things to get you set
+                                up.
                             </p>
                         </Carousel.Item>
                         <Carousel.Item>
                             <h2>
-                                <i className="material-icons">settings</i>{" "}
-                                Import Settings
+                                <i className="material-icons">settings</i> Import Settings
                             </h2>
                             {this.state.oldSettings ? (
                                 <div>
                                     <p>
-                                        It looks like you are upgrading from a
-                                        previous version of BCML. BCML has
-                                        attempted to import your old settings.
-                                        Result:
+                                        It looks like you are upgrading from a previous
+                                        version of BCML. BCML has attempted to import your
+                                        old settings. Result:
                                     </p>
                                     <p>{this.state.converted}</p>
                                 </div>
                             ) : (
                                 <div>
-                                    Let's see, it doesn't look like you are
-                                    upgrading from a previous version of BCML.
-                                    Alright then, we'll set you up from scratch
-                                    on the next page.
+                                    Let's see, it doesn't look like you are upgrading from
+                                    a previous version of BCML. Alright then, we'll set
+                                    you up from scratch on the next page.
                                 </div>
                             )}
                         </Carousel.Item>
@@ -140,15 +156,13 @@ class FirstRun extends React.Component {
                                 <>
                                     {this.state.oldSettings ? (
                                         <p>
-                                            Take a look at your imported
-                                            settings and check that everything
-                                            seems right.
+                                            Take a look at your imported settings and
+                                            check that everything seems right.
                                         </p>
                                     ) : (
                                         <p>
-                                            Take a moment to configure your
-                                            basic settings. If you need help,
-                                            consult the BCML{" "}
+                                            Take a moment to configure your basic
+                                            settings. If you need help, consult the BCML{" "}
                                             <a
                                                 href="https://github.com/NiceneNerd/BCML/blob/master/docs/README.md#readme"
                                                 title="BCML/README.md on GitHub"
@@ -162,15 +176,27 @@ class FirstRun extends React.Component {
                                                 target="_blank">
                                                 Troubleshooting
                                             </a>{" "}
-                                            page. Folders will turn green when
-                                            valid.
+                                            page. Folders will turn green when valid.
                                         </p>
                                     )}
                                     <Settings
                                         saving={this.state.savingSettings}
                                         onFail={() =>
                                             this.setState({
-                                                savingSettings: false
+                                                savingSettings: false,
+                                                showError: true,
+                                                error: {
+                                                    short:
+                                                        "Your settings are not valid and cannot be saved. " +
+                                                        "Check that all required fields are completed and " +
+                                                        "green before submitting. If you have trouble, consult " +
+                                                        "the in-app help.",
+                                                    error_text:
+                                                        "Your settings are not valid and cannot be saved. " +
+                                                        "Check that all required fields are completed and " +
+                                                        "green before submitting. If you have trouble, consult " +
+                                                        "the in-app help."
+                                                }
                                             })
                                         }
                                         onSubmit={this.saveSettings}
@@ -181,37 +207,28 @@ class FirstRun extends React.Component {
                         {this.state.oldMods > 0 && (
                             <Carousel.Item>
                                 <h2>
-                                    <i className="material-icons">
-                                        double_arrow
-                                    </i>{" "}
-                                    Import Mods
+                                    <i className="material-icons">double_arrow</i> Import
+                                    Mods
                                 </h2>
                                 <p>
-                                    It looks like you have {this.state.oldMods}{" "}
-                                    mods from a previous version of BCML. If you
-                                    like, you can import them into your new BCML
-                                    version, or you can just delete or ignore
-                                    them. (Note that ignoring them is not
-                                    recommended.)
+                                    It looks like you have {this.state.oldMods} mods from
+                                    a previous version of BCML. If you like, you can
+                                    import them into your new BCML version, or you can
+                                    just delete or ignore them. (Note that ignoring them
+                                    is not recommended.)
                                 </p>
                                 <div className="d-flex mb-2">
                                     <Button
                                         variant="success"
                                         size="sm"
-                                        onClick={() =>
-                                            this.handleMods("convert")
-                                        }>
-                                        <i className="material-icons">
-                                            double_arrow
-                                        </i>{" "}
+                                        onClick={() => this.handleMods("convert")}>
+                                        <i className="material-icons">double_arrow</i>{" "}
                                         <span>Import</span>
                                     </Button>
                                     <Button
                                         variant="danger"
                                         size="sm"
-                                        onClick={() =>
-                                            this.handleMods("delete")
-                                        }>
+                                        onClick={() => this.handleMods("delete")}>
                                         <i className="material-icons">delete</i>{" "}
                                         <span>Delete</span>
                                     </Button>
@@ -224,9 +241,7 @@ class FirstRun extends React.Component {
                                                 handlingMods: true
                                             })
                                         }>
-                                        <i className="material-icons">
-                                            warning
-                                        </i>{" "}
+                                        <i className="material-icons">warning</i>{" "}
                                         <span>Ignore</span>
                                     </Button>
                                 </div>
@@ -248,11 +263,7 @@ class FirstRun extends React.Component {
                                                 </h3>
                                                 <p className="p-1">
                                                     <strong>
-                                                        Uh-oh!{" "}
-                                                        {
-                                                            this.state
-                                                                .handledError
-                                                        }
+                                                        Uh-oh! {this.state.handledError}
                                                     </strong>
                                                 </p>
                                             </>
@@ -263,9 +274,7 @@ class FirstRun extends React.Component {
                                                         check_circle
                                                     </i>
                                                 </h3>
-                                                <p className="p-1">
-                                                    Alright, done!
-                                                </p>
+                                                <p className="p-1">Alright, done!</p>
                                             </>
                                         ))}
                                 </div>
@@ -277,21 +286,17 @@ class FirstRun extends React.Component {
                                 &nbsp;Setup Complete
                             </h2>
                             <p>
-                                Alright, it looks like everything is set up.
-                                Time to start installing mods!
+                                Alright, it looks like everything is set up. Time to start
+                                installing mods!
                             </p>
                             <Alert variant="info">
                                 <p>
-                                    If you're a first time BCML user or
-                                    upgrading from 2.8, it's probably worth
-                                    taking a look at{" "}
-                                    <strong>the in-app help</strong>, located in
-                                    the overflow menu. If you run into any
-                                    problems, first try{" "}
-                                    <strong>the in-app help</strong> and
-                                    consider{" "}
-                                    <strong>clicking the Remerge button</strong>
-                                    .
+                                    If you're a first time BCML user or upgrading from
+                                    2.8, it's probably worth taking a look at{" "}
+                                    <strong>the in-app help</strong>, located in the
+                                    overflow menu. If you run into any problems, first try{" "}
+                                    <strong>the in-app help</strong> and consider{" "}
+                                    <strong>clicking the Remerge button</strong>.
                                 </p>
                             </Alert>
                         </Carousel.Item>
@@ -306,9 +311,7 @@ class FirstRun extends React.Component {
                         borderTop: 0
                     }}>
                     {this.state.page > 0 && (
-                        <Button
-                            className="btn-nav btn-left"
-                            onClick={this.goBack}>
+                        <Button className="btn-nav btn-left" onClick={this.goBack}>
                             <i className="material-icons">arrow_back</i>
                         </Button>
                     )}
@@ -324,9 +327,7 @@ class FirstRun extends React.Component {
                         ) : (
                             <Button
                                 className="btn-nav"
-                                onClick={() =>
-                                    this.setState({ savingSettings: true })
-                                }>
+                                onClick={() => this.setState({ savingSettings: true })}>
                                 <i className="material-icons">save</i>
                             </Button>
                         )
@@ -336,6 +337,11 @@ class FirstRun extends React.Component {
                         </Button>
                     )}
                 </Modal.Footer>
+                <ErrorDialog
+                    show={this.state.showError}
+                    error={this.state.error}
+                    onClose={() => this.setState({ showError: false })}
+                />
             </div>
         );
     }

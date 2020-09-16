@@ -57,7 +57,11 @@ class Mods extends React.Component {
             })
             .catch(err => {
                 console.error(err);
-                this.props.onError(err);
+                this.props.onError({
+                    short:
+                        err.short + " The setup wizard will be relaunched in 5 seconds.",
+                    error_text: err.error_text
+                });
                 setTimeout(() => (window.location = "index.html?firstrun=true"), 5000);
             });
     }
