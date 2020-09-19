@@ -82,12 +82,13 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         "desc": str(rules["Definition"].get("description", "")).strip("\"' "),
         "url": str(rules["Definition"].get("url", "")).strip("\"' "),
         "image": str(rules["Definition"].get("image", "")).strip("\"' "),
-        "version": 1.0,
+        "version": "1.0.0",
         "depends": [],
         "options": {},
         "platform": "wiiu",
     }
-    info["id"] = base64.urlsafe_b64encode(info["name"].encode("utf8")).decode("utf8")
+    id_string = f"{info['name']}=={info['version']}"
+    info["id"] = base64.urlsafe_b64encode(id_string.encode("utf8")).decode("utf8")
     try:
         info["priority"] = int(rules["Definition"]["fsPriority"])
     except KeyError:

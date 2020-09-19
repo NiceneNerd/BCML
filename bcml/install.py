@@ -357,13 +357,21 @@ def install_mod(
         mod_name = rules["name"].strip(" '\"").replace("_", "")
         print(f"Identified mod: {mod_name}")
         if rules["depends"]:
-            installed_ids = {m.id for m in util.get_installed_mods()}
+            installed_metas = {
+                v[0]: v[1]
+                for m in util.get_installed_mods()
+                for v in util.BcmlMod.meta_from_id(m.id)
+            }
             for depend in rules["depends"]:
-                if not depend in installed_ids:
-                    depend_name = b64decode(depend).decode("utf8")
+                depend_name, depend_version = util.BcmlMod.meta_from_id(depend)
+                if (depend_name not in installed_metas) or (
+                    depend_name in installed_metas
+                    and depend_version > installed_metas[depend_name]
+                ):
                     raise RuntimeError(
-                        f"{mod_name} requires {depend_name}, but it is not installed. "
-                        f"Please install {depend_name} and try again."
+                        f"{mod_name} requires {depend_name} version {depend_version}, "
+                        f"but it is not installed. Please install {depend_name} and "
+                        "try again."
                     )
         friendly_plaform = lambda p: "Wii U" if p == "wiiu" else "Switch"
         user_platform = "wiiu" if util.get_settings("wiiu") else "switch"

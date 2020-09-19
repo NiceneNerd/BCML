@@ -501,7 +501,7 @@ class Api:
                             "desc": "Temp pack",
                             "url": "",
                             "image": "",
-                            "version": 1.0,
+                            "version": "1.0.0",
                             "depends": [],
                             "options": {},
                             "platform": "wiiu" if util.get_settings("wiiu") else "switch",

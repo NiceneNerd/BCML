@@ -291,7 +291,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
 
     if "showDepends" in meta:
         del meta["showDepends"]
-    meta["id"] = urlsafe_b64encode(meta["name"].encode("utf8")).decode("utf8")
+    depend_string = f"{meta['name']}=={meta['version']}"
+    meta["id"] = urlsafe_b64encode(depend_string.encode("utf8")).decode("utf8")
     any_platform = (
         options.get("options", dict()).get("general", dict()).get("agnostic", False)
     )

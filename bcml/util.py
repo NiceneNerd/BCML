@@ -9,6 +9,7 @@ import socket
 import sys
 import urllib.error
 import urllib.request
+from base64 import b64decode
 from collections import OrderedDict
 from collections.abc import Mapping
 from configparser import ConfigParser
@@ -297,6 +298,10 @@ class BcmlMod:
     @staticmethod
     def from_info(info_path: Path):
         return BcmlMod(info_path.parent)
+
+    @staticmethod
+    def meta_from_id(mod_id: str) -> (str, str):
+        return b64decode(mod_id).decode("utf8").split("==")
 
     @property
     def name(self) -> str:

@@ -25,7 +25,7 @@ class DevTools extends React.Component {
         image: "",
         url: "",
         desc: "",
-        version: 1.0,
+        version: "1.0.0",
         options: {
             options: {},
             disable: []
@@ -212,8 +212,6 @@ class DevTools extends React.Component {
                             <Form.Group controlId="version">
                                 <Form.Label>Version</Form.Label>
                                 <Form.Control
-                                    type="number"
-                                    step="0.1"
                                     value={this.state.version}
                                     onChange={this.handleChange}
                                 />
