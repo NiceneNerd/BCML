@@ -556,7 +556,16 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
 @refresher
 def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Uninstalling {mod.name}...")
-    shutil.rmtree(str(mod.path))
+    try:
+        shutil.rmtree(str(mod.path))
+    except (OSError, PermissionError) as err:
+        raise RuntimeError(
+            f"The folder for {mod.name} could not be removed. "
+            "You may need to delete it manually and remerge, or "
+            "close all open programs (including BCML and Windows Explorer) "
+            "and try again. The location of the folder is "
+            f"<code>{str(mod.path)}</code>."
+        ) from err
 
     for fall_mod in [
         m for m in util.get_installed_mods(True) if m.priority > mod.priority
