@@ -698,6 +698,8 @@ def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
 
 @lru_cache(None)
 def get_update_dir() -> Path:
+    if not get_settings("wiiu"):
+        return get_game_dir()
     update_str = get_settings("update_dir")
     if not update_str:
         raise FileNotFoundError(
