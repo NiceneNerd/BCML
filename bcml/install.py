@@ -741,16 +741,18 @@ def export(output: Path):
     else:
         print("Exporting as graphic pack mod...")
         x_args = [ZPATH, "a", str(output), f'{str(tmp_dir / "*")}']
+        result: subprocess.CompletedProcess
         if os.name == "nt":
-            subprocess.run(
+            result = subprocess.run(
                 x_args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 creationflags=util.CREATE_NO_WINDOW,
-                check=True,
+                check=False,
+                capture_output=True,
             )
         else:
-            subprocess.run(
-                x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+            result = subprocess.run(check=False, capture_output=True)
+        if result.stderr:
+            raise RuntimeError(
+                f"There was an error exporting your mod(s). {result.stderr}"
             )
     rmtree(tmp_dir, True)
