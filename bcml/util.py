@@ -1285,9 +1285,17 @@ class Messager:
         self.window = window
         self.log_file = get_data_dir() / "bcml.log"
         self.log = []
+        self.i = 0
 
     def write(self, string: str):
-        self.log.append(string.replace("VERBOSE", ""))
+        stripped = string.replace("VERBOSE", "")
+        self.log.append(stripped)
+        self.i += 1
+        if self.i == 256:
+            self.save()
+            self.i = 0
+        if DEBUG:
+            sys.__stdout__.write(stripped)
 
     def isatty(self):  # pylint: disable=no-self-use
         return False
