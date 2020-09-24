@@ -415,6 +415,7 @@ def install_mod(
                     if ("logs" not in f.parts and f.is_file())
                 }:
                     out = tmp_dir / file.relative_to(opt_dir)
+                    out.parent.mkdir(parents=True, exist_ok=True)
                     try:
                         os.link(file, out)
                     except FileExistsError:
@@ -431,13 +432,13 @@ def install_mod(
                                     util.unyaz_if_needed(file.read_bytes())
                                 )
                             except (ValueError, oead.InvalidDataError, RuntimeError):
+                                del old_sarc
                                 continue
                             new_sarc = oead.SarcWriter.from_sarc(link_sarc)
+                            link_files = {f.name for f in link_sarc.get_files()}
                             for sarc_file in old_sarc.get_files():
-                                if not link_sarc.get_file(sarc_file.name):
-                                    new_sarc.files[sarc_file.name] = oead.Bytes(
-                                        sarc_file.data
-                                    )
+                                if sarc_file.name not in link_files:
+                                    new_sarc.files[sarc_file.name] = bytes(sarc_file.data)
                             del old_sarc
                             del link_sarc
                             out.write_bytes(new_sarc.write()[1])
