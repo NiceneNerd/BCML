@@ -43,7 +43,7 @@ setup(
         "console_scripts": ["bcml-debug = bcml.__main__:main_debug",],
     },
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3 :: Only",
@@ -54,7 +54,7 @@ setup(
         "byml>=2.3.1",
         "botw-utils==0.2.3",
         "cefpython3~=66.0",
-        "oead>=1.1.1",
+        "oead>=1.1.4",
         "pythonnet>=2.5.0rc2; platform_system=='Windows'",
         "PyYAML~=5.3.1",
         "requests~=2.23.0",
