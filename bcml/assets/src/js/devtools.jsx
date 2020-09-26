@@ -41,6 +41,7 @@ class DevTools extends React.Component {
         super();
         this.state = JSON.parse(JSON.stringify(this.blank));
         this.handleChange = this.handleChange.bind(this);
+        this.handlePath = this.handlePath.bind(this);
         this.setOptions = this.setOptions.bind(this);
         this.createBnp = this.createBnp.bind(this);
         this.generateRstb = this.generateRstb.bind(this);
@@ -57,6 +58,19 @@ class DevTools extends React.Component {
             e.persist();
         } catch (error) {}
         this.setState({ [e.target.id]: e.target.value });
+    }
+
+    async handlePath(e) {
+        try {
+            e.persist();
+        } catch (error) {}
+        const info = await pywebview.api.get_existing_meta({
+            path: e.target.value
+        });
+        this.setState({
+            folder: e.target.value,
+            ...info
+        });
     }
 
     createBnp() {
@@ -182,7 +196,7 @@ class DevTools extends React.Component {
                                         </Tooltip>
                                     }
                                     value={this.state.folder}
-                                    onChange={this.handleChange}
+                                    onChange={this.handlePath}
                                 />
                             </Form.Group>
                             <Form.Group controlId="name">

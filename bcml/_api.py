@@ -485,6 +485,14 @@ class Api:
             options=params["options"],
         )
 
+    def get_existing_meta(self, params):
+        path = Path(params["path"])
+        if (path / "info.json").exists():
+            return json.loads((path / "info.json").read_text("utf-8"), encoding="utf-8")
+        if (path / "rules.txt").exists():
+            return upgrade.parse_rules(path / "rules.txt")
+        return {}
+
     @win_or_lose
     def gen_rstb(self, params=None):
         try:

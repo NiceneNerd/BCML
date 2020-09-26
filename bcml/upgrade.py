@@ -73,8 +73,7 @@ def convert_old_settings():
     util.save_settings()
 
 
-def rules_to_info(rules_path: Path, delete_old: bool = False):
-    print("Converting meta file...")
+def parse_rules(rules_path: Path) -> {}:
     rules = RulesParser()
     rules.read(str(rules_path))
     info = {
@@ -93,6 +92,12 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         info["priority"] = int(rules["Definition"]["fsPriority"])
     except KeyError:
         info["priority"] = int(getattr(rules["Definition"], "fspriority", 100))
+    return info
+
+
+def rules_to_info(rules_path: Path, delete_old: bool = False):
+    print("Converting meta file...")
+    info = parse_rules(rules_path)
     (rules_path.parent / "info.json").write_text(
         json.dumps(info, ensure_ascii=False, indent=2)
     )
