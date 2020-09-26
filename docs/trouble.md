@@ -97,6 +97,18 @@ folder structure for a BNP mod. If it still doesn't work, make sure to check the
 the folder names, as they are in fact case-sensitive (e.g. `content/Actor` works but
 `Content/actor` does not).
 
+### Usage Problems
+
+#### BCML takes me back to the setup wizard each time.
+
+Your settings, probably the game folders, are incorrect. They need to be fixed first.
+
+#### The "Launch Game" button doesn't work.
+
+Usually, this happens if Cemu is set to run as administrator but BCML is not. To correct
+this, either turn off the administrator setting for Cemu (recommended, as it's actually
+useless in *most* cases) or run BCML as administrator.
+
 ## Problems In Game
 
 ***Any time you have any problem with one or more mods in-game after installing them
