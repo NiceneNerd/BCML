@@ -151,7 +151,7 @@ class Api:
         img = ""
         try:
             img = base64.b64encode(mod.get_preview().read_bytes()).decode("utf8")
-        except (KeyError, FileNotFoundError):
+        except:  # pylint: disable=bare-except
             pass
         return {
             "changes": [
