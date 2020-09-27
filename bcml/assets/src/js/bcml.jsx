@@ -81,7 +81,9 @@ class BcmlRoot extends React.Component {
             showConfirm: true,
             confirmText: message,
             confirmCallback: yesNo =>
-                this.setState({ showConfirm: false }, () => (yesNo ? callback() : null))
+                this.setState({ showConfirm: false }, () =>
+                    yesNo ? callback() : null
+                )
         });
     }
 
@@ -126,7 +128,8 @@ class BcmlRoot extends React.Component {
         const num_selects = Object.keys(this.selects).length;
         if (
             num_selects > 0 &&
-            (!this.state.selects || num_selects > Object.keys(this.state.selects).length)
+            (!this.state.selects ||
+                num_selects > Object.keys(this.state.selects).length)
         ) {
             this.installArgs = { mods, options };
             this.setState({
@@ -190,10 +193,14 @@ class BcmlRoot extends React.Component {
                             if (!res.success) {
                                 throw res.error;
                             }
-                            this.setState({ showProgress: false, showDone: true }, () => {
-                                this.backupRef.current.refreshBackups();
-                                if (operation == "restore") this.refreshMods();
-                            });
+                            this.setState(
+                                { showProgress: false, showDone: true },
+                                () => {
+                                    this.backupRef.current.refreshBackups();
+                                    if (operation == "restore")
+                                        this.refreshMods();
+                                }
+                            );
                         })
                         .catch(this.showError)
             );
@@ -217,8 +224,9 @@ class BcmlRoot extends React.Component {
                             throw res.error;
                         }
 
-                        this.setState({ showProgress: false, showDone: true }, () =>
-                            this.refreshMods()
+                        this.setState(
+                            { showProgress: false, showDone: true },
+                            () => this.refreshMods()
                         );
                     })
                     .catch(this.showError);
@@ -306,7 +314,8 @@ class BcmlRoot extends React.Component {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        <Dropdown.Item onClick={() => pywebview.api.open_help()}>
+                        <Dropdown.Item
+                            onClick={() => pywebview.api.open_help()}>
                             Help
                         </Dropdown.Item>
                         <Dropdown.Item onClick={this.updateBcml}>
@@ -315,7 +324,8 @@ class BcmlRoot extends React.Component {
                         <Dropdown.Item as="a" href="/index.html?firstrun">
                             Run Setup Wizard
                         </Dropdown.Item>
-                        <Dropdown.Item onClick={() => this.setState({ showAbout: true })}>
+                        <Dropdown.Item
+                            onClick={() => this.setState({ showAbout: true })}>
                             About
                         </Dropdown.Item>
                     </Dropdown.Menu>
@@ -324,7 +334,9 @@ class BcmlRoot extends React.Component {
                     <Tab eventKey="mod-list" title="Mods">
                         <Mods
                             mods={this.state.mods}
-                            onBackup={() => this.setState({ showBackups: true })}
+                            onBackup={() =>
+                                this.setState({ showBackups: true })
+                            }
                             loaded={this.state.modsLoaded}
                             onRefresh={this.refreshMods}
                             onConfirm={this.confirm}
@@ -367,7 +379,9 @@ class BcmlRoot extends React.Component {
                         />
                         <Button
                             className="fab"
-                            onClick={() => this.setState({ savingSettings: true })}>
+                            onClick={() =>
+                                this.setState({ savingSettings: true })
+                            }>
                             <i className="material-icons">save</i>
                         </Button>
                     </Tab>
@@ -415,7 +429,9 @@ class BcmlRoot extends React.Component {
                         this.setState({
                             selectMod: null,
                             selectPath: null,
-                            selects: {}
+                            selects: {},
+                            showProgress: false,
+                            showDone: false
                         });
                         this.installArgs = null;
                         this.selects = null;
@@ -458,7 +474,9 @@ class DoneDialog extends React.Component {
     componentDidUpdate(prevProps) {
         if (this.props.show != prevProps.show) {
             try {
-                pywebview.api.get_setup().then(res => this.setState({ ...res }));
+                pywebview.api
+                    .get_setup()
+                    .then(res => this.setState({ ...res }));
             } catch (error) {}
         }
     }
@@ -470,7 +488,11 @@ class DoneDialog extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show} size="sm" centered onHide={this.props.onClose}>
+            <Modal
+                show={this.props.show}
+                size="sm"
+                centered
+                onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>Done!</Modal.Title>
                 </Modal.Header>
@@ -498,7 +520,9 @@ const ConfirmDialog = props => {
             <Modal.Body>{props.message}</Modal.Body>
             <Modal.Footer>
                 <Button onClick={() => props.onClose(true)}>OK</Button>
-                <Button variant="secondary" onClick={() => props.onClose(false)}>
+                <Button
+                    variant="secondary"
+                    onClick={() => props.onClose(false)}>
                     Close
                 </Button>
             </Modal.Footer>
