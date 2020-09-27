@@ -146,7 +146,11 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     this_pool = pool or Pool()
     results = this_pool.map(
         partial(_check_modded, tmp_dir=tmp_dir),
-        {f for f in tmp_dir.rglob("**/*") if f.is_file()},
+        {
+            f
+            for f in tmp_dir.rglob("**/*")
+            if f.is_file() and "options" not in f.relative_to(tmp_dir).parts
+        },
     )
     for result in results:
         if result:
