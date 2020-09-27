@@ -10,11 +10,26 @@ class SelectsDialog extends React.Component {
         this.handleChange = this.handleChange.bind(this);
     }
 
+    componentDidUpdate(prevProps) {
+        if (
+            this.props.mod &&
+            (!prevProps.mod || prevProps.mod.options != this.props.mod.options)
+        ) {
+            this.setState({
+                folders: this.props.mod.options.multi
+                    .map(m => (m.default ? m.folder : null))
+                    .filter(m => m)
+            });
+        }
+    }
+
     handleChange(e) {
         e.persist();
         if (!e.currentTarget.checked) {
             this.setState({
-                folders: this.state.folders.filter(f => f != e.currentTarget.value)
+                folders: this.state.folders.filter(
+                    f => f != e.currentTarget.value
+                )
             });
         } else {
             this.setState({
@@ -25,21 +40,27 @@ class SelectsDialog extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show} scrollable={true} onHide={this.props.onClose}>
+            <Modal
+                show={this.props.show}
+                scrollable={true}
+                onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>
-                        Select Options for {this.props.mod && this.props.mod.name}
+                        Select Options for{" "}
+                        {this.props.mod && this.props.mod.name}
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <p>
-                        {this.props.mod && this.props.mod.name} has customization options.
-                        Please select the options you would like to use below.
+                        {this.props.mod && this.props.mod.name} has
+                        customization options. Please select the options you
+                        would like to use below.
                     </p>
                     <Form>
                         {this.props.mod &&
                             this.props.mod.options.multi &&
-                            Object.keys(this.props.mod.options.multi).length > 0 && (
+                            Object.keys(this.props.mod.options.multi).length >
+                                0 && (
                                 <>
                                     <h5>Multiple Choice Options</h5>
                                     {this.props.mod.options.multi.map(m => (
@@ -47,11 +68,15 @@ class SelectsDialog extends React.Component {
                                             <OverlayTrigger
                                                 overlay={
                                                     <Tooltip>
-                                                        {m.desc || "No description"}
+                                                        {m.desc ||
+                                                            "No description"}
                                                     </Tooltip>
                                                 }>
                                                 <Form.Check
                                                     type="checkbox"
+                                                    checked={this.state.folders.includes(
+                                                        m.folder
+                                                    )}
                                                     label={m.name}
                                                     value={m.folder}
                                                     onChange={this.handleChange}
@@ -63,11 +88,14 @@ class SelectsDialog extends React.Component {
                             )}
                         {this.props.mod &&
                             this.props.mod.options.single &&
-                            Object.keys(this.props.mod.options.single).length > 0 && (
+                            Object.keys(this.props.mod.options.single).length >
+                                0 && (
                                 <>
                                     <h5>Single Choice Options</h5>
                                     {this.props.mod.options.single.map(s => (
-                                        <div key={s.name} className="radio-group">
+                                        <div
+                                            key={s.name}
+                                            className="radio-group">
                                             <strong>{s.name}</strong>
                                             <br />
                                             {s.desc}
@@ -87,7 +115,10 @@ class SelectsDialog extends React.Component {
                                                             name={s.name}
                                                             label={opt.name}
                                                             value={opt.folder}
-                                                            onChange={this.handleChange}
+                                                            onChange={
+                                                                this
+                                                                    .handleChange
+                                                            }
                                                         />
                                                     </OverlayTrigger>
                                                 </Form.Group>
