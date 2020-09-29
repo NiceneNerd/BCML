@@ -352,7 +352,8 @@ class TextsMerger(mergers.Merger):
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 util.dict_merge(
-                    diff, json.loads((opt / "logs" / self._log_name).read_text("utf-8"))
+                    diff, json.loads((opt / "logs" / self._log_name).read_text("utf-8")),
+                    overwrite_lists=True
                 )
         return diff
 
