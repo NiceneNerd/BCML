@@ -83,7 +83,7 @@ Steps to build from source:
 ## Usage and Troubleshooting
 
 For information on how to use BCML, see the Help dialog in-app or read the documentation
-[on the repo](https://github.com/NiceneNerd/BCML/tree/master/bcml/docs). For issues and
+[on the repo](https://github.com/NiceneNerd/BCML/tree/master/docs). For issues and
 troubleshooting, please check the official
 [Troubleshooting](https://github.com/NiceneNerd/BCML/wiki/Troubleshooting) page.
 
