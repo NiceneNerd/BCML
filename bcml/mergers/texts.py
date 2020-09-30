@@ -365,11 +365,12 @@ class TextsMerger(mergers.Merger):
         return diffs
 
     def get_all_diffs(self):
-        return [
-            self.get_mod_diff(mod)
-            for mod in util.get_installed_mods()
-            if self.is_mod_logged(mod)
-        ]
+        diffs = []
+        for mod in util.get_installed_mods():
+            diff = self.get_mod_diff(mod)
+            if diff:
+                diffs.append(diff)
+        return diffs
 
     def consolidate_diffs(self, diffs: list):
         if not diffs:
