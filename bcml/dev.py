@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from platform import system
 from tempfile import TemporaryDirectory
+from typing import Optional
 import shutil
 import subprocess
 
@@ -119,7 +120,7 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
     }
     if sarc_files:
         print("Creating partial packs...")
-        pool.map(partial(_clean_sarc, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
+        pool.map(partial(_clean_sarc_file, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
 
     sarc_files = {
         file
@@ -155,7 +156,43 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
             pass
 
 
-def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
+def _clean_sarc(old_sarc: oead.Sarc, base_sarc: oead.Sarc) -> Optional[oead.SarcWriter]:
+    old_files = {f.name for f in old_sarc.get_files()}
+    new_sarc = oead.SarcWriter(
+        endian=oead.Endianness.Big
+        if util.get_settings("wiiu")
+        else oead.Endianness.Little
+    )
+    can_delete = True
+    for nest_file, file_data in [(f.name, f.data) for f in base_sarc.get_files()]:
+        ext = Path(nest_file).suffix
+        if ext in {".yml", ".bak"}:
+            continue
+        if nest_file in old_files:
+            old_data = util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
+        file_data = util.unyaz_if_needed(file_data)
+        if nest_file not in old_files or (
+            file_data != old_data and ext not in util.AAMP_EXTS
+        ):
+            if ext in util.SARC_EXTS:
+                nest_old_sarc = oead.Sarc(old_data)
+                nest_base_sarc = oead.Sarc(file_data)
+                nest_new_sarc = _clean_sarc(nest_old_sarc, nest_base_sarc)
+                if nest_new_sarc:
+                    new_bytes = nest_new_sarc.write()[1]
+                    if ext.startswith(".s") and ext != ".sarc":
+                        new_bytes = util.compress(new_bytes)
+                    new_sarc.files[nest_file] = oead.Bytes(new_bytes)
+                    can_delete = False
+                else:
+                    continue
+            else:
+                new_sarc.files[nest_file] = oead.Bytes(file_data)
+                can_delete = False
+    return None if can_delete else new_sarc
+
+
+def _clean_sarc_file(file: Path, hashes: dict, tmp_dir: Path):
     canon = util.get_canon_name(file.relative_to(tmp_dir))
     try:
         stock_file = util.get_game_file(file.relative_to(tmp_dir))
@@ -165,34 +202,14 @@ def _clean_sarc(file: Path, hashes: dict, tmp_dir: Path):
         old_sarc = oead.Sarc(util.unyaz_if_needed(stock_file.read_bytes()))
     except (RuntimeError, ValueError, oead.InvalidDataError):
         return
-    old_files = {f.name for f in old_sarc.get_files()}
     if canon not in hashes:
         return
     try:
         base_sarc = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
     except (RuntimeError, ValueError, oead.InvalidDataError):
         return
-    new_sarc = oead.SarcWriter(
-        endian=oead.Endianness.Big
-        if util.get_settings("wiiu")
-        else oead.Endianness.Little
-    )
-    can_delete = True
-    for nest_file, file_data in [(f.name, f.data) for f in base_sarc.get_files()]:
-        canon = nest_file.replace(".s", ".")
-        ext = Path(canon).suffix
-        if ext in {".yml", ".bak"}:
-            continue
-        if nest_file in old_files:
-            old_data = util.unyaz_if_needed(old_sarc.get_file(nest_file).data)
-        if nest_file not in old_files or (
-            util.unyaz_if_needed(file_data) != old_data and ext not in util.AAMP_EXTS
-        ):
-            can_delete = False
-            new_sarc.files[nest_file] = oead.Bytes(file_data)
-    del old_sarc
-    if can_delete:
-        del new_sarc
+    new_sarc = _clean_sarc(old_sarc, base_sarc)
+    if not new_sarc:
         file.unlink()
     else:
         write_bytes = new_sarc.write()[1]
@@ -214,7 +231,7 @@ def _do_yml(file: Path):
 
 
 def _make_bnp_logs(tmp_dir: Path, options: dict):
-    logged_files = install.generate_logs(tmp_dir, options=options)
+    util.vprint(install.generate_logs(tmp_dir, options=options))
 
     print("Removing unnecessary files...")
 
