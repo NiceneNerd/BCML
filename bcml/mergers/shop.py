@@ -114,6 +114,7 @@ def nand_pio_into_plist(
             res_plist.objects[key] = pobj
         else:
             ref_pobj = ref.objects[key]
+            res_plist.objects[key] = ref_pobj
             for param_key, param_value in pobj.params.items():
                 if param_key not in ref_pobj.params:
                     continue  # new keys are garbage the game can't use, skip them
@@ -313,8 +314,8 @@ class ShopMerger(mergers.Merger):
 
                 file_names.params[oead.aamp.Name(file).hash] = Parameter(file)
                 diffs.lists[file] = gen_diffs(ref_pio, mod_pio)
-            except (FileNotFoundError, KeyError, AttributeError):
-                continue
+            except (FileNotFoundError, KeyError, AttributeError) as err:
+                raise err
         diffs.objects["Filenames"] = file_names
         return diffs
 
