@@ -325,7 +325,7 @@ class ShopMerger(mergers.Merger):
         """ Saves generated diffs to a log file """
         if isinstance(diff_material, list):
             diff_material = self.generate_diff(mod_dir, diff_material)
-        if diff_material:
+        if diff_material.objects["Filenames"].params:
             (mod_dir / "logs" / self._log_name).write_bytes(diff_material.to_binary())
 
     def get_mod_diff(self, mod: util.BcmlMod) -> ParameterIO:
