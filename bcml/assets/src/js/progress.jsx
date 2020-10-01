@@ -56,7 +56,23 @@ let messages = [
     "BCML tip: To reorder your mods, click the Show Sort Handles toggle",
     "BCML tip: Ctrl-Click to select multiple mods",
     "BCML tip: Higher number priority overrides lower number priority",
-    "BCML tip: When using a set of related mods, put the base mod beneath the addons"
+    "BCML tip: When using a set of related mods, put the base mod beneath the addons",
+    "Downloading RAM so link goes fast",
+    "Feeding koroks",
+    "Leaving Ganon in peace",
+    "Selling apples to koroks",
+    "Becoming a traveling merchant",
+    "Following Beedle",
+    "Creating a paper currency",
+    "Making a tourism industry based in the Shrine of Ressurection",
+    "Climbing Death Mountian",
+    "Accidentally killing a korok",
+    "BCML tip: back up your mods",
+    "Dying to Dark Beast",
+    "Building a rocketship to the moon",
+    "Stealing money from Cloyne",
+    "Opening a gambling business",
+    "Upgrading to the Master Cycle One"
 ];
 
 function shuffle(array) {
