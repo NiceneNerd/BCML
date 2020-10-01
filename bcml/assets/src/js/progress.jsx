@@ -58,7 +58,7 @@ let messages = [
     "BCML tip: Higher number priority overrides lower number priority",
     "BCML tip: When using a set of related mods, put the base mod beneath the addons",
     "BCML tip: Back up your mods when making substantial changes",
-    "BCML tip: The backup/restore feature can be used for mod \"profiles\"",
+    'BCML tip: The backup/restore feature can be used for mod "profiles"',
     "Downloading RAM so Link goes fast",
     "Feeding Koroks",
     "Leaving Ganon in peace",
@@ -78,9 +78,9 @@ let messages = [
     "Chasing a Hinox eyeball",
     "Making Tik Toks on Sheikah Slate",
     "Old enough to save Hyrule, too young for The Noble Canteen",
-    "\"Hold on Zelda, only 842 more Koroks!\"",
-    "Shameless plug: I blog at https://calebdixonsmith.wordpress.com",
-    "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”",
+    '"Hold on Zelda, only 842 more Koroks!"',
+    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com'>Theology Without Warranty</a>",
+    "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”"
 ];
 
 function shuffle(array) {
@@ -124,10 +124,23 @@ class ProgressModal extends React.Component {
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex align-items-start">
-                    <Spinner animation="border" role="status" className="flex-shrink-0" />
-                    <div className="m-1 ml-3" style={{ minHeight: "1rem" }}>
-                        {messages[this.state.messageIdx]}…
-                    </div>
+                    <Spinner
+                        animation="border"
+                        role="status"
+                        className="flex-shrink-0"
+                    />
+                    <div
+                        className="m-1 ml-3"
+                        style={{ minHeight: "1rem" }}
+                        dangerouslySetInnerHTML={{
+                            __html:
+                                messages[this.state.messageIdx] +
+                                (/[a-zA-Z]/.test(
+                                    messages[this.state.messageIdx].slice(-1)
+                                )
+                                    ? "…"
+                                    : "")
+                        }}></div>
                 </Modal.Body>
             </Modal>
         );
