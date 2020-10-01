@@ -60,17 +60,21 @@ class DevTools extends React.Component {
         this.setState({ [e.target.id]: e.target.value });
     }
 
-    async handlePath(e) {
+    handlePath(e) {
         try {
             e.persist();
         } catch (error) {}
-        const info = await pywebview.api.get_existing_meta({
-            path: e.target.value
-        });
-        this.setState({
-            folder: e.target.value,
-            ...info
-        });
+        this.setState(
+            {
+                folder: e.target.value
+            },
+            async () => {
+                const info = await pywebview.api.get_existing_meta({
+                    path: e.target.value
+                });
+                this.setState({ ...info });
+            }
+        );
     }
 
     createBnp() {
