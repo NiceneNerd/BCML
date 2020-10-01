@@ -17,7 +17,7 @@ except ImportError:
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import set_start_method, Process
-from os import chmod  # pylint: disable=ungrouped-imports
+from os import chmod, setpgrp, killpg  # pylint: disable=ungrouped-imports
 from pathlib import Path
 from subprocess import Popen, DEVNULL
 from shutil import rmtree
@@ -51,6 +51,8 @@ def stop_it(messager: Messager = None):
         rmtree(Path() / "blob_storage", ignore_errors=True)
         rmtree(Path() / "webrtc_event_logs", ignore_errors=True)
         return
+    else:
+        killpg(0, 9)
 
 
 def main(debug: bool = False):
@@ -62,6 +64,8 @@ def main(debug: bool = False):
         if SYSTEM != "Windows":
             chmod(util.get_exec_dir() / "helpers/msyt", int("755", 8))
             chmod(util.get_exec_dir() / "helpers/7z", int("755", 8))
+        else:
+            setpgrp()
         LOG.parent.mkdir(parents=True, exist_ok=True)
         for folder in util.get_work_dir().glob("*"):
             rmtree(folder)
