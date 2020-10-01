@@ -584,7 +584,7 @@ class ModOptions extends React.Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (this.props.folder != prevProps.folder) {
+        if (this.props.show != prevProps.show) {
             pywebview.api
                 .get_option_folders({ mod: this.props.folder })
                 .then(folders => this.setState({ folders }));
