@@ -116,7 +116,7 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
 
-    if (tmp_dir / util.get_dlc_path()).exists:
+    if (tmp_dir / util.get_dlc_path()).exists():
         try:
             util.get_aoc_dir()
         except FileNotFoundError:
