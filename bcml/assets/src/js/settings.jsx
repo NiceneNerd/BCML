@@ -35,14 +35,45 @@ class Settings extends React.Component {
         this.formRef = React.createRef();
     }
 
-    checkValid() {
+    async checkValid() {
+        const gameValid =
+            !this.state.wiiu ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.game_dir,
+                type: "game_dir"
+            }));
+        const gameNxValid =
+            this.state.wiiu ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.game_dir_nx,
+                type: "game_dir"
+            }));
+        const updateValid =
+            !this.state.wiiu ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.update_dir,
+                type: "update_dir"
+            }));
+        const cemuValid =
+            this.state.no_cemu ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.cemu_dir,
+                type: "cemu_dir"
+            }));
+        const dlcValid =
+            this.state.dlc == "" ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.dlc_dir,
+                type: "dlc_dir"
+            }));
         return (
-            (this.state.game_dir != "" || !this.state.wiiu) &&
-            (this.state.game_dir_nx != "" || this.state.wiiu) &&
-            (this.state.update_dir != "" || !this.state.wiiu) &&
+            gameValid &&
+            gameNxValid &&
+            updateValid &&
+            dlcValid &&
+            cemuValid &&
             this.state.lang != "" &&
             this.state.store_dir != "" &&
-            (this.state.cemu_dir != "" || this.state.no_cemu) &&
             this.formRef.current.checkValidity()
         );
     }
@@ -53,11 +84,14 @@ class Settings extends React.Component {
         });
     }
 
-    componentDidUpdate(prevProps) {
+    async componentDidUpdate(prevProps) {
         if (!prevProps.saving && this.props.saving) {
-            if (!this.checkValid()) {
+            console.log("Here");
+            if (!(await this.checkValid())) {
+                console.log("Not valid");
                 this.setState({ valid: false }, () => this.props.onFail());
             } else {
+                console.log("Valid");
                 this.setState({ valid: true }, () => {
                     let { valid, ...settings } = this.state;
                     this.props.onSubmit(settings);
