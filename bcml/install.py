@@ -270,14 +270,7 @@ def refresh_master_export():
     print("Exporting merged mod pack...")
     link_master_mod()
     if not util.get_settings("no_cemu"):
-        setpath = util.get_cemu_dir() / "settings.xml"
-        if not setpath.exists():
-            raise FileNotFoundError("The Cemu settings file could not be found.")
-        setread = ""
-        with setpath.open("r", encoding="utf-8") as setfile:
-            for line in setfile:
-                setread += line.strip()
-        settings = minidom.parseString(setread)
+        settings = util.parse_cemu_settings()
         try:
             gpack = settings.getElementsByTagName("GraphicPack")[0]
         except IndexError:
@@ -313,7 +306,9 @@ def refresh_master_export():
             bcmlentry.appendChild(entrypreset)
             gpack.appendChild(bcmlentry)
             settings.writexml(
-                setpath.open("w", encoding="utf-8"), addindent="    ", newl="\n"
+                (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
+                addindent="    ",
+                newl="\n",
             )
 
 

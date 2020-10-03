@@ -25,6 +25,7 @@ from shutil import rmtree, copyfile
 from tempfile import mkdtemp
 from time import sleep
 from threading import Thread
+from xml.dom import minidom
 
 try:
     from os import startfile  # pylint: disable=no-name-in-module
@@ -44,9 +45,7 @@ def win_or_lose(func):
         except Exception as err:  # pylint: disable=broad-except
             with LOG.open("a") as log_file:
                 log_file.write(f"\n{err}\n")
-            return {
-                "error": {"short": str(err), "error_text": traceback.format_exc(-5)}
-            }
+            return {"error": {"short": str(err), "error_text": traceback.format_exc(-5)}}
         return {"success": True}
 
     return status_run
@@ -95,6 +94,36 @@ class Api:
         if params["type"] == "store_dir":
             return True
         return True
+
+    def parse_cemu_settings(self, params):
+        try:
+            cemu = Path(params["folder"])
+            set_path = cemu / "settings.xml"
+            settings: minidom = util.parse_cemu_settings(set_path)
+            game_dir: Path
+            for entry in settings.getElementsByTagName("GameCache")[
+                0
+            ].getElementsByTagName("Entry"):
+                entry: minidom.Element
+                path = entry.getElementsByTagName("path")[0].childNodes[0].data
+                if "U-King" in path:
+                    game_dir = Path(path).parent.parent / "content"
+                    break
+            if not game_dir:
+                return {}
+            mlc_path = Path(
+                settings.getElementsByTagName("mlc_path")[0].childNodes[0].data
+            )
+            update_dir = util.guess_update_dir(mlc_path, game_dir)
+            dlc_dir = util.guess_aoc_dir(mlc_path, game_dir)
+            return {
+                "game_dir": str(game_dir),
+                "update_dir": str(update_dir) if update_dir else "",
+                "dlc_dir": str(dlc_dir) if dlc_dir else "",
+            }
+        except Exception as err:  # pylint: disable=bare-except
+            print(err)
+            return {}
 
     def get_settings(self, params=None):
         return util.get_settings()

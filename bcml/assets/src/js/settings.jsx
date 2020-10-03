@@ -61,9 +61,17 @@ class Settings extends React.Component {
                 type: "cemu_dir"
             }));
         const dlcValid =
-            this.state.dlc == "" ||
+            !this.state.wiiu ||
+            this.state.dlc_dir == "" ||
             (await pywebview.api.dir_exists({
                 folder: this.state.dlc_dir,
+                type: "dlc_dir"
+            }));
+        const dlcNxValid =
+            this.state.wiiu ||
+            this.state.dlc_dir_nx == "" ||
+            (await pywebview.api.dir_exists({
+                folder: this.state.dlc_dir_nx,
                 type: "dlc_dir"
             }));
         return (
@@ -71,6 +79,7 @@ class Settings extends React.Component {
             gameNxValid &&
             updateValid &&
             dlcValid &&
+            dlcNxValid &&
             cemuValid &&
             this.state.lang != "" &&
             this.state.store_dir != "" &&
@@ -84,17 +93,30 @@ class Settings extends React.Component {
         });
     }
 
-    async componentDidUpdate(prevProps) {
+    async componentDidUpdate(prevProps, prevState) {
         if (!prevProps.saving && this.props.saving) {
-            console.log("Here");
             if (!(await this.checkValid())) {
-                console.log("Not valid");
                 this.setState({ valid: false }, () => this.props.onFail());
             } else {
-                console.log("Valid");
                 this.setState({ valid: true }, () => {
                     let { valid, ...settings } = this.state;
                     this.props.onSubmit(settings);
+                });
+            }
+        } else if (
+            prevState.cemu_dir != this.state.cemu_dir &&
+            !this.state.game_dir
+        ) {
+            if (
+                await pywebview.api.dir_exists({
+                    folder: this.state.cemu_dir,
+                    type: "cemu_dir"
+                })
+            ) {
+                this.setState({
+                    ...(await pywebview.api.parse_cemu_settings({
+                        folder: this.state.cemu_dir
+                    }))
                 });
             }
         }

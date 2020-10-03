@@ -50,9 +50,10 @@ def convert_old_settings():
     old_settings = ConfigParser()
     old_settings.read(str(util.get_data_dir() / "settings.ini"))
     cemu_dir = old_settings["Settings"]["cemu_dir"]
+    mlc_dir = old_settings["Settings"]["mlc_dir"]
     game_dir = old_settings["Settings"]["game_dir"]
-    update_dir = util.guess_update_dir(Path(cemu_dir), Path(game_dir))
-    dlc_dir = util.guess_aoc_dir(Path(cemu_dir), Path(game_dir))
+    update_dir = util.guess_update_dir(Path(mlc_dir), Path(game_dir))
+    dlc_dir = util.guess_aoc_dir(Path(mlc_dir), Path(game_dir))
     settings = {
         "cemu_dir": cemu_dir,
         "game_dir": game_dir,

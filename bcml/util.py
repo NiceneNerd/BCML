@@ -588,6 +588,16 @@ def set_cemu_dir(path: Path):
     save_settings()
 
 
+def parse_cemu_settings(path: Path = get_cemu_dir() / "settings.xml"):
+    if not path.exists():
+        raise FileNotFoundError("The Cemu settings file could not be found.")
+    setread = ""
+    with path.open("r", encoding="utf-8") as setfile:
+        for line in setfile:
+            setread += line.strip()
+    return minidom.parseString(setread)
+
+
 def get_game_dir() -> Path:
     game_dir = str(
         get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
@@ -682,11 +692,9 @@ def get_title_id(game_dir: Path = None) -> (str, str):
     return get_title_id.title_id
 
 
-def guess_update_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
-    if not cemu_dir:
-        cemu_dir = get_cemu_dir()
-    mlc_dir = cemu_dir / "mlc01" / "usr" / "title"
+def guess_update_dir(mlc_dir: Path, game_dir: Path) -> Path:
     title_id = get_title_id(game_dir)
+    mlc_dir = mlc_dir / "usr" / "title"
     # First try the 1.15.11c mlc layout
     if (mlc_dir / f"{title_id[0][0:7]}E" / title_id[1] / "content").exists():
         return mlc_dir / f"{title_id[0][0:7]}E" / title_id[1] / "content"
@@ -720,11 +728,9 @@ def get_update_dir() -> Path:
     return update_dir
 
 
-def guess_aoc_dir(cemu_dir: Path = None, game_dir: Path = None) -> Path:
-    if not cemu_dir:
-        cemu_dir = get_cemu_dir()
-    mlc_dir = cemu_dir / "mlc01" / "usr" / "title"
+def guess_aoc_dir(mlc_dir: Path, game_dir: Path) -> Path:
     title_id = get_title_id(game_dir)
+    mlc_dir = mlc_dir / "usr" / "title"
     # First try the 1.15.11c mlc layout
     if (mlc_dir / f"{title_id[0][0:7]}C" / title_id[1] / "content" / "0010").exists():
         return mlc_dir / f"{title_id[0][0:7]}C" / title_id[1] / "content" / "0010"
