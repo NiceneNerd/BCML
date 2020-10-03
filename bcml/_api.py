@@ -44,7 +44,9 @@ def win_or_lose(func):
         except Exception as err:  # pylint: disable=broad-except
             with LOG.open("a") as log_file:
                 log_file.write(f"\n{err}\n")
-            return {"error": {"short": str(err), "error_text": traceback.format_exc(-5)}}
+            return {
+                "error": {"short": str(err), "error_text": traceback.format_exc(-5)}
+            }
         return {"success": True}
 
     return status_run
@@ -360,7 +362,11 @@ class Api:
     def launch_game(self, params=None):
         cemu = next(
             iter(
-                {f for f in util.get_cemu_dir().glob("*.exe") if "cemu" in f.name.lower()}
+                {
+                    f
+                    for f in util.get_cemu_dir().glob("*.exe")
+                    if "cemu" in f.name.lower()
+                }
             )
         )
         uking = util.get_game_dir().parent / "code" / "U-King.rpx"
@@ -512,12 +518,15 @@ class Api:
                             "version": "1.0.0",
                             "depends": [],
                             "options": {},
-                            "platform": "wiiu" if util.get_settings("wiiu") else "switch",
+                            "platform": "wiiu"
+                            if util.get_settings("wiiu")
+                            else "switch",
                         }
                     )
                 )
             install.install_mod(
-                mod, merge_now=True,
+                mod,
+                merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -603,22 +612,24 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
+        exe = util.get_python_exe().replace("pythonw", "python")
+        args = [
+            exe,
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            "--no-warn-script-location",
+            "--upgrade",
+            "--pre" if DEBUG else "",
+            "bcml",
+        ]
         parent = util.get_exec_dir().parent
         if parent.name == "pkgs":
             (parent / "bcml").rename(parent / "bcml.bak")
         if SYSTEM == "Windows":
             result = run(
-                [
-                    util.get_python_exe().replace("pythonw", "python"),
-                    "-m",
-                    "pip",
-                    "install",
-                    "--disable-pip-version-check",
-                    "--no-warn-script-location",
-                    "--upgrade",
-                    "--pre" if DEBUG else "",
-                    "bcml",
-                ],
+                args,
                 creationflags=util.CREATE_NO_WINDOW,
                 capture_output=True,
                 check=False,
@@ -626,17 +637,7 @@ class Api:
             )
         else:
             result = run(
-                [
-                    util.get_python_exe().replace("pythonw", "python"),
-                    "-m",
-                    "pip",
-                    "install",
-                    "--disable-pip-version-check",
-                    "--no-warn-script-location",
-                    "--upgrade",
-                    "--pre" if DEBUG else "",
-                    "bcml",
-                ],
+                args,
                 capture_output=True,
                 check=False,
                 text=True,
