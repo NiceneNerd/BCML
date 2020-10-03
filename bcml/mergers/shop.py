@@ -233,7 +233,10 @@ def threaded_merge(item) -> Tuple[str, dict]:
     file, stuff = item
     failures = {}
 
-    base_file = util.get_game_file(file, file.startswith(util.get_dlc_path()))
+    try:
+        base_file = util.get_game_file(file, file.startswith(util.get_dlc_path()))
+    except FileNotFoundError:
+        return "", {}
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
     file_ext = os.path.splitext(file)[1]
@@ -305,8 +308,14 @@ class ShopMerger(mergers.Merger):
             try:
                 mod_bytes = util.get_nested_file_bytes(str(mod_dir) + "/" + str(file))
                 nests = str(file).split("//", 1)
-                ref_path = str(util.get_game_file(Path(nests[0]))) + "//" + nests[1]
-                ref_bytes = util.get_nested_file_bytes(ref_path)
+                try:
+                    ref_path = str(util.get_game_file(Path(nests[0]))) + "//" + nests[1]
+                except FileNotFoundError:
+                    continue
+                try:
+                    ref_bytes = util.get_nested_file_bytes(ref_path)
+                except AttributeError:
+                    continue
                 shop_type = str(file).split(".")[-1]
 
                 mod_pio = get_named_pio(ParameterIO.from_binary(mod_bytes), shop_type)
@@ -314,7 +323,7 @@ class ShopMerger(mergers.Merger):
 
                 file_names.params[oead.aamp.Name(file).hash] = Parameter(file)
                 diffs.lists[file] = gen_diffs(ref_pio, mod_pio)
-            except (FileNotFoundError, KeyError, AttributeError) as err:
+            except (KeyError, AttributeError) as err:
                 raise err
         diffs.objects["Filenames"] = file_names
         return diffs
