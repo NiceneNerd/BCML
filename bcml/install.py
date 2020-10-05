@@ -473,11 +473,9 @@ def install_mod(
                 shutil.move(str(tmp_dir), str(mod_dir))
             except Exception:  # pylint: disable=broad-except
                 try:
+                    shutil.rmtree(str(mod_dir))
                     shutil.copytree(str(tmp_dir), str(mod_dir))
-                    try:
-                        shutil.rmtree(str(tmp_dir))
-                    except Exception:  # pylint: disable=broad-except
-                        pass
+                    shutil.rmtree(str(tmp_dir), ignore_errors=True)
                 except Exception:  # pylint: disable=broad-except
                     raise OSError(
                         "BCML could not transfer your mod from the temp directory to the"
