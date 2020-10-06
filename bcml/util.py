@@ -22,6 +22,8 @@ from multiprocessing import current_process
 from pathlib import Path
 from platform import system, python_version_tuple
 from pprint import pformat
+from re import findall
+from subprocess import run
 from tempfile import mkdtemp
 from time import time_ns
 from typing import Union, List, Dict, ByteString
@@ -316,9 +318,9 @@ class BcmlMod:
         format_str = (
             "%m/%d/%Y %#I:%M %p" if system() == "Windows" else "%m/%d/%Y %-I:%M %p"
         )
-        return datetime.fromtimestamp((self.path / "info.json").stat().st_mtime).strftime(
-            format_str
-        )
+        return datetime.fromtimestamp(
+            (self.path / "info.json").stat().st_mtime
+        ).strftime(format_str)
 
     @property
     def description(self) -> str:
@@ -650,7 +652,9 @@ def set_game_dir(path: Path):
 def get_mlc_dir() -> Path:
     mlc_dir = str(get_settings("mlc_dir"))
     if not mlc_dir or not Path(mlc_dir).is_dir():
-        raise FileNotFoundError("The Cemu MLC directory has moved or not been saved yet.")
+        raise FileNotFoundError(
+            "The Cemu MLC directory has moved or not been saved yet."
+        )
     return Path(mlc_dir)
 
 
@@ -1246,6 +1250,23 @@ def get_open_port():
     port = s.getsockname()[1]
     s.close()
     return port
+
+
+@lru_cache(1)
+def get_latest_bcml() -> str:
+    result = run(
+        [
+            get_python_exe().replace("pythonw", "python"),
+            "-m",
+            "pip",
+            "install",
+            "bcml==checkver",
+        ],
+        capture_output=True,
+        universal_newlines=True,
+    )
+    vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
+    return vers[-1]
 
 
 class RulesParser(ConfigParser):

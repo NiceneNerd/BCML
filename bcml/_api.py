@@ -35,7 +35,7 @@ import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
 from bcml.util import BcmlMod, LOG, SYSTEM, ZPATH
-from bcml.__version__ import USER_VERSION
+from bcml.__version__ import USER_VERSION, VERSION
 
 
 def win_or_lose(func):
@@ -641,6 +641,8 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
+        if util.get_latest_bcml() <= VERSION:
+            return
         exe = util.get_python_exe().replace("pythonw", "python")
         args = [
             exe,
