@@ -33,6 +33,7 @@ class BcmlRoot extends React.Component {
             confirmText: "",
             confirmCallback: () => {},
             showAbout: false,
+            update: false,
             version: "3.0"
         };
         this.selects = null;
@@ -48,11 +49,12 @@ class BcmlRoot extends React.Component {
         this.launchGame = this.launchGame.bind(this);
         this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () => {
-            setTimeout(async () => {
-                let version = await pywebview.api.get_ver();
-                this.setState({ version });
+            setTimeout(() => {
                 this.refreshMods();
-            }, 125);
+                return pywebview.api.get_ver().then(res => {
+                    this.setState({ ...res });
+                });
+            }, 250);
         });
     }
 
@@ -407,6 +409,14 @@ class BcmlRoot extends React.Component {
                     message={this.state.confirmText}
                     onClose={this.state.confirmCallback.bind(this)}
                 />
+                <UpdateDialog
+                    show={this.state.update}
+                    onClose={confirmed =>
+                        this.setState({ update: false }, () =>
+                            confirmed ? this.updateBcml() : null
+                        )
+                    }
+                />
                 <BackupModal
                     show={this.state.showBackups}
                     ref={this.backupRef}
@@ -518,6 +528,28 @@ const ConfirmDialog = props => {
                 <Modal.Title>Please Confirm</Modal.Title>
             </Modal.Header>
             <Modal.Body>{props.message}</Modal.Body>
+            <Modal.Footer>
+                <Button onClick={() => props.onClose(true)}>OK</Button>
+                <Button
+                    variant="secondary"
+                    onClick={() => props.onClose(false)}>
+                    Close
+                </Button>
+            </Modal.Footer>
+        </Modal>
+    );
+};
+
+const UpdateDialog = props => {
+    return (
+        <Modal show={props.show}>
+            <Modal.Header>
+                <Modal.Title>Update Available</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                There is a new update available for BCML. Would you like to
+                install it?
+            </Modal.Body>
             <Modal.Footer>
                 <Button onClick={() => props.onClose(true)}>OK</Button>
                 <Button

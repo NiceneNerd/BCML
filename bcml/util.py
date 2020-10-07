@@ -1266,7 +1266,10 @@ def get_latest_bcml() -> str:
         universal_newlines=True,
     )
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
-    return vers[-1]
+    try:
+        return vers[-1]
+    except IndexError:
+        return "0.0.0"
 
 
 class RulesParser(ConfigParser):

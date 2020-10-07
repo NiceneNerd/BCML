@@ -69,7 +69,7 @@ class Api:
         self.host = host
 
     def get_ver(self, params=None):
-        return USER_VERSION
+        return {"version": USER_VERSION, "update": util.get_latest_bcml() > VERSION}
 
     @win_or_lose
     def sanity_check(self, kwargs=None):
