@@ -590,7 +590,8 @@ def set_cemu_dir(path: Path):
     save_settings()
 
 
-def parse_cemu_settings(path: Path = get_cemu_dir() / "settings.xml"):
+def parse_cemu_settings(path: Path = None):
+    path = path or get_cemu_dir() / "settings.xml"
     if not path.exists():
         raise FileNotFoundError("The Cemu settings file could not be found.")
     setread = ""
