@@ -32,15 +32,15 @@ setup(
     package_dir={"webviewb": "webviewb", "bcml": "bcml"},
     package_data={
         "webviewb": [
-            "webviewb/lib/WebBrowserInterop.x64.dll",
-            "webviewb/lib/WebBrowserInterop.x86.dll",
-            "webviewb/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.dll"
-            "webviewb/lib/Microsoft.Toolkit.Forms.UI.Controls.WebView.LICENSE.md",
+            "webviewb/lib/Microsoft.WindowsAPICodePack.dll",
+            "webviewb/lib/Microsoft.WindowsAPICodePack.Shell.dll",
         ],
     },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": ["bcml-debug = bcml.__main__:main_debug",],
+        "console_scripts": [
+            "bcml-debug = bcml.__main__:main_debug",
+        ],
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",

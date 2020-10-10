@@ -20,6 +20,7 @@ from webviewb import (
     SAVE_DIALOG,
 )
 from webviewb.util import (
+    interop_dll_path,
     parse_file_type,
     inject_base_uri,
 )
@@ -30,8 +31,10 @@ import clr
 clr.AddReference("System.Windows.Forms")
 clr.AddReference("System.Collections")
 clr.AddReference("System.Threading")
+clr.AddReference(interop_dll_path("Microsoft.WindowsAPICodePack.Shell.dll"))
 
 import System.Windows.Forms as WinForms
+from Microsoft.WindowsAPICodePack.Dialogs import CommonOpenFileDialog
 from System import IntPtr, Int32, Func, Type
 from System.Threading import Thread, ThreadStart, ApartmentState
 from System.Drawing import Size, Icon, ColorTranslator, SizeF
@@ -463,15 +466,15 @@ def create_file_dialog(
 
     try:
         if dialog_type == FOLDER_DIALOG:
-            dialog = WinForms.FolderBrowserDialog()
-            dialog.RestoreDirectory = True
+            dialog = CommonOpenFileDialog()
+            dialog.IsFolderPicker = True
 
             if directory:
-                dialog.SelectedPath = directory
+                dialog.InitialDirectory = directory
 
-            result = dialog.ShowDialog(window)
+            result = dialog.ShowDialog()
             if result == WinForms.DialogResult.OK:
-                file_path = (dialog.SelectedPath,)
+                file_path = (dialog.FileName,)
             else:
                 file_path = None
         elif dialog_type == OPEN_DIALOG:
@@ -485,7 +488,9 @@ def create_file_dialog(
                     ["{0} ({1})|{1}".format(*parse_file_type(f)) for f in file_types]
                 )
             else:
-                dialog.Filter = localization["windows.fileFilter.allFiles"] + " (*.*)|*.*"
+                dialog.Filter = (
+                    localization["windows.fileFilter.allFiles"] + " (*.*)|*.*"
+                )
             dialog.RestoreDirectory = True
 
             result = dialog.ShowDialog(window)
