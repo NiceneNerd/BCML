@@ -652,11 +652,16 @@ class Api:
             "--disable-pip-version-check",
             "--no-warn-script-location",
             "--upgrade",
-            "--pre" if DEBUG else "",
             "bcml",
         ]
+        if DEBUG:
+            args.insert(-2, "--pre")
         parent = util.get_exec_dir().parent
-        if parent.name == "pkgs":
+        if (
+            parent.name == "pkgs"
+            and (parent / "bcml").exists()
+            and not (parent / "bcml.bak").exists()
+        ):
             (parent / "bcml").rename(parent / "bcml.bak")
         if SYSTEM == "Windows":
             result = run(
@@ -674,6 +679,12 @@ class Api:
                 text=True,
             )
         if result.stderr:
+            if (
+                parent.name == "pkgs"
+                and (parent / "bcml.bak").exists()
+                and not (parent / "bcml").exists()
+            ):
+                (parent / "bcml.bak").rename(parent / "bcml")
             raise RuntimeError(result.stderr)
 
     def restart(self):
