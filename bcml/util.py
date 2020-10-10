@@ -1255,17 +1255,26 @@ def get_open_port():
 
 @lru_cache(1)
 def get_latest_bcml() -> str:
-    result = run(
-        [
-            get_python_exe().replace("pythonw", "python"),
-            "-m",
-            "pip",
-            "install",
-            "bcml==checkver",
-        ],
-        capture_output=True,
-        universal_newlines=True,
-    )
+    args = [
+        get_python_exe().replace("pythonw", "python"),
+        "-m",
+        "pip",
+        "install",
+        "bcml==checkver",
+    ]
+    if SYSTEM == "Windows":
+        result = run(
+            args,
+            creationflags=CREATE_NO_WINDOW,
+            capture_output=True,
+            universal_newlines=True,
+        )
+    else:
+        result = run(
+            args,
+            capture_output=True,
+            universal_newlines=True,
+        )
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
     try:
         return vers[-1]
