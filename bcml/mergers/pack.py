@@ -23,7 +23,7 @@ EXCLUDE_EXTS = {".sbeventpack"}
 
 def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
     opened_sarcs: List[oead.Sarc] = []
-    if "Bootup.pack" in file_name:
+    if "ThunderRodLv2" in file_name:
         print()
     if isinstance(sarcs[0], Path):
         for i, sarc_path in enumerate(sarcs):
@@ -49,7 +49,14 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for opened_sarc in reversed(opened_sarcs):
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
             file_data = oead.Bytes(file.data)
-            if util.is_file_modded(
+            if (
+                file.name[file.name.rindex(".") :]
+                in util.SARC_EXTS - EXCLUDE_EXTS - SPECIAL
+            ):
+                if file.name not in nested_sarcs:
+                    nested_sarcs[file.name] = []
+                nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
+            elif util.is_file_modded(
                 file.name.replace(".s", "."), file_data, count_new=True
             ):
                 if (
@@ -58,10 +65,6 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
                 ) or file.name in SPECIAL:
                     new_sarc.files[file.name] = file_data
                     files_added.add(file.name)
-                else:
-                    if file.name not in nested_sarcs:
-                        nested_sarcs[file.name] = []
-                    nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
     util.vprint(set(nested_sarcs.keys()))
     for file, sarcs in nested_sarcs.items():
         if not sarcs:

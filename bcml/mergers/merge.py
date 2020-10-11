@@ -120,7 +120,10 @@ def merge_aamp_files(file: str, tree: dict):
         return
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
-    sarc = Sarc(util.unyaz_if_needed(base_file.read_bytes()))
+    try:
+        sarc = Sarc(util.unyaz_if_needed(base_file.read_bytes()))
+    except (ValueError, InvalidDataError, RuntimeError):
+        return
     new_data = _merge_in_sarc(sarc, tree)
     if base_file.suffix.startswith(".s") and base_file.suffix != ".ssarc":
         new_data = util.compress(new_data)
@@ -133,8 +136,16 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
     for file, stuff in edits.items():
         if isinstance(stuff, dict):
             try:
+                if file not in {f.name for f in sarc.get_files()}:
+                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
                 sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
-            except (InvalidDataError, ValueError, AttributeError, RuntimeError):
+            except (
+                InvalidDataError,
+                ValueError,
+                AttributeError,
+                RuntimeError,
+                FileNotFoundError,
+            ):
                 util.vprint(f"Couldn't merge into nested SARC {file}")
                 continue
             nsub_bytes = _merge_in_sarc(sub_sarc, stuff)
@@ -145,8 +156,15 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
             )
         elif isinstance(stuff, ParameterList):
             try:
+                if file not in {f.name for f in sarc.get_files()}:
+                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
                 pio = ParameterIO.from_binary(sarc.get_file(file).data)
-            except (AttributeError, ValueError, InvalidDataError) as e:
+            except (
+                AttributeError,
+                ValueError,
+                InvalidDataError,
+                FileNotFoundError,
+            ) as e:
                 util.vprint(f"Couldn't open {file}: {e}")
                 continue
             merge_plists(pio, stuff)
@@ -226,7 +244,9 @@ class DeepMerger(mergers.Merger):
                     diff = ParameterIO()
                 merge_plists(
                     diff,
-                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
+                    ParameterIO.from_binary(
+                        (opt / "logs" / self._log_name).read_bytes()
+                    ),
                     True,
                 )
         return diff
