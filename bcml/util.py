@@ -264,9 +264,20 @@ class BcmlMod:
 
     def __init__(self, mod_path):
         self.path = mod_path
-        self._info = json.loads(
-            (self.path / "info.json").read_text("utf-8"), encoding="utf-8"
-        )
+        try:
+            self._info = json.loads(
+                (self.path / "info.json").read_text("utf-8"), encoding="utf-8"
+            )
+            assert "name" in self._info
+            assert "id" in self._info
+            assert "priority" in self._info
+        except (KeyError, AttributeError, json.decoder.JSONDecodeError):
+            name = getattr(self, "_info", {}).get("name", "One of your mods")
+            raise ValueError(
+                f"{name} has an invalid or correct <code>info.json</code> meta file "
+                "and cannot be loaded. You will need to manually correct the file "
+                "or remove the mod folder and reinstall."
+            )
         self.priority = self._info["priority"]
         self._preview = None
 

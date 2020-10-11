@@ -24,8 +24,9 @@ class CompareView extends React.Component {
     }
 
     async loadMods() {
+        const res = await pywebview.api.get_mods({ disabled: true });
         this.setState({
-            mods: await pywebview.api.get_mods({ disabled: true })
+            mods: res.data
         });
     }
 

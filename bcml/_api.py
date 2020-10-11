@@ -41,12 +41,12 @@ from bcml.__version__ import USER_VERSION, VERSION
 def win_or_lose(func):
     def status_run(*args, **kwargs):
         try:
-            func(*args, **kwargs)
+            data = func(*args, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             with LOG.open("a") as log_file:
                 log_file.write(f"\n{err}\n")
             return {"error": {"short": str(err), "error_text": traceback.format_exc(-5)}}
-        return {"success": True}
+        return {"success": True, "data": data}
 
     return status_run
 
@@ -169,6 +169,7 @@ class Api:
     def delete_old_mods(self):
         rmtree(util.get_cemu_dir() / "graphicPacks" / "BCML")
 
+    @win_or_lose
     def get_mods(self, params):
         if not params:
             params = {"disabled": False}

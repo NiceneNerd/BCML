@@ -427,8 +427,8 @@ class Dependencies extends React.Component {
                 })
             },
             () => {
-                pywebview.api.get_mods({ disabled: true }).then(mods => {
-                    this.setState({ mods, modsLoaded: true });
+                pywebview.api.get_mods({ disabled: true }).then(res => {
+                    this.setState({ mods: res.data, modsLoaded: true });
                 });
             }
         );
