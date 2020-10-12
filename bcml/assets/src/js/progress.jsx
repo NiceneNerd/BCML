@@ -53,6 +53,8 @@ let messages = [
     "Believe it or not, real progress updates are not an option",
     "BCML tip: When in doubt, remerge",
     "BCML tip: The in-app help has a lot of information",
+    "BCML tip: Read the in-app help",
+    "BCML tip: Questions or problems? Try the in-app help", 
     "BCML tip: To reorder your mods, click the Show Sort Handles toggle",
     "BCML tip: Ctrl-Click to select multiple mods",
     "BCML tip: Higher number priority overrides lower number priority",
@@ -66,6 +68,8 @@ let messages = [
     "Becoming a traveling merchant",
     "Stalking Beedle",
     "Creating a paper currency",
+    "Planting Korok seeds",
+    "Fleeing Daruk's crushing embrace",
     "Turning the Shrine of Resurrection into a tourist attraction",
     "Climbing Death Mountian in the buff",
     "Accidentally stoning a Korok",
@@ -76,6 +80,7 @@ let messages = [
     "Ascending to High Hrothgar—oh wait, wrong game",
     "Collecting monk dust for elixirs",
     "Chasing a Hinox eyeball",
+    "Abusing ghost rabbits for money",
     "Making Tik Toks on Sheikah Slate",
     "Old enough to save Hyrule, too young for The Noble Canteen",
     '"Hold on Zelda, only 842 more Koroks!"',
@@ -111,7 +116,7 @@ class ProgressModal extends React.Component {
                                 : 0
                     });
                 }
-            }, 2000);
+            }, 3000);
         } else if (prevProps.show && !this.props.show) {
             clearInterval(this.timer);
         }
