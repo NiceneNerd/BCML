@@ -17,7 +17,9 @@ Start Menu. If you installed using pip, run `bcml` from the command line.
 
 #### Why won't BCML accept my folders?
 
-Here are the rules for the folders you need to set in BCML:
+Here are the rules for the folders you need to set in BCML.
+
+(Note that if you use Cemu, BCML should automatically find your game folders when you select the Cemu folder. If it doesn't, you can find them by right-clicking the game in Cemu and clicking the buttons to open the game, update, and DLC folders. These will *not* be the exact folders you need but will be very close to them; read on to find out exactly what you'll need to do from there.)
 
 ##### Cemu
 
@@ -42,6 +44,7 @@ You can tell this folder is set correctly if it contains the file `Pack/Dungeon0
 for Wii U or 1.6.0 for Switch. For Cemu users, this should ordinarily be inside Cemu's MLC
 storage. For Cemu/Wii U, the first half of the title ID will end in the letter E. Example:
  `C:\Cemu\mlc01\usr\title\0005000E\101C9400\content`
+
 Switch users should not need an update folder, because dumping will ordinarily merge the
 base game and update files.
 
@@ -54,6 +57,7 @@ folder `Actor/Pack`.
 users, this should ordinarily be inside Cemu's MLC storage. For Cemu/Wii U, the first half
 of the title ID will end in the letter C. Example (*make sure to include the `0010`*):
  `C:\Cemu\mlc01\usr\title\0005000E\101C9400\content\0010`
+
 For Switch, this will be the `romfs` folder under the supported DLC title ID, e.g.
  `C:\Game Dumps\BOTW\01007EF00011F001\romfs`
 
@@ -123,17 +127,18 @@ but you still see no effects from any mods, it could be a bug involving hard lin
 file permissions. To avoid this, check the "Disable hard links for master mod" option in
 BCML's setttings.
 
-### Cemu crashes immediately after compiling shaders
+### BOTW crashes *immediately*  when the game starts to load
 
 There are a few possible causes:
 
 1. You have mods installed outside of BCML that conflict with the BCML pack. **Running BCML
    alongside mods installed with other methods is not supported.**
-2. Your load order is backwards.
-3. Your game language in BCML does not match the region and language you use in BOTW.
-4. Your game directory settings in BCML are set incorrectly.
-5. There is something wrong with one of your mods itself.
-6. Your game dump is corrupt.
+2. You still have the master graphic pack for BCML 2.8 enabled in Cemu after upgrading (under `{BCML: DON'T TOUCH}`.
+3. Your load order is backwards.
+4. Your game language in BCML does not match the region and language you use in BOTW.
+5. Your game directory settings in BCML are set incorrectly.
+6. There is something wrong with one of your mods itself.
+7. Your game dump is corrupt.
 
 ### I installed the Linkle mod, and it kind of works, but Linkle looks mixed with Link
 
