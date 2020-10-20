@@ -50,10 +50,10 @@ class BcmlRoot extends React.Component {
         this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () => {
             setTimeout(() => {
-                this.refreshMods();
-                return pywebview.api.get_ver().then(res => {
+                pywebview.api.get_ver().then(res => {
                     this.setState({ ...res });
                 });
+                this.refreshMods();
             }, 250);
         });
     }
@@ -355,6 +355,9 @@ class BcmlRoot extends React.Component {
                             onExport={this.export}
                             onLaunch={this.launchGame}
                         />
+                    </Tab>
+                    <Tab eventKey="gamebanana" title="GameBanana">
+                        <GameBanana onError={this.showError} />
                     </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">
                         <DevTools
