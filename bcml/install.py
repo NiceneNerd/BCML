@@ -748,7 +748,7 @@ def export(output: Path):
                 capture_output=True,
             )
         else:
-            result = subprocess.run(check=False, capture_output=True)
+            result = subprocess.run(x_args, check=False, capture_output=True)
         if result.stderr:
             raise RuntimeError(
                 f"There was an error exporting your mod(s). {result.stderr}"
