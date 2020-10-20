@@ -704,8 +704,6 @@ def link_master_mod(output: Path = None):
 def export(output: Path):
     print("Loading files...")
     tmp_dir = Path(mkdtemp())
-    if tmp_dir.drive != util.get_modpack_dir().drive:
-        tmp_dir = Path(util.get_modpack_dir().drive) / "tmp_bcml_export"
     if tmp_dir.exists():
         try:
             rmtree(tmp_dir)
