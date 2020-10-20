@@ -356,9 +356,6 @@ class BcmlRoot extends React.Component {
                             onLaunch={this.launchGame}
                         />
                     </Tab>
-                    <Tab eventKey="gamebanana" title="GameBanana">
-                        <GameBanana onError={this.showError} />
-                    </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">
                         <DevTools
                             onError={this.showError}
