@@ -16,6 +16,7 @@ import oead
 import xxhash  # pylint: disable=wrong-import-order
 
 from bcml import util, install
+from bcml.mergers.pack import SPECIAL
 
 EXCLUDE_EXTS = {".yml", ".yaml", ".bak", ".txt", ".json", ".old"}
 
@@ -174,7 +175,11 @@ def _clean_sarc(old_sarc: oead.Sarc, base_sarc: oead.Sarc) -> Optional[oead.Sarc
         if nest_file not in old_files or (
             file_data != old_data and ext not in util.AAMP_EXTS
         ):
-            if ext in util.SARC_EXTS:
+            if (
+                ext in util.SARC_EXTS
+                and nest_file in old_files
+                and nest_file not in SPECIAL
+            ):
                 nest_old_sarc = oead.Sarc(old_data)
                 nest_base_sarc = oead.Sarc(file_data)
                 nest_new_sarc = _clean_sarc(nest_old_sarc, nest_base_sarc)
@@ -187,6 +192,8 @@ def _clean_sarc(old_sarc: oead.Sarc, base_sarc: oead.Sarc) -> Optional[oead.Sarc
                 else:
                     continue
             else:
+                if ext.startswith(".s") and ext != ".sarc":
+                    file_data = util.compress(file_data)
                 new_sarc.files[nest_file] = oead.Bytes(file_data)
                 can_delete = False
     return None if can_delete else new_sarc
@@ -255,7 +262,9 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml"
     ).exists():
         print("Removing ActorInfo.product.sbyml...")
-        (tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml").unlink()
+        (
+            tmp_dir / util.get_content_path() / "Actor" / "ActorInfo.product.sbyml"
+        ).unlink()
 
     if (tmp_dir / "logs" / "gamedata.yml").exists() or (
         tmp_dir / "logs" / "savedata.yml"
@@ -393,7 +402,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             check=True,
         )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(
+            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
     shutil.rmtree(tmp_dir, ignore_errors=True)
     print("Conversion complete.")
 
