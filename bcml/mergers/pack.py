@@ -50,21 +50,16 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
             file_data = oead.Bytes(file.data)
             if (
-                file.name[file.name.rindex(".") :]
-                in util.SARC_EXTS - EXCLUDE_EXTS - SPECIAL
-            ):
+                file.name[file.name.rindex(".") :] in util.SARC_EXTS - EXCLUDE_EXTS
+            ) and file.name not in SPECIAL:
                 if file.name not in nested_sarcs:
                     nested_sarcs[file.name] = []
                 nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
             elif util.is_file_modded(
                 file.name.replace(".s", "."), file_data, count_new=True
             ):
-                if (
-                    not file.name[file.name.rindex(".") :]
-                    in util.SARC_EXTS - EXCLUDE_EXTS
-                ) or file.name in SPECIAL:
-                    new_sarc.files[file.name] = file_data
-                    files_added.add(file.name)
+                new_sarc.files[file.name] = file_data
+                files_added.add(file.name)
     util.vprint(set(nested_sarcs.keys()))
     for file, sarcs in nested_sarcs.items():
         if not sarcs:
