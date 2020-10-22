@@ -64,7 +64,7 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for file, sarcs in nested_sarcs.items():
         if not sarcs:
             continue
-        merged_bytes = merge_sarcs(file, sarcs)[1]
+        merged_bytes = merge_sarcs(file, sarcs[::-1])[1]
         if Path(file).suffix.startswith(".s") and not file.endswith(".sarc"):
             merged_bytes = util.compress(merged_bytes)
         new_sarc.files[file] = merged_bytes
