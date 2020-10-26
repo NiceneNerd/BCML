@@ -544,6 +544,7 @@ class Api:
                             "name": "Temp",
                             "desc": "Temp pack",
                             "url": "",
+                            "id": "VGVtcD0wLjA=",
                             "image": "",
                             "version": "1.0.0",
                             "depends": [],
