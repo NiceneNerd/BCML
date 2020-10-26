@@ -658,12 +658,11 @@ class Api:
         if DEBUG:
             args.insert(-2, "--pre")
         parent = util.get_exec_dir().parent
-        if (
-            parent.name == "pkgs"
-            and (parent / "bcml").exists()
-            and not (parent / "bcml.bak").exists()
-        ):
-            (parent / "bcml").rename(parent / "bcml.bak")
+        if parent.name == "pkgs":
+            try:
+                (parent / "bcml").rename(parent / "bcml.bak")
+            except:
+                pass
         if SYSTEM == "Windows":
             result = run(
                 args,
@@ -680,12 +679,11 @@ class Api:
                 text=True,
             )
         if result.stderr:
-            if (
-                parent.name == "pkgs"
-                and (parent / "bcml.bak").exists()
-                and not (parent / "bcml").exists()
-            ):
-                (parent / "bcml.bak").rename(parent / "bcml")
+            if parent.name == "pkgs":
+                try:
+                    (parent / "bcml.bak").rename(parent / "bcml")
+                except:
+                    pass
             raise RuntimeError(result.stderr)
 
     def restart(self):
