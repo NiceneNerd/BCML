@@ -1270,6 +1270,7 @@ def get_latest_bcml() -> str:
         get_python_exe().replace("pythonw", "python"),
         "-m",
         "pip",
+        "--disable-pip-version-check",
         "install",
         "bcml==checkver",
     ]
