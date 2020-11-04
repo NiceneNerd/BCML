@@ -1,3 +1,4 @@
+import "./scss/App.scss";
 import BcmlRoot from "./js/bcml.jsx";
 import FirstRun from "./js/firstrun.jsx";
 import React from "react";
