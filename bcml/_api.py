@@ -16,8 +16,11 @@ except ImportError:
 
 import base64
 import json
+import requests
 import traceback
+from math import ceil
 from multiprocessing import Pool
+from operator import itemgetter
 from pathlib import Path
 from platform import system
 from subprocess import run, PIPE, Popen
@@ -25,6 +28,7 @@ from shutil import rmtree, copyfile
 from tempfile import mkdtemp
 from time import sleep
 from threading import Thread
+from typing import List
 from xml.dom import minidom
 
 try:
@@ -34,6 +38,7 @@ except ImportError:
 import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
+from bcml.gamebanana import GameBananaDb
 from bcml.util import BcmlMod, LOG, SYSTEM, ZPATH
 from bcml.__version__ import USER_VERSION, VERSION
 
@@ -64,9 +69,12 @@ class Api:
     # pylint: disable=unused-argument,no-self-use,too-many-public-methods
     window: webviewb.Window
     host: str
+    gb_api: GameBananaDb
+    tmp_files: List[Path]
 
     def __init__(self, host: str):
         self.host = host
+        self.tmp_files = []
 
     def get_ver(self, params=None):
         return {"version": USER_VERSION, "update": util.get_latest_bcml() > VERSION}
@@ -692,3 +700,56 @@ class Api:
         opener.start()
         for win in webviewb.windows:
             win.destroy()
+
+    def is_wiiu(self):
+        return util.get_settings("wiiu")
+
+    def init_gb(self):
+        self.gb_api = GameBananaDb()
+
+    def get_gb_pages(self, category: str = None, search: str = None) -> int:
+        mods = self.gb_api.mods
+        if search:
+            mods = self.gb_api.search(search)
+        return ceil(
+            len(mods if not category else [m for m in mods if m["category"] == category])
+            / 24
+        )
+
+    def get_gb_mods(
+        self, page: int, sort: str = "new", category: str = None, search: str = None
+    ):
+        mods = self.gb_api.mods
+        if search:
+            mods = self.gb_api.search(search)
+        key = {
+            "new": itemgetter("updated"),
+            "old": itemgetter("updated"),
+            "down": itemgetter("downloads"),
+            "abc": itemgetter("name"),
+            "likes": itemgetter("likes"),
+        }.get(sort)
+        mods = sorted(
+            mods if not category else [m for m in mods if m["category"] == category],
+            key=key,
+            reverse=sort not in {"old", "abc"},
+        )
+        last = min(page * 24, len(mods))
+        return mods[(page - 1) * 24 : last]
+
+    @win_or_lose
+    def install_gb_mod(self, file: dict):
+        path = Path(mkdtemp()) / file["_sFile"]
+        res: requests.Response = requests.get(file["_sDownloadUrl"])
+        with path.open("wb") as tmp_file:
+            for chunk in res.iter_content(chunk_size=1024):
+                tmp_file.write(chunk)
+        self.tmp_files.append(path)
+        return str(path)
+
+    def cleanup(self):
+        for file in self.tmp_files:
+            try:
+                file.unlink()
+            except:
+                pass

@@ -1,6 +1,7 @@
 import { Button, Dropdown, Fade, Modal, Tab, Tabs } from "react-bootstrap";
 
 import DevTools from "./devtools.jsx";
+import GameBanana from "./gamebanana.jsx";
 import Settings from "./settings.jsx";
 import Mods from "./mods.jsx";
 import BackupModal from "./backup.jsx";
@@ -313,6 +314,18 @@ class BcmlRoot extends React.Component {
         );
     }
 
+    setProgress = (title, msg) => {
+        this.setState({
+            progressTitle: title,
+            progressStatus: msg,
+            showProgress: true
+        });
+    };
+
+    setDone = () => {
+        this.setState({ showProgress: false, showDone: true });
+    };
+
     render() {
         return (
             <>
@@ -354,6 +367,15 @@ class BcmlRoot extends React.Component {
                             onState={this.setState.bind(this)}
                             onExport={this.export}
                             onLaunch={this.launchGame}
+                        />
+                    </Tab>
+                    <Tab eventKey="gamebanana" title="GameBanana">
+                        <GameBanana
+                            onError={this.showError}
+                            onProgress={this.setProgress}
+                            onDone={() =>
+                                this.setState({ showProgress: false })
+                            }
                         />
                     </Tab>
                     <Tab eventKey="dev-tools" title="Dev Tools">

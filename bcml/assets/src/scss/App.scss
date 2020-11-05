@@ -797,20 +797,54 @@ Fade {
 
 .gb-list {
     height: fit-content;
-    width: 100%;
+    width: calc(100% + 2.5rem);
+    margin: 0 -1.25rem;
+    padding: 0 1.25rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    display: flex;
+    align-items: start;
+
+    .card {
+        max-width: calc(33% - 1rem);
+        margin: 0.5rem;
+
+        @media (min-width: 1000px) {
+            max-width: calc(25% - 1rem) !important;
+        }
+
+        .author {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 80%;
+        }
+    }
 }
 
 .gb-mod {
     background-color: #212121;
 
     .card-footer {
+        display: flex;
+        justify-content: space-around;
         background-color: #191919;
         font-size: small;
+        flex-wrap: wrap;
+        overflow: hidden;
+        height: 2.66rem;
+        
+        .meta {
+            line-height: 1;
+            margin: 0 8px 30rem 0;
+            white-space: nowrap;
+        }
     }
 }
 
 .carousel-item img {
     opacity: 0.8;
+    transition: opacity 0.2s ease-in;
 
     &:hover {
         opacity: 1;
@@ -818,8 +852,38 @@ Fade {
 }
 
 .carousel-caption {
-    text-shadow: 0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
-        0 0 24px $bg-darkest, 0 0 24px $bg-darkest;
+    text-shadow: 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
+        0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
+        0 0 24px $bg-darkest;
+}
+
+.gb-menu {
+    margin: 0.5rem -0.5rem;
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+
+    & > * {
+        margin: 0 0.5rem;
+    }
+
+    .input-group-append {
+        height: 31px;
+
+        .material-icons {
+            font-size: 20px;
+        }
+    }
+}
+
+.pagination .page-link {
+    background-color: $bg-lighter;
+    color: $fg1;
+    border-color: $bg-lighter;
+
+    &:active {
+        border-color: $primary-light;
+    }
 }
 
 /* Transitions */

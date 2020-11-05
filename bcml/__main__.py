@@ -130,6 +130,7 @@ def main(debug: bool = False):
             webview.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
             )
+    api.cleanup()
     stop_it(messager=messager)
 
 
