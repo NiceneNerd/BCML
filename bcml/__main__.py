@@ -87,6 +87,14 @@ def main(debug: bool = False):
 
     gui = "cef" if SYSTEM == "Windows" else "qt"
 
+    if SYSTEM == "Windows":
+        from webviewb.platforms.cef import settings
+
+        cache = util.get_storage_dir() / "cef_cache"
+        settings["cache_path"] = str(cache)
+        if not cache.exists():
+            cache.mkdir(parents=True, exist_ok=True)
+
     if (util.get_data_dir() / "settings.json").exists():
         url = f"{host}/index.html"
         width, height = 907, 680
