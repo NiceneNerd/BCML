@@ -282,7 +282,10 @@ def refresh_master_export():
             if new_cemu and entry.getElementsByTagName("filename"):
                 new_cemu = False
             try:
-                if "BCML" in entry.getElementsByTagName("filename")[0].childNodes[0].data:
+                if (
+                    "BCML"
+                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
+                ):
                     break
             except IndexError:
                 if "BCML" in entry.getAttribute("filename"):
@@ -377,8 +380,7 @@ def install_mod(
         if rules["platform"] != user_platform:
             raise ValueError(
                 f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not '
-                f" {friendly_plaform(user_platform)}. If you want to use it, check "
-                'the "Allow cross-platform install" option.'
+                f" {friendly_plaform(user_platform)}.'"
             )
 
         logs = tmp_dir / "logs"
@@ -437,7 +439,9 @@ def install_mod(
                             link_files = {f.name for f in link_sarc.get_files()}
                             for sarc_file in old_sarc.get_files():
                                 if sarc_file.name not in link_files:
-                                    new_sarc.files[sarc_file.name] = bytes(sarc_file.data)
+                                    new_sarc.files[sarc_file.name] = bytes(
+                                        sarc_file.data
+                                    )
                             del old_sarc
                             del link_sarc
                             out.write_bytes(new_sarc.write()[1])
@@ -611,7 +615,9 @@ def create_backup(name: str = ""):
             check=True,
         )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(
+            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
     print(f'Backup "{name}" created')
 
 
@@ -638,7 +644,9 @@ def restore_backup(backup: Union[str, Path]):
             check=True,
         )
     else:
-        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(
+            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
     print("Re-enabling mods in Cemu...")
     refresh_master_export()
     print(f'Backup "{backup.name}" restored')
@@ -655,7 +663,9 @@ def link_master_mod(output: Path = None):
     try:
         output.mkdir(parents=True, exist_ok=True)
         if not util.get_settings("no_cemu"):
-            shutil.copy(util.get_master_modpack_dir() / "rules.txt", output / "rules.txt")
+            shutil.copy(
+                util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
+            )
     except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
         raise RuntimeError(
             "There was a problem creating the master BCML graphic pack. "
