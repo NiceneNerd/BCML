@@ -56,6 +56,17 @@ def stop_it(messager: Messager = None):
         os.killpg(0, 9)
 
 
+def configure_cef(debug):
+    from webviewb.platforms.cef import settings
+
+    cache = util.get_storage_dir() / "cef_cache"
+    settings.update(
+        {"cache_path": str(cache), "context_menu": {"enabled": debug, "devtools": True}}
+    )
+    if not cache.exists():
+        cache.mkdir(parents=True, exist_ok=True)
+
+
 def main(debug: bool = False):
     set_start_method("spawn", True)
     global logger  # pylint: disable=invalid-name,global-statement
@@ -87,13 +98,11 @@ def main(debug: bool = False):
 
     gui = "cef" if SYSTEM == "Windows" else "qt"
 
-    if SYSTEM == "Windows":
-        from webviewb.platforms.cef import settings
+    if not debug:
+        debug = DEBUG or "bcml-debug" in sys.argv
 
-        cache = util.get_storage_dir() / "cef_cache"
-        settings["cache_path"] = str(cache)
-        if not cache.exists():
-            cache.mkdir(parents=True, exist_ok=True)
+    if SYSTEM == "Windows":
+        configure_cef(debug)
 
     if (util.get_data_dir() / "settings.json").exists():
         url = f"{host}/index.html"
@@ -113,9 +122,6 @@ def main(debug: bool = False):
     )
     logger = Messager(api.window)
     api.window.closing += stop_it
-
-    if not debug:
-        debug = DEBUG or "bcml-debug" in sys.argv
 
     messager = Messager(api.window)
     with redirect_stderr(sys.stdout):
