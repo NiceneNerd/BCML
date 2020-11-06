@@ -53,10 +53,7 @@ class GameBananaDb:
         req = f"https://api.gamebanana.com/{url}?" + "&".join(
             f"{k}={v}" for k, v in params.items()
         )
-        return requests.get(
-            req,
-            headers={"Authorization": "NiceneNerdRocks"},
-        ).json()
+        return requests.get(req).json()
 
     def update_db(self):
         EXCLUDES = {
