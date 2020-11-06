@@ -1,6 +1,6 @@
 import "./scss/App.scss";
-import BcmlRoot from "./js/bcml.jsx";
-import FirstRun from "./js/firstrun.jsx";
+import App from "./js/App.jsx";
+import FirstRun from "./js/FirstRun.jsx";
 import React from "react";
 import ReactDOM from "react-dom";
 
@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async event => {
     if (window.location.toString().includes("firstrun")) {
         root = <FirstRun />;
     } else {
-        root = <BcmlRoot />;
+        root = <App />;
     }
     ReactDOM.render(root, document.getElementById("root"));
 });
