@@ -86,7 +86,7 @@ class ModSelect extends React.Component {
         return (
             this.state.mods.length > 0 && (
                 <ReactSortable
-                    className="mod-list scroller"
+                    className="mod-list"
                     key={JSON.stringify(this.state.selectedItems)}
                     onChange={this.onSort.bind(this)}
                     options={{ handle: ".mod-handle" }}>

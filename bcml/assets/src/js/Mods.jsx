@@ -443,7 +443,7 @@ class Mods extends React.Component {
                             )}
                         </div>
                     </div>
-                    <div className="scroller" id="mod-info">
+                    <div id="mod-info">
                         <ModInfo
                             mod={this.state.selectedMods[0]}
                             onAction={this.handleAction}

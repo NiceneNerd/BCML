@@ -64,7 +64,7 @@ class OptionsDialog extends React.Component {
 
     render() {
         return (
-            <Popover className="options scroller">
+            <Popover className="options">
                 <Popover.Title>Advanced Options</Popover.Title>
                 {!this.state.loading ? (
                     <Popover.Content>
