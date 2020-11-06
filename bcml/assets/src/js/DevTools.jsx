@@ -16,7 +16,7 @@ import {
 
 import CompareView from "./Compare.jsx";
 import FolderInput from "./Folder.jsx";
-import ModContext from "./App.jsx";
+import ModContext from "./Context.jsx";
 import OptionsDialog from "./Options.jsx";
 import React from "react";
 

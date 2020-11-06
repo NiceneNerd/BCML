@@ -8,7 +8,7 @@ import {
 } from "react-bootstrap";
 
 import InstallModal from "./Install.jsx";
-import { ModContext } from "./App.jsx";
+import ModContext from "./Context.jsx";
 import ModInfo from "./ModInfo.jsx";
 import React from "react";
 import SortSelect from "./SortSelect.jsx";
@@ -23,6 +23,7 @@ class Mods extends React.Component {
             sortReverse: true,
             showHandle: false,
             showInstall: false,
+            showDisabled: true,
             dirty: false,
             mergersReady: false,
             mergers: [],
@@ -199,7 +200,7 @@ class Mods extends React.Component {
         return (
             <>
                 <div className="row">
-                    <div className="col-4" id="mods">
+                    <div id="mods">
                         {this.props.loaded ? (
                             this.context.mods.length > 0 ? (
                                 <SortSelect
@@ -208,6 +209,7 @@ class Mods extends React.Component {
                                             ? [...this.context.mods].reverse()
                                             : this.context.mods
                                     }
+                                    showDisabled={this.state.showDisabled}
                                     showHandle={this.state.showHandle}
                                     onSelect={selected =>
                                         this.setState({
@@ -295,6 +297,29 @@ class Mods extends React.Component {
                                         }>
                                         <i className="material-icons">
                                             reorder
+                                        </i>
+                                    </Button>
+                                </OverlayTrigger>
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            {this.state.showDisabled
+                                                ? "Hide disabled mods"
+                                                : "Show disabled mods"}
+                                        </Tooltip>
+                                    }>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            this.setState({
+                                                showDisabled: !this.state
+                                                    .showDisabled
+                                            })
+                                        }>
+                                        <i className="material-icons">
+                                            {this.state.showDisabled
+                                                ? "visibility_off"
+                                                : "visibility"}
                                         </i>
                                     </Button>
                                 </OverlayTrigger>
@@ -418,7 +443,7 @@ class Mods extends React.Component {
                             )}
                         </div>
                     </div>
-                    <div className="col-8 scroller" id="mod-info">
+                    <div className="scroller" id="mod-info">
                         <ModInfo
                             mod={this.state.selectedMods[0]}
                             onAction={this.handleAction}

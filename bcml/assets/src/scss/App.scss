@@ -170,6 +170,7 @@ body,
         overflow: hidden;
         padding: 0 15px;
         height: 100%;
+        flex-wrap: nowrap;
     }
 
     max-height: 100%;
@@ -189,11 +190,12 @@ body,
     background-color: $bg2;
     box-shadow: 3px 0 9px -2px #191919;
     padding: 4px;
-    width: 100%;
     display: flex;
     flex-direction: column;
     max-height: 100%;
     z-index: 111;
+    min-width: calc(8 * 32px + 4rem);
+    width: 33%;
 }
 
 .mod-list {
@@ -254,7 +256,8 @@ body,
         color: $fg2;
         padding: 0.25em 0.5em;
         text-align: left;
-        overflow-x: auto;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
         min-height: fit-content;
         border: 0;
         transition: background-color ease-out 0.25s;

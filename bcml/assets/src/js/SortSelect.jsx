@@ -1,5 +1,6 @@
 import React from "react";
 import ReactSortable from "react-sortablejs";
+import { ThemeProvider } from "react-bootstrap";
 
 class ModSelect extends React.Component {
     constructor() {
@@ -97,6 +98,7 @@ class ModSelect extends React.Component {
                                 mod.priority
                             )}
                             showHandle={this.props.showHandle}
+                            hide={!this.props.showDisabled && mod.disabled}
                             onClick={e => this.onItemSelect(e, mod)}
                         />
                     ))}
@@ -108,16 +110,14 @@ class ModSelect extends React.Component {
 
 class ModItem extends React.Component {
     render() {
+        let classes = ["list-group-item"];
+        if (this.props.active) classes.push("active");
+        if (this.props.hide) classes.push("d-none");
+        if (this.props.mod.disabled) classes.push("mod-disabled");
+        if (this.props.mod.path.startsWith("QUEUE")) classes.push("mod-queued");
         return (
             <div
-                className={
-                    "list-group-item" +
-                    (this.props.active ? " active" : "") +
-                    (this.props.mod.disabled ? " mod-disabled" : "") +
-                    (this.props.mod.path.startsWith("QUEUE")
-                        ? " mod-queued"
-                        : "")
-                }
+                className={classes.join(" ")}
                 onClick={this.props.onClick}
                 data-id={JSON.stringify(this.props.mod)}>
                 <span

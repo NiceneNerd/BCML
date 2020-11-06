@@ -5,13 +5,12 @@ import BackupModal from "./Backup.jsx";
 import DevTools from "./DevTools.jsx";
 import ErrorDialog from "./Error.jsx";
 import GameBanana from "./GameBanana.jsx";
+import ModContext from "./Context.jsx";
 import Mods from "./Mods.jsx";
 import ProgressModal from "./Progress.jsx";
 import React from "react";
 import SelectsDialog from "./Selects.jsx";
 import Settings from "./Settings.jsx";
-
-export const ModContext = React.createContext();
 
 class App extends React.Component {
     constructor() {
