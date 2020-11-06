@@ -216,13 +216,12 @@ class DeepMerger(mergers.Merger):
         diffs = ParameterIO()
         diffs.objects["FileTable"] = ParameterObject()
         i: int = 0
-        for result in results:
-            if not result:
-                continue
-            for file, diff in result.items():
-                diffs.objects["FileTable"].params[f"File{i}"] = Parameter(file)
-                diffs.lists[file] = diff
-                i += 1
+        for file, diff in sorted(
+            (k, v) for r in [r for r in results if r is not None] for k, v in r.items()
+        ):
+            diffs.objects["FileTable"].params[f"File{i}"] = Parameter(file)
+            diffs.lists[file] = diff
+            i += 1
         return diffs
 
     def log_diff(self, mod_dir: Path, diff_material):
