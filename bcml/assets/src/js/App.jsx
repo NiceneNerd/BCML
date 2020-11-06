@@ -39,16 +39,6 @@ class App extends React.Component {
         };
         this.selects = null;
         this.backupRef = React.createRef();
-        this.handleBackups = this.handleBackups.bind(this);
-        this.handleOldRestore = this.handleOldRestore.bind(this);
-        this.handleInstall = this.handleInstall.bind(this);
-        this.saveSettings = this.saveSettings.bind(this);
-        this.showError = this.showError.bind(this);
-        this.confirm = this.confirm.bind(this);
-        this.refreshMods = this.refreshMods.bind(this);
-        this.export = this.export.bind(this);
-        this.launchGame = this.launchGame.bind(this);
-        this.updateBcml = this.updateBcml.bind(this);
         window.addEventListener("pywebviewready", () => {
             setTimeout(() => {
                 pywebview.api.get_ver().then(res => {
@@ -59,11 +49,17 @@ class App extends React.Component {
         });
     }
 
-    componentDidCatch(error) {
+    componentDidCatch = error => {
         this.showError(error);
-    }
+    };
 
-    saveSettings(settings) {
+    componentDidMount = () => {
+        window.onMsg = msg => {
+            this.setState({ progressStatus: msg });
+        };
+    };
+
+    saveSettings = settings => {
         this.setState(
             {
                 settingsValid: true,
@@ -77,9 +73,9 @@ class App extends React.Component {
                     .then(() => setTimeout(() => window.location.reload(), 500))
                     .catch(this.showError)
         );
-    }
+    };
 
-    confirm(message, callback) {
+    confirm = (message, callback) => {
         this.setState({
             showConfirm: true,
             confirmText: message,
@@ -88,9 +84,9 @@ class App extends React.Component {
                     yesNo ? callback() : null
                 )
         });
-    }
+    };
 
-    showError(error) {
+    showError = error => {
         try {
             console.error(JSON.stringify(error));
         } catch (error) {
@@ -104,9 +100,9 @@ class App extends React.Component {
             },
             () => this.refreshMods()
         );
-    }
+    };
 
-    async handleInstall(mods, options) {
+    handleInstall = async (mods, options) => {
         if (!this.selects) {
             await new Promise(resolve =>
                 this.setState(
@@ -166,9 +162,9 @@ class App extends React.Component {
                     .catch(this.showError);
             }
         );
-    }
+    };
 
-    handleBackups(backup, operation) {
+    handleBackups = (backup, operation) => {
         let progressTitle;
         let action;
         if (operation == "create") {
@@ -210,9 +206,9 @@ class App extends React.Component {
         if (operation == "delete")
             this.confirm("Are you sure you want to delete this backup?", task);
         else task();
-    }
+    };
 
-    handleOldRestore() {
+    handleOldRestore = () => {
         this.setState(
             {
                 showProgress: true,
@@ -235,9 +231,9 @@ class App extends React.Component {
                     .catch(this.showError);
             }
         );
-    }
+    };
 
-    export() {
+    export = () => {
         this.setState(
             {
                 showProgress: true,
@@ -254,15 +250,9 @@ class App extends React.Component {
                     .catch(this.showError);
             }
         );
-    }
+    };
 
-    componentDidMount() {
-        window.onMsg = msg => {
-            this.setState({ progressStatus: msg });
-        };
-    }
-
-    refreshMods() {
+    refreshMods = () => {
         this.setState({ modsLoaded: false }, () => {
             pywebview.api
                 .get_mods({ disabled: true })
@@ -274,9 +264,9 @@ class App extends React.Component {
                 })
                 .catch(this.showError);
         });
-    }
+    };
 
-    launchGame() {
+    launchGame = () => {
         pywebview.api
             .launch_game()
             .then(res => {
@@ -285,9 +275,9 @@ class App extends React.Component {
                 }
             })
             .catch(this.props.onError);
-    }
+    };
 
-    updateBcml() {
+    updateBcml = () => {
         this.setState(
             {
                 progressTitle: "Upgrading BCML",
@@ -312,12 +302,12 @@ class App extends React.Component {
                     .catch(this.showError);
             }
         );
-    }
+    };
 
     setProgress = (title, msg) => {
         this.setState({
             progressTitle: title,
-            progressStatus: msg,
+            progressStatus: msg || "",
             showProgress: true
         });
     };
@@ -364,7 +354,13 @@ class App extends React.Component {
                             onChange={mods => this.setState({ mods })}
                             onInstall={this.handleInstall}
                             onError={this.showError}
-                            onState={this.setState.bind(this)}
+                            onProgress={this.setProgress}
+                            onDone={() =>
+                                this.setState({
+                                    showProgress: false,
+                                    showDone: true
+                                })
+                            }
                             onExport={this.export}
                             onLaunch={this.launchGame}
                         />
@@ -381,7 +377,16 @@ class App extends React.Component {
                     <Tab eventKey="dev-tools" title="Dev Tools">
                         <DevTools
                             onError={this.showError}
-                            onState={this.setState.bind(this)}
+                            onProgress={this.setProgress}
+                            onCancel={() =>
+                                this.setState({ showProgress: false })
+                            }
+                            onDone={() =>
+                                this.setState({
+                                    showProgress: false,
+                                    showDone: true
+                                })
+                            }
                         />
                     </Tab>
                     <Tab eventKey="settings" title="Settings" className="p-2">

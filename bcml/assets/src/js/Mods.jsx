@@ -36,23 +36,17 @@ class Mods extends React.Component {
                     )
                 )
         );
-        this.sanityCheck = this.sanityCheck.bind(this);
-        this.handleAction = this.handleAction.bind(this);
-        this.handleQueue = this.handleQueue.bind(this);
-        this.applyQueue = this.applyQueue.bind(this);
-        this.uninstallAll = this.uninstallAll.bind(this);
-        this.defaultSelect = this.defaultSelect.bind(this);
     }
 
-    defaultSelect() {
+    defaultSelect = () => {
         if (this.state.mods.length > 0) {
             return [this.state.mods[0]];
         } else {
             return [];
         }
-    }
+    };
 
-    sanityCheck() {
+    sanityCheck = () => {
         pywebview.api
             .sanity_check()
             .then(res => {
@@ -71,11 +65,11 @@ class Mods extends React.Component {
                     5000
                 );
             });
-    }
+    };
 
-    componentDidMount() {
+    componentDidMount = () => {
         this.setState({ mods: this.props.mods });
-    }
+    };
 
     static getDerivedStateFromProps(nextProps, prevState) {
         if (JSON.stringify(nextProps.mods) != JSON.stringify(prevState.mods)) {
@@ -83,7 +77,7 @@ class Mods extends React.Component {
         } else return null;
     }
 
-    handleQueue(mods, options) {
+    handleQueue = (mods, options) => {
         this.setState(prevState => {
             let newMods = prevState.mods;
             let priority = newMods.length + 99;
@@ -97,9 +91,9 @@ class Mods extends React.Component {
             }
             return { mods: newMods, showInstall: false, dirty: true };
         });
-    }
+    };
 
-    handleAction(action) {
+    handleAction = action => {
         for (const mod of this.state.selectedMods) {
             console.log(mod);
             if (action == "explore") {
@@ -108,32 +102,21 @@ class Mods extends React.Component {
                 let verb = action.replace(/^\w/, c => c.toUpperCase());
                 if (verb.endsWith("e"))
                     verb = verb.substring(0, verb.length - 1);
-                const task = () =>
-                    this.props.onState(
-                        {
-                            showProgress: true,
-                            progressTitle: `${verb}ing ${mod.name}`
-                        },
-                        () => {
-                            pywebview.api
-                                .mod_action({ mod, action })
-                                .then(res => {
-                                    if (!res.success) {
-                                        throw res.error;
-                                    }
-                                    this.setState({ selectedMods: [] }, () => {
-                                        this.props.onState(
-                                            {
-                                                showProgress: false,
-                                                showDone: true
-                                            },
-                                            () => this.props.onRefresh()
-                                        );
-                                    });
-                                })
-                                .catch(this.props.onError);
-                        }
-                    );
+                const task = () => {
+                    this.props.onProgress(`${verb}ing ${mod.name}`);
+                    pywebview.api
+                        .mod_action({ mod, action })
+                        .then(res => {
+                            if (!res.success) {
+                                throw res.error;
+                            }
+                            this.setState({ selectedMods: [] }, () => {
+                                this.props.onDone();
+                                this.props.onRefresh();
+                            });
+                        })
+                        .catch(this.props.onError);
+                };
                 if (["enable", "update"].includes(action)) task();
                 else
                     this.props.onConfirm(
@@ -142,111 +125,77 @@ class Mods extends React.Component {
                     );
             }
         }
-    }
+    };
 
-    handleRemerge(merger) {
-        this.props.onState(
-            { showProgress: true, progressTitle: `Remerging ${merger}` },
+    handleRemerge = merger => {
+        this.props.onProgress(`Remerging ${merger}`);
+        pywebview.api
+            .remerge({ name: merger })
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
+                this.setState(
+                    {
+                        selectedMods: []
+                    },
+                    () => this.props.onDone()
+                );
+            })
+            .catch(this.props.onError);
+    };
+
+    uninstallAll = () => {
+        this.props.onConfirm(
+            "Are you sure you want to uninstall all of your mods?",
             () => {
+                this.props.onProgress("Uninstalling All Mods");
                 pywebview.api
-                    .remerge({ name: merger })
+                    .uninstall_all()
                     .then(res => {
                         if (!res.success) {
                             throw res.error;
                         }
-                        this.setState(
-                            {
-                                selectedMods: []
-                            },
-                            () =>
-                                this.props.onState({
-                                    showProgress: false,
-                                    showDone: true
-                                })
-                        );
+                        this.props.onDone();
+                        this.props.onRefresh();
+                        this.setState({
+                            selectedMods: []
+                        });
                     })
                     .catch(this.props.onError);
             }
         );
-    }
+    };
 
-    uninstallAll() {
-        this.props.onConfirm(
-            "Are you sure you want to uninstall all of your mods?",
-            () => {
-                this.props.onState(
+    applyQueue = async () => {
+        this.props.onProgress("Applying Changes");
+        let installs = [];
+        let moves = [];
+        for (const [i, mod] of this.state.mods.slice().reverse().entries()) {
+            if (mod.path.startsWith("QUEUE")) installs.push(mod);
+            else {
+                const newPriority = this.state.mods.length - i - 1 + 100;
+                if (mod.priority != newPriority)
+                    moves.push({ mod, priority: newPriority });
+            }
+        }
+        pywebview.api
+            .apply_queue({ installs, moves })
+            .then(res => {
+                if (!res.success) throw res.error;
+
+                this.props.onDone();
+                this.setState(
                     {
-                        showProgress: true,
-                        progressTitle: "Uninstalling All Mods"
+                        showHandle: false,
+                        selectedMods: [],
+                        dirty: false
                     },
-                    () => {
-                        pywebview.api
-                            .uninstall_all()
-                            .then(res => {
-                                if (!res.success) {
-                                    throw res.error;
-                                }
-                                this.props.onState(
-                                    {
-                                        showProgress: false,
-                                        showDone: true
-                                    },
-                                    () => {
-                                        this.props.onRefresh();
-                                        this.setState({
-                                            selectedMods: []
-                                        });
-                                    }
-                                );
-                            })
-                            .catch(this.props.onError);
-                    }
+                    () => this.props.onRefresh()
                 );
-            }
-        );
-    }
-
-    applyQueue() {
-        this.props.onState(
-            { showProgress: true, progressTitle: "Applying Changes" },
-            async () => {
-                let installs = [];
-                let moves = [];
-                for (const [
-                    i,
-                    mod
-                ] of this.state.mods.slice().reverse().entries()) {
-                    if (mod.path.startsWith("QUEUE")) installs.push(mod);
-                    else {
-                        const newPriority =
-                            this.state.mods.length - i - 1 + 100;
-                        if (mod.priority != newPriority)
-                            moves.push({ mod, priority: newPriority });
-                    }
-                }
-                pywebview.api
-                    .apply_queue({ installs, moves })
-                    .then(res => {
-                        if (!res.success) throw res.error;
-
-                        this.props.onState(
-                            { showProgress: false, showDone: true },
-                            () => {
-                                this.setState(
-                                    {
-                                        showHandle: false,
-                                        selectedMods: [],
-                                        dirty: false
-                                    },
-                                    () => this.props.onRefresh()
-                                );
-                            }
-                        );
-                    })
-                    .catch(this.props.onError);
-            }
-        );
-    }
+            })
+            .catch(this.props.onError);
+    };
 
     render() {
         return (

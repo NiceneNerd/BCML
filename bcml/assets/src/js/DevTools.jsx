@@ -40,27 +40,20 @@ class DevTools extends React.Component {
     constructor() {
         super();
         this.state = JSON.parse(JSON.stringify(this.blank));
-        this.handleChange = this.handleChange.bind(this);
-        this.handlePath = this.handlePath.bind(this);
-        this.setOptions = this.setOptions.bind(this);
-        this.createBnp = this.createBnp.bind(this);
-        this.generateRstb = this.generateRstb.bind(this);
-        this.upgradeBnp = this.upgradeBnp.bind(this);
-        this.exportBnp = this.exportBnp.bind(this);
     }
 
-    setOptions(options) {
+    setOptions = options => {
         this.setState({ options: options });
-    }
+    };
 
-    handleChange(e) {
+    handleChange = e => {
         try {
             e.persist();
         } catch (error) {}
         this.setState({ [e.target.id]: e.target.value });
-    }
+    };
 
-    handlePath(e) {
+    handlePath = e => {
         try {
             e.persist();
         } catch (error) {}
@@ -75,105 +68,70 @@ class DevTools extends React.Component {
                 this.setState({ ...info });
             }
         );
-    }
+    };
 
-    createBnp() {
-        this.props.onState(
-            { showProgress: true, progressTitle: "Creating BNP..." },
-            () => {
-                let { showDepends, showOptions, ...args } = this.state;
-                pywebview.api
-                    .create_bnp(args)
-                    .then(res => {
-                        if (!res.success) {
-                            if (res.error && res.error == "cancelled") {
-                                this.props.onState({ showProgress: false });
-                                return;
-                            } else {
-                                throw res.error;
-                            }
-                        }
-                        this.setState(
-                            {
-                                ...JSON.parse(JSON.stringify(this.blank))
-                            },
-                            () =>
-                                this.props.onState({
-                                    showProgress: false,
-                                    showDone: true
-                                })
-                        );
-                    })
-                    .catch(this.props.onError);
-            }
-        );
-    }
+    createBnp = () => {
+        this.props.onProgress("Creating BNP...");
+        let { showDepends, showOptions, ...args } = this.state;
+        pywebview.api
+            .create_bnp(args)
+            .then(res => {
+                if (!res.success) {
+                    if (res.error && res.error == "cancelled") {
+                        this.props.onCancel();
+                        return;
+                    } else {
+                        throw res.error;
+                    }
+                }
+                this.setState(
+                    {
+                        ...JSON.parse(JSON.stringify(this.blank))
+                    },
+                    () => this.props.onDone()
+                );
+            })
+            .catch(this.props.onError);
+    };
 
-    exportBnp() {
-        this.props.onState(
-            {
-                showProgress: true,
-                progressTitle: "Exporting BNP to Standalone Mod"
-            },
-            () => {
-                pywebview.api
-                    .bnp_to_gfx()
-                    .then(res => {
-                        if (!res.success) {
-                            throw res.error;
-                        }
-                        this.props.onState({
-                            showProgress: false,
-                            showDone: true
-                        });
-                    })
-                    .catch(this.props.onError);
-            }
-        );
-    }
+    exportBnp = () => {
+        this.props.onProgress("Exporting BNP to Standalone Mod");
+        pywebview.api
+            .bnp_to_gfx()
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
+                this.props.onDone();
+            })
+            .catch(this.props.onError);
+    };
 
-    generateRstb() {
-        this.props.onState(
-            {
-                showProgress: true,
-                progressTitle: "Generating RSTB for Mod"
-            },
-            () => {
-                pywebview.api
-                    .gen_rstb()
-                    .then(res => {
-                        if (!res.success) {
-                            throw res.error;
-                        }
-                        this.props.onState({
-                            showProgress: false,
-                            showDone: true
-                        });
-                    })
-                    .catch(this.props.onError);
-            }
-        );
-    }
+    generateRstb = () => {
+        this.props.onProgress("Generating RSTB for Mod");
+        pywebview.api
+            .gen_rstb()
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
+                this.props.onDone();
+            })
+            .catch(this.props.onError);
+    };
 
-    upgradeBnp() {
-        this.props.onState(
-            { showProgress: true, progressTitle: "Upgrading BNP" },
-            () => {
-                pywebview.api
-                    .upgrade_bnp()
-                    .then(res => {
-                        if (!res.success) {
-                            throw res.error;
-                        }
-                        this.props.onState({
-                            showProgress: false,
-                            showDone: true
-                        });
-                    })
-                    .catch(this.props.onError);
-            }
-        );
-    }
+    upgradeBnp = () => {
+        this.props.onProgress("Upgrading BNP");
+        pywebview.api
+            .upgrade_bnp()
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
+                this.props.onDone();
+            })
+            .catch(this.props.onError);
+    };
 
     render() {
         return (
