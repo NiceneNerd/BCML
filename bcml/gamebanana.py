@@ -142,16 +142,6 @@ class GameBananaDb:
         if res["Withhold().bIsWithheld()"] or res["Trash().bIsTrashed()"]:
             return {}
 
-        def find_meta(data: dict, name: str) -> bool:
-            for v in data.values():
-                if isinstance(v, str) and v == name:
-                    return True
-                if isinstance(v, list) and name in v:
-                    return True
-                if isinstance(v, dict) and find_meta(v, name):
-                    return True
-            return False
-
         files = json.dumps(res["Files().aFiles()"])
         if not (
             "info.json" in files
