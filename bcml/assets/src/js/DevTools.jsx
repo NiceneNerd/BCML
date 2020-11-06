@@ -1,22 +1,24 @@
-import React from "react";
 import {
+    Badge,
+    Button,
     Col,
     Form,
-    Row,
-    OverlayTrigger,
-    Tooltip,
-    Button,
-    Modal,
-    Badge,
-    Spinner,
-    InputGroup,
     FormControl,
+    InputGroup,
+    Modal,
+    OverlayTrigger,
+    Row,
+    Spinner,
+    Tab,
     Tabs,
-    Tab
+    Tooltip
 } from "react-bootstrap";
-import FolderInput from "./Folder.jsx";
-import OptionsDialog from "./Options.jsx";
+
 import CompareView from "./Compare.jsx";
+import FolderInput from "./Folder.jsx";
+import ModContext from "./App.jsx";
+import OptionsDialog from "./Options.jsx";
+import React from "react";
 
 class DevTools extends React.Component {
     blank = {
@@ -352,14 +354,14 @@ class DevTools extends React.Component {
 }
 
 class Dependencies extends React.Component {
+    static contextType = ModContext;
+
     constructor(props) {
         super(props);
 
         this.state = {
             depends: [],
-            manualId: "",
-            mods: [],
-            modsLoaded: false
+            manualId: ""
         };
         this.addDepend = this.addDepend.bind(this);
         this.removeDepend = this.removeDepend.bind(this);
@@ -378,18 +380,11 @@ class Dependencies extends React.Component {
     }
 
     componentDidMount() {
-        this.setState(
-            {
-                depends: this.props.depends.map(depend => {
-                    return { id: depend, name: atob(depend) };
-                })
-            },
-            () => {
-                pywebview.api.get_mods({ disabled: true }).then(res => {
-                    this.setState({ mods: res.data, modsLoaded: true });
-                });
-            }
-        );
+        this.setState({
+            depends: this.props.depends.map(depend => {
+                return { id: depend, name: atob(depend) };
+            })
+        });
     }
 
     render() {
@@ -409,35 +404,26 @@ class Dependencies extends React.Component {
                     <div className="my-1">
                         <h5>Installed Mods</h5>
                         <div className="bg-dark p-2 rounded">
-                            {this.state.modsLoaded ? (
-                                this.state.mods.length > 0 ? (
-                                    this.state.mods.map(mod => (
-                                        <div key={mod.id} className="d-flex">
-                                            <div className="flex-grow-1">
-                                                {mod.name}
-                                            </div>
-                                            <div className="add-depend">
-                                                <a
-                                                    onClick={() =>
-                                                        this.addDepend(mod)
-                                                    }>
-                                                    <i className="material-icons text-success">
-                                                        add_circle
-                                                    </i>
-                                                </a>
-                                            </div>
+                            {this.context.mods.length > 0 ? (
+                                this.context.mods.map(mod => (
+                                    <div key={mod.id} className="d-flex">
+                                        <div className="flex-grow-1">
+                                            {mod.name}
                                         </div>
-                                    ))
-                                ) : (
-                                    <span>No mods installed</span>
-                                )
+                                        <div className="add-depend">
+                                            <a
+                                                onClick={() =>
+                                                    this.addDepend(mod)
+                                                }>
+                                                <i className="material-icons text-success">
+                                                    add_circle
+                                                </i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))
                             ) : (
-                                <div className="text-center">
-                                    <Spinner
-                                        variant="secondary"
-                                        animation="border"
-                                    />
-                                </div>
+                                <span>No mods installed</span>
                             )}
                         </div>
                     </div>

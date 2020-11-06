@@ -1,15 +1,17 @@
 import { Button, Dropdown, Fade, Modal, Tab, Tabs } from "react-bootstrap";
 
-import DevTools from "./DevTools.jsx";
-import GameBanana from "./GameBanana.jsx";
-import Settings from "./Settings.jsx";
-import Mods from "./Mods.jsx";
+import AboutDialog from "./About.jsx";
 import BackupModal from "./Backup.jsx";
+import DevTools from "./DevTools.jsx";
+import ErrorDialog from "./Error.jsx";
+import GameBanana from "./GameBanana.jsx";
+import Mods from "./Mods.jsx";
 import ProgressModal from "./Progress.jsx";
 import React from "react";
-import ErrorDialog from "./Error.jsx";
 import SelectsDialog from "./Selects.jsx";
-import AboutDialog from "./About.jsx";
+import Settings from "./Settings.jsx";
+
+export const ModContext = React.createContext();
 
 class App extends React.Component {
     constructor() {
@@ -323,7 +325,6 @@ class App extends React.Component {
                     <Dropdown.Toggle id="dropdown-basic">
                         <i className="material-icons">menu</i>
                     </Dropdown.Toggle>
-
                     <Dropdown.Menu>
                         <Dropdown.Item
                             onClick={() => pywebview.api.open_help()}>
@@ -341,86 +342,90 @@ class App extends React.Component {
                         </Dropdown.Item>
                     </Dropdown.Menu>
                 </Dropdown>
-                <Tabs id="tabs" mountOnEnter transition={Fade}>
-                    <Tab eventKey="mod-list" title="Mods">
-                        <Mods
-                            mods={this.state.mods}
-                            onBackup={() =>
-                                this.setState({ showBackups: true })
-                            }
-                            loaded={this.state.modsLoaded}
-                            onRefresh={this.refreshMods}
-                            onConfirm={this.confirm}
-                            onChange={mods => this.setState({ mods })}
-                            onInstall={this.handleInstall}
-                            onError={this.showError}
-                            onProgress={this.setProgress}
-                            onDone={() =>
-                                this.setState({
-                                    showProgress: false,
-                                    showDone: true
-                                })
-                            }
-                            onExport={this.export}
-                            onLaunch={this.launchGame}
-                        />
-                    </Tab>
-                    <Tab eventKey="gamebanana" title="GameBanana">
-                        <GameBanana
-                            onError={this.showError}
-                            onProgress={this.setProgress}
-                            onDone={() =>
-                                this.setState({ showProgress: false })
-                            }
-                        />
-                    </Tab>
-                    <Tab eventKey="dev-tools" title="Dev Tools">
-                        <DevTools
-                            onError={this.showError}
-                            onProgress={this.setProgress}
-                            onCancel={() =>
-                                this.setState({ showProgress: false })
-                            }
-                            onDone={() =>
-                                this.setState({
-                                    showProgress: false,
-                                    showDone: true
-                                })
-                            }
-                        />
-                    </Tab>
-                    <Tab eventKey="settings" title="Settings" className="p-2">
-                        <Settings
-                            saving={this.state.savingSettings}
-                            onFail={() =>
-                                this.setState({
-                                    savingSettings: false,
-                                    showError: true,
-                                    error: {
-                                        short:
-                                            "Your settings are not valid and cannot be saved. " +
-                                            "Check that all required fields are completed and " +
-                                            "green before submitting. If you have trouble, consult " +
-                                            "the in-app help.",
-                                        error_text:
-                                            "Your settings are not valid and cannot be saved. " +
-                                            "Check that all required fields are completed and " +
-                                            "green before submitting. If you have trouble, consult " +
-                                            "the in-app help."
-                                    }
-                                })
-                            }
-                            onSubmit={this.saveSettings}
-                        />
-                        <Button
-                            className="fab"
-                            onClick={() =>
-                                this.setState({ savingSettings: true })
-                            }>
-                            <i className="material-icons">save</i>
-                        </Button>
-                    </Tab>
-                </Tabs>
+                <ModContext.Provider value={{ mods: this.state.mods }}>
+                    <Tabs id="tabs" mountOnEnter transition={Fade}>
+                        <Tab eventKey="mod-list" title="Mods">
+                            <Mods
+                                onBackup={() =>
+                                    this.setState({ showBackups: true })
+                                }
+                                loaded={this.state.modsLoaded}
+                                onRefresh={this.refreshMods}
+                                onConfirm={this.confirm}
+                                onChange={mods => this.setState({ mods })}
+                                onInstall={this.handleInstall}
+                                onError={this.showError}
+                                onProgress={this.setProgress}
+                                onDone={() =>
+                                    this.setState({
+                                        showProgress: false,
+                                        showDone: true
+                                    })
+                                }
+                                onExport={this.export}
+                                onLaunch={this.launchGame}
+                            />
+                        </Tab>
+                        <Tab eventKey="gamebanana" title="GameBanana">
+                            <GameBanana
+                                onError={this.showError}
+                                onProgress={this.setProgress}
+                                onDone={() =>
+                                    this.setState({ showProgress: false })
+                                }
+                            />
+                        </Tab>
+                        <Tab eventKey="dev-tools" title="Dev Tools">
+                            <DevTools
+                                onError={this.showError}
+                                onProgress={this.setProgress}
+                                onCancel={() =>
+                                    this.setState({ showProgress: false })
+                                }
+                                onDone={() =>
+                                    this.setState({
+                                        showProgress: false,
+                                        showDone: true
+                                    })
+                                }
+                            />
+                        </Tab>
+                        <Tab
+                            eventKey="settings"
+                            title="Settings"
+                            className="p-2">
+                            <Settings
+                                saving={this.state.savingSettings}
+                                onFail={() =>
+                                    this.setState({
+                                        savingSettings: false,
+                                        showError: true,
+                                        error: {
+                                            short:
+                                                "Your settings are not valid and cannot be saved. " +
+                                                "Check that all required fields are completed and " +
+                                                "green before submitting. If you have trouble, consult " +
+                                                "the in-app help.",
+                                            error_text:
+                                                "Your settings are not valid and cannot be saved. " +
+                                                "Check that all required fields are completed and " +
+                                                "green before submitting. If you have trouble, consult " +
+                                                "the in-app help."
+                                        }
+                                    })
+                                }
+                                onSubmit={this.saveSettings}
+                            />
+                            <Button
+                                className="fab"
+                                onClick={() =>
+                                    this.setState({ savingSettings: true })
+                                }>
+                                <i className="material-icons">save</i>
+                            </Button>
+                        </Tab>
+                    </Tabs>
+                </ModContext.Provider>
                 <ProgressModal
                     show={this.state.showProgress}
                     title={this.state.progressTitle}

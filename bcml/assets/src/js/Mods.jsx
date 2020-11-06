@@ -3,16 +3,19 @@ import {
     ButtonGroup,
     Dropdown,
     OverlayTrigger,
-    Tooltip,
-    Spinner
+    Spinner,
+    Tooltip
 } from "react-bootstrap";
 
 import InstallModal from "./Install.jsx";
+import { ModContext } from "./App.jsx";
 import ModInfo from "./ModInfo.jsx";
 import React from "react";
 import SortSelect from "./SortSelect.jsx";
 
 class Mods extends React.Component {
+    static contextType = ModContext;
+
     constructor() {
         super();
         this.state = {
@@ -20,7 +23,6 @@ class Mods extends React.Component {
             sortReverse: true,
             showHandle: false,
             showInstall: false,
-            mods: [],
             dirty: false,
             mergersReady: false,
             mergers: [],
@@ -39,8 +41,8 @@ class Mods extends React.Component {
     }
 
     defaultSelect = () => {
-        if (this.state.mods.length > 0) {
-            return [this.state.mods[0]];
+        if (this.context.mods.length > 0) {
+            return [this.context.mods[0]];
         } else {
             return [];
         }
@@ -65,10 +67,6 @@ class Mods extends React.Component {
                     5000
                 );
             });
-    };
-
-    componentDidMount = () => {
-        this.setState({ mods: this.props.mods });
     };
 
     static getDerivedStateFromProps(nextProps, prevState) {
@@ -171,10 +169,10 @@ class Mods extends React.Component {
         this.props.onProgress("Applying Changes");
         let installs = [];
         let moves = [];
-        for (const [i, mod] of this.state.mods.slice().reverse().entries()) {
+        for (const [i, mod] of this.context.mods.slice().reverse().entries()) {
             if (mod.path.startsWith("QUEUE")) installs.push(mod);
             else {
-                const newPriority = this.state.mods.length - i - 1 + 100;
+                const newPriority = this.context.mods.length - i - 1 + 100;
                 if (mod.priority != newPriority)
                     moves.push({ mod, priority: newPriority });
             }
@@ -203,12 +201,12 @@ class Mods extends React.Component {
                 <div className="row">
                     <div className="col-4" id="mods">
                         {this.props.loaded ? (
-                            this.state.mods.length > 0 ? (
+                            this.context.mods.length > 0 ? (
                                 <SortSelect
                                     mods={
                                         this.state.sortReverse
-                                            ? [...this.state.mods].reverse()
-                                            : this.state.mods
+                                            ? [...this.context.mods].reverse()
+                                            : this.context.mods
                                     }
                                     showHandle={this.state.showHandle}
                                     onSelect={selected =>
