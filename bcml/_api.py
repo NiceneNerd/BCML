@@ -15,6 +15,7 @@ except ImportError:
 # fmt: on
 
 import base64
+from build.nsis.pkgs.pip._vendor.pyparsing import Optional
 import json
 import requests
 import traceback
@@ -28,7 +29,7 @@ from shutil import rmtree, copyfile
 from tempfile import mkdtemp
 from time import sleep
 from threading import Thread
-from typing import List
+from typing import Any, Dict, List, Tuple, Union
 from xml.dom import minidom
 
 try:
@@ -220,7 +221,9 @@ class Api:
                     "Packaged mods (*.bnp;*.7z;*.zip;*.rar)",
                     "Mod meta (*.txt;*.json)",
                     "All files (*.*)",
-                ),
+                )
+                if "types" not in params
+                else params["types"],
                 allow_multiple=True if "multiple" not in params else params["multiple"],
             )
             or []
@@ -528,6 +531,46 @@ class Api:
             meta=meta,
             options=params["options"],
         )
+
+    def select_bnp_with_meta(self, params=None):
+        file = self.file_pick({"types": ("BOTW Nano Patch (*.bnp)",), "multiple": False})
+        if file:
+            return {"file": file[0], "meta": install.extract_mod_meta(Path(file[0]))}
+        return
+
+    @win_or_lose
+    def convert_bnp(self, params) -> List[str]:
+        bnp = Path(params["mod"])
+        mod = install.open_mod(bnp)
+        warnings = dev.convert_mod(mod, params["wiiu"], params["warn"])
+        out = self.window.create_file_dialog(
+            webviewb.SAVE_DIALOG,
+            file_types=("BOTW Nano Patch (*.bnp)", "All files (*.*)"),
+            save_filename=bnp.stem + f"_{'wiiu' if params['wiiu'] else 'switch'}.bnp",
+        )
+        if not out:
+            raise Exception("canceled")
+        x_args = [
+            install.ZPATH,
+            "a",
+            out if isinstance(out, str) else out[0],
+            f'{str(mod / "*")}',
+        ]
+        if system() == "Windows":
+            result = run(
+                x_args,
+                capture_output=True,
+                universal_newlines=True,
+                creationflags=util.CREATE_NO_WINDOW,
+            )
+        else:
+            result = run(
+                x_args, capture_output=True, universal_newlines=True, check=True
+            )
+        if result.stderr:
+            raise RuntimeError(result.stderr)
+        rmtree(mod, ignore_errors=True)
+        return warnings
 
     def get_existing_meta(self, params):
         path = Path(params["path"])

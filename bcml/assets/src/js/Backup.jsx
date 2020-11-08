@@ -1,4 +1,10 @@
-import { Button, ButtonGroup, FormControl, InputGroup, Modal } from "react-bootstrap";
+import {
+    Button,
+    ButtonGroup,
+    FormControl,
+    InputGroup,
+    Modal
+} from "react-bootstrap";
 
 import React from "react";
 
@@ -24,16 +30,19 @@ class BackupModal extends React.Component {
 
     render() {
         return (
-            <Modal show={this.props.show} onHide={this.props.onClose}>
+            <Modal
+                show={this.props.show}
+                style={{ opacity: this.props.busy ? "0" : "1.0" }}
+                onHide={this.props.onClose}>
                 <Modal.Header closeButton>
                     <Modal.Title>Backup and Restore Mods</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <p>
-                        Here you can backup and restore entire mod configurations. The
-                        backups are complete and exact: what you restore will be identical
-                        to what you backed up. (Note that this is not guaranteed for 2.8
-                        backups.)
+                        Here you can backup and restore entire mod
+                        configurations. The backups are complete and exact: what
+                        you restore will be identical to what you backed up.
+                        (Note that this is not guaranteed for 2.8 backups.)
                     </p>
                     <hr />
                     <div className="h5">Create Backup</div>
@@ -41,13 +50,18 @@ class BackupModal extends React.Component {
                         <FormControl
                             placeholder="Backup name"
                             value={this.state.backupName}
-                            onChange={e => this.setState({ backupName: e.target.value })}
+                            onChange={e =>
+                                this.setState({ backupName: e.target.value })
+                            }
                         />
                         <InputGroup.Append>
                             <Button
                                 variant="primary"
                                 onClick={() =>
-                                    this.props.onCreate(this.state.backupName, "create")
+                                    this.props.onCreate(
+                                        this.state.backupName,
+                                        "create"
+                                    )
                                 }>
                                 Create
                             </Button>
@@ -69,7 +83,10 @@ class BackupModal extends React.Component {
                                     <Button
                                         variant="success"
                                         onClick={() =>
-                                            this.props.onRestore(backup, "restore")
+                                            this.props.onRestore(
+                                                backup,
+                                                "restore"
+                                            )
                                         }>
                                         <i className="material-icons">
                                             settings_backup_restore
@@ -78,7 +95,10 @@ class BackupModal extends React.Component {
                                     <Button
                                         variant="danger"
                                         onClick={() =>
-                                            this.props.onDelete(backup, "delete")
+                                            this.props.onDelete(
+                                                backup,
+                                                "delete"
+                                            )
                                         }>
                                         <i className="material-icons">delete</i>
                                     </Button>

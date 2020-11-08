@@ -797,6 +797,21 @@ class TempModContext(AbstractContextManager):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
 
+class TempSettingsContext(AbstractContextManager):
+    _settings: dict
+    _tmp_settings: dict
+
+    def __init__(self, tmp_settings: dict):
+        self._settings = get_settings().copy()
+        self._tmp_settings = tmp_settings
+
+    def __enter__(self):
+        getattr(get_settings, "settings").update(self._tmp_settings)
+
+    def __exit__(self, exctype, excinst, exctb):
+        setattr(get_settings, "settings", self._settings)
+
+
 def get_modpack_dir() -> Path:
     return getattr(
         get_modpack_dir,

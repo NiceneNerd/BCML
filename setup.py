@@ -53,6 +53,7 @@ setup(
         "aamp>=1.4.1",
         "byml>=2.3.1",
         "botw-utils==0.2.3",
+        "botw-havok~=0.3.17",
         "cefpython3~=66.0",
         "oead>=1.1.4",
         "pythonnet>=2.5.0rc2; platform_system=='Windows'",

@@ -1,4 +1,5 @@
 import {
+    Alert,
     Badge,
     Button,
     Col,
@@ -36,7 +37,8 @@ class DevTools extends React.Component {
         depends: [],
         showDepends: false,
         showOptions: false,
-        showCompare: false
+        showCompare: false,
+        showConvert: false
     };
 
     constructor() {
@@ -313,6 +315,15 @@ class DevTools extends React.Component {
                             </Col>
                             <Col>
                                 <Button
+                                    variant="additional"
+                                    onClick={() =>
+                                        this.setState({ showConvert: true })
+                                    }>
+                                    Convert BNP Platform
+                                </Button>
+                            </Col>
+                            <Col>
+                                <Button
                                     variant="danger"
                                     onClick={this.exportBnp}>
                                     BNP to Standalone
@@ -347,6 +358,12 @@ class DevTools extends React.Component {
                 <CompareView
                     show={this.state.showCompare}
                     onHide={() => this.setState({ showCompare: false })}
+                />
+                <ModConverter
+                    show={this.state.showConvert}
+                    onClose={() => this.setState({ showConvert: false })}
+                    onProgress={this.props.onProgress}
+                    onDone={this.props.onCancel}
                 />
             </>
         );
@@ -910,6 +927,225 @@ class ModOptions extends React.Component {
                             })
                         }>
                         OK
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        );
+    }
+}
+
+class ModConverter extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            file: "",
+            meta: null,
+            results: null,
+            busy: false,
+            warn: false
+        };
+    }
+
+    componentDidUpdate = prevProps => {
+        if (prevProps.show != this.props.show) this.reset();
+    };
+
+    reset = () => {
+        this.setState({ file: "", meta: null, results: null, warn: false });
+    };
+
+    browse = async () => {
+        let res = await pywebview.api.select_bnp_with_meta();
+        if (res) {
+            this.setState({ ...res, results: null });
+        }
+    };
+
+    convert = () => {
+        this.setState({ busy: true }, async () => {
+            this.props.onProgress(
+                `Converting ${this.state.meta.name} to ${
+                    this.state.meta.platform != "wiiu" ? "Wii U" : "Switch"
+                }.`
+            );
+            this.setState(
+                {
+                    results: await pywebview.api.convert_bnp({
+                        mod: this.state.file,
+                        wiiu: this.state.meta.platform != "wiiu",
+                        warn: this.state.warn
+                    }),
+                    busy: false
+                },
+                () => this.props.onDone()
+            );
+        });
+    };
+
+    render() {
+        return (
+            <Modal
+                show={this.props.show}
+                style={{ opacity: this.state.busy ? "0" : "1.0" }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Convert BNP Platform</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group>
+                            <Form.Label>BNP mod to convert</Form.Label>
+                            <InputGroup>
+                                <FormControl
+                                    placeholder="BNP to convert"
+                                    value={this.state.file}
+                                    onChange={e =>
+                                        this.setState({
+                                            file: e.currentTarget.value
+                                        })
+                                    }
+                                />
+                                <InputGroup.Append>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={this.browse}>
+                                        Browse...
+                                    </Button>
+                                </InputGroup.Append>
+                            </InputGroup>
+                        </Form.Group>
+                        {this.state.meta && !this.state.results && (
+                            <>
+                                <Alert variant="info">
+                                    <Alert.Heading>
+                                        {this.state.meta.name}
+                                    </Alert.Heading>
+                                    <p>
+                                        This mod is for{" "}
+                                        <strong>
+                                            {this.state.meta.platform == "wiiu"
+                                                ? "Wii U"
+                                                : "Switch"}
+                                        </strong>
+                                        , to be converted to{" "}
+                                        <strong>
+                                            {this.state.meta.platform != "wiiu"
+                                                ? "Wii U"
+                                                : "Switch"}
+                                        </strong>
+                                    </p>
+                                </Alert>
+                                <Form.Group>
+                                    <Form.Label>
+                                        Automatic platform conversion is{" "}
+                                        <strong>
+                                            <em>very limited</em>
+                                        </strong>
+                                        . Only a few types of mods can be fully
+                                        converted. Please select how you would
+                                        like BCML to handle files it cannot
+                                        convert:
+                                    </Form.Label>
+                                    <Form.Check
+                                        label="Stop and report error"
+                                        type="radio"
+                                        name="error"
+                                        value="fail"
+                                        checked={!this.state.warn}
+                                        onChange={e =>
+                                            this.setState({
+                                                warn: !e.currentTarget.checked
+                                            })
+                                        }
+                                    />
+                                    <Form.Check
+                                        label="Convert whatever possible and return list of warnings"
+                                        type="radio"
+                                        name="error"
+                                        value="warn"
+                                        checked={this.state.warn}
+                                        onChange={e =>
+                                            this.setState({
+                                                warn: e.currentTarget.checked
+                                            })
+                                        }
+                                    />
+                                </Form.Group>
+                            </>
+                        )}
+                        {this.state.results && (
+                            <Alert
+                                variant={
+                                    this.state.results.success
+                                        ? "success"
+                                        : "danger"
+                                }>
+                                <Alert.Heading>
+                                    {this.state.results.success
+                                        ? "Conversion successful!"
+                                        : "Conversion failed!"}
+                                </Alert.Heading>
+                                {this.state.results.success ? (
+                                    <>
+                                        <p>
+                                            {this.state.meta.name} was
+                                            successfully converted to{" "}
+                                            {this.state.meta.platform != "wiiu"
+                                                ? "Wii U"
+                                                : "Switch"}
+                                            .{" "}
+                                            {this.state.results.data.length >
+                                                0 &&
+                                                `There were ${this.state.results.data.length} warnings:`}
+                                        </p>
+                                        {this.state.results.data.length > 0 && (
+                                            <Form.Control
+                                                readOnly
+                                                as="textarea"
+                                                rows={5}
+                                                value={this.state.results.data.map(
+                                                    warn => `${warn}\n`
+                                                )}
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p>
+                                            {this.state.meta.name} could not be
+                                            converted to{" "}
+                                            {this.state.meta.platform != "wiiu"
+                                                ? "Wii U"
+                                                : "Switch"}
+                                            . Reason:
+                                            <br />"
+                                            {this.state.results.error.short}"
+                                            <br />
+                                            Further details:
+                                        </p>
+                                        <Form.Control
+                                            readOnly
+                                            as="textarea"
+                                            rows={5}
+                                            value={
+                                                this.state.results.error
+                                                    .error_text
+                                            }
+                                        />
+                                    </>
+                                )}
+                            </Alert>
+                        )}
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer className="alignright">
+                    <Button variant="secondary" onClick={this.props.onClose}>
+                        Close
+                    </Button>
+                    <Button
+                        variant="primary"
+                        disabled={!this.state.file || this.state.results}
+                        onClick={this.convert}>
+                        Convert
                     </Button>
                 </Modal.Footer>
             </Modal>

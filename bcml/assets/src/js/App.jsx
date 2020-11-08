@@ -456,6 +456,7 @@ class App extends React.Component {
                 />
                 <BackupModal
                     show={this.state.showBackups}
+                    busy={this.state.showProgress}
                     ref={this.backupRef}
                     onCreate={this.handleBackups}
                     onRestore={this.handleBackups}
