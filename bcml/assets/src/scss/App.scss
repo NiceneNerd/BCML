@@ -580,10 +580,16 @@ Fade {
     }
 }
 
-.dev-other .btn {
-    white-space: nowrap;
-    width: 100%;
-    margin-bottom: 0.66rem;
+.dev-other {
+    .col {
+        flex-basis: 50%;
+    }
+
+    .btn {
+        white-space: nowrap;
+        width: 100%;
+        margin-bottom: 0.66rem;
+    }
 }
 
 .bnp {

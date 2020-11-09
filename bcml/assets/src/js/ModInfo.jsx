@@ -97,7 +97,7 @@ class ModInfo extends React.Component {
                         variant="primary"
                         size="sm"
                         title="Explore"
-                        disabled={!this.props.mod}
+                        disabled={!this.props.mod || this.props.multi}
                         onClick={() => this.props.onAction("explore")}>
                         <i className="material-icons">folder_open</i>{" "}
                         <span>Explore</span>
@@ -128,7 +128,7 @@ class ModInfo extends React.Component {
                         variant="info"
                         size="sm"
                         title="Update"
-                        disabled={!this.props.mod}
+                        disabled={!this.props.mod || this.props.multi}
                         onClick={() => this.props.onAction("update")}>
                         <i className="material-icons">update</i>{" "}
                         <span>Update</span>
@@ -138,7 +138,7 @@ class ModInfo extends React.Component {
                             variant="secondary"
                             size="sm"
                             title="Reprocess"
-                            disabled={!this.props.mod}
+                            disabled={!this.props.mod || this.props.multi}
                             onClick={() => this.props.onAction("reprocess")}>
                             <i className="material-icons">refresh</i>{" "}
                             <span>Reprocess</span>

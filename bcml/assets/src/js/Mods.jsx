@@ -1,6 +1,7 @@
 import {
     Button,
     ButtonGroup,
+    ButtonToolbar,
     Dropdown,
     OverlayTrigger,
     Spinner,
@@ -70,15 +71,9 @@ class Mods extends React.Component {
             });
     };
 
-    static getDerivedStateFromProps(nextProps, prevState) {
-        if (JSON.stringify(nextProps.mods) != JSON.stringify(prevState.mods)) {
-            return { mods: nextProps.mods, selectedMods: [nextProps.mods[0]] };
-        } else return null;
-    }
-
     handleQueue = (mods, options) => {
         this.setState(prevState => {
-            let newMods = prevState.mods;
+            let newMods = this.context.mods;
             let priority = newMods.length + 99;
             for (const [i, mod] of mods.entries()) {
                 newMods.push({
@@ -93,37 +88,49 @@ class Mods extends React.Component {
     };
 
     handleAction = action => {
+        let tasks = [];
+        let verb = action.replace(/^\w/, c => c.toUpperCase());
+        if (verb.endsWith("e")) verb = verb.substring(0, verb.length - 1);
         for (const mod of this.state.selectedMods) {
-            console.log(mod);
             if (action == "explore") {
-                pywebview.api.explore({ mod: mod });
+                tasks.push(() => pywebview.api.explore({ mod: mod }));
             } else {
-                let verb = action.replace(/^\w/, c => c.toUpperCase());
-                if (verb.endsWith("e"))
-                    verb = verb.substring(0, verb.length - 1);
-                const task = () => {
+                tasks.push(async () => {
                     this.props.onProgress(`${verb}ing ${mod.name}`);
-                    pywebview.api
-                        .mod_action({ mod, action })
-                        .then(res => {
-                            if (!res.success) {
-                                throw res.error;
-                            }
-                            this.setState({ selectedMods: [] }, () => {
-                                this.props.onDone();
-                                this.props.onRefresh();
-                            });
-                        })
-                        .catch(this.props.onError);
-                };
-                if (["enable", "update"].includes(action)) task();
-                else
-                    this.props.onConfirm(
-                        `Are you sure you want to ${action} ${mod.name}?`,
-                        task
-                    );
+                    try {
+                        const res = await pywebview.api.mod_action({
+                            mod,
+                            action
+                        });
+                        if (!res.success) {
+                            throw res.error;
+                        }
+                    } catch (err) {
+                        this.props.onError(err);
+                    }
+                });
             }
         }
+        let queue = async () => {
+            for (const task of tasks) {
+                try {
+                    await task();
+                } catch (err) {
+                    this.props.onError(err);
+                    break;
+                }
+            }
+            this.props.onDone();
+            this.props.onRefresh();
+        };
+        if (["enable", "update"].includes(action)) queue();
+        else
+            this.props.onConfirm(
+                `Are you sure you want to ${action} ${this.state.selectedMods
+                    .map(m => m.name)
+                    .join(", ")}?`,
+                queue
+            );
     };
 
     handleRemerge = merger => {
@@ -446,6 +453,7 @@ class Mods extends React.Component {
                     <div id="mod-info">
                         <ModInfo
                             mod={this.state.selectedMods[0]}
+                            multi={this.state.selectedMods.length > 1}
                             onAction={this.handleAction}
                         />
                     </div>
