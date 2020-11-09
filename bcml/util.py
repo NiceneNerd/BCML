@@ -553,6 +553,7 @@ DEFAULT_SETTINGS = {
     "no_cemu": False,
     "wiiu": True,
     "no_hardlinks": False,
+    "force_7z": False,
 }
 
 
@@ -1371,10 +1372,16 @@ class Messager:
         self.log_file.write_text("\n".join(self.log))
 
 
-if system() == "Windows":
-    ZPATH = str(get_exec_dir() / "helpers" / "7z.exe")
-else:
-    ZPATH = shutil.which("7z") or str(get_exec_dir() / "helpers" / "7z")
+@lru_cache(1)
+def get_7z_path():
+    if system() == "Windows":
+        return str(get_exec_dir() / "helpers" / "7z.exe")
+    bundle_path = get_exec_dir() / "helpers" / "7z"
+    os.chmod(bundle_path, 0o755)
+    if get_settings("force_7z"):
+        return str(bundle_path)
+    return shutil.which("7z") or str(bundle_path)
+
 
 LOG = get_data_dir() / "bcml.log"
 SYSTEM = system()

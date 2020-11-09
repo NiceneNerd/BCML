@@ -21,12 +21,12 @@ from xml.dom import minidom
 import oead
 
 from bcml import util, mergers, dev, upgrade
-from bcml.util import BcmlMod, ZPATH
+from bcml.util import BcmlMod, get_7z_path
 
 
 def extract_mod_meta(mod: Path) -> {}:
     process = subprocess.Popen(
-        f'"{ZPATH}" e "{str(mod.resolve())}" -r -so info.json',
+        f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
         stdout=subprocess.PIPE,
         shell=True,
     )
@@ -44,7 +44,7 @@ def open_mod(path: Path) -> Path:
     if tmpdir.exists():
         shutil.rmtree(tmpdir, ignore_errors=True)
     if path.suffix.lower() in archive_formats:
-        x_args = [ZPATH, "x", str(path), f"-o{str(tmpdir)}"]
+        x_args = [get_7z_path(), "x", str(path), f"-o{str(tmpdir)}"]
         if system() == "Windows":
             subprocess.run(
                 x_args,
@@ -605,7 +605,7 @@ def create_backup(name: str = ""):
     output = util.get_storage_dir() / "backups" / f"{name}---{num_mods - 1}.7z"
     output.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saving backup {name}...")
-    x_args = [ZPATH, "a", str(output), f'{str(util.get_modpack_dir() / "*")}']
+    x_args = [get_7z_path(), "a", str(output), f'{str(util.get_modpack_dir() / "*")}']
     if system() == "Windows":
         subprocess.run(
             x_args,
@@ -634,7 +634,7 @@ def restore_backup(backup: Union[str, Path]):
     for folder in [item for item in util.get_modpack_dir().glob("*") if item.is_dir()]:
         shutil.rmtree(str(folder))
     print("Extracting backup...")
-    x_args = [ZPATH, "x", str(backup), f"-o{str(util.get_modpack_dir())}"]
+    x_args = [get_7z_path(), "x", str(backup), f"-o{str(util.get_modpack_dir())}"]
     if system() == "Windows":
         subprocess.run(
             x_args,
@@ -746,7 +746,7 @@ def export(output: Path):
         )
     else:
         print("Exporting as graphic pack mod...")
-        x_args = [ZPATH, "a", str(output), f'{str(tmp_dir / "*")}']
+        x_args = [get_7z_path(), "a", str(output), f'{str(tmp_dir / "*")}']
         result: subprocess.CompletedProcess
         if os.name == "nt":
             result = subprocess.run(

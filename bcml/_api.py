@@ -40,7 +40,7 @@ import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
 from bcml.gamebanana import GameBananaDb
-from bcml.util import BcmlMod, LOG, SYSTEM, ZPATH
+from bcml.util import BcmlMod, LOG, SYSTEM, get_7z_path
 from bcml.__version__ import USER_VERSION, VERSION
 
 
@@ -474,7 +474,7 @@ class Api:
         except IndexError:
             return
         tmp_dir = Path(mkdtemp())
-        x_args = [ZPATH, "x", str(file), f"-o{str(tmp_dir)}"]
+        x_args = [get_7z_path(), "x", str(file), f"-o{str(tmp_dir)}"]
         if system() == "Windows":
             run(
                 x_args,
@@ -551,7 +551,7 @@ class Api:
         if not out:
             raise Exception("canceled")
         x_args = [
-            install.ZPATH,
+            util.get_7z_path(),
             "a",
             out if isinstance(out, str) else out[0],
             f'{str(mod / "*")}',
@@ -676,7 +676,7 @@ class Api:
             return
         output = Path(output if isinstance(output, str) else output[0])
         print(f"Saving output file to {str(output)}...")
-        x_args = [install.ZPATH, "a", str(output), f'{str(tmp_dir / "*")}']
+        x_args = [util.get_7z_path(), "a", str(output), f'{str(tmp_dir / "*")}']
         if SYSTEM == "Windows":
             run(
                 x_args,

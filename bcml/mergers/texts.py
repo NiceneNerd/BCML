@@ -14,7 +14,7 @@ import oead
 import xxhash
 
 from bcml import mergers, util
-from bcml.util import ZPATH
+from bcml.util import get_7z_path
 
 EXCLUDE_TEXTS = [
     "ErrorMessage",
@@ -153,7 +153,7 @@ def read_msbt(file: Union[Path, ByteString]):
 
 def extract_refs(language: str, tmp_dir: Path, files: set = None):
     x_args = [
-        ZPATH,
+        get_7z_path(),
         "x",
         str(util.get_exec_dir() / "data" / "text_refs.7z"),
         f'-o{str(tmp_dir / "refs")}',
@@ -340,7 +340,8 @@ class TextsMerger(mergers.Merger):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / "logs" / self._log_name).write_text(
-                json.dumps(diff_material, ensure_ascii=False, indent=2), encoding="utf-8",
+                json.dumps(diff_material, ensure_ascii=False, indent=2),
+                encoding="utf-8",
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
@@ -352,8 +353,9 @@ class TextsMerger(mergers.Merger):
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 util.dict_merge(
-                    diff, json.loads((opt / "logs" / self._log_name).read_text("utf-8")),
-                    overwrite_lists=True
+                    diff,
+                    json.loads((opt / "logs" / self._log_name).read_text("utf-8")),
+                    overwrite_lists=True,
                 )
         return diff
 
@@ -449,7 +451,10 @@ class TextsMerger(mergers.Merger):
 
                 else:
                     result = subprocess.run(
-                        m_args, capture_output=True, check=False, text=True,
+                        m_args,
+                        capture_output=True,
+                        check=False,
+                        text=True,
                     )
                 if result.stderr:
                     raise RuntimeError(

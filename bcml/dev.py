@@ -394,7 +394,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
             shutil.rmtree(folder)
 
     print(f"Saving output file to {str(output)}...")
-    x_args = [install.ZPATH, "a", str(output), f'{str(tmp_dir / "*")}']
+    x_args = [util.get_7z_path(), "a", str(output), f'{str(tmp_dir / "*")}']
     if system() == "Windows":
         subprocess.run(
             x_args,

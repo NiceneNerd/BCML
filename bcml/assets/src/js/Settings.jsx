@@ -21,6 +21,7 @@ class Settings extends React.Component {
             no_cemu: false,
             wiiu: true,
             no_hardlinks: false,
+            force_7z: false,
             valid: false
         };
         this.handleChange = this.handleChange.bind(this);
@@ -458,6 +459,27 @@ class Settings extends React.Component {
                                 />
                             </OverlayTrigger>
                         </Form.Group>
+                        {!window.navigator.platform.includes("inux") && (
+                            <Form.Group controlId="force_7z">
+                                <OverlayTrigger
+                                    overlay={
+                                        <Tooltip>
+                                            By default, BCML will attempt to use
+                                            the system installation of 7z. If
+                                            this is a problem, you can force
+                                            BCML to use the bundled copy.
+                                        </Tooltip>
+                                    }
+                                    placement={"left"}>
+                                    <Form.Check
+                                        type="checkbox"
+                                        label="Force use bundled 7z"
+                                        checked={this.state.force_7z}
+                                        onChange={this.handleChange}
+                                    />
+                                </OverlayTrigger>
+                            </Form.Group>
+                        )}
                     </Col>
                 </Row>
             </Form>
