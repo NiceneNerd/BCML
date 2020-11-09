@@ -15,7 +15,6 @@ except ImportError:
 # fmt: on
 
 import base64
-from build.nsis.pkgs.pip._vendor.pyparsing import Optional
 import json
 import requests
 import traceback
@@ -29,7 +28,7 @@ from shutil import rmtree, copyfile
 from tempfile import mkdtemp
 from time import sleep
 from threading import Thread
-from typing import Any, Dict, List, Tuple, Union
+from typing import List
 from xml.dom import minidom
 
 try:
