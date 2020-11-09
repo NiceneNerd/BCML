@@ -445,7 +445,7 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
             ext = file.name[file.name.rindex(".") :]
             if ext in NO_CONVERT_EXTS:
                 if not util.is_file_modded(
-                    util.get_canon_name(file.name, allow_no_soure=True),
+                    util.get_canon_name(file.name, allow_no_source=True),
                     file.data,
                     count_new=True,
                 ):
@@ -454,8 +454,11 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                         stock_data = util.get_nested_file_bytes(
                             f"{str(util.get_game_file(f'Actor/Pack/{actor_name}.sbactorpack'))}//{file.name}"
                         )
-                        new_sarc.files[file.name] = stock_data
-                    except FileNotFoundError:
+                        if stock_data:
+                            new_sarc.files[file.name] = stock_data
+                        else:
+                            raise FileNotFoundError(file.name)
+                    except (FileNotFoundError, AttributeError):
                         error = f"This mod contains a Havok file not supported by the converter: {file.name}"
                 else:
                     error = f"This mod contains a Havok file not supported by the converter: {file.name}"
@@ -467,15 +470,20 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                 except:
                     return f"Could not parse Havok file {file.name}"
                 if to_wiiu:
-                    new_sarc.files[file.name] = hk.to_wiiu()
+                    hk.to_wiiu()
                 else:
-                    new_sarc.files[file.name] = hk.to_switch()
+                    hk.to_switch()
+                hk.serialize()
+                new_sarc.files[file.name] = hk.to_bytes()
     actor_pack.write_bytes(util.compress(new_sarc.write()[1]))
     return error
 
 
 def _convert_sarc_file(pack: Path, to_wiiu: bool) -> list:
-    sarc = oead.Sarc(util.unyaz_if_needed(pack.read_bytes()))
+    data = pack.read_bytes()
+    if not data:
+        return []
+    sarc = oead.Sarc(util.unyaz_if_needed(data))
     new_bytes, error = _convert_sarc(sarc, to_wiiu)
     pack.write_bytes(
         util.compress(new_bytes)

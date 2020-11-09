@@ -966,7 +966,7 @@ class ModConverter extends React.Component {
             this.props.onProgress(
                 `Converting ${this.state.meta.name} to ${
                     this.state.meta.platform != "wiiu" ? "Wii U" : "Switch"
-                }.`
+                }`
             );
             this.setState(
                 {
@@ -986,6 +986,8 @@ class ModConverter extends React.Component {
         return (
             <Modal
                 show={this.props.show}
+                onHide={this.props.onClose}
+                dialogClassName="modal-wide"
                 style={{ opacity: this.state.busy ? "0" : "1.0" }}>
                 <Modal.Header closeButton>
                     <Modal.Title>Convert BNP Platform</Modal.Title>
@@ -1102,8 +1104,8 @@ class ModConverter extends React.Component {
                                                 readOnly
                                                 as="textarea"
                                                 rows={5}
-                                                value={this.state.results.data.map(
-                                                    warn => `${warn}\n`
+                                                value={this.state.results.data.join(
+                                                    "\n"
                                                 )}
                                             />
                                         )}
