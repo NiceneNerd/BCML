@@ -341,7 +341,11 @@ class App extends React.Component {
                         </Dropdown.Item>
                     </Dropdown.Menu>
                 </Dropdown>
-                <ModContext.Provider value={{ mods: this.state.mods }}>
+                <ModContext.Provider
+                    value={{
+                        mods: this.state.mods,
+                        busy: this.state.showProgress
+                    }}>
                     <Tabs id="tabs" mountOnEnter transition={Fade}>
                         <Tab eventKey="mod-list" title="Mods">
                             <Mods

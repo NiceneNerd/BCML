@@ -1,23 +1,21 @@
-import React from "react";
 import {
-    Breadcrumb,
     Button,
     ButtonGroup,
     Card,
     CardColumns,
-    CardGroup,
     Carousel,
-    Col,
     Dropdown,
     FormControl,
     InputGroup,
     Modal,
     Pagination,
-    Row,
     Spinner,
     SplitButton,
     ToggleButton
 } from "react-bootstrap";
+
+import ModContext from "./Context.jsx";
+import React from "react";
 
 class GameBanana extends React.Component {
     constructor(props) {
@@ -346,6 +344,8 @@ class ModList extends React.Component {
 }
 
 class ModModal extends React.Component {
+    static contextType = ModContext;
+
     constructor(props) {
         super(props);
         this.state = {};
@@ -367,6 +367,9 @@ class ModModal extends React.Component {
             <Modal
                 show={this.props.show}
                 onHide={this.props.onClose}
+                style={{
+                    opacity: this.context.busy ? "0.0" : "1.0"
+                }}
                 dialogClassName="modal-wide">
                 <Modal.Header closeButton>
                     <Modal.Title>{this.props.mod.name}</Modal.Title>
