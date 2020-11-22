@@ -54,11 +54,11 @@ def _dict_to_drop(drop_dict: dict) -> ParameterIO:
             contents["occurrence_speed_type"]
         )
         table_obj.params["ColumnNum"] = Parameter(len(contents["items"]))
-        for i, item in enumerate(contents["items"]):
-            table_obj.params[f"ItemName{i + 1:02}"] = Parameter(
+        for idx, item in enumerate(contents["items"]):
+            table_obj.params[f"ItemName{idx + 1:02}"] = Parameter(
                 oead.FixedSafeString64(item)
             )
-            table_obj.params[f"ItemProbability{i + 1:02}"] = Parameter(
+            table_obj.params[f"ItemProbability{idx + 1:02}"] = Parameter(
                 contents["items"][item]
             )
         pio.objects[table] = table_obj
@@ -66,6 +66,8 @@ def _dict_to_drop(drop_dict: dict) -> ParameterIO:
 
 
 def log_drop_file(file: str, mod_dir: Path):
+    if "Bootup.pack" in file:
+        return {}
     drop = ParameterIO.from_binary(util.get_nested_file_bytes(str(mod_dir) + "/" + file))
     drop_table = _drop_to_dict(drop)
     del drop
