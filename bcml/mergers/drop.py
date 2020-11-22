@@ -3,7 +3,7 @@ import re
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Dict
 
 import oead
 from oead.aamp import ParameterIO, ParameterList, ParameterObject, Name, Parameter
@@ -121,7 +121,11 @@ def merge_drop_file(file: str, drop_table: dict):
         drop_table = ref_drop
     except (FileNotFoundError, AttributeError, RuntimeError):
         pass
-    actor_name = re.search(r"Pack\/(.+)\.sbactorpack", file).groups()[0]
+    actor_name_matches = re.search(r"Pack\/(.+)\.sbactorpack", file)
+    if actor_name_matches:
+        actor_name = actor_name_matches.groups()[0]
+    else:
+        raise ValueError(f"No actor name found in {file}")
     pio = _dict_to_drop(drop_table)
     util.inject_files_into_actor(actor_name, {file.split("//")[-1]: pio.to_binary()})
 
@@ -155,7 +159,7 @@ class DropMerger(mergers.Merger):
         )
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        diff = {}
+        diff: Dict[str, dict] = {}
         if self.is_mod_logged(mod):
             util.dict_merge(
                 diff, json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))

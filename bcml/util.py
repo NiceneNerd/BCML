@@ -26,7 +26,7 @@ from re import findall
 from subprocess import run
 from tempfile import mkdtemp
 from time import time_ns
-from typing import Union, List, Dict, ByteString
+from typing import Union, List, Dict, ByteString, Tuple, Any, Optional
 from xml.dom import minidom
 
 import oead
@@ -313,8 +313,8 @@ class BcmlMod:
         return BcmlMod(info_path.parent)
 
     @staticmethod
-    def meta_from_id(mod_id: str) -> (str, str):
-        return b64decode(mod_id).decode("utf8").split("==")
+    def meta_from_id(mod_id: str) -> Tuple[str, ...]:
+        return tuple(b64decode(mod_id).decode("utf8").split("=="))
 
     @property
     def name(self) -> str:
@@ -426,7 +426,7 @@ class BcmlMod:
                         )
             else:
                 for thumb in self.path.glob("thumbnail.*"):
-                    image_path = thumb
+                    image_path = str(thumb)
             self._preview = self.path / image_path
         return self._preview
 
@@ -557,7 +557,7 @@ DEFAULT_SETTINGS = {
 }
 
 
-def get_settings(name: str = "") -> {}:
+def get_settings(name: str = "") -> Any:
     try:
         if not hasattr(get_settings, "settings"):
             settings = {}
@@ -567,21 +567,18 @@ def get_settings(name: str = "") -> {}:
                 with settings_path.open("w", encoding="utf-8") as s_file:
                     json.dump(settings, s_file)
             else:
-                settings: dict = json.loads(settings_path.read_text())
+                settings.update(json.loads(settings_path.read_text()))
                 for k, v in DEFAULT_SETTINGS.items():
                     if k not in settings:
                         settings[k] = v
                 if settings["store_dir"] == "":
                     settings["store_dir"] = str(get_data_dir())
-            get_settings.settings = settings
+            setattr(get_settings, "settings", settings)
         if name:
-            return get_settings.settings.get(name, False)
-        return get_settings.settings
-    except Exception as e:
-        e.message = f"""Oops, BCML could not load its settings file. The error: {
-            getattr(e, 'message', '')
-        }"""
-        raise e
+            return getattr(get_settings, "settings", {}).get(name, False)
+        return getattr(get_settings, "settings", {})
+    except Exception as err:
+        raise RuntimeError("BCML could not load its settings file") from err
 
 
 def save_settings():
@@ -615,7 +612,9 @@ def parse_cemu_settings(path: Path = None):
 
 def get_game_dir() -> Path:
     game_dir = str(
-        get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
+        get_settings("game_dir")
+        if get_settings("wiiu")
+        else get_settings("game_dir_nx")
     )
     game_path = Path(game_dir)
     if not game_dir or not game_path.is_dir():
@@ -630,57 +629,6 @@ def get_game_dir() -> Path:
     return game_path
 
 
-def set_game_dir(path: Path):
-    settings = get_settings()
-    settings["game_dir"] = str(path.resolve())
-    save_settings()
-    try:
-        get_mlc_dir()
-    except FileNotFoundError:
-        try:
-            set_path = get_cemu_dir() / "settings.xml"
-            if not set_path.exists():
-                raise FileNotFoundError(
-                    "The Cemu settings file could not be found. This usually means your "
-                    "Cemu directory is set incorrectly."
-                )
-            set_read = ""
-            with set_path.open("r") as setfile:
-                for line in setfile:
-                    set_read += line.strip()
-            settings = minidom.parseString(set_read)
-            mlc_path = Path(
-                settings.getElementsByTagName("mlc_path")[0].firstChild.nodeValue
-            )
-        except (FileNotFoundError, IndexError, ValueError, AttributeError):
-            mlc_path = get_cemu_dir() / "mlc01"
-        if mlc_path.exists():
-            set_mlc_dir(mlc_path)
-        else:
-            raise FileNotFoundError(
-                "The MLC directory could not be automatically located."
-            )
-
-
-def get_mlc_dir() -> Path:
-    mlc_dir = str(get_settings("mlc_dir"))
-    if not mlc_dir or not Path(mlc_dir).is_dir():
-        raise FileNotFoundError(
-            "The Cemu MLC directory has moved or not been saved yet."
-        )
-    return Path(mlc_dir)
-
-
-def set_mlc_dir(path: Path):
-    settings = get_settings()
-    settings["mlc_dir"] = str(path.resolve())
-    save_settings()
-    if hasattr(get_update_dir, "update_dir"):
-        del get_update_dir.update_dir
-    if hasattr(get_aoc_dir, "aoc_dir"):
-        del get_aoc_dir.aoc_dir
-
-
 def set_site_meta(site_meta):
     settings = get_settings()
     if not "site_meta" in settings:
@@ -691,25 +639,23 @@ def set_site_meta(site_meta):
 
 
 @lru_cache(None)
-def get_title_id(game_dir: Path = None) -> (str, str):
-    if not hasattr(get_title_id, "title_id"):
-        title_id = "00050000101C9400"
-        if not game_dir:
-            game_dir = get_game_dir()
-        with (game_dir.parent / "code" / "app.xml").open("r") as a_file:
-            for line in a_file:
-                title_match = re.search(
-                    r"<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>",
-                    line,
-                )
-                if title_match:
-                    title_id = title_match.group(1)
-                    break
-        get_title_id.title_id = (title_id[0:7] + "0", title_id[8:])
-    return get_title_id.title_id
+def get_title_id(game_dir: Path = None) -> Tuple[str, str]:
+    title_id = "00050000101C9400"
+    if not game_dir:
+        game_dir = get_game_dir()
+    with (game_dir.parent / "code" / "app.xml").open("r") as a_file:
+        for line in a_file:
+            title_match = re.search(
+                r"<title_id type=\"hexBinary\" length=\"8\">([0-9A-F]{16})</title_id>",
+                line,
+            )
+            if title_match:
+                title_id = title_match.group(1)
+                break
+    return (title_id[0:7] + "0", title_id[8:])
 
 
-def guess_update_dir(mlc_dir: Path, game_dir: Path) -> Path:
+def guess_update_dir(mlc_dir: Path, game_dir: Path) -> Optional[Path]:
     title_id = get_title_id(game_dir)
     mlc_dir = mlc_dir / "usr" / "title"
     # First try the 1.15.11c mlc layout
@@ -745,7 +691,7 @@ def get_update_dir() -> Path:
     return update_dir
 
 
-def guess_aoc_dir(mlc_dir: Path, game_dir: Path) -> Path:
+def guess_aoc_dir(mlc_dir: Path, game_dir: Path) -> Optional[Path]:
     title_id = get_title_id(game_dir)
     mlc_dir = mlc_dir / "usr" / "title"
     # First try the 1.15.11c mlc layout
@@ -830,6 +776,7 @@ def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     game_dir = get_game_dir()
     if get_settings("wiiu"):
         update_dir = get_update_dir()
+    aoc_dir: Optional[Path]
     try:
         aoc_dir = get_aoc_dir()
     except FileNotFoundError:
@@ -887,7 +834,7 @@ def get_master_modpack_dir() -> Path:
 
 
 @lru_cache(2)
-def get_hash_table(wiiu: bool = True) -> {}:
+def get_hash_table(wiiu: bool = True) -> Dict[str, List[int]]:
     return json.loads(
         decompress(
             (
@@ -901,7 +848,7 @@ def get_hash_table(wiiu: bool = True) -> {}:
 
 
 @lru_cache(None)
-def get_canon_name(file: str, allow_no_source: bool = False) -> str:
+def get_canon_name(file: Union[str, Path], allow_no_source: bool = False) -> str:
     if isinstance(file, str):
         file = Path(file)
     name = (
@@ -951,7 +898,10 @@ def get_file_language(file: Union[Path, str]) -> str:
     if isinstance(file, Path):
         file = str(file)
     lang_match = re.search(r"_([A-Z]{2}[a-z]{2})", file)
-    return lang_match.group(1)
+    if lang_match:
+        return lang_match.group(1)
+    else:
+        raise ValueError(f"File {file} does not have a language specifier in its path")
 
 
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
@@ -963,7 +913,10 @@ def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) 
         else bytes(file)
     )
     if contents[0:4] == b"Yaz0":
-        contents = decompress(contents)
+        try:
+            contents = decompress(contents)
+        except RuntimeError as err:
+            raise ValueError(f"Invalid yaz0 file {name}") from err
     table = get_hash_table(get_settings("wiiu"))
     if name not in table:
         return count_new
@@ -1070,7 +1023,9 @@ def get_mod_preview(mod: BcmlMod) -> Path:
                         img_match.group(1), str(mod.path / image_path)
                     )
                 else:
-                    raise IndexError(f"Rule for {url} failed to find the remote preview")
+                    raise IndexError(
+                        f"Rule for {url} failed to find the remote preview"
+                    )
             else:
                 raise KeyError("No preview image available")
         else:
@@ -1087,7 +1042,7 @@ def get_mod_preview(mod: BcmlMod) -> Path:
                 )
     else:
         for thumb in mod.path.glob("thumbnail.*"):
-            image_path = thumb
+            image_path = str(thumb)
     return mod.path / image_path
 
 
@@ -1259,7 +1214,10 @@ def pio_subtract(
     for key, plist in mod.lists.items():
         if key in merged.lists:
             pio_subtract(merged.lists[key], plist)
-            if len(merged.lists[key].objects) == 0 and len(merged.lists[key].lists) == 0:
+            if (
+                len(merged.lists[key].objects) == 0
+                and len(merged.lists[key].lists) == 0
+            ):
                 del merged.lists[key]
     for key, pobj in mod.objects.items():
         if key in merged.objects:
@@ -1298,11 +1256,7 @@ def get_latest_bcml() -> str:
             universal_newlines=True,
         )
     else:
-        result = run(
-            args,
-            capture_output=True,
-            universal_newlines=True,
-        )
+        result = run(args, capture_output=True, universal_newlines=True,)
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
     try:
         return vers[-1]
@@ -1352,7 +1306,7 @@ class Messager:
     def __init__(self, window: Window):
         self.window = window
         self.log_file = get_data_dir() / "bcml.log"
-        self.log = []
+        self.log: List[str] = []
         self.i = 0
 
     def write(self, string: str):
@@ -1370,6 +1324,10 @@ class Messager:
 
     def save(self):
         self.log_file.write_text("\n".join(self.log))
+
+    def __del__(self):
+        self.save()
+        del self.log
 
 
 @lru_cache(1)

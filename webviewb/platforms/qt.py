@@ -1,4 +1,5 @@
 # pylint: skip-file
+# mypy: ignore-errors
 """
 (C) 2014-2019 Roman Sirokov and contributors
 Licensed under BSD license
@@ -16,7 +17,14 @@ from uuid import uuid1
 from copy import deepcopy
 from threading import Semaphore, Event
 
-from webviewb import _debug, _user_agent, OPEN_DIALOG, FOLDER_DIALOG, SAVE_DIALOG, windows
+from webviewb import (
+    _debug,
+    _user_agent,
+    OPEN_DIALOG,
+    FOLDER_DIALOG,
+    SAVE_DIALOG,
+    windows,
+)
 from webviewb.localization import localization
 from webviewb.window import Window
 from webviewb.util import convert_string, default_html, parse_api_js, js_bridge_call
@@ -195,7 +203,9 @@ class BrowserView(QMainWindow):
         def __init__(self, parent=None):
             super(BrowserView.WebPage, self).__init__(parent)
             if is_webengine:
-                self.featurePermissionRequested.connect(self.onFeaturePermissionRequested)
+                self.featurePermissionRequested.connect(
+                    self.onFeaturePermissionRequested
+                )
                 self.nav_handler = BrowserView.NavigationHandler(self)
             else:
                 self.nav_handler = None
@@ -341,7 +351,8 @@ class BrowserView(QMainWindow):
             self.move(window.initial_x, window.initial_y)
         else:
             center = (
-                QApplication.desktop().availableGeometry().center() - self.rect().center()
+                QApplication.desktop().availableGeometry().center()
+                - self.rect().center()
             )
             self.move(center.x(), center.y())
 
@@ -382,7 +393,9 @@ class BrowserView(QMainWindow):
 
     def on_current_url(self):
         url = BrowserView._convert_string(self.view.url().toString())
-        self._current_url = None if url == "" or url.startswith("data:text/html") else url
+        self._current_url = (
+            None if url == "" or url.startswith("data:text/html") else url
+        )
         self._current_url_semaphore.release()
 
     def on_load_url(self, url):

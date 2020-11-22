@@ -1,7 +1,7 @@
 from functools import reduce, partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List, ByteString
+from typing import Union, List, ByteString, Optional, Dict, Any
 
 from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
 from oead import Sarc, SarcWriter, InvalidDataError
@@ -10,11 +10,11 @@ from bcml import util, mergers
 HANDLED = {".bdrop", ".bshop"}
 
 
-def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> dict:
+def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optional[dict]:
     try:
         ref_sarc = Sarc(util.unyaz_if_needed(util.get_game_file(file).read_bytes()))
-    except (FileNotFoundError, InvalidDataError, ValueError, RuntimeError) as e:
-        util.vprint(f"{file} ignored on stock side, cuz {e}")
+    except (FileNotFoundError, InvalidDataError, ValueError, RuntimeError) as err:
+        util.vprint(f"{file} ignored on stock side, cuz {err}")
         return None
     try:
         sarc = Sarc(util.unyaz_if_needed((tmp_dir / file).read_bytes()))
@@ -35,8 +35,8 @@ def _get_diffs_from_sarc(
         for file, edits in edits.items():
             try:
                 rsub_sarc = Sarc(util.unyaz_if_needed(ref_sarc.get_file(file).data))
-            except (AttributeError, InvalidDataError, ValueError, RuntimeError) as e:
-                util.vprint(f'Skipping "{path}//{file}", {e}')
+            except (AttributeError, InvalidDataError, ValueError, RuntimeError) as err:
+                util.vprint(f'Skipping "{path}//{file}", {err}')
                 continue
             sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
             diffs.update(
@@ -51,7 +51,14 @@ def _get_diffs_from_sarc(
                 ref_pio = ParameterIO.from_binary(ref_sarc.get_file(file).data)
             except AttributeError:
                 continue
-            pio = ParameterIO.from_binary(sarc.get_file(file).data)
+            try:
+                pio = ParameterIO.from_binary(sarc.get_file(file).data)
+            except AttributeError as err:
+                raise ValueError(
+                    f"Failed to read nested file:\n{path}//{file}"
+                ) from err
+            except (ValueError, RuntimeError, InvalidDataError) as err:
+                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
             diffs.update({full_path: get_aamp_diff(pio, ref_pio)})
     return diffs
 
@@ -128,7 +135,7 @@ def merge_aamp_files(file: str, tree: dict):
     if base_file.suffix.startswith(".s") and base_file.suffix != ".ssarc":
         new_data = util.compress(new_data)
     (util.get_master_modpack_dir() / file).parent.mkdir(parents=True, exist_ok=True)
-    (util.get_master_modpack_dir() / file).write_bytes(new_data)
+    (util.get_master_modpack_dir() / file).write_bytes(bytes(new_data))
 
 
 def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
@@ -137,7 +144,9 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
         if isinstance(stuff, dict):
             try:
                 if file not in {f.name for f in sarc.get_files()}:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
             except (
                 InvalidDataError,
@@ -157,15 +166,17 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
         elif isinstance(stuff, ParameterList):
             try:
                 if file not in {f.name for f in sarc.get_files()}:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 pio = ParameterIO.from_binary(sarc.get_file(file).data)
             except (
                 AttributeError,
                 ValueError,
                 InvalidDataError,
                 FileNotFoundError,
-            ) as e:
-                util.vprint(f"Couldn't open {file}: {e}")
+            ) as err:
+                util.vprint(f"Couldn't open {file}: {err}")
                 continue
             merge_plists(pio, stuff)
             new_sarc.files[file] = pio.to_binary()
@@ -193,12 +204,12 @@ class DeepMerger(mergers.Merger):
         if not aamps:
             return None
 
-        consolidated = {}
+        consolidated: Dict[str, Any] = {}
         for aamp in aamps:
             util.dict_merge(
                 consolidated,
                 reduce(
-                    lambda res, cur: {cur: res} if res is not None else [cur],
+                    lambda res, cur: {cur: res} if res is not None else [cur],  # type: ignore
                     reversed(aamp.split("//")),
                     None,
                 ),
@@ -260,16 +271,16 @@ class DeepMerger(mergers.Merger):
                 merge_plists(diffs, diff, True)
         return diffs
 
-    def consolidate_diffs(self, diffs: list):
+    def consolidate_diffs(self, diffs: ParameterIO):
         if not diffs:
             return None
-        consolidated = {}
+        consolidated: Dict[str, Any] = {}
         for _, file in diffs.objects["FileTable"].params.items():
             try:
                 util.dict_merge(
                     consolidated,
                     reduce(
-                        lambda res, cur: {cur: res},
+                        lambda res, cur: {cur: res},  # type: ignore
                         reversed(file.v.split("//")),
                         diffs.lists[file.v],
                     ),
