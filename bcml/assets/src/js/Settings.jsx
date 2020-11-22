@@ -206,7 +206,7 @@ class Settings extends React.Component {
                         <Form.Group
                             controlId="game_dir_nx"
                             className={this.state.wiiu && "d-none"}>
-                            <Form.Label>Base Game Directory</Form.Label>
+                            <Form.Label>Base+Update Directory</Form.Label>
                             <FolderInput
                                 value={this.state.game_dir_nx}
                                 onChange={this.handleChange}
@@ -216,10 +216,10 @@ class Settings extends React.Component {
                                 }
                                 overlay={
                                     <Tooltip>
-                                        The folder containing the base game
-                                        files for BOTW, without the update or
-                                        DLC files. The last folder should be
-                                        "romfs", e.g.
+                                        The folder containing the 1.6.0 game
+                                        files for BOTW. The base game and update
+                                        should be merged. The last folder should
+                                        be "romfs", e.g.
                                         <br />
                                         <code>
                                             C:\Games\BOTW\01007EF00011E000\romfs
@@ -241,7 +241,11 @@ class Settings extends React.Component {
                             <FolderInput
                                 value={this.state.update_dir}
                                 onChange={this.handleChange}
-                                placeholder={`Tip: should end in "content", usually in Cemu's MLC folder`}
+                                placeholder={
+                                    this.state.wiiu
+                                        ? `Tip: should end in "content", usually in Cemu's MLC folder`
+                                        : "N/A for Switch mode"
+                                }
                                 isValid={
                                     this.state.update_dir != "" ||
                                     !this.state.wiiu
@@ -459,7 +463,7 @@ class Settings extends React.Component {
                                 />
                             </OverlayTrigger>
                         </Form.Group>
-                        {!window.navigator.platform.includes("inux") && (
+                        {window.navigator.platform.includes("inux") && (
                             <Form.Group controlId="force_7z">
                                 <OverlayTrigger
                                     overlay={
