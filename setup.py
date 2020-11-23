@@ -38,9 +38,7 @@ setup(
     },
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": [
-            "bcml-debug = bcml.__main__:main_debug",
-        ],
+        "console_scripts": ["bcml-debug = bcml.__main__:main_debug",],
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -50,6 +48,7 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=[
+        "numpy==1.19.2",
         "aamp>=1.4.1",
         "byml>=2.3.1",
         "botw-utils==0.2.3",
