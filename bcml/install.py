@@ -79,9 +79,10 @@ def open_mod(path: Path) -> Path:
             raise FileNotFoundError(
                 "No <code>info.json</code> or <code>rules.txt</code> file was found in "
                 f'"{path.stem}". This could mean the mod is in an old or unsupported '
-                "format. For information on converting mods, see "
-                '<a href="https://gamebanana.com/tuts/12493">'
-                "this tutorial</a>."
+                "format. For information on creating BNPs, check the in-app help. If "
+                "instead you want to make a graphic pack, check "
+                '<a href="https://zeldamods.org/wiki/Help:Using_mods#Installing_mods_with_the_graphic_pack_menu" target="_blank">'
+                "the guide on ZeldaMods here</a>."
             )
     print("Looks like an older mod, let's upgrade it...")
     upgrade.convert_old_mod(rulesdir, delete_old=True)
@@ -134,7 +135,9 @@ def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         if not (
-            tmp_dir / util.get_dlc_path() / ("0010" if util.get_settings("wiiu") else "")
+            tmp_dir
+            / util.get_dlc_path()
+            / ("0010" if util.get_settings("wiiu") else "")
         ).rglob("Map/**/?-?_*.smubin"):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
