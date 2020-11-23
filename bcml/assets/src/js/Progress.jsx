@@ -54,7 +54,7 @@ let messages = [
     "BCML tip: When in doubt, remerge",
     "BCML tip: The in-app help has a lot of information",
     "BCML tip: Read the in-app help",
-    "BCML tip: Questions or problems? Try the in-app help", 
+    "BCML tip: Questions or problems? Try the in-app help",
     "BCML tip: To reorder your mods, click the Show Sort Handles toggle",
     "BCML tip: Ctrl-Click to select multiple mods",
     "BCML tip: Higher number priority overrides lower number priority",
@@ -84,7 +84,7 @@ let messages = [
     "Making Tik Toks on Sheikah Slate",
     "Old enough to save Hyrule, too young for The Noble Canteen",
     '"Hold on Zelda, only 842 more Koroks!"',
-    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com'>Theology Without Warranty</a>",
+    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com' target='_blank'>Theology Without Warranty</a>",
     "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”"
 ];
 
