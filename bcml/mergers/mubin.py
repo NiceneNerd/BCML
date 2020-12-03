@@ -183,45 +183,80 @@ def get_map_diff(
             break
     base_map = get_stock_map(map_unit, force_vanilla=stock_map)
 
-    base_hashes = [int(obj["HashId"]) for obj in base_map["Objs"]]
-    base_links = (
-        set()
-        if link_del
-        else {
-            int(link["DestUnitHashId"])
-            for obj in base_map["Objs"]
-            for link in obj.get("LinksToObj", Array())
-            if "LinksToObj" in obj
-        }
-    )
-    mod_hashes = [int(obj["HashId"]) for obj in mod_map["Objs"]]
+    def diff_objs() -> Hash:
+        base_hashes = [int(obj["HashId"]) for obj in base_map["Objs"]]
+        base_links = (
+            set()
+            if link_del
+            else {
+                int(link["DestUnitHashId"])
+                for obj in base_map["Objs"]
+                for link in obj.get("LinksToObj", Array())
+                if "LinksToObj" in obj
+            }
+        )
+        mod_hashes = [int(obj["HashId"]) for obj in mod_map["Objs"]]
 
-    diffs = Hash()
-    diffs["add"] = Array(
-        {obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes}
-    )
-    diffs["mod"] = Hash(
-        {
-            str(obj["HashId"]): obj
-            for obj in mod_map["Objs"]
-            if int(obj["HashId"]) in base_hashes
-            and obj != base_map["Objs"][base_hashes.index(int(obj["HashId"]))]
-        }
-    )
-    diffs["del"] = Array(
-        {
-            oead.U32(hash_id)
-            for hash_id in base_hashes
-            if hash_id not in {*mod_hashes, *base_links}
-        }
-        if not no_del
-        else set()
-    )
+        diffs = Hash()
+        diffs["add"] = Array(
+            {obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes}
+        )
+        diffs["mod"] = Hash(
+            {
+                str(obj["HashId"]): obj
+                for obj in mod_map["Objs"]
+                if int(obj["HashId"]) in base_hashes
+                and obj != base_map["Objs"][base_hashes.index(int(obj["HashId"]))]
+            }
+        )
+        diffs["del"] = Array(
+            {
+                oead.U32(hash_id)
+                for hash_id in base_hashes
+                if hash_id not in {*mod_hashes, *base_links}
+            }
+            if not no_del
+            else set()
+        )
+        return diffs
+
+    def diff_rails() -> Hash:
+        base_hashes = [int(rail["HashId"]) for rail in base_map["Rails"]]
+        mod_hashes = [int(rail["HashId"]) for rail in mod_map["Rails"]]
+
+        diffs = Hash()
+        diffs["add"] = Array(
+            {
+                rail
+                for rail in mod_map["Rails"]
+                if int(rail["HashId"]) not in base_hashes
+            }
+        )
+        diffs["mod"] = Hash(
+            {
+                str(rail["HashId"]): rail
+                for rail in mod_map["Rails"]
+                if int(rail["HashId"]) in base_hashes
+                and rail != base_map["Rails"][base_hashes.index(int(rail["HashId"]))]
+            }
+        )
+        diffs["del"] = Array(
+            {oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes}
+            if not no_del
+            else set()
+        )
+        return diffs
+
     del mod_map
     del base_map
-    del base_links
-    del mod_hashes
-    return "_".join(map_unit), oead.byml.to_text(diffs)
+    return "_".join(map_unit), oead.byml.to_text(
+        Hash(
+            {
+                "Objs": diff_objs(),
+                "Rails": diff_rails() if map_unit.type == "Static" else Hash(),
+            }
+        )
+    )
 
 
 def generate_modded_map_log(
@@ -237,7 +272,9 @@ def generate_modded_map_log(
         {
             map_unit: oead.byml.from_text(diff)
             for map_unit, diff in this_pool.imap_unordered(
-                partial(get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del),
+                partial(
+                    get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del
+                ),
                 modded_maps,
             )
         }
@@ -254,23 +291,23 @@ def merge_map(
     map_unit, changes = map_pair[0], map_pair[1]
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
-    stock_hashes = [int(obj["HashId"]) for obj in new_map["Objs"]]
-    for hash_id, actor in changes["mod"].items():
+    stock_obj_hashes = [int(obj["HashId"]) for obj in new_map["Objs"]]
+    for hash_id, actor in changes["Objs"]["mod"].items():
         try:
-            new_map["Objs"][stock_hashes.index(int(hash_id))] = actor
+            new_map["Objs"][stock_obj_hashes.index(int(hash_id))] = actor
         except ValueError:
-            changes["add"].append(actor)
+            changes["Objs"]["add"].append(actor)
     if not no_del:
         for map_del in sorted(
-            changes["del"],
-            key=lambda change: stock_hashes.index(int(change))
-            if int(change) in stock_hashes
+            changes["Objs"]["del"],
+            key=lambda change: stock_obj_hashes.index(int(change))
+            if int(change) in stock_obj_hashes
             else -1,
             reverse=True,
         ):
-            if int(map_del) in stock_hashes:
+            if int(map_del) in stock_obj_hashes:
                 try:
-                    new_map["Objs"].pop(stock_hashes.index(int(map_del)))
+                    new_map["Objs"].pop(stock_obj_hashes.index(int(map_del)))
                 except IndexError:
                     try:
                         obj_to_delete = next(
@@ -286,9 +323,56 @@ def merge_map(
                     except (StopIteration, ValueError):
                         util.vprint(f"Could not delete actor with HashId {map_del}")
     new_map["Objs"].extend(
-        [change for change in changes["add"] if int(change["HashId"]) not in stock_hashes]
+        [
+            change
+            for change in changes["Objs"]["add"]
+            if int(change["HashId"]) not in stock_obj_hashes
+        ]
     )
     new_map["Objs"] = sorted(new_map["Objs"], key=lambda actor: int(actor["HashId"]))
+
+    if len(new_map["Rails"]):
+        stock_rail_hashes = [int(rail["HashId"]) for rail in new_map["Rails"]]
+        for hash_id, rail in changes["Rails"]["mod"].items():
+            try:
+                new_map["Rails"][stock_rail_hashes.index(int(hash_id))] = rail
+            except ValueError:
+                changes["Rails"]["add"].append(rail)
+        if not no_del:
+            for map_del in sorted(
+                changes["Rails"]["del"],
+                key=lambda change: stock_rail_hashes.index(int(change))
+                if int(change) in stock_rail_hashes
+                else -1,
+                reverse=True,
+            ):
+                if int(map_del) in stock_rail_hashes:
+                    try:
+                        new_map["Rails"].pop(stock_rail_hashes.index(int(map_del)))
+                    except IndexError:
+                        try:
+                            obj_to_delete = next(
+                                iter(
+                                    [
+                                        rail
+                                        for rail in new_map["Rails"]
+                                        if rail["HashId"] == map_del
+                                    ]
+                                )
+                            )
+                            new_map["Rails"].remove(obj_to_delete)
+                        except (StopIteration, ValueError):
+                            util.vprint(f"Could not delete rail with HashId {map_del}")
+        new_map["Rails"].extend(
+            [
+                change
+                for change in changes["Rails"]["add"]
+                if int(change["HashId"]) not in stock_rail_hashes
+            ]
+        )
+        new_map["Rails"] = sorted(
+            new_map["Rails"], key=lambda rail: int(rail["HashId"])
+        )
 
     aoc_out: Path = (
         util.get_master_modpack_dir()
@@ -303,7 +387,9 @@ def merge_map(
     aoc_bytes = oead.byml.to_binary(new_map, big_endian=util.get_settings("wiiu"))
     aoc_out.write_bytes(util.compress(aoc_bytes))
     new_map["Objs"] = [
-        obj for obj in new_map["Objs"] if not str(obj["UnitConfigName"]).startswith("DLC")
+        obj
+        for obj in new_map["Objs"]
+        if not str(obj["UnitConfigName"]).startswith("DLC")
     ]
     (
         util.get_master_modpack_dir()
@@ -400,6 +486,16 @@ def merge_dungeonstatic(diffs: dict = None):
     )
 
 
+def parse_legacy_diff(text: str) -> Hash:
+    diff = oead.byml.from_text(text)
+    return Hash(
+        {
+            unit: Hash({"Objs": changes, "Rails": Hash()})
+            for unit, changes in diff.items()
+        }
+    )
+
+
 class MapMerger(mergers.Merger):
     # pylint: disable=abstract-method
     NAME: str = "maps"
@@ -440,18 +536,22 @@ class MapMerger(mergers.Merger):
     def get_mod_diff(self, mod: util.BcmlMod):
         diffs = []
         if self.is_mod_logged(mod):
-            diffs.append(
-                oead.byml.from_text(
-                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8")
-                )
-            )
+            diff_text = (mod.path / "logs" / self._log_name).read_text(encoding="utf-8")
+            diff: Hash
+            if not ("Rails" in diff_text and "Objs" in diff_text):
+                diff = parse_legacy_diff(diff_text)
+            else:
+                diff = oead.byml.from_text(diff_text)
+            diffs.append(diff)
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                diffs.append(
-                    oead.byml.from_text(
-                        (opt / "logs" / self._log_name).read_text("utf-8")
-                    )
-                )
+                diff_text = (opt / "logs" / self._log_name).read_text(encoding="utf-8")
+                diff: Hash
+                if not ("Rails" in diff_text and "Objs" in diff_text):
+                    diff = parse_legacy_diff(diff_text)
+                else:
+                    diff = oead.byml.from_text(diff_text)
+                diffs.append(diff)
         return diffs
 
     def get_all_diffs(self):
@@ -469,31 +569,57 @@ class MapMerger(mergers.Merger):
                     a_diffs[a_map] = []
                 a_diffs[a_map].append(diff)
         c_diffs = {}
-        for file, mods in list(a_diffs.items()):
+        for file, mods in a_diffs.items():
             c_diffs[file] = {
-                "add": [],
-                "mod": {},
-                "del": list(
-                    set(
-                        [
-                            hash_id
-                            for hashes in [mod["del"] for mod in mods]
-                            for hash_id in hashes
-                        ]
-                    )
-                ),
+                "Objs": {
+                    "add": [],
+                    "mod": {},
+                    "del": list(
+                        set(
+                            [
+                                hash_id
+                                for hashes in [mod["Objs"]["del"] for mod in mods]
+                                for hash_id in hashes
+                            ]
+                        )
+                    ),
+                },
+                "Rails": {
+                    "add": [],
+                    "mod": {},
+                    "del": list(
+                        set(
+                            [
+                                hash_id
+                                for hashes in [
+                                    mod["Rails"]["del"]
+                                    for mod in mods
+                                    if "del" in mod["Rails"]
+                                ]
+                                for hash_id in hashes
+                            ]
+                        )
+                    ),
+                },
             }
             for mod in mods:
-                for hash_id, actor in mod["mod"].items():
-                    c_diffs[file]["mod"][hash_id] = actor
-            add_hashes = []
+                for hash_id, actor in mod["Objs"]["mod"].items():
+                    c_diffs[file]["Objs"]["mod"][hash_id] = actor
+            for mod in [m for m in mods if "mod" in m["Rails"]]:
+                for hash_id, actor in mod["Rails"]["mod"].items():
+                    c_diffs[file]["Rails"]["mod"][hash_id] = actor
+            add_obj_hashes = []
+            add_rail_hashes = []
             for mod in reversed(mods):
-                if file == Map("D-6", "Static"):
-                    print("Hello")
-                for actor in mod["add"]:
-                    if actor["HashId"] not in add_hashes:
-                        add_hashes.append(actor["HashId"])
-                        c_diffs[file]["add"].append(actor)
+                for actor in mod["Objs"]["add"]:
+                    if actor["HashId"] not in add_obj_hashes:
+                        add_obj_hashes.append(actor["HashId"])
+                        c_diffs[file]["Objs"]["add"].append(actor)
+                if "add" in mod["Rails"]:
+                    for actor in mod["Rails"]["add"]:
+                        if actor["HashId"] not in add_rail_hashes:
+                            add_rail_hashes.append(actor["HashId"])
+                            c_diffs[file]["Rails"]["add"].append(actor)
         return c_diffs
 
     @util.timed
@@ -546,7 +672,8 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool()
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del), map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
+            map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
@@ -589,7 +716,12 @@ class DungeonStaticMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         dstatic_path = (
-            mod_dir / util.get_dlc_path() / "0010" / "Map" / "CDungeon" / "Static.smubin"
+            mod_dir
+            / util.get_dlc_path()
+            / "0010"
+            / "Map"
+            / "CDungeon"
+            / "Static.smubin"
         )
         if dstatic_path.exists():
             print("Logging changes to shrine entry coordinates...")
@@ -628,7 +760,9 @@ class DungeonStaticMerger(mergers.Merger):
 
     def get_all_diffs(self):
         diffs = []
-        for mod in [mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)]:
+        for mod in [
+            mod for mod in util.get_installed_mods() if self.is_mod_logged(mod)
+        ]:
             diffs.append(self.get_mod_diff(mod))
         return diffs
 
