@@ -554,6 +554,7 @@ DEFAULT_SETTINGS = {
     "wiiu": True,
     "no_hardlinks": False,
     "force_7z": False,
+    "suppress_update": False,
 }
 
 

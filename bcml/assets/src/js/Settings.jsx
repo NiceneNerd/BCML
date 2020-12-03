@@ -22,6 +22,7 @@ class Settings extends React.Component {
             wiiu: true,
             no_hardlinks: false,
             force_7z: false,
+            suppress_update: false,
             valid: false
         };
         this.handleChange = this.handleChange.bind(this);
@@ -459,6 +460,22 @@ class Settings extends React.Component {
                                     disabled={this.state.no_cemu}
                                     label="Disable hard links for master mod"
                                     checked={this.state.no_hardlinks}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="suppress_update">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        By default, BCML will notify you when it detects an updated version is available. Check this to turn that off.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Disable BCML update notification"
+                                    checked={this.state.suppress_update}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>

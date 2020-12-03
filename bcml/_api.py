@@ -50,7 +50,9 @@ def win_or_lose(func):
         except Exception as err:  # pylint: disable=broad-except
             with LOG.open("a") as log_file:
                 log_file.write(f"\n{err}\n")
-            return {"error": {"short": str(err), "error_text": traceback.format_exc(-5)}}
+            return {
+                "error": {"short": str(err), "error_text": traceback.format_exc(-5)}
+            }
         return {"success": True, "data": data}
 
     return status_run
@@ -77,7 +79,11 @@ class Api:
         self.tmp_files = []
 
     def get_ver(self, params=None):
-        return {"version": USER_VERSION, "update": util.get_latest_bcml() > VERSION}
+        return {
+            "version": USER_VERSION,
+            "update": util.get_latest_bcml() > VERSION
+            and not util.get_settings("suppress_update"),
+        }
 
     @win_or_lose
     def sanity_check(self, kwargs=None):
@@ -532,7 +538,9 @@ class Api:
         )
 
     def select_bnp_with_meta(self, params=None):
-        file = self.file_pick({"types": ("BOTW Nano Patch (*.bnp)",), "multiple": False})
+        file = self.file_pick(
+            {"types": ("BOTW Nano Patch (*.bnp)",), "multiple": False}
+        )
         if file:
             return {"file": file[0], "meta": install.extract_mod_meta(Path(file[0]))}
         return
@@ -754,7 +762,9 @@ class Api:
         if search:
             mods = self.gb_api.search(search)
         return ceil(
-            len(mods if not category else [m for m in mods if m["category"] == category])
+            len(
+                mods if not category else [m for m in mods if m["category"] == category]
+            )
             / 24
         )
 
