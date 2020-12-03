@@ -28,11 +28,11 @@ def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optiona
 
 
 def _get_diffs_from_sarc(
-    sarc: Sarc, ref_sarc: Sarc, edits: Union[dict, list], path: str
+    sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str
 ) -> dict:
     diffs = {}
-    if isinstance(edits, dict):
-        for file, edits in edits.items():
+    for file, edits in edits.items():
+        if edits:
             try:
                 rsub_sarc = Sarc(util.unyaz_if_needed(ref_sarc.get_file(file).data))
             except (AttributeError, InvalidDataError, ValueError, RuntimeError) as err:
@@ -44,8 +44,7 @@ def _get_diffs_from_sarc(
             )
             del sub_sarc
             del rsub_sarc
-    else:
-        for file in edits:
+        else:
             full_path = f"{path}//{file}"
             try:
                 ref_pio = ParameterIO.from_binary(ref_sarc.get_file(file).data)
@@ -209,7 +208,7 @@ class DeepMerger(mergers.Merger):
             util.dict_merge(
                 consolidated,
                 reduce(
-                    lambda res, cur: {cur: res} if res is not None else [cur],  # type: ignore
+                    lambda res, cur: {cur: res if res is not None else {}},  # type: ignore
                     reversed(aamp.split("//")),
                     None,
                 ),
