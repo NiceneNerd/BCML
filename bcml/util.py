@@ -1256,11 +1256,13 @@ def get_latest_bcml() -> str:
             creationflags=CREATE_NO_WINDOW,
             capture_output=True,
             universal_newlines=True,
-            check=True,
+            check=False,
         )
     else:
-        result = run(args, capture_output=True, universal_newlines=True, check=True)
+        result = run(args, capture_output=True, universal_newlines=True, check=False)
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
+    if not DEBUG:
+        vers = [v for v in vers if ".a" not in v and ".b" not in v]
     try:
         return vers[-1]
     except IndexError:
