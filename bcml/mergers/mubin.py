@@ -1,12 +1,13 @@
 """Handles diffing and merging map files"""
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+import multiprocessing
 import shutil
 from collections import namedtuple
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List
+from typing import Dict, Union, List, Tuple
 
 import oead
 from oead.byml import Hash, Array  # pylint: disable=import-error
@@ -18,10 +19,10 @@ from bcml import util, mergers
 Map = namedtuple("Map", "section type")
 
 
-def consolidate_map_files(modded_maps: List[str]) -> List[Map]:
+def consolidate_map_files(modded_maps: List[Path]) -> List[Map]:
     return sorted(
         {
-            Map(*(Path(path).stem.split("_")))
+            Map(*(path.stem.split("_")))
             for path in modded_maps
             if not any(part.startswith("_") for part in Path(path).parts)
         }
@@ -36,6 +37,7 @@ def get_stock_map(map_unit: Union[Map, tuple], force_vanilla: bool = False) -> H
     except FileNotFoundError:
         force_vanilla = True
     map_bytes = None
+    map_path: Union[str, Path]
     if force_vanilla:
         try:
             if util.get_settings("wiiu"):
@@ -262,10 +264,10 @@ def get_map_diff(
 
 def generate_modded_map_log(
     tmp_dir: Path,
-    modded_mubins: List[str],
+    modded_mubins: List[Path],
     no_del: bool = False,
     link_del: bool = False,
-    pool: Pool = None,
+    pool: multiprocessing.pool.Pool = None,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
     this_pool = pool or Pool()
@@ -288,7 +290,7 @@ def generate_modded_map_log(
 
 def merge_map(
     map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False
-) -> {}:
+) -> Dict[str, Tuple[str, int]]:
     map_unit, changes = map_pair[0], map_pair[1]
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
     new_map = get_stock_map(map_unit)
@@ -547,7 +549,6 @@ class MapMerger(mergers.Merger):
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 diff_text = (opt / "logs" / self._log_name).read_text(encoding="utf-8")
-                diff: Hash
                 if not ("Rails" in diff_text and "Objs" in diff_text):
                     diff = parse_legacy_diff(diff_text)
                 else:
@@ -562,14 +563,14 @@ class MapMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        a_diffs = {}
+        a_diffs: Dict[Map, List[Hash]] = {}
         for mod_diff in diffs:
             for file, diff in mod_diff.items():
                 a_map = Map(*file.split("_"))
                 if a_map not in a_diffs:
                     a_diffs[a_map] = []
                 a_diffs[a_map].append(diff)
-        c_diffs = {}
+        c_diffs: Dict[str, dict] = {}
         for file, mods in a_diffs.items():
             c_diffs[file] = {
                 "Objs": {
@@ -738,7 +739,7 @@ class DungeonStaticMerger(mergers.Merger):
             )
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        diffs = {}
+        diffs = Hash()
         if self.is_mod_logged(mod):
             util.dict_merge(
                 diffs,
