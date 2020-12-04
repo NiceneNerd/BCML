@@ -69,7 +69,13 @@ class DevTools extends React.Component {
                 const info = await pywebview.api.get_existing_meta({
                     path: e.target.value
                 });
-                this.setState({ ...info });
+                this.setState({
+                    ...info,
+                    options: {
+                        options: {},
+                        disable: []
+                    }
+                });
             }
         );
     };
