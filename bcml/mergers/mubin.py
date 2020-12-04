@@ -247,15 +247,16 @@ def get_map_diff(
         )
         return diffs
 
-    del mod_map
-    del base_map
-    return "_".join(map_unit), oead.byml.to_text(
-        Hash(
-            {
-                "Objs": diff_objs(),
-                "Rails": diff_rails() if map_unit.type == "Static" else Hash(),
-            }
-        )
+    return (
+        "_".join(map_unit),
+        oead.byml.to_text(
+            Hash(
+                {
+                    "Objs": diff_objs(),
+                    "Rails": diff_rails() if map_unit.type == "Static" else Hash(),
+                }
+            )
+        ),
     )
 
 
@@ -672,8 +673,7 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool()
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
-            map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del), map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
