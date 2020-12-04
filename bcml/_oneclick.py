@@ -42,6 +42,8 @@ def process_arg(arg: str = None):
         if len(sys.argv) < 2:
             return
         arg = sys.argv[1]
+    if arg == "bcml-debug":
+        return
     path: Path
     try:
         assert Path(arg).exists()
@@ -153,7 +155,10 @@ def _win_create_handler():
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp") as key:
         try:
             with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp", 0, winreg.KEY_READ,
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Classes\.bnp",
+                0,
+                winreg.KEY_READ,
             ) as okey:
                 assert winreg.QueryValueEx(okey, "")[0] == "bcml"
         except (WindowsError, OSError, AssertionError):

@@ -30,6 +30,7 @@ from typing import Union, List, Dict, ByteString, Tuple, Any, Optional
 from xml.dom import minidom
 
 import oead
+import requests
 import xxhash  # pylint: disable=wrong-import-order
 from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webviewb import Window  # pylint: disable=wrong-import-order
@@ -394,7 +395,7 @@ class BcmlMod:
     def get_preview(self) -> Path:
         if self._preview is None:
             if not list(self.path.glob("thumbnail.*")):
-                if self.image:
+                if not self.image:
                     if self.url and "gamebanana.com" in self.url:
                         response = urllib.request.urlopen(self.url)
                         rdata = response.read().decode()
@@ -403,8 +404,8 @@ class BcmlMod:
                         )
                         if img_match:
                             image_path = "thumbnail.jfif"
-                            urllib.request.urlretrieve(
-                                img_match.group(1), str(self.path / image_path)
+                            (self.path / image_path).write_bytes(
+                                requests.get(img_match.group(1)).content
                             )
                         else:
                             raise IndexError(
@@ -415,11 +416,12 @@ class BcmlMod:
                 else:
                     image_path = self.image
                     if image_path.startswith("http"):
-                        urllib.request.urlretrieve(
-                            image_path,
-                            str(self.path / ("thumbnail." + image_path.split(".")[-1])),
+                        (
+                            self.path / f"thumbnail.{image_path.split('.')[-1]}"
+                        ).write_bytes(
+                            requests.get(image_path, allow_redirects=True).content
                         )
-                        image_path = "thumbnail." + image_path.split(".")[-1]
+                        image_path = f"thumbnail.{image_path.split('.')[-1]}"
                     if not os.path.isfile(str(self.path / image_path)):
                         raise FileNotFoundError(
                             f"Preview {image_path} specified in rules.txt not found"
@@ -1257,7 +1259,11 @@ def get_latest_bcml() -> str:
             universal_newlines=True,
         )
     else:
-        result = run(args, capture_output=True, universal_newlines=True,)
+        result = run(
+            args,
+            capture_output=True,
+            universal_newlines=True,
+        )
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
     try:
         return vers[-1]
