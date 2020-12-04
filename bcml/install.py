@@ -272,50 +272,7 @@ def refresher(func: Callable) -> Callable:
 def refresh_master_export():
     print("Exporting merged mod pack...")
     link_master_mod()
-    if not util.get_settings("no_cemu"):
-        settings = util.parse_cemu_settings()
-        try:
-            gpack = settings.getElementsByTagName("GraphicPack")[0]
-        except IndexError:
-            gpack = settings.createElement("GraphicPack")
-            settings.appendChild(gpack)
-        new_cemu = True
-        entry: minidom.Element
-        for entry in gpack.getElementsByTagName("Entry"):
-            if new_cemu and entry.getElementsByTagName("filename"):
-                new_cemu = False
-            try:
-                if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
-                ):
-                    break
-            except IndexError:
-                if "BCML" in entry.getAttribute("filename"):
-                    break
-        else:
-            bcmlentry = settings.createElement("Entry")
-            if new_cemu:
-                bcmlentry.setAttribute(
-                    "filename", "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
-                )
-            else:
-                entryfile = settings.createElement("filename")
-                entryfile.appendChild(
-                    settings.createTextNode(
-                        "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
-                    )
-                )
-                bcmlentry.appendChild(entryfile)
-            entrypreset = settings.createElement("preset")
-            entrypreset.appendChild(settings.createTextNode(""))
-            bcmlentry.appendChild(entrypreset)
-            gpack.appendChild(bcmlentry)
-            settings.writexml(
-                (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
-                addindent="    ",
-                newl="\n",
-            )
+    enable_bcml_gfx()
 
 
 def install_mod(
@@ -653,6 +610,84 @@ def restore_backup(backup: Union[str, Path]):
     print("Re-enabling mods in Cemu...")
     refresh_master_export()
     print(f'Backup "{backup.name}" restored')
+
+
+def enable_bcml_gfx():
+    if not util.get_settings("no_cemu"):
+        settings = util.parse_cemu_settings()
+        try:
+            gpack = settings.getElementsByTagName("GraphicPack")[0]
+        except IndexError:
+            gpack = settings.createElement("GraphicPack")
+            settings.appendChild(gpack)
+        new_cemu = True
+        entry: minidom.Element
+        for entry in gpack.getElementsByTagName("Entry"):
+            if new_cemu and entry.getElementsByTagName("filename"):
+                new_cemu = False
+            try:
+                if (
+                    "BCML"
+                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
+                ):
+                    break
+            except IndexError:
+                if "BCML" in entry.getAttribute("filename"):
+                    break
+        else:
+            bcmlentry = settings.createElement("Entry")
+            if new_cemu:
+                bcmlentry.setAttribute(
+                    "filename", "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
+                )
+            else:
+                entryfile = settings.createElement("filename")
+                entryfile.appendChild(
+                    settings.createTextNode(
+                        "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
+                    )
+                )
+                bcmlentry.appendChild(entryfile)
+            entrypreset = settings.createElement("preset")
+            entrypreset.appendChild(settings.createTextNode(""))
+            bcmlentry.appendChild(entrypreset)
+            gpack.appendChild(bcmlentry)
+            settings.writexml(
+                (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
+                addindent="    ",
+                newl="\n",
+            )
+
+
+def disable_bcml_gfx():
+    if not util.get_settings("no_cemu"):
+        settings = util.parse_cemu_settings()
+        try:
+            gpack = settings.getElementsByTagName("GraphicPack")[0]
+        except IndexError:
+            gpack = settings.createElement("GraphicPack")
+            settings.appendChild(gpack)
+        new_cemu = True
+        entry: minidom.Element
+        for entry in gpack.getElementsByTagName("Entry"):
+            if new_cemu and entry.getElementsByTagName("filename"):
+                new_cemu = False
+            try:
+                if (
+                    "BCML"
+                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
+                ):
+                    gpack.removeChild(entry)
+                    break
+            except IndexError:
+                if "BCML" in entry.getAttribute("filename"):
+                    gpack.removeChild(entry)
+                    break
+        settings.writexml(
+            (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
+            addindent="    ",
+            newl="\n",
+        )
 
 
 def link_master_mod(output: Path = None):

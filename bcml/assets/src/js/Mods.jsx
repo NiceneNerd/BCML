@@ -5,7 +5,7 @@ import {
     Dropdown,
     OverlayTrigger,
     Spinner,
-    Tooltip
+    Tooltip,
 } from "react-bootstrap";
 
 import InstallModal from "./Install.jsx";
@@ -28,17 +28,14 @@ class Mods extends React.Component {
             dirty: false,
             mergersReady: false,
             mergers: [],
-            hasCemu: false
+            hasCemu: false,
         };
         window.addEventListener("pywebviewready", () =>
             pywebview.api
                 .get_setup()
                 .then(setup =>
-                    this.setState(
-                        { mergersReady: true, ...setup },
-                        this.sanityCheck
-                    )
-                )
+                    this.setState({ mergersReady: true, ...setup }, this.sanityCheck),
+                ),
         );
     }
 
@@ -62,12 +59,9 @@ class Mods extends React.Component {
                     short:
                         err.short +
                         " The setup wizard will be relaunched in 5 seconds.",
-                    error_text: err.error_text
+                    error_text: err.error_text,
                 });
-                setTimeout(
-                    () => (window.location = "index.html?firstrun=true"),
-                    5000
-                );
+                setTimeout(() => (window.location = "index.html?firstrun=true"), 5000);
             });
     };
 
@@ -80,7 +74,7 @@ class Mods extends React.Component {
                     name: mod.split("\\").slice(-1)[0],
                     priority: priority + i,
                     path: "QUEUE" + mod,
-                    options
+                    options,
                 });
             }
             return { mods: newMods, showInstall: false, dirty: true };
@@ -100,7 +94,7 @@ class Mods extends React.Component {
                     try {
                         const res = await pywebview.api.mod_action({
                             mod,
-                            action
+                            action,
                         });
                         if (!res.success) {
                             throw res.error;
@@ -129,7 +123,7 @@ class Mods extends React.Component {
                 `Are you sure you want to ${action} ${this.state.selectedMods
                     .map(m => m.name)
                     .join(", ")}?`,
-                queue
+                queue,
             );
     };
 
@@ -143,9 +137,9 @@ class Mods extends React.Component {
                 }
                 this.setState(
                     {
-                        selectedMods: []
+                        selectedMods: [],
                     },
-                    () => this.props.onDone()
+                    () => this.props.onDone(),
                 );
             })
             .catch(this.props.onError);
@@ -165,11 +159,11 @@ class Mods extends React.Component {
                         this.props.onDone();
                         this.props.onRefresh();
                         this.setState({
-                            selectedMods: []
+                            selectedMods: [],
                         });
                     })
                     .catch(this.props.onError);
-            }
+            },
         );
     };
 
@@ -195,10 +189,32 @@ class Mods extends React.Component {
                     {
                         showHandle: false,
                         selectedMods: [],
-                        dirty: false
+                        dirty: false,
                     },
-                    () => this.props.onRefresh()
+                    () => this.props.onRefresh(),
                 );
+            })
+            .catch(this.props.onError);
+    };
+
+    launchNoMod = () => {
+        pywebview.api
+            .launch_game_no_mod()
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
+            })
+            .catch(this.props.onError);
+    };
+
+    launchCemu = () => {
+        pywebview.api
+            .launch_cemu({ run_game: false })
+            .then(res => {
+                if (!res.success) {
+                    throw res.error;
+                }
             })
             .catch(this.props.onError);
     };
@@ -220,7 +236,7 @@ class Mods extends React.Component {
                                     showHandle={this.state.showHandle}
                                     onSelect={selected =>
                                         this.setState({
-                                            selectedMods: selected
+                                            selectedMods: selected,
                                         })
                                     }
                                     onChange={mods =>
@@ -228,8 +244,8 @@ class Mods extends React.Component {
                                             this.props.onChange(
                                                 !this.state.sortReverse
                                                     ? mods
-                                                    : mods.reverse()
-                                            )
+                                                    : mods.reverse(),
+                                            ),
                                         )
                                     }
                                 />
@@ -271,8 +287,7 @@ class Mods extends React.Component {
                                         disabled={this.state.showHandle}
                                         onClick={() =>
                                             this.setState({
-                                                sortReverse: !this.state
-                                                    .sortReverse
+                                                sortReverse: !this.state.sortReverse,
                                             })
                                         }>
                                         <i
@@ -298,13 +313,10 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showHandle: !this.state
-                                                    .showHandle
+                                                showHandle: !this.state.showHandle,
                                             })
                                         }>
-                                        <i className="material-icons">
-                                            reorder
-                                        </i>
+                                        <i className="material-icons">reorder</i>
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
@@ -319,8 +331,7 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showDisabled: !this.state
-                                                    .showDisabled
+                                                showDisabled: !this.state.showDisabled,
                                             })
                                         }>
                                         <i className="material-icons">
@@ -332,16 +343,11 @@ class Mods extends React.Component {
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <OverlayTrigger
-                                    overlay={<Tooltip>Remerge</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Remerge</Tooltip>}>
                                     <Button
                                         variant="secondary"
-                                        onClick={() =>
-                                            this.handleRemerge("all")
-                                        }>
-                                        <i className="material-icons">
-                                            refresh
-                                        </i>
+                                        onClick={() => this.handleRemerge("all")}>
+                                        <i className="material-icons">refresh</i>
                                     </Button>
                                 </OverlayTrigger>
                                 <Dropdown.Toggle
@@ -355,9 +361,7 @@ class Mods extends React.Component {
                                         this.state.mergers.map(m => (
                                             <Dropdown.Item
                                                 key={m}
-                                                onClick={() =>
-                                                    this.handleRemerge(m)
-                                                }>
+                                                onClick={() => this.handleRemerge(m)}>
                                                 Remerge {m}
                                             </Dropdown.Item>
                                         ))}
@@ -365,19 +369,14 @@ class Mods extends React.Component {
                             </Dropdown>
                             <ButtonGroup size="xs">
                                 <OverlayTrigger
-                                    overlay={
-                                        <Tooltip>Backup and restore</Tooltip>
-                                    }>
+                                    overlay={<Tooltip>Backup and restore</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onBackup}>
-                                        <i className="material-icons">
-                                            restore
-                                        </i>
+                                        <i className="material-icons">restore</i>
                                     </Button>
                                 </OverlayTrigger>
-                                <OverlayTrigger
-                                    overlay={<Tooltip>Export</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Export</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onExport}
@@ -388,65 +387,74 @@ class Mods extends React.Component {
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={
-                                        <Tooltip>Uninstall all mods</Tooltip>
-                                    }>
+                                    overlay={<Tooltip>Uninstall all mods</Tooltip>}>
                                     <Button
                                         variant="danger"
                                         onClick={this.uninstallAll}>
-                                        <i className="material-icons">
-                                            delete_sweep
-                                        </i>
+                                        <i className="material-icons">delete_sweep</i>
                                     </Button>
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <div className="flex-grow-1"></div>
                             {this.state.hasCemu && (
-                                <OverlayTrigger
-                                    overlay={
-                                        <Tooltip>
-                                            Launch Breath of the Wild
-                                        </Tooltip>
-                                    }>
-                                    <Button
-                                        variant="primary"
-                                        size="xs"
-                                        onClick={this.props.onLaunch}>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            x="0px"
-                                            y="0px"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 171 171"
-                                            style={{ fill: "#000000" }}>
-                                            <g
-                                                fill="none"
-                                                fillRule="nonzero"
-                                                stroke="none"
-                                                strokeWidth="1"
-                                                strokeLinecap="butt"
-                                                strokeLinejoin="miter"
-                                                strokeMiterlimit="10"
-                                                strokeDasharray=""
-                                                strokeDashoffset="0"
-                                                fontFamily="none"
-                                                fontWeight="none"
-                                                fontSize="none"
-                                                textAnchor="none"
-                                                style={{
-                                                    mixBlendMode: "normal"
-                                                }}>
-                                                <path
-                                                    d="M0,171.98863v-171.98863h171.98863v171.98863z"
-                                                    fill="none"></path>
-                                                <g fill="#ffb300">
-                                                    <path d="M85.5,19.14844l-35.625,61.67578h71.25zM121.125,80.82422l-35.625,61.67578h71.25zM85.5,142.5l-35.625,-61.67578l-35.625,61.67578z"></path>
+                                <Dropdown as={ButtonGroup} size="xs">
+                                    <OverlayTrigger
+                                        overlay={
+                                            <Tooltip>Launch Breath of the Wild</Tooltip>
+                                        }>
+                                        <Button
+                                            variant="primary"
+                                            size="xs"
+                                            onClick={this.props.onLaunch}>
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                x="0px"
+                                                y="0px"
+                                                width="24"
+                                                height="24"
+                                                viewBox="0 0 171 171"
+                                                style={{ fill: "#000000" }}>
+                                                <g
+                                                    fill="none"
+                                                    fillRule="nonzero"
+                                                    stroke="none"
+                                                    strokeWidth="1"
+                                                    strokeLinecap="butt"
+                                                    strokeLinejoin="miter"
+                                                    strokeMiterlimit="10"
+                                                    strokeDasharray=""
+                                                    strokeDashoffset="0"
+                                                    fontFamily="none"
+                                                    fontWeight="none"
+                                                    fontSize="none"
+                                                    textAnchor="none"
+                                                    style={{
+                                                        mixBlendMode: "normal",
+                                                    }}>
+                                                    <path
+                                                        d="M0,171.98863v-171.98863h171.98863v171.98863z"
+                                                        fill="none"></path>
+                                                    <g fill="#ffb300">
+                                                        <path d="M85.5,19.14844l-35.625,61.67578h71.25zM121.125,80.82422l-35.625,61.67578h71.25zM85.5,142.5l-35.625,-61.67578l-35.625,61.67578z"></path>
+                                                    </g>
                                                 </g>
-                                            </g>
-                                        </svg>
-                                    </Button>
-                                </OverlayTrigger>
+                                            </svg>
+                                        </Button>
+                                    </OverlayTrigger>
+                                    <Dropdown.Toggle
+                                        split
+                                        variant="primary"
+                                        id="dropdown-split-basic"
+                                    />
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item onClick={this.launchNoMod}>
+                                            Launch without mods
+                                        </Dropdown.Item>
+                                        <Dropdown.Item onClick={this.launchCemu}>
+                                            Launch Cemu without starting game
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
                             )}
                         </div>
                     </div>
@@ -468,7 +476,7 @@ class Mods extends React.Component {
                     show={this.state.showInstall}
                     onInstall={(mods, options) => {
                         this.setState({ showInstall: false }, () =>
-                            this.props.onInstall(mods, options)
+                            this.props.onInstall(mods, options),
                         );
                     }}
                     onQueue={this.handleQueue}

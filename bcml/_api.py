@@ -406,6 +406,18 @@ class Api:
 
     @win_or_lose
     def launch_game(self, params=None):
+        install.enable_bcml_gfx()
+        self.launch_cemu()
+
+    @win_or_lose
+    def launch_game_no_mod(self, params=None):
+        install.disable_bcml_gfx()
+        self.launch_cemu()
+
+    @win_or_lose
+    def launch_cemu(self, params=None):
+        if not params:
+            params = {"run_game": True}
         cemu = next(
             iter(
                 {
@@ -420,15 +432,20 @@ class Api:
             assert uking.exists()
         except AssertionError:
             raise FileNotFoundError("Your BOTW executable could not be found")
+        cemu_args: List[str]
         if SYSTEM == "Windows":
-            cemu_args = [str(cemu), "-g", str(uking)]
+            cemu_args = [str(cemu)]
+            if params["run_game"]:
+                cemu_args.extend(("-g", str(uking)))
         else:
-            cemu_args = [
-                "wine",
-                str(cemu),
-                "-g",
-                "Z:\\" + str(uking).replace("/", "\\"),
-            ]
+            cemu_args = ["wine", str(cemu)]
+            if params["run_game"]:
+                cemu_args.extend(
+                    (
+                        "-g",
+                        "Z:\\" + str(uking).replace("/", "\\"),
+                    )
+                )
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
