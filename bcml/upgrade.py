@@ -5,6 +5,7 @@ import shutil
 from configparser import ConfigParser
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Any, Dict
 
 import oead
 import yaml
@@ -74,7 +75,7 @@ def convert_old_settings():
     util.save_settings()
 
 
-def parse_rules(rules_path: Path) -> {}:
+def parse_rules(rules_path: Path) -> Dict[str, Any]:
     rules = RulesParser()
     rules.read(str(rules_path))
     info = {
@@ -86,6 +87,7 @@ def parse_rules(rules_path: Path) -> {}:
         "depends": [],
         "options": {},
         "platform": "wiiu",
+        "priority": 100,
     }
     id_string = f"{info['name']}=={info['version']}"
     info["id"] = base64.urlsafe_b64encode(id_string.encode("utf8")).decode("utf8")
@@ -188,7 +190,9 @@ def _convert_text_log(log: Path) -> dict:
 def _convert_text_logs(logs_path: Path):
     diffs = {}
     with Pool() as pool:
-        for diff in pool.imap_unordered(_convert_text_log, logs_path.glob("texts_*.yml")):
+        for diff in pool.imap_unordered(
+            _convert_text_log, logs_path.glob("texts_*.yml")
+        ):
             diffs.update(diff)
     fails = set()
     for text_pack in logs_path.glob("newtexts_*.sarc"):
@@ -200,7 +204,9 @@ def _convert_text_logs(logs_path: Path):
             try:
                 diffs[lang].update({file.name: read_msbt(bytes(file.data))["entries"]})
             except RuntimeError:
-                print(f"Warning: {file.name} could not be processed and will not be used")
+                print(
+                    f"Warning: {file.name} could not be processed and will not be used"
+                )
                 fails.add(file.name)
                 continue
         util.vprint(f"{len(fails)} text files failed to process:\n{fails}")

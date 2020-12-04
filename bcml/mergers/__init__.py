@@ -1,8 +1,8 @@
 """ Provides abstracted merging objects """
 from abc import ABCMeta
-from multiprocessing import Pool
+from multiprocessing.pool import Pool
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Type, Set, Optional, Tuple, Iterable
 from bcml import util
 
 
@@ -17,7 +17,7 @@ class Merger(metaclass=ABCMeta):
     _description: str
     _log_name: str
     _options: dict
-    _pool: Pool
+    _pool: Optional[Pool]
 
     def __init__(
         self, friendly_name: str, description: str, log_name: str, options: dict = None
@@ -92,13 +92,13 @@ class Merger(metaclass=ABCMeta):
         """ Checks whether this merger needs to inject a file into `Bootup.pack` """
         return False
 
-    def get_bootup_injection(self) -> (str, bytes):
+    def get_bootup_injection(self) -> Tuple[Optional[str], Optional[bytes]]:
         """ Gets whatever file this merger needs to inject into `Bootup.pack` """
         return (None, None)
 
     def get_mod_affected(
         self, mod: util.BcmlMod  # pylint: disable=unused-argument
-    ) -> []:
+    ) -> List[str]:
         """ Gets a list of files affected by a mod, if merger supports partial remerge """
         return []
 
@@ -114,7 +114,7 @@ class Merger(metaclass=ABCMeta):
         """ Performs any cleanup tasks needed when a merge mod is uninstalled """
 
 
-def get_mergers() -> List[Merger]:
+def get_mergers() -> List[Type[Merger]]:
     """ Retrieves all available types of mod mergers """
     # pylint: disable=import-outside-toplevel
 
@@ -151,15 +151,15 @@ def get_mergers() -> List[Merger]:
     ]
 
 
-def get_mergers_for_mod(mod: util.BcmlMod) -> List[Merger]:
+def get_mergers_for_mod(mod: util.BcmlMod) -> Set[Merger]:
     mergers = set()
-    for merger in [m() for m in get_mergers()]:
+    for merger in [m() for m in get_mergers()]:  # type: ignore
         if merger.is_mod_logged(mod):
             mergers.add(merger)
     return mergers
 
 
-def sort_mergers(mergers: List[Merger]) -> List[Merger]:
+def sort_mergers(mergers: Iterable[Merger]) -> List[Merger]:
     merger_names = [m.NAME for m in get_mergers()]
     return sorted(
         mergers, key=lambda merger: merger_names.index(merger.NAME), reverse=False,

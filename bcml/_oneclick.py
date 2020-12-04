@@ -56,11 +56,11 @@ def process_arg(arg: str = None):
         if "," in url:
             url, mod_type, mod_id = url.split(",")
             try:
-                res = requests.get(
+                res_meta = requests.get(
                     "https://api.gamebanana.com/Core/Item/Data"
                     f"?itemtype={mod_type}&itemid={mod_id}&fields=name"
                 )
-                filename = util.get_safe_pathname(res.json()[0])
+                filename = util.get_safe_pathname(res_meta.json()[0])
             except (
                 requests.ConnectionError,
                 requests.RequestException,

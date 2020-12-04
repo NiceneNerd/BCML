@@ -1,7 +1,7 @@
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Dict
 from zlib import crc32
 
 import oead
@@ -20,17 +20,21 @@ class ActorInfoMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "actor info", "Merges changes to ActorInfo.product.byml", "actorinfo.yml", {},
+            "actor info",
+            "Merges changes to ActorInfo.product.byml",
+            "actorinfo.yml",
+            {},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         try:
-            actor_file = next(
+            actor_file: Path = next(
                 iter(
                     [
                         file
                         for file in modded_files
-                        if Path(file).name == "ActorInfo.product.sbyml"
+                        if isinstance(file, Path)
+                        and file.name == "ActorInfo.product.sbyml"
                     ]
                 )
             )
@@ -46,7 +50,9 @@ class ActorInfoMerger(mergers.Merger):
             try:
                 actorinfo = oead.byml.from_binary(data)
             except oead.InvalidDataError as err:
-                raise ValueError("This mod contains a corrupt actor info file.") from err
+                raise ValueError(
+                    "This mod contains a corrupt actor info file."
+                ) from err
         del actor_file
         stock_actorinfo = get_stock_actorinfo()
         stock_actors = {actor["name"]: actor for actor in stock_actorinfo["Actors"]}
@@ -79,14 +85,14 @@ class ActorInfoMerger(mergers.Merger):
 
     def log_diff(self, mod_dir: Path, diff_material: Union[oead.byml.Hash, list]):
         if isinstance(diff_material, List):
-            diff_material: oead.byml.Hash = self.generate_diff(Path, diff_material)
+            diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / "logs" / self._log_name).write_text(
                 oead.byml.to_text(diff_material), encoding="utf-8"
             )
 
     def get_mod_diff(self, mod: BcmlMod):
-        diffs = {}
+        diffs: Dict[str, oead.Byml.Hash] = {}
         if self.is_mod_logged(mod):
             util.dict_merge(
                 diffs,
@@ -113,7 +119,7 @@ class ActorInfoMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = {}
+        all_diffs: Dict[str, oead.Byml.Hash] = {}
         for diff in diffs:
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
         util.vprint("All actor info diffs:")

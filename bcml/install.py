@@ -4,18 +4,18 @@
 # pylint: disable=too-many-lines
 import datetime
 import json
+import multiprocessing
 import os
 import re
 import shutil
 import subprocess
-from base64 import b64decode
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
 from platform import system
 from shutil import rmtree, copyfile
 from tempfile import TemporaryDirectory, mkdtemp
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Dict, Any, Optional
 from xml.dom import minidom
 
 import oead
@@ -24,7 +24,7 @@ from bcml import util, mergers, dev, upgrade
 from bcml.util import BcmlMod, get_7z_path
 
 
-def extract_mod_meta(mod: Path) -> {}:
+def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     process = subprocess.Popen(
         f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
         stdout=subprocess.PIPE,
@@ -112,7 +112,9 @@ def _check_modded(file: Path, tmp_dir: Path):
         return None
 
 
-def find_modded_files(tmp_dir: Path, pool: Pool = None) -> List[Union[Path, str]]:
+def find_modded_files(
+    tmp_dir: Path, pool: Optional[multiprocessing.pool.Pool] = None
+) -> List[Union[Path, str]]:
     modded_files = []
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
@@ -215,7 +217,11 @@ def find_modded_sarc_files(
     return modded_files
 
 
-def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> List[Path]:
+def generate_logs(
+    tmp_dir: Path,
+    options: dict = None,
+    pool: Optional[multiprocessing.pool.Pool] = None,
+) -> List[Union[Path, str]]:
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
     if not options:
@@ -242,7 +248,7 @@ def generate_logs(tmp_dir: Path, options: dict = None, pool: Pool = None) -> Lis
                 if merger_class.NAME not in options["disable"]
             ]
         ):
-            merger = merger_class()
+            merger = merger_class()  # type: ignore
             util.vprint(f"Merger {merger.NAME}, #{i+1} of {len(mergers.get_mergers())}")
             if options is not None and merger.NAME in options["options"]:
                 merger.set_options(options["options"][merger.NAME])
@@ -279,7 +285,7 @@ def install_mod(
     mod: Path,
     options: dict = None,
     selects: dict = None,
-    pool: Pool = None,
+    pool: Optional[multiprocessing.pool.Pool] = None,
     insert_priority: int = 0,
     merge_now: bool = False,
 ):
@@ -313,7 +319,7 @@ def install_mod(
     if not options:
         options = {"options": {}, "disable": []}
 
-    this_pool: Pool = None
+    this_pool: Optional[multiprocessing.pool.Pool] = None  # type: ignore
     try:
         rules = json.loads((tmp_dir / "info.json").read_text("utf-8"))
         mod_name = rules["name"].strip(" '\"").replace("_", "")
@@ -347,7 +353,7 @@ def install_mod(
         if logs.exists():
             print("Loading mod logs...")
             for merger in [
-                merger()
+                merger()  # type: ignore
                 for merger in mergers.get_mergers()
                 if merger.NAME in options["disable"]
             ]:
@@ -476,12 +482,13 @@ def install_mod(
     try:
         if merge_now:
             all_mergers = set()
-            for merger in {m() for m in mergers.get_mergers()}:
+            for merger in {m() for m in mergers.get_mergers()}:  # type: ignore
                 if merger.is_mod_logged(output_mod):
                     all_mergers.add(merger)
-            for merger in mergers.sort_mergers(all_mergers):
-                merger.set_pool(this_pool)
-                merger.perform_merge()
+            if this_pool:
+                for merger in mergers.sort_mergers(all_mergers):
+                    merger.set_pool(this_pool)
+                    merger.perform_merge()
     except Exception as err:  # pylint: disable=broad-except
         raise util.MergeError(err) from err
 
@@ -495,7 +502,7 @@ def install_mod(
 def disable_mod(mod: BcmlMod, wait_merge: bool = False):
     remergers = []
     print(f"Disabling {mod.name}...")
-    for merger in [merger() for merger in mergers.get_mergers()]:
+    for merger in [merger() for merger in mergers.get_mergers()]:  # type: ignore
         if merger.is_mod_logged(mod):
             remergers.append(merger)
     (mod.path / ".disabled").write_bytes(b"")
@@ -721,7 +728,7 @@ def link_master_mod(output: Path = None):
         reverse=True,
     )
     util.vprint(mod_folders)
-    link_or_copy = os.link if not util.get_settings("no_hardlinks") else copyfile
+    link_or_copy: Any = os.link if not util.get_settings("no_hardlinks") else copyfile
     for mod_folder in mod_folders:
         for item in mod_folder.rglob("**/*"):
             rel_path = item.relative_to(mod_folder)
@@ -792,9 +799,12 @@ def export(output: Path):
                 creationflags=util.CREATE_NO_WINDOW,
                 check=False,
                 capture_output=True,
+                universal_newlines=True,
             )
         else:
-            result = subprocess.run(x_args, check=False, capture_output=True)
+            result = subprocess.run(
+                x_args, check=False, capture_output=True, universal_newlines=True
+            )
         if result.stderr:
             raise RuntimeError(
                 f"There was an error exporting your mod(s). {result.stderr}"

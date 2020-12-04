@@ -1,19 +1,3 @@
-# fmt: off
-try:
-    import oead
-    del oead
-except ImportError:
-    import sys
-    from bcml import native_msg
-    native_msg(
-        "The latest (2019) Visual C++ redistributable is required to run BCML. Please "
-        "download it from the following link and try again:\n"
-        "https://aka.ms/vs/16/release/vc_redist.x64.exe",
-        "Dependency Error"
-    )
-    sys.exit(1)
-# fmt: on
-
 import os
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -57,7 +41,9 @@ def stop_it(messager: Messager = None):
 
 
 def configure_cef(debug):
-    from webviewb.platforms.cef import settings
+    from webviewb.platforms.cef import (  # pylint: disable=import-outside-toplevel
+        settings,
+    )
 
     cache = util.get_storage_dir() / "cef_cache"
     settings.update(
@@ -125,7 +111,7 @@ def main(debug: bool = False):
 
     messager = Messager(api.window)
     with redirect_stderr(sys.stdout):
-        with redirect_stdout(messager):
+        with redirect_stdout(messager):  # type: ignore
             sleep(0.5)
             webview.start(
                 gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg

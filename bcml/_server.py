@@ -8,7 +8,7 @@ class BcmlRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(get_exec_dir() / "assets"), **kwargs)
 
-    def log_message(self, format, *args):
+    def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         pass
 
 

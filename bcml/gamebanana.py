@@ -1,13 +1,35 @@
 import json
-from time import time
-from pathlib import Path
-import requests
 import shlex
 import sys
+from time import time
+
+import requests
 
 from bcml import util
 
 GB_DATA = util.get_data_dir() / "gb.json"
+CAT_EXCLUDES = {
+    "Request",
+    "Question",
+    "Tutorial",
+    "Blog",
+    "Contest",
+    "News",
+    "Poll",
+    "Project",
+    "Thread",
+    "Wip",
+    "Tool",
+    "Script",
+    "Concept",
+}
+FIELD_MAP = {
+    "Preview().sStructuredDataFullsizeUrl()": "preview",
+    "Files().aFiles()": "files",
+    "Game().name": "game",
+    "Owner().name": "owner",
+    "udate": "updated",
+}
 
 
 class GameBananaDb:
@@ -18,7 +40,9 @@ class GameBananaDb:
         self._gameid = "5866" if util.get_settings("wiiu") else "6386"
         if not GB_DATA.exists():
             GB_DATA.write_bytes(
-                util.decompress((util.get_exec_dir() / "data" / "gb.sjson").read_bytes())
+                util.decompress(
+                    (util.get_exec_dir() / "data" / "gb.sjson").read_bytes()
+                )
             )
         self._data = json.loads(GB_DATA.read_text("utf-8"))
         self.update_db()
@@ -27,11 +51,11 @@ class GameBananaDb:
         search = search.lower()
         terms = shlex.split(search)
         special = {}
-        for t in terms.copy():
-            if ":" in t:
-                terms.remove(t)
-                kv = t.split(":")
-                special[kv[0]] = kv[1]
+        for term in terms.copy():
+            if ":" in term:
+                terms.remove(term)
+                key_val = term.split(":")
+                special[key_val[0]] = key_val[1]
         return [
             m
             for m in self.mods
@@ -56,21 +80,6 @@ class GameBananaDb:
         return requests.get(req).json()
 
     def update_db(self):
-        EXCLUDES = {
-            "Request",
-            "Question",
-            "Tutorial",
-            "Blog",
-            "Contest",
-            "News",
-            "Poll",
-            "Project",
-            "Thread",
-            "Wip",
-            "Tool",
-            "Script",
-            "Concept",
-        }
         page = 1
         max_age = (
             157680000
@@ -89,11 +98,13 @@ class GameBananaDb:
                         "include_updated": 1,
                     },
                 )
-            except:
+            except:  # pylint: disable=bare-except
                 return
             if not res:
                 break
-            mods.update({m[1]: {"category": m[0]} for m in res if m[0] not in EXCLUDES})
+            mods.update(
+                {m[1]: {"category": m[0]} for m in res if m[0] not in CAT_EXCLUDES}
+            )
             page += 1
 
         for mod, info in mods.copy().items():
@@ -107,13 +118,6 @@ class GameBananaDb:
         self.save_db()
 
     def _get_mod_data(self, mod_id: str, category: str) -> dict:
-        FIELD_MAP = {
-            "Preview().sStructuredDataFullsizeUrl()": "preview",
-            "Files().aFiles()": "files",
-            "Game().name": "game",
-            "Owner().name": "owner",
-            "udate": "updated",
-        }
         data = {}
         try:
             res = self._send_request(
@@ -132,7 +136,7 @@ class GameBananaDb:
                 raise RuntimeError(
                     f"Error getting info for {category} mod #{mod_id}: {res['error']}"
                 )
-        except Exception as err:
+        except (requests.exceptions.BaseHTTPError, RuntimeError) as err:
             sys.__stdout__.write(str(err))
             return {}
         res["itemid"] = mod_id
@@ -163,7 +167,9 @@ class GameBananaDb:
         return [
             m
             for m in self._data["mods"].values()
-            if ("WiiU" in m["game"] if self._gameid == "5866" else "Switch" in m["game"])
+            if (
+                "WiiU" in m["game"] if self._gameid == "5866" else "Switch" in m["game"]
+            )
         ]
 
     def update_mod(self, mod_id: str):

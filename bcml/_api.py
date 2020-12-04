@@ -1,22 +1,6 @@
-# fmt: off
-try:
-    import oead
-    del oead
-except ImportError:
-    import sys
-    from bcml import native_msg
-    native_msg(
-        "The latest (2019) Visual C++ redistributable is required to run BCML. Please "
-        "download it from the following link and try again:\n"
-        "https://aka.ms/vs/16/release/vc_redist.x64.exe",
-        "Dependency Error"
-    )
-    sys.exit(1)
-# fmt: on
-
 import base64
 import json
-import requests
+import os
 import traceback
 from math import ceil
 from multiprocessing import Pool
@@ -31,10 +15,7 @@ from threading import Thread
 from typing import List
 from xml.dom import minidom
 
-try:
-    from os import startfile  # pylint: disable=no-name-in-module
-except ImportError:
-    pass
+import requests
 import webviewb
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
@@ -135,7 +116,7 @@ class Api:
                 "update_dir": str(update_dir) if update_dir else "",
                 "dlc_dir": str(dlc_dir) if dlc_dir else "",
             }
-        except Exception as err:  # pylint: disable=bare-except
+        except Exception as err:  # pylint: disable=broad-except
             print(err)
             return {}
 
@@ -389,7 +370,7 @@ class Api:
     def explore(self, params):
         path = params["mod"]["path"]
         if SYSTEM == "Windows":
-            startfile(path)
+            os.startfile(path)
         elif SYSTEM == "Darwin":
             run(["open", path], check=False)
         else:
@@ -398,7 +379,7 @@ class Api:
     def explore_master(self, params=None):
         path = util.get_master_modpack_dir()
         if SYSTEM == "Windows":
-            startfile(path)
+            os.startfile(path)
         elif SYSTEM == "Darwin":
             run(["open", path], check=False)
         else:
@@ -586,10 +567,11 @@ class Api:
                 capture_output=True,
                 universal_newlines=True,
                 creationflags=util.CREATE_NO_WINDOW,
+                check=False,
             )
         else:
             result = run(
-                x_args, capture_output=True, universal_newlines=True, check=True
+                x_args, capture_output=True, universal_newlines=True, check=False
             )
         if result.stderr:
             raise RuntimeError(result.stderr)
@@ -631,8 +613,7 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod,
-                merge_now=True,
+                mod, merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -737,7 +718,7 @@ class Api:
         if parent.name == "pkgs":
             try:
                 (parent / "bcml").rename(parent / "bcml.bak")
-            except:
+            except (OSError, PermissionError, FileExistsError, FileNotFoundError):
                 pass
         if SYSTEM == "Windows":
             result = run(
@@ -748,17 +729,12 @@ class Api:
                 text=True,
             )
         else:
-            result = run(
-                args,
-                capture_output=True,
-                check=False,
-                text=True,
-            )
+            result = run(args, capture_output=True, check=False, text=True,)
         if result.stderr:
             if parent.name == "pkgs":
                 try:
                     (parent / "bcml.bak").rename(parent / "bcml")
-                except:
+                except (OSError, PermissionError, FileExistsError, FileNotFoundError):
                     pass
             raise RuntimeError(result.stderr)
 
@@ -820,5 +796,5 @@ class Api:
         for file in self.tmp_files:
             try:
                 file.unlink()
-            except:
+            except (OSError, PermissionError, FileNotFoundError):
                 pass

@@ -1,16 +1,16 @@
 # pylint: disable=unsupported-assignment-operation,no-member
+import multiprocessing
+import shutil
+import subprocess
 from base64 import urlsafe_b64encode
-from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial
 from json import dumps, loads
 from multiprocessing import Pool
 from pathlib import Path
 from platform import system
-from tempfile import TemporaryDirectory, mkdtemp
-from typing import Optional, Union
-import shutil
-import subprocess
+from tempfile import TemporaryDirectory
+from typing import Optional, Union, List, Tuple
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
@@ -40,7 +40,7 @@ def _yml_to_aamp(file: Path):
     file.unlink()
 
 
-def _pack_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
+def _pack_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
     sarc_folders = {
         d
         for d in tmp_dir.rglob("**/*")
@@ -114,7 +114,7 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
         )
 
 
-def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: Pool):
+def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
     sarc_files = {
         file
         for file in tmp_dir.rglob("**/*")
@@ -286,9 +286,11 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         )
 
 
-def create_bnp_mod(mod: Path, output: Path, meta: dict, options: dict = None):
+def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] = None):
     if isinstance(mod, str):
         mod = Path(mod)
+    if not options:
+        options = {"options": {}, "disable": []}
 
     if mod.is_file():
         print("Extracting mod...")
@@ -416,7 +418,8 @@ NO_CONVERT_EXTS = {
     ".bfres",
     ".hkcl",
     ".hkrg",
-    ".bphyssb" ".sesetlist",
+    ".bphyssb",
+    ".sesetlist",
     ".sbfarc",
     ".shknm2",
     ".shktmrb",
@@ -449,25 +452,36 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                     file.data,
                     count_new=True,
                 ):
-                    actor_name = file.name[file.name.rindex("/") : file.name.rindex(".")]
+                    actor_name = file.name[
+                        file.name.rindex("/") : file.name.rindex(".")
+                    ]
                     try:
+                        pack_path = util.get_game_file(
+                            f"Actor/Pack/{actor_name}.sbactorpack"
+                        )
                         stock_data = util.get_nested_file_bytes(
-                            f"{str(util.get_game_file(f'Actor/Pack/{actor_name}.sbactorpack'))}//{file.name}"
+                            f"{str(pack_path)}//{file.name}"
                         )
                         if stock_data:
                             new_sarc.files[file.name] = stock_data
                         else:
                             raise FileNotFoundError(file.name)
                     except (FileNotFoundError, AttributeError):
-                        error = f"This mod contains a Havok file not supported by the converter: {file.name}"
+                        error = (
+                            "This mod contains a Havok file not supported by the "
+                            f"converter: {file.name}"
+                        )
                 else:
-                    error = f"This mod contains a Havok file not supported by the converter: {file.name}"
+                    error = (
+                        "This mod contains a Havok file not supported by the"
+                        f" converter: {file.name}"
+                    )
             else:
                 if file.data[0:4] == b"AAMP":
                     continue
                 try:
                     hk = Havok.from_bytes(bytes(file.data))
-                except:
+                except:  # pylint: disable=bare-except
                     return f"Could not parse Havok file {file.name}"
                 if to_wiiu:
                     hk.to_wiiu()
@@ -493,7 +507,7 @@ def _convert_sarc_file(pack: Path, to_wiiu: bool) -> list:
     return error
 
 
-def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> (bytes, list):
+def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> Tuple[bytes, List[str]]:
     error = []
     new_sarc = oead.SarcWriter.from_sarc(sarc)
     new_sarc.set_endianness(oead.Endianness.Big if to_wiiu else oead.Endianness.Little)
@@ -521,7 +535,7 @@ def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> (bytes, list):
 def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
     warnings = []
 
-    def handle_warning(warning: str) -> str:
+    def handle_warning(warning: str) -> None:
         if not warn_only:
             raise ValueError(warning)
         else:
@@ -542,7 +556,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         to_aoc = "01007EF00011F001/romfs"
         from_aoc = "aoc/0010"
 
-    SPECIAL = {"ActorInfo.product.sbyml"}
+    special_files = {"ActorInfo.product.sbyml"}
     all_files = {
         f for f in mod.rglob("**/*.*") if f.is_file() and "options" not in f.parts
     }
@@ -569,7 +583,8 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         if log_path.exists():
             text = log_path.read_text("utf-8").replace("\\\\", "/").replace("\\", "/")
             log_path.write_text(
-                text.replace(from_content, to_content).replace(from_aoc, to_aoc), "utf-8"
+                text.replace(from_content, to_content).replace(from_aoc, to_aoc),
+                "utf-8",
             )
 
     for log in {"deepmerge.aamp", "shop.aamp"}:
@@ -588,7 +603,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
             )
 
     for file in {
-        f for f in all_files if f.suffix in BYML_EXTS and f.name not in SPECIAL
+        f for f in all_files if f.suffix in BYML_EXTS and f.name not in special_files
     }:
         byml = oead.byml.from_binary(util.unyaz_if_needed(file.read_bytes()))
         file.write_bytes(oead.byml.to_binary(byml, big_endian=to_wiiu))
@@ -603,7 +618,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                 handle_warning(err)
 
         errs = pool.map(
-            partial(_convert_sarc_file, to_wiiu=to_wiiu),
+            partial(_convert_sarc_file, to_wiiu=to_wiiu),  # type: ignore
             {
                 f
                 for f in all_files
@@ -616,26 +631,27 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                 handle_warning(err)
 
         if (mod / from_content).exists():
-            shutil.move(mod / from_content, mod / to_content)
+            shutil.move(mod / from_content, mod / to_content)  # type: ignore
 
         if (mod / from_aoc).exists():
-            shutil.move(mod / from_aoc, mod / to_aoc)
+            shutil.move(mod / from_aoc, mod / to_aoc)  # type: ignore
 
         with TempSettingsContext({"wiiu": to_wiiu}):
             rstb_log = mod / "logs" / "rstb.json"
             if rstb_log.exists():
+                # pylint: disable=import-outside-toplevel
                 rstb_log.unlink()
                 from bcml.install import find_modded_files
                 from bcml.mergers.rstable import RstbMerger
 
                 files = find_modded_files(mod, pool)
-                rm = RstbMerger()
-                rm.set_pool(pool)
-                rm.log_diff(mod, files)
+                merger = RstbMerger()
+                merger.set_pool(pool)
+                merger.log_diff(mod, files)
 
     if (mod / "options").exists():
         for folder in {d for d in (mod / "options").glob("*") if d.is_dir()}:
-            convert_mod(folder)
+            convert_mod(folder, to_wiiu=to_wiiu, warn_only=warn_only)
 
     meta = loads((mod / "info.json").read_text("utf-8"))
     meta["platform"] = "wiiu" if to_wiiu else "switch"

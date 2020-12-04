@@ -22,11 +22,10 @@ from multiprocessing import current_process
 from pathlib import Path
 from platform import system, python_version_tuple
 from pprint import pformat
-from re import findall
 from subprocess import run
 from tempfile import mkdtemp
 from time import time_ns
-from typing import Union, List, Dict, ByteString, Tuple, Any, Optional
+from typing import Union, List, Dict, ByteString, Tuple, Any, Optional, IO
 from xml.dom import minidom
 
 import oead
@@ -632,9 +631,9 @@ def get_game_dir() -> Path:
     return game_path
 
 
-def set_site_meta(site_meta):
+def set_site_meta(site_meta: str):
     settings = get_settings()
-    if not "site_meta" in settings:
+    if "site_meta" not in settings:
         settings["site_meta"] = ""
     else:
         settings["site_meta"] = str(settings["site_meta"] + f"{site_meta};")
@@ -1257,13 +1256,10 @@ def get_latest_bcml() -> str:
             creationflags=CREATE_NO_WINDOW,
             capture_output=True,
             universal_newlines=True,
+            check=True,
         )
     else:
-        result = run(
-            args,
-            capture_output=True,
-            universal_newlines=True,
-        )
+        result = run(args, capture_output=True, universal_newlines=True, check=True)
     vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
     try:
         return vers[-1]
@@ -1316,8 +1312,8 @@ class Messager:
         self.log: List[str] = []
         self.i = 0
 
-    def write(self, string: str):
-        stripped = string.replace("VERBOSE", "")
+    def write(self, s: str):
+        stripped = s.replace("VERBOSE", "")
         self.log.append(stripped)
         self.i += 1
         if self.i == 256:

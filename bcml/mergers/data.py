@@ -6,13 +6,14 @@ Provides functions to diff and merge BOTW gamedat and savedata.
 # pylint: disable=unsupported-assignment-operation
 from functools import lru_cache
 from math import ceil
-from multiprocessing import Pool
+from multiprocessing import Pool, pool
 from operator import itemgetter
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Dict
 
 import oead
 import xxhash
+from oead.byml import Hash
 
 from bcml import util, mergers
 from bcml.mergers import rstable
@@ -32,51 +33,36 @@ def get_stock_savedata() -> oead.Sarc:
 
 
 @lru_cache(None)
-def get_gamedata_hashes() -> {}:
+def get_gamedata_hashes() -> Dict[str, int]:
     gamedata = get_stock_gamedata()
-    return {file.name: xxhash.xxh64_intdigest(file.data) for file in gamedata.get_files()}
+    return {
+        file.name: xxhash.xxh64_intdigest(file.data) for file in gamedata.get_files()
+    }
 
 
 @lru_cache(None)
-def get_savedata_hashes() -> {}:
+def get_savedata_hashes() -> Dict[str, int]:
     savedata = get_stock_savedata()
-    return {file.name: xxhash.xxh64_intdigest(file.data) for file in savedata.get_files()}
+    return {
+        file.name: xxhash.xxh64_intdigest(file.data) for file in savedata.get_files()
+    }
 
 
-def is_savedata_modded(savedata: oead.Sarc) -> {}:
-    hashes = get_savedata_hashes()
-    sv_files = sorted(savedata.get_files(), key=lambda file: file.name)
-    fix_slash = "/" if not sv_files[0].name.startswith("/") else ""
-    modded = False
-    for svdata in sv_files[0:-2]:
-        svdata_hash = xxhash.xxh64_intdigest(svdata.data)
-        if not modded:
-            modded = (
-                fix_slash + svdata.name not in hashes
-                or svdata_hash != hashes[fix_slash + svdata.name]
-            )
-    return modded
-
-
-def _bgdata_from_bytes(file: str, game_dict: dict) -> {}:
-    return oead.byml.from_binary(game_dict[file])
-
-
-def consolidate_gamedata(gamedata: oead.Sarc) -> {}:
-    data = {}
+def consolidate_gamedata(gamedata: oead.Sarc) -> Hash:
+    data = Hash()
     for file in gamedata.get_files():
         util.dict_merge(data, oead.byml.from_binary(file.data))
     del gamedata
     return data
 
 
-def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
+def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> Hash:
     stock_entries = {entry["DataName"]: entry for entry in stock_data}
     del stock_data
     mod_entries = {entry["DataName"] for entry in mod_data}
-    diffs = oead.byml.Hash(
+    diffs = Hash(
         {
-            "add": oead.byml.Hash(
+            "add": Hash(
                 {
                     entry["DataName"]: entry
                     for entry in mod_data
@@ -94,10 +80,10 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> {}:
     del stock_entries
     del mod_entries
     del mod_data
-    return oead.byml.Hash({data_type: diffs})
+    return Hash({data_type: diffs})
 
 
-def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
+def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: pool.Pool = None) -> Hash:
     this_pool = pool or Pool()
     stock_data = consolidate_gamedata(get_stock_gamedata())
     mod_data = consolidate_gamedata(gamedata)
@@ -105,9 +91,7 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     results = this_pool.starmap(
         diff_gamedata_type, ((key, mod_data[key], stock_data[key]) for key in mod_data),
     )
-    diffs = oead.byml.Hash(
-        {data_type: diff for d in results for data_type, diff in d.items()}
-    )
+    diffs = Hash({data_type: diff for d in results for data_type, diff in d.items()})
     del results
     if not pool:
         this_pool.close()
@@ -117,7 +101,7 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: Pool = None) -> {}:
     return diffs
 
 
-def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
+def get_modded_savedata_entries(savedata: oead.Sarc) -> Hash:
     ref_savedata = get_stock_savedata().get_files()
     ref_hashes = {
         int(item["HashValue"])
@@ -133,7 +117,7 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> {}:
             {item for item in entries if int(item["HashValue"]) not in ref_hashes}
         )
     del ref_savedata
-    return oead.byml.Hash(
+    return Hash(
         {
             "add": new_entries,
             "del": oead.byml.Array(
@@ -177,7 +161,7 @@ class GameDataMerger(mergers.Merger):
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
-            diff_material: oead.byml.Hash = self.generate_diff(mod_dir, diff_material)
+            diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / "logs" / self._log_name).write_text(
                 oead.byml.to_text(diff_material), encoding="utf-8"
@@ -185,7 +169,7 @@ class GameDataMerger(mergers.Merger):
             del diff_material
 
     def get_mod_diff(self, mod: BcmlMod):
-        diffs = oead.byml.Hash()
+        diffs = Hash()
         if self.is_mod_logged(mod):
             util.dict_merge(
                 diffs,
@@ -223,7 +207,7 @@ class GameDataMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        all_diffs = oead.byml.Hash()
+        all_diffs = Hash()
         for diff in diffs:
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
         return all_diffs
@@ -252,7 +236,7 @@ class GameDataMerger(mergers.Merger):
         print("Loading stock gamedata...")
         gamedata = consolidate_gamedata(get_stock_gamedata())
         merged_entries = {
-            data_type: oead.byml.Hash({entry["DataName"]: entry for entry in entries})
+            data_type: Hash({entry["DataName"]: entry for entry in entries})
             for data_type, entries in gamedata.items()
         }
         del gamedata
@@ -260,7 +244,9 @@ class GameDataMerger(mergers.Merger):
         print("Merging changes...")
         for data_type in {d for d in merged_entries if d in modded_entries}:
             util.dict_merge(
-                merged_entries[data_type], modded_entries[data_type]["add"], shallow=True,
+                merged_entries[data_type],
+                modded_entries[data_type]["add"],
+                shallow=True,
             )
             for entry in modded_entries[data_type]["del"]:
                 try:
@@ -268,7 +254,7 @@ class GameDataMerger(mergers.Merger):
                 except KeyError:
                     continue
 
-        merged_entries = oead.byml.Hash(
+        merged_entries = Hash(
             {
                 data_type: oead.byml.Array({value for _, value in entries.items()})
                 for data_type, entries in merged_entries.items()
@@ -287,9 +273,7 @@ class GameDataMerger(mergers.Merger):
                 if end_pos > len(merged_entries[data_type]):
                     end_pos = len(merged_entries[data_type])
                 new_gamedata.files[f"/{data_type}_{i}.bgdata"] = oead.byml.to_binary(
-                    oead.byml.Hash(
-                        {data_type: merged_entries[data_type][i * 4096 : end_pos]}
-                    ),
+                    Hash({data_type: merged_entries[data_type][i * 4096 : end_pos]}),
                     big_endian=util.get_settings("wiiu"),
                 )
         new_gamedata_bytes = new_gamedata.write()[1]
@@ -367,7 +351,7 @@ class SaveDataMerger(mergers.Merger):
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
-            diff_material: oead.byml.Array = self.generate_diff(mod_dir, diff_material)
+            diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
             (mod_dir / "logs" / self._log_name).write_text(
                 oead.byml.to_text(diff_material), encoding="utf-8"
@@ -402,7 +386,7 @@ class SaveDataMerger(mergers.Merger):
     def consolidate_diffs(self, diffs: list):
         if not diffs:
             return {}
-        all_diffs = oead.byml.Hash({"add": oead.byml.Array(), "del": oead.byml.Array()})
+        all_diffs = Hash({"add": oead.byml.Array(), "del": oead.byml.Array()})
         hashes = set()
         for diff in reversed(diffs):
             for entry in diff["add"]:
@@ -467,7 +451,7 @@ class SaveDataMerger(mergers.Merger):
             if end_pos > len(merged_entries):
                 end_pos = len(merged_entries)
             data = oead.byml.to_binary(
-                oead.byml.Hash(
+                Hash(
                     {
                         "file_list": oead.byml.Array(
                             [

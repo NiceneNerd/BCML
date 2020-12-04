@@ -29,7 +29,7 @@ def pickle_u32(u32: oead.U32):
     return oead.U32, (int(u32),)
 
 
-pickle_map = {
+PICKLE_MAP = {
     oead.aamp.ParameterIO: pickle_pio,
     oead.aamp.ParameterList: pickle_plist,
     oead.byml.Hash: pickle_byml,
@@ -37,5 +37,5 @@ pickle_map = {
     oead.U32: pickle_u32,
 }
 
-for typ, func in pickle_map.items():
+for typ, func in PICKLE_MAP.items():
     copyreg.pickle(typ, func)
