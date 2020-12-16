@@ -7,7 +7,10 @@ def native_msg(msg: str, title: str):
     import ctypes
 
     ctypes.windll.user32.MessageBoxW(  # type: ignore
-        0, msg, title, 0x0 | 0x10,
+        0,
+        msg,
+        title,
+        0x0 | 0x10,
     )
 
 

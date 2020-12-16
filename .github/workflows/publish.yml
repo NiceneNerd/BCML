@@ -6,13 +6,20 @@ on:
 
 jobs:
     deploy:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-18.04
         steps:
             - uses: actions/checkout@v2
+            - name: local-fix
+              run: |
+                # Hack to get setup-python to work on act
+                # (see https://github.com/nektos/act/issues/251)
+                if [ ! -f "/etc/lsb-release" ] ; then
+                  echo "DISTRIB_RELEASE=18.04" > /etc/lsb-release
+                fi
             - name: Set up Python
               uses: actions/setup-python@v2
               with:
-                  python-version: "3.7.6"
+                  python-version: "3.7"
             - name: Set up Node.js
               uses: actions/setup-node@v1
               env:
@@ -21,9 +28,9 @@ jobs:
                   node-version: "14.x"
             - name: Install Python dependencies
               run: |
-                  python -m pip install --upgrade pip
-                  pip install setuptools wheel twine pynsist mkdocs mkdocs-material
-                  sudo apt install nsis
+                  python -m pip install --upgrade pip wheel setuptools
+                  pip install twine pynsist mkdocs mkdocs-material
+                  apt install nsis
             - name: Generate webpack bundle
               working-directory: ./bcml/assets
               run: |
@@ -31,9 +38,11 @@ jobs:
                   ./node_modules/.bin/webpack --mode production
             - name: Build docs
               run: mkdocs build -d ./bcml/assets/help
-            - name: Build artifacts
+            - name: Build Python packages
               run: |
-                  python setup.py sdist bdist_wheel
+                python setup.py sdist bdist_wheel
+            - name: Build Windows installer
+              run: |
                   rm bcml/helpers/7z.so
                   pynsist installer.cfg
             - name: Upload installer binary

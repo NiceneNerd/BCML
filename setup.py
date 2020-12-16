@@ -3,13 +3,6 @@ import os
 from sys import argv
 from pathlib import Path
 from setuptools import setup
-from bcml.__version__ import VERSION
-
-installer_cfg = Path("installer.cfg")
-if installer_cfg.exists() and "sdist" in argv or "bdist_wheel" in argv:
-    text = installer_cfg.read_text().splitlines()
-    text[3] = f"version={VERSION}"
-    installer_cfg.write_text("\n".join(text))
 
 if "install" in argv and os.name == "posix":
     os.chmod("bcml/helpers/7z", int("755", 8))
@@ -20,7 +13,7 @@ with open("docs/README.md", "r") as readme:
 
 setup(
     name="bcml",
-    version=VERSION,
+    version="3.2.1",
     author="NiceneNerd",
     author_email="macadamiadaze@gmail.com",
     description="A mod manager for The Legend of Zelda: Breath of the Wild",
