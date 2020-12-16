@@ -481,14 +481,12 @@ def install_mod(
 
     try:
         if merge_now:
-            all_mergers = set()
-            for merger in {m() for m in mergers.get_mergers()}:  # type: ignore
-                if merger.is_mod_logged(output_mod):
-                    all_mergers.add(merger)
-            if this_pool:
-                for merger in mergers.sort_mergers(all_mergers):
-                    merger.set_pool(this_pool)
-                    merger.perform_merge()
+            for merger in [m() for m in mergers.get_mergers()]:
+                if this_pool or pool:
+                    merger.set_pool(this_pool or pool)
+                if merger.NAME in options["options"]:
+                    merger.set_options(options["options"][merger.NAME])
+                merger.perform_merge()
     except Exception as err:  # pylint: disable=broad-except
         raise util.MergeError(err) from err
 
