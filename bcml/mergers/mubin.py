@@ -627,17 +627,6 @@ class MapMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         no_del = self._options.get("no_del", False)
-        aoc_pack = (
-            util.get_master_modpack_dir()
-            / util.get_dlc_path()
-            / ("0010" if util.get_settings("wiiu") else "")
-            / "Pack"
-            / "AocMainField.pack"
-        )
-        if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
-            print("Emptying AocMainField.pack...")
-            aoc_pack.parent.mkdir(parents=True, exist_ok=True)
-            aoc_pack.write_bytes(b"")
         shutil.rmtree(
             str(
                 util.get_master_modpack_dir()
@@ -667,6 +656,17 @@ class MapMerger(mergers.Merger):
         if not map_diffs:
             print("No map merge necessary")
             return
+        aoc_pack = (
+            util.get_master_modpack_dir()
+            / util.get_dlc_path()
+            / ("0010" if util.get_settings("wiiu") else "")
+            / "Pack"
+            / "AocMainField.pack"
+        )
+        if not aoc_pack.exists() or aoc_pack.stat().st_size > 0:
+            print("Emptying AocMainField.pack...")
+            aoc_pack.parent.mkdir(parents=True, exist_ok=True)
+            aoc_pack.write_bytes(b"")
 
         rstb_vals = {}
         rstb_calc = rstb.SizeCalculator()
