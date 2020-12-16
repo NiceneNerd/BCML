@@ -52,33 +52,29 @@ you may run into complications down the line. Simply `C:\BCML` is often a good c
 Building from source requires, in addition to the general prerequisites:
 
 - Python 3.7+ 64 bit
-- Node.js v14
-- The following Python packages:
 
-  - aamp>=1.4.1
-  - byml>=2.3.1
-  - oead>=1.1.1
-  - mkdocs>=1.1.2
-  - mkdocs-material>=5.4.0
-  - pyYaml~=5.3.1
-  - requests~=2.23.0
-  - rstb>=1.2.0
-  - setuptools~=46.4.0
-  - xxhash~=1.4.3
-  - wheel~=0.34.2
+  (Note: 3.8+ will not work on Windows until `cefpython3` is updated.)
+- Node.js v14
 
 Steps to build from source:
 
-1. Prepare the webpack bundle
+1. Install Python requirements
+   1. Open terminal to repo root folder
+   2. Run `pip install -r requirements.txt`
+
+2. Prepare the webpack bundle
     1. Open terminal to `bcml/assets`
     2. Run `npm install`
-    3. Run `npm build` (or `npm test` to watch while editing)
+    3. Run `npm run build` (or `npm run test` to watch while editing)
 
-2. Build the docs
+3. Build the docs
     1. Open terminal to repo root folder
     2. Run `mkdocs build -d bcml/assets/help`
 
-3. Install BCML with `python setup.py install` or run without installing with `python -m bcml`
+4. Install BCML with `python setup.py install` or run without installing with `python -m bcml`
+
+Note that on Linux, you can simply run `bootstrap.sh` to perform these steps automatically unless
+you would like more control.
 
 ## Usage and Troubleshooting
 
