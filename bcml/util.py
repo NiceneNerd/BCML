@@ -1,6 +1,8 @@
 # pylint: disable=missing-docstring,no-member,too-many-lines,invalid-name
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+import functools
+import gc
 import json
 import os
 import re
@@ -465,6 +467,12 @@ def timed(func):
     return timed_function
 
 
+def clear_all_caches():
+    gc.collect()
+    for wrap in {a for a in gc.get_objects() if isinstance(a, functools._lru_cache_wrapper)}:
+        wrap.cache_clear()
+
+
 def sanity_check():
     ver = python_version_tuple()
     if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
@@ -739,11 +747,14 @@ class TempModContext(AbstractContextManager):
         self._tmpdir = path or Path(mkdtemp())
 
     def __enter__(self):
+        clear_all_caches()
         setattr(get_modpack_dir, "tmp", self._tmpdir)
+
 
     def __exit__(self, exctype, excinst, exctb):
         delattr(get_modpack_dir, "tmp")
         shutil.rmtree(self._tmpdir, ignore_errors=True)
+        clear_all_caches()
 
 
 class TempSettingsContext(AbstractContextManager):
@@ -755,10 +766,12 @@ class TempSettingsContext(AbstractContextManager):
         self._tmp_settings = tmp_settings
 
     def __enter__(self):
+        clear_all_caches()
         getattr(get_settings, "settings").update(self._tmp_settings)
 
     def __exit__(self, exctype, excinst, exctb):
         setattr(get_settings, "settings", self._settings)
+        clear_all_caches()
 
 
 def get_modpack_dir() -> Path:

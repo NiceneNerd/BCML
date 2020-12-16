@@ -125,6 +125,8 @@ class Api:
 
     def save_settings(self, params):
         print("Saving settings, BCML will reload momentarily...")
+        if util.get_settings("wiiu") != params["settings"]["wiiu"]:
+            util.clear_all_caches()
         util.get_settings.settings = params["settings"]
         util.save_settings()
 
