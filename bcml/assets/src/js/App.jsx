@@ -406,6 +406,8 @@ class App extends React.Component {
                                     })
                                 }
                                 onSubmit={this.saveSettings}
+                                onProgress={this.setProgress}
+                                onDone={() => this.setState({ showProgress: false })}
                             />
                             <Button
                                 className="fab"

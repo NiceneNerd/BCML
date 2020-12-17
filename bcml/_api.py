@@ -90,6 +90,25 @@ class Api:
             return True
         return True
 
+    def drill_dir(self, params):
+        folder = Path(params["folder"])
+        if not folder.exists():
+            return params["folder"]
+        folder = folder.parent
+        if "game_dir" in params["type"]:
+            targets: List[Path] = list(folder.rglob("**/Pack/Dungeon000.pack"))
+            if targets:
+                return str(targets[0].parent.parent)
+        elif "update_dir" in params["type"]:
+            targets: List[Path] = list(folder.rglob("**/Pack/ActorObserverByActorTagTag.sbactorpack"))
+            if targets:
+                return str(targets[0].parent.parent.parent)
+        elif "dlc_dir" in params["type"]:
+            targets: List[Path] = list(folder.rglob("**/Pack/AocMainField.pack"))
+            if targets:
+                return str(targets[0].parent.parent)
+        return params["folder"]
+
     def parse_cemu_settings(self, params):
         try:
             cemu = Path(params["folder"])

@@ -19,7 +19,11 @@ Start Menu. If you installed using pip, run `bcml` from the command line.
 
 Here are the rules for the folders you need to set in BCML.
 
-(Note that if you use Cemu, BCML should automatically find your game folders when you select the Cemu folder. If it doesn't, you can find them by right-clicking the game in Cemu and clicking the buttons to open the game, update, and DLC folders. These will *not* be the exact folders you need but will be very close to them; read on to find out exactly what you'll need to do from there.)
+(Note that if you use Cemu, BCML should automatically find your game folders when you select
+the Cemu folder. If it doesn't, you can find them by right-clicking the game in Cemu and
+clicking the buttons to open the game, update, and DLC folders. These will *not* be the exact
+folders you need but will be very close to them; read on to find out exactly what you'll need
+to do from there.)
 
 ##### Cemu
 

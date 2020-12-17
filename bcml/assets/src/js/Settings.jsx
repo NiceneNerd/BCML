@@ -23,13 +23,13 @@ class Settings extends React.Component {
             no_hardlinks: false,
             force_7z: false,
             suppress_update: false,
-            valid: false
+            valid: false,
+            loaded: false
         };
-        this.handleChange = this.handleChange.bind(this);
         this.formRef = React.createRef();
     }
 
-    async checkValid() {
+    checkValid = async () => {
         const gameValid =
             !this.state.wiiu ||
             (await pywebview.api.dir_exists({
@@ -79,15 +79,16 @@ class Settings extends React.Component {
             this.state.store_dir != "" &&
             this.formRef.current.checkValidity()
         );
-    }
+    };
 
     componentDidMount() {
         pywebview.api.get_settings().then(settings => {
-            this.setState({ ...settings });
+            this.setState({ ...settings }, () => this.setState({ loaded: true }));
         });
     }
 
     async componentDidUpdate(prevProps, prevState) {
+        if (!this.state.loaded) return;
         if (!prevProps.saving && this.props.saving) {
             if (!(await this.checkValid())) {
                 this.setState({ valid: false }, () => this.props.onFail());
@@ -97,35 +98,50 @@ class Settings extends React.Component {
                     this.props.onSubmit(settings);
                 });
             }
-        } else if (
-            prevState.cemu_dir != this.state.cemu_dir &&
-            !this.state.game_dir
-        ) {
-            if (
-                await pywebview.api.dir_exists({
-                    folder: this.state.cemu_dir,
-                    type: "cemu_dir"
-                })
-            ) {
+        } else {
+            if (prevState.cemu_dir != this.state.cemu_dir && !this.state.game_dir) {
+                if (
+                    await pywebview.api.dir_exists({
+                        folder: this.state.cemu_dir,
+                        type: "cemu_dir"
+                    })
+                ) {
+                    this.setState({
+                        ...(await pywebview.api.parse_cemu_settings({
+                            folder: this.state.cemu_dir
+                        }))
+                    });
+                }
+            }
+            for (const key of Object.keys(this.state).filter(
+                k =>
+                    k.includes("dir") &&
+                    !["cemu_dir", "store_dir"].includes(k) &&
+                    prevState[k] != this.state[k] &&
+                    !prevState[k]
+            )) {
+                this.props.onProgress("Checking Folder, One Sec...");
+                let dir = await pywebview.api.drill_dir({
+                    type: key,
+                    folder: this.state[key]
+                });
+                this.props.onDone();
                 this.setState({
-                    ...(await pywebview.api.parse_cemu_settings({
-                        folder: this.state.cemu_dir
-                    }))
+                    [key]: dir
                 });
             }
         }
     }
 
-    handleChange(e) {
+    handleChange = e => {
         try {
             e.persist();
         } catch (error) {}
-        console.log(e);
         this.setState({
             [e.target.id]:
                 e.target.type != "checkbox" ? e.target.value : e.target.checked
         });
-    }
+    };
 
     render() {
         return (
@@ -141,23 +157,19 @@ class Settings extends React.Component {
                             <Form.Label>Cemu Directory</Form.Label>
                             <FolderInput
                                 value={this.state.cemu_dir}
-                                disabled={
-                                    !this.state.wiiu || this.state.no_cemu
-                                }
+                                disabled={!this.state.wiiu || this.state.no_cemu}
                                 onChange={this.handleChange}
                                 placeholder='Tip: folder should contain "Cemu.exe"'
                                 isValid={
-                                    this.state.cemu_dir != "" ||
-                                    this.state.no_cemu
+                                    this.state.cemu_dir != "" || this.state.no_cemu
                                 }
                                 overlay={
                                     <Tooltip>
                                         {this.state.wiiu ? (
                                             <>
-                                                (Optional) The directory where
-                                                Cemu is installed. Note that
-                                                this <em>must</em> be the folder
-                                                that directly contains
+                                                (Optional) The directory where Cemu is
+                                                installed. Note that this <em>must</em>{" "}
+                                                be the folder that directly contains
                                                 "Cemu.exe" and "settings.xml"
                                             </>
                                         ) : (
@@ -167,8 +179,8 @@ class Settings extends React.Component {
                                 }
                             />
                             <Form.Control.Feedback type="invalid">
-                                A Cemu folder is required unless you check the
-                                no Cemu option
+                                A Cemu folder is required unless you check the no Cemu
+                                option
                             </Form.Control.Feedback>
                         </Form.Group>
                     </Col>
@@ -181,20 +193,16 @@ class Settings extends React.Component {
                                 value={this.state.game_dir}
                                 onChange={this.handleChange}
                                 placeholder='Tip: should end in "content"'
-                                isValid={
-                                    this.state.game_dir != "" ||
-                                    !this.state.wiiu
-                                }
+                                isValid={this.state.game_dir != "" || !this.state.wiiu}
                                 overlay={
                                     <Tooltip>
-                                        The folder containing the base game
-                                        files for BOTW, without the update or
-                                        DLC files. The last folder should be
-                                        "content", e.g.
+                                        The folder containing the base game files for
+                                        BOTW, without the update or DLC files. The last
+                                        folder should be "content", e.g.
                                         <br />
                                         <code>
-                                            C:\Games\The Legend of Zelda Breath
-                                            of the Wild [AZE01]\content
+                                            C:\Games\The Legend of Zelda Breath of the
+                                            Wild [AZE01]\content
                                         </code>
                                     </Tooltip>
                                 }
@@ -212,15 +220,13 @@ class Settings extends React.Component {
                                 value={this.state.game_dir_nx}
                                 onChange={this.handleChange}
                                 isValid={
-                                    this.state.game_dir_nx != "" ||
-                                    this.state.wiiu
+                                    this.state.game_dir_nx != "" || this.state.wiiu
                                 }
                                 overlay={
                                     <Tooltip>
-                                        The folder containing the 1.6.0 game
-                                        files for BOTW. The base game and update
-                                        should be merged. The last folder should
-                                        be "romfs", e.g.
+                                        The folder containing the 1.6.0 game files for
+                                        BOTW. The base game and update should be merged.
+                                        The last folder should be "romfs", e.g.
                                         <br />
                                         <code>
                                             C:\Games\BOTW\01007EF00011E000\romfs
@@ -248,19 +254,17 @@ class Settings extends React.Component {
                                         : "N/A for Switch mode"
                                 }
                                 isValid={
-                                    this.state.update_dir != "" ||
-                                    !this.state.wiiu
+                                    this.state.update_dir != "" || !this.state.wiiu
                                 }
                                 disabled={!this.state.wiiu}
                                 overlay={
                                     <Tooltip>
                                         {this.state.wiiu ? (
                                             <>
-                                                The folder containing the update
-                                                files for BOTW, version 1.5.0.
-                                                The last folder should be
-                                                "content", and if you use Cemu,
-                                                it should be in your "mlc01"
+                                                The folder containing the update files
+                                                for BOTW, version 1.5.0. The last folder
+                                                should be "content", and if you use
+                                                Cemu, it should be in your "mlc01"
                                                 folder, e.g.
                                                 <br />
                                                 <code>
@@ -290,11 +294,10 @@ class Settings extends React.Component {
                                 isValid={true}
                                 overlay={
                                     <Tooltip>
-                                        (Optional) The folder containing the DLC
-                                        files for BOTW, version 3.0. The last
-                                        folder should usually be "0010", and if
-                                        you use Cemu, it should be in your
-                                        "mlc01" folder, e.g.
+                                        (Optional) The folder containing the DLC files
+                                        for BOTW, version 3.0. The last folder should
+                                        usually be "0010", and if you use Cemu, it
+                                        should be in your "mlc01" folder, e.g.
                                         <br />
                                         <code>
                                             C:\Cemu\mlc01\usr\title\0005000C\101C9400\content\0010
@@ -315,8 +318,8 @@ class Settings extends React.Component {
                                 isValid={true}
                                 overlay={
                                     <Tooltip>
-                                        (Optional) The folder containing the DLC
-                                        files for BOTW, version 3.0.
+                                        (Optional) The folder containing the DLC files
+                                        for BOTW, version 3.0.
                                         <br />
                                         <code>
                                             C:\Games\BOTW\01007EF00011F001\romfs
@@ -336,9 +339,8 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        The game language you play with. This
-                                        will be prioritized when attempting to
-                                        merge text mods.
+                                        The game language you play with. This will be
+                                        prioritized when attempting to merge text mods.
                                     </Tooltip>
                                 }>
                                 <Form.Control
@@ -346,9 +348,7 @@ class Settings extends React.Component {
                                     value={this.state.lang}
                                     isValid={this.state.lang != ""}
                                     onChange={this.handleChange}>
-                                    <option value={""}>
-                                        Select a language
-                                    </option>
+                                    <option value={""}>Select a language</option>
                                     {LANGUAGES.map(lang => (
                                         <option value={lang} key={lang}>
                                             {lang}
@@ -368,9 +368,8 @@ class Settings extends React.Component {
                                 isValid={this.state.store_dir != ""}
                                 overlay={
                                     <Tooltip>
-                                        The folder where BCML will store
-                                        internal files like installed mods,
-                                        merged data, and backups.
+                                        The folder where BCML will store internal files
+                                        like installed mods, merged data, and backups.
                                     </Tooltip>
                                 }
                             />
@@ -385,8 +384,7 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        Turn on Switch mode instead of Wii
-                                        U/Cemu mode
+                                        Turn on Switch mode instead of Wii U/Cemu mode
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -407,12 +405,11 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        Allows you to use BCML without Cemu on
-                                        your PC. If you do this, you will need
-                                        to be careful about getting the right
-                                        directories for update and DLC files.
-                                        You will be able to merge installed mods
-                                        with Export.
+                                        Allows you to use BCML without Cemu on your PC.
+                                        If you do this, you will need to be careful
+                                        about getting the right directories for update
+                                        and DLC files. You will be able to merge
+                                        installed mods with Export.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -429,9 +426,9 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        Don't estimate proper RSTB values for
-                                        merged files. Deletes entries which
-                                        cannot be calculated instead.
+                                        Don't estimate proper RSTB values for merged
+                                        files. Deletes entries which cannot be
+                                        calculated instead.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -447,11 +444,10 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        By default, BCML uses hard links to
-                                        connect installed mods to a single Cemu
-                                        graphic pack. Use this option to disable
-                                        this if it doesn't work and just copy
-                                        the files instead.
+                                        By default, BCML uses hard links to connect
+                                        installed mods to a single Cemu graphic pack.
+                                        Use this option to disable this if it doesn't
+                                        work and just copy the files instead.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -468,7 +464,9 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        By default, BCML will notify you when it detects an updated version is available. Check this to turn that off.
+                                        By default, BCML will notify you when it detects
+                                        an updated version is available. Check this to
+                                        turn that off.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
@@ -485,10 +483,10 @@ class Settings extends React.Component {
                                 <OverlayTrigger
                                     overlay={
                                         <Tooltip>
-                                            By default, BCML will attempt to use
-                                            the system installation of 7z. If
-                                            this is a problem, you can force
-                                            BCML to use the bundled copy.
+                                            By default, BCML will attempt to use the
+                                            system installation of 7z. If this is a
+                                            problem, you can force BCML to use the
+                                            bundled copy.
                                         </Tooltip>
                                     }
                                     placement={"left"}>
