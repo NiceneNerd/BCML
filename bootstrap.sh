@@ -18,8 +18,8 @@ python -m venv venv >/dev/null
 source venv/bin/activate
 
 echo "Installing Python dependencies..."
-pip install --disable-pip-version-check -r requirements.txt >/dev/null
 pip install --disable-pip-version-check mkdocs mkdocs-material setuptools wheel pyqtwebengine >/dev/null
+pip install --disable-pip-version-check -r requirements.txt >/dev/null
 
 echo "Building docs..."
 mkdocs build -q -d bcml/assets/help >/dev/null
