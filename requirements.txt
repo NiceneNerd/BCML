@@ -2,7 +2,7 @@ numpy==1.19.2
 aamp>=1.4.1
 byml>=2.3.1
 botw-utils==0.2.3
-botw-havok~=0.3.17
+botw-havok~=0.3.18
 cefpython3~=66.0; platform_system == 'Windows'
 oead~=1.2.0
 pythonnet>=2.5.0rc2; platform_system == 'Windows'
