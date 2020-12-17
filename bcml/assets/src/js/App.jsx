@@ -359,6 +359,7 @@ class App extends React.Component {
                                         showDone: true
                                     })
                                 }
+                                onCancel={() => this.setState({ showProgress: false })}
                                 onExport={this.export}
                                 onLaunch={this.launchGame}
                             />

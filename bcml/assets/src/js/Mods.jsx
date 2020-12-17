@@ -114,10 +114,14 @@ class Mods extends React.Component {
                     break;
                 }
             }
-            this.props.onDone();
+            if (!["enable", "update", "explore"].includes(action)) {
+                this.props.onDone();
+            } else {
+                this.props.onCancel();
+            }
             this.props.onRefresh();
         };
-        if (["enable", "update"].includes(action)) queue();
+        if (["enable", "update", "explore"].includes(action)) queue();
         else
             this.props.onConfirm(
                 `Are you sure you want to ${action} ${this.state.selectedMods

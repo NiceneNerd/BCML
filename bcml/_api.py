@@ -202,20 +202,19 @@ class Api:
     def file_pick(self, params=None):
         if not params:
             params = {}
-        return (
-            self.window.create_file_dialog(
-                file_types=(
+        result = self.window.create_file_dialog(
+            file_types=params.get(
+                "types",
+                (
                     "All supported files (*.bnp;*.7z;*.zip;*.rar;*.txt;*.json)",
                     "Packaged mods (*.bnp;*.7z;*.zip;*.rar)",
                     "Mod meta (*.txt;*.json)",
                     "All files (*.*)",
-                )
-                if "types" not in params
-                else params["types"],
-                allow_multiple=True if "multiple" not in params else params["multiple"],
-            )
-            or []
+                ),
+            ),
+            allow_multiple=params.get("multiple", True),
         )
+        return result or []
 
     def get_options(self):
         opts = []
@@ -615,7 +614,8 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod, merge_now=True,
+                mod,
+                merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -731,7 +731,12 @@ class Api:
                 text=True,
             )
         else:
-            result = run(args, capture_output=True, check=False, text=True,)
+            result = run(
+                args,
+                capture_output=True,
+                check=False,
+                text=True,
+            )
         if result.stderr:
             if parent.name == "pkgs":
                 try:
