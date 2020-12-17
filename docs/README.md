@@ -92,6 +92,19 @@ BOTW is an immensely complex game, and there are a number of new mergers that co
 you find an aspect of the game that can be complicated by mod conflicts, but BCML doesn't yet handle
 it, feel free to try writing a merger for it and submitting a PR.
 
+Python and JSX code for BCML is subject to formatting standards. Python should be formatted with Black.
+JSX should be formatted with Prettier, using the following settings:
+
+```json
+{
+    "prettier.arrowParens": "avoid",
+    "prettier.jsxBracketSameLine": true,
+    "prettier.printWidth": 88,
+    "prettier.tabWidth": 4,
+    "prettier.trailingComma": "none"
+}
+```
+
 ## License
 
 This software is licensed under the terms of the GNU General Public License, version 3 or later. The
