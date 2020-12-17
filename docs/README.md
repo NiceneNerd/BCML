@@ -101,10 +101,9 @@ This software includes the 7-Zip console application `7z.exe` and the library `7
 licensed under the GNU Lesser General Public License. The source code for this application is
 available for free at <https://www.7-zip.org/download.html>.
 
-This software includes a lightly modified copy of the console application `msyt.exe` by Kyle
-Clemens, copyrighted 2018 under the MIT License. The source code for this application is available
-for free at <https://gitlab.com/jkcclemens/msyt>. The only change is a replacement of `serde_yaml`
-with `serde_json`.
+This software includes a fork of the console application `msyt.exe` by Kyle Clemens, copyrighted 2018
+under the MIT License. The source code for this application is available for free at
+<https://github.com/NiceneNerd/msyt/tree/bcml>.
 
 This software includes part of a modified copy of the `pywebview` Python package, copyright 2020
 Roman Sirokov under the BSD-3-Clause License. The source code for the original library is available
