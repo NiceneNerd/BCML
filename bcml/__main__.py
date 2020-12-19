@@ -66,6 +66,7 @@ def main(debug: bool = False):
         LOG.parent.mkdir(parents=True, exist_ok=True)
         for folder in util.get_work_dir().glob("*"):
             rmtree(folder)
+        (util.get_data_dir() / "tmp_settings.json").unlink()
     except (FileNotFoundError, OSError, PermissionError):
         pass
 

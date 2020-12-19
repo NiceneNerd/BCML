@@ -469,7 +469,9 @@ def timed(func):
 
 def clear_all_caches():
     gc.collect()
-    for wrap in {a for a in gc.get_objects() if isinstance(a, functools._lru_cache_wrapper)}:
+    for wrap in {
+        a for a in gc.get_objects() if isinstance(a, functools._lru_cache_wrapper)
+    }:
         wrap.cache_clear()
 
 
@@ -577,7 +579,11 @@ def get_settings(name: str = "") -> Any:
                 with settings_path.open("w", encoding="utf-8") as s_file:
                     json.dump(settings, s_file)
             else:
-                settings.update(json.loads(settings_path.read_text()))
+                tmp_settings_path = get_data_dir() / "tmp_settings.json"
+                if tmp_settings_path.exists():
+                    settings.update(json.loads(tmp_settings_path.read_text()))
+                else:
+                    settings.update(json.loads(settings_path.read_text()))
                 for k, v in DEFAULT_SETTINGS.items():
                     if k not in settings:
                         settings[k] = v
@@ -740,23 +746,6 @@ def get_dlc_path() -> str:
     return "aoc" if get_settings("wiiu") else "01007EF00011F001/romfs"
 
 
-class TempModContext(AbstractContextManager):
-    _tmpdir: Path
-
-    def __init__(self, path: Path = None):
-        self._tmpdir = path or Path(mkdtemp())
-
-    def __enter__(self):
-        clear_all_caches()
-        setattr(get_modpack_dir, "tmp", self._tmpdir)
-
-
-    def __exit__(self, exctype, excinst, exctb):
-        delattr(get_modpack_dir, "tmp")
-        shutil.rmtree(self._tmpdir, ignore_errors=True)
-        clear_all_caches()
-
-
 class TempSettingsContext(AbstractContextManager):
     _settings: dict
     _tmp_settings: dict
@@ -768,18 +757,31 @@ class TempSettingsContext(AbstractContextManager):
     def __enter__(self):
         clear_all_caches()
         getattr(get_settings, "settings").update(self._tmp_settings)
+        with (get_data_dir() / "tmp_settings.json").open(
+            "w", encoding="utf-8"
+        ) as s_file:
+            json.dump(get_settings.settings, s_file, indent=2)
 
     def __exit__(self, exctype, excinst, exctb):
         setattr(get_settings, "settings", self._settings)
         clear_all_caches()
+        (get_data_dir() / "tmp_settings.json").unlink()
+
+
+class TempModContext(TempSettingsContext):
+    _tmpdir: Path
+
+    def __init__(self, path: Path = None):
+        self._tmpdir = path or Path(mkdtemp())
+        super().__init__({"store_dir": str(self._tmpdir)})
+
+    def __exit__(self, exctype, excinst, exctb):
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+        super().__exit__(exctype, excinst, exctb)
 
 
 def get_modpack_dir() -> Path:
-    return getattr(
-        get_modpack_dir,
-        "tmp",
-        get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx"),
-    )
+    return get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
 
 
 @lru_cache(None)
