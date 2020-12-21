@@ -1,5 +1,5 @@
 import { Badge, Button, Spinner } from "react-bootstrap";
-
+import ReactMarkdown from "react-markdown";
 import React from "react";
 
 class ModInfo extends React.Component {
@@ -42,12 +42,10 @@ class ModInfo extends React.Component {
         } else {
             const mod = JSON.stringify(this.props.mod);
             if (!(mod in this.modInfos)) {
-                pywebview.api
-                    .get_mod_info({ mod: this.props.mod })
-                    .then(info => {
-                        this.modInfos[mod] = info;
-                        this.setState({ ...info, loading: false });
-                    });
+                pywebview.api.get_mod_info({ mod: this.props.mod }).then(info => {
+                    this.modInfos[mod] = info;
+                    this.setState({ ...info, loading: false });
+                });
             } else {
                 this.setState({ ...this.modInfos[mod], loading: false });
             }
@@ -87,11 +85,11 @@ class ModInfo extends React.Component {
                         )}
                     </div>
                 </div>
-                <div className="mod-descrip">
+                <ReactMarkdown className="mod-descrip">
                     {this.props.mod
                         ? this.state.desc || "No description"
                         : "No mod selected"}
-                </div>
+                </ReactMarkdown>
                 <div className="mod-actions">
                     <Button
                         variant="primary"
@@ -130,8 +128,7 @@ class ModInfo extends React.Component {
                         title="Update"
                         disabled={!this.props.mod || this.props.multi}
                         onClick={() => this.props.onAction("update")}>
-                        <i className="material-icons">update</i>{" "}
-                        <span>Update</span>
+                        <i className="material-icons">update</i> <span>Update</span>
                     </Button>
                     {this.state.processed && (
                         <Button
@@ -150,16 +147,14 @@ class ModInfo extends React.Component {
                         title="Uninstall"
                         disabled={!this.props.mod}
                         onClick={() => this.props.onAction("uninstall")}>
-                        <i className="material-icons">delete</i>{" "}
-                        <span>Uninstall</span>
+                        <i className="material-icons">delete</i> <span>Uninstall</span>
                     </Button>
                 </div>
                 <div className="mod-details">
                     {this.props.mod ? (
                         <>
                             <span>
-                                <strong>Priority:</strong>{" "}
-                                {this.props.mod.priority}
+                                <strong>Priority:</strong> {this.props.mod.priority}
                             </span>
                             <span>
                                 <strong>Changes:</strong>{" "}
