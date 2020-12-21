@@ -325,6 +325,9 @@ class App extends React.Component {
                         <Dropdown.Item onClick={() => pywebview.api.open_help()}>
                             Help
                         </Dropdown.Item>
+                        <Dropdown.Item onClick={() => pywebview.api.save_mod_list()}>
+                            Save Mod List
+                        </Dropdown.Item>
                         <Dropdown.Item onClick={this.updateBcml}>
                             Update BCML
                         </Dropdown.Item>

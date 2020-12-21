@@ -100,7 +100,9 @@ class Api:
             if targets:
                 return str(targets[0].parent.parent)
         elif "update_dir" in params["type"]:
-            targets: List[Path] = list(folder.rglob("**/Pack/ActorObserverByActorTagTag.sbactorpack"))
+            targets: List[Path] = list(
+                folder.rglob("**/Pack/ActorObserverByActorTagTag.sbactorpack")
+            )
             if targets:
                 return str(targets[0].parent.parent.parent)
         elif "dlc_dir" in params["type"]:
@@ -192,6 +194,22 @@ class Api:
         mods = [mod.to_json() for mod in util.get_installed_mods(params["disabled"])]
         util.vprint(mods)
         return mods
+
+    def save_mod_list(self, params=None):
+        result = self.window.create_file_dialog(
+            webviewb.SAVE_DIALOG,
+            file_types=("JSON File (*.json)",),
+            allow_multiple=False,
+        )
+        if not result:
+            return
+        out = Path(result if isinstance(result, str) else result[0])
+        out.write_text(
+            json.dumps(
+                [mod.to_json() for mod in util.get_installed_mods(disabled=True)],
+                indent=4,
+            )
+        )
 
     def get_mod_info(self, params):
         mod = BcmlMod.from_json(params["mod"])
