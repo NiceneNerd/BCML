@@ -48,7 +48,7 @@ class GameBananaDb:
         self.update_db()
 
     def search(self, search: str) -> list:
-        search = search.lower()
+        search = search.lower().replace("'", "\\\'")
         terms = shlex.split(search)
         special = {}
         for term in terms.copy():
