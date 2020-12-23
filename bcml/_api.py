@@ -813,6 +813,11 @@ class Api:
         return mods[(page - 1) * 24 : last]
 
     @win_or_lose
+    def update_gb_mod(self, mod_id: str):
+        self.gb_api.update_mod(str(mod_id))
+        return self.gb_api.get_mod_by_id(str(mod_id))
+
+    @win_or_lose
     def install_gb_mod(self, file: dict):
         path = Path(mkdtemp()) / file["_sFile"]
         res: requests.Response = requests.get(file["_sDownloadUrl"])

@@ -172,5 +172,11 @@ class GameBananaDb:
             )
         ]
 
+    def get_mod_by_id(self, mod_id: str) -> dict:
+        return self._data["mods"][mod_id]
+
     def update_mod(self, mod_id: str):
-        pass
+        data = self._get_mod_data(mod_id, self._data["mods"][mod_id]["category"])
+        if data:
+            self._data["mods"][mod_id].update(data)
+            self.save_db()

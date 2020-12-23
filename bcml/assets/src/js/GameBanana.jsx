@@ -110,10 +110,7 @@ class GameBanana extends React.Component {
                     padding: "0 1rem 1rem"
                 }}>
                 <div className="gb-menu">
-                    <ButtonGroup
-                        toggle
-                        size="sm"
-                        style={{ minWidth: "fit-content" }}>
+                    <ButtonGroup toggle size="sm" style={{ minWidth: "fit-content" }}>
                         {Object.entries({
                             New: "new",
                             Old: "old",
@@ -140,9 +137,8 @@ class GameBanana extends React.Component {
                         size="sm"
                         value={this.state.category}
                         onChange={e =>
-                            this.setState(
-                                { category: e.currentTarget.value },
-                                () => this.loadMods()
+                            this.setState({ category: e.currentTarget.value }, () =>
+                                this.loadMods()
                             )
                         }>
                         {Object.entries({
@@ -195,9 +191,7 @@ class GameBanana extends React.Component {
                         />
                         <Pagination className="w-100">
                             {this.state.pages > 10 && (
-                                <Pagination.First
-                                    onClick={() => this.setPage(1)}
-                                />
+                                <Pagination.First onClick={() => this.setPage(1)} />
                             )}
                             {this.state.page > 1 && (
                                 <>
@@ -211,10 +205,7 @@ class GameBanana extends React.Component {
                             {[...Array(this.state.pages).keys()]
                                 .slice(
                                     Math.max(this.state.page - 2, 1),
-                                    Math.min(
-                                        this.state.page + 3,
-                                        this.state.pages
-                                    )
+                                    Math.min(this.state.page + 3, this.state.pages)
                                 )
                                 .map(i => (
                                     <Pagination.Item
@@ -226,24 +217,18 @@ class GameBanana extends React.Component {
                                 ))}
                             {this.state.pages > 1 && (
                                 <Pagination.Next
-                                    onClick={() =>
-                                        this.setPage(this.state.page + 1)
-                                    }
+                                    onClick={() => this.setPage(this.state.page + 1)}
                                 />
                             )}
                             {this.state.pages > 10 && (
                                 <Pagination.Last
-                                    onClick={() =>
-                                        this.setPage(this.state.pages)
-                                    }
+                                    onClick={() => this.setPage(this.state.pages)}
                                 />
                             )}
                         </Pagination>
                     </>
                 ) : (
-                    <div
-                        className="text-center mt-3"
-                        style={{ height: "100%" }}>
+                    <div className="text-center mt-3" style={{ height: "100%" }}>
                         <Spinner animation="border" variant="light" />
                     </div>
                 )}
@@ -261,6 +246,20 @@ class ModList extends React.Component {
             showModal: false
         };
     }
+
+    openMod = async mod => {
+        try {
+            const res = await pywebview.api.update_gb_mod(mod.itemid);
+            if (!res.success) throw res.error;
+            mod = res.data;
+        } catch (error) {
+            console.error(error);
+        }
+        this.setState({
+            openMod: mod,
+            showModal: true
+        });
+    };
 
     render() {
         return (
@@ -302,31 +301,20 @@ class ModList extends React.Component {
                                     <Button
                                         variant="primary"
                                         size="sm"
-                                        onClick={() =>
-                                            this.setState({
-                                                openMod: mod,
-                                                showModal: true
-                                            })
-                                        }>
+                                        onClick={() => this.openMod(mod)}>
                                         View
                                     </Button>
                                 </div>
                             </Card.Body>
                             <Card.Footer>
-                                <Metadata
-                                    icon="category"
-                                    label={mod.category}
-                                />
+                                <Metadata icon="category" label={mod.category} />
                                 <Metadata
                                     icon="access_time"
                                     label={new Intl.DateTimeFormat().format(
                                         new Date(mod.updated * 1000)
                                     )}
                                 />
-                                <Metadata
-                                    icon="cloud_download"
-                                    label={mod.downloads}
-                                />
+                                <Metadata icon="cloud_download" label={mod.downloads} />
                                 <Metadata icon="favorite" label={mod.likes} />
                             </Card.Footer>
                         </Card>
@@ -350,8 +338,6 @@ class ModModal extends React.Component {
         super(props);
         this.state = {};
     }
-
-    async componentDidMount() {}
 
     hasMeta = file => {
         const json = JSON.stringify(file);
@@ -384,17 +370,12 @@ class ModModal extends React.Component {
                                         className="d-block w-100"
                                         src={`https://screenshots.gamebanana.com/${img._sRelativeImageDir}/${img._sFile}`}
                                     />
-                                    <Carousel.Caption>
-                                        {img._sCaption}
-                                    </Carousel.Caption>
+                                    <Carousel.Caption>{img._sCaption}</Carousel.Caption>
                                 </Carousel.Item>
                             ))}
                         </Carousel>
                     ) : (
-                        <img
-                            className="d-block w-100"
-                            src={this.props.mod.preview}
-                        />
+                        <img className="d-block w-100" src={this.props.mod.preview} />
                     )}
                     <br />
                     <div
@@ -412,9 +393,7 @@ class ModModal extends React.Component {
                                 variant="success"
                                 title="Install"
                                 onClick={() =>
-                                    this.props.onInstall(
-                                        this.props.mod.files[0]
-                                    )
+                                    this.props.onInstall(this.props.mod.files[0])
                                 }>
                                 Install
                             </Button>
@@ -423,9 +402,7 @@ class ModModal extends React.Component {
                                 variant="success"
                                 title="Install"
                                 onClick={() =>
-                                    this.props.onInstall(
-                                        this.props.mod.files[0]
-                                    )
+                                    this.props.onInstall(this.props.mod.files[0])
                                 }>
                                 {this.props.mod.files
                                     .filter(file => this.hasMeta(file))
@@ -433,9 +410,7 @@ class ModModal extends React.Component {
                                         <Dropdown.Item
                                             key={id}
                                             title={file._sDescription}
-                                            onClick={() =>
-                                                this.props.onInstall(file)
-                                            }>
+                                            onClick={() => this.props.onInstall(file)}>
                                             {file._sFile}
                                         </Dropdown.Item>
                                     ))}
