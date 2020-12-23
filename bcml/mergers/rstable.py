@@ -233,7 +233,7 @@ class RstbMerger(mergers.Merger):
         nested_files = {}
         if not self._table:
             self._table = get_stock_rstb()
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         for nest in {n for n in modded_files if isinstance(n, str)}:
             util.dict_merge(
                 nested_files,
@@ -319,7 +319,7 @@ class RstbMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         if not self._table:
             self._table = get_stock_rstb()
         diffs = self.consolidate_diffs(self.get_all_diffs())

@@ -84,7 +84,7 @@ def diff_gamedata_type(data_type: str, mod_data: dict, stock_data: dict) -> Hash
 
 
 def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: pool.Pool = None) -> Hash:
-    this_pool = pool or Pool()
+    this_pool = pool or Pool(maxtasksperchild=500)
     stock_data = consolidate_gamedata(get_stock_gamedata())
     mod_data = consolidate_gamedata(gamedata)
     del gamedata

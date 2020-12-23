@@ -398,7 +398,7 @@ class ShopMerger(mergers.Merger):
         print("Performing shop merge...")
         if not self._pool:
             multiprocessing.set_start_method("spawn", True)
-        pool = self._pool or multiprocessing.Pool()
+        pool = self._pool or multiprocessing.Pool(maxtasksperchild=500)
         pool.map(partial(threaded_merge), diffs.items())
         if not self._pool:
             pool.close()

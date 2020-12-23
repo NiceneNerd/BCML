@@ -143,7 +143,7 @@ class DropMerger(mergers.Merger):
         if not drops:
             return {}
         print("Logging changes to drop tables...")
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         diffs = {}
         for result in pool.map(partial(log_drop_file, mod_dir=mod_dir), drops):
             diffs.update(result)
@@ -193,7 +193,7 @@ class DropMerger(mergers.Merger):
             print("No drop table merging necessary")
             return
         print("Merging drop table edits...")
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         pool.starmap(merge_drop_file, diffs.items())
         if not self._pool:
             pool.close()

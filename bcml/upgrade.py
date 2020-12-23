@@ -138,7 +138,7 @@ def convert_old_logs(mod_dir: Path):
 
 def _convert_rstb_log(mod: Path):
     (mod / "logs" / "rstb.log").unlink()
-    with Pool() as pool:
+    with Pool(maxtasksperchild=500) as pool:
         files = install.find_modded_files(mod, pool=pool)
         merger = RstbMerger()
         merger.set_pool(pool)
@@ -189,7 +189,7 @@ def _convert_text_log(log: Path) -> dict:
 
 def _convert_text_logs(logs_path: Path):
     diffs = {}
-    with Pool() as pool:
+    with Pool(maxtasksperchild=500) as pool:
         for diff in pool.imap_unordered(
             _convert_text_log, logs_path.glob("texts_*.yml")
         ):

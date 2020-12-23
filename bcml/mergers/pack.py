@@ -202,7 +202,7 @@ class PackMerger(mergers.Merger):
             print("No SARC merging necessary")
             return
         print(f"Merging {len(sarcs)} SARC files...")
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         results = pool.starmap(merge_sarcs, sarcs.items())
         for result in results:
             file, file_data = result

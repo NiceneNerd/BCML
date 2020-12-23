@@ -333,7 +333,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
         dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    with Pool() as pool:
+    with Pool(maxtasksperchild=500) as pool:
         yml_files = set(tmp_dir.glob("**/*.yml"))
         if yml_files:
             print("Compiling YAML documents...")
@@ -608,7 +608,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         byml = oead.byml.from_binary(util.unyaz_if_needed(file.read_bytes()))
         file.write_bytes(oead.byml.to_binary(byml, big_endian=to_wiiu))
 
-    with Pool() as pool:
+    with Pool(maxtasksperchild=500) as pool:
         errs = pool.map(
             partial(_convert_actorpack, to_wiiu=to_wiiu),
             {f for f in all_files if f.suffix == ".sbactorpack"},
