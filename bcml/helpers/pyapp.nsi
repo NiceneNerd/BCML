@@ -223,8 +223,8 @@ Function .onInit
   !insertmacro MULTIUSER_INIT
 
   ; If cmd line included /INSTDIR, override the install dir set by MultiUser
-  StrCmp $cmdLineInstallDir "" +2
-    StrCpy $INSTDIR $cmdLineInstallDir
+  ; StrCmp $cmdLineInstallDir "" +2
+  StrCpy $INSTDIR "$LOCALAPPDATA\bcml"
 FunctionEnd
 
 Function un.onInit
