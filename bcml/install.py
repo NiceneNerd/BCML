@@ -713,8 +713,11 @@ def link_master_mod(output: Path = None):
         raise RuntimeError(
             "There was a problem creating the master BCML graphic pack. "
             "It may be a one time fluke, so try remerging and/or restarting BCML. "
-            "If the problem persists, good luck, because it's something wonky about your "
-            "PC, I guess."
+            "This can also happen if BCML and/or Cemu are installed into Program "
+            "Files or any folder which requires administrator (or root) permissions. "
+            "You can try running BCML as administrator or root, but bear in mind this "
+            "is not officially supported. If the problem persists, good luck, because "
+            "it's something wonky about your PC, I guess."
         ) from err
 
     mod_folders: List[Path] = sorted(
