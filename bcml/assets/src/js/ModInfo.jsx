@@ -58,14 +58,15 @@ class ModInfo extends React.Component {
                 <div className="mod-header">
                     <img
                         src={
-                            this.props.mod &&
-                            (this.props.mod.name.includes("NSFW") ||
-                            this.props.mod.name.includes("THICC")
-                                ? "https://i.imgur.com/AfedhPe.png"
-                                : this.state.image
-                                ? "data:image/*;charset=utf-8;base64," +
-                                  this.state.image
-                                : "logo-smaller.png")
+                            (this.props.mod &&
+                                (this.props.mod.name.includes("NSFW") ||
+                                this.props.mod.name.includes("THICC")
+                                    ? "https://i.imgur.com/AfedhPe.png"
+                                    : this.state.image
+                                    ? "data:image/*;charset=utf-8;base64," +
+                                      this.state.image
+                                    : null)) ||
+                            "logo-smaller.png"
                         }
                         className="mod-preview"
                     />
