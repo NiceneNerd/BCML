@@ -311,7 +311,6 @@ class Api:
                 raise
 
     @win_or_lose
-    @install.refresher
     def update_mod(self, params):
         try:
             update_file = self.file_pick({"multiple": False})[0]
@@ -324,7 +323,6 @@ class Api:
             )
         else:
             options = {}
-        remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
         with Pool(maxtasksperchild=1000) as pool:
             new_mod = install.install_mod(
@@ -333,19 +331,8 @@ class Api:
                 options=options,
                 pool=pool,
             )
-            remergers |= {
-                m
-                for m in mergers.get_mergers_for_mod(new_mod)
-                if m.NAME not in {m.NAME for m in remergers}
-            }
-            try:
-                install.refresh_merges()
-            except Exception:  # pylint: disable=broad-except
-                pool.terminate()
-                raise
 
     @win_or_lose
-    @install.refresher
     def reprocess(self, params):
         mod = BcmlMod.from_json(params["mod"])
         rmtree(mod.path / "logs")
@@ -356,7 +343,6 @@ class Api:
         else:
             options = {}
         install.generate_logs(mod.path, options)
-        install.refresh_merges()
 
     @win_or_lose
     @install.refresher
@@ -395,11 +381,11 @@ class Api:
         mod = BcmlMod.from_json(params["mod"])
         action = params["action"]
         if action == "enable":
-            install.enable_mod(mod)
+            install.enable_mod(mod, wait_merge=True)
         elif action == "disable":
-            install.disable_mod(mod)
+            install.disable_mod(mod, wait_merge=True)
         elif action == "uninstall":
-            install.uninstall_mod(mod)
+            install.uninstall_mod(mod, wait_merge=True)
         elif action == "update":
             self.update_mod(params)
         elif action == "reprocess":
