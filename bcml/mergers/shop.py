@@ -1,417 +1,299 @@
-"""Provides features for diffing and merging bshop and brecipe AAMP files """
-# Copyright 2019 Nicene Nerd <macadamiadaze@gmail.com>
-# 2020 Ginger Avalanche <chodness@gmail.com>
-# Licensed under GPLv3+
-import multiprocessing
-import os
-from functools import partial, reduce
+from functools import reduce, partial
+from multiprocessing import Pool
 from pathlib import Path
-from typing import List, Union, Tuple
+from typing import Union, List, ByteString, Optional, Dict, Any
 
-import oead
-from oead.aamp import Parameter, ParameterIO, ParameterList, ParameterObject
+from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
+from oead import Sarc, SarcWriter, InvalidDataError
 from bcml import util, mergers
 
-
-# pretty sure sbrecipe and sbshop arent a thing, but doesnt hurt to have them
-EXT_FOLDERS = {
-    ".bshop": "ShopData",
-    ".sbshop": "ShopData",
-}
-EXT_PARAMS = {
-    "bshop": [
-        "ItemSort",
-        "ItemName",
-        "ItemNum",
-        "ItemAdjustPrice",
-        "ItemLookGetFlg",
-        "ItemAmount",
-    ],
-}
+HANDLED = {".bdrop", ".bshop"}
 
 
-def cache_merged_shop(file: str, data: bytes):
-    out = Path(util.get_master_modpack_dir() / "logs" / "sh" / file)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_bytes(data)
-
-
-def fix_itemsorts(pio: ParameterList) -> None:
-    """
-    Sorts items by their original ItemSort values.
-
-    Since there is no real way of determining which mod
-    added which item at a given ItemSort without keeping
-    a metadata object that may or may not exist when we
-    want it to, it doesn't attempt to. It just sorts them
-    in the order it finds them.
-    """
-    for _, table_list in pio.lists.items():
-        nested_sort: dict = {}
-        max_sort = 0
-        for item_key, item_obj in table_list.objects.items():
-            current_sort = item_obj.params["ItemSort"].v
-            if current_sort not in nested_sort.keys():
-                nested_sort[current_sort] = []
-            nested_sort[current_sort].append(item_key)
-            max_sort = current_sort if current_sort > max_sort else max_sort
-        current_sort = 0
-        for idx in range(0, max_sort + 1):
-            if idx in nested_sort.keys():
-                for item_name in nested_sort[idx]:
-                    table_list.objects[item_name].params["ItemSort"].v = current_sort
-                    current_sort += 1
-
-
-def get_named_pio(shop: ParameterIO, shop_type: str) -> ParameterIO:
-    named_pio = ParameterIO()
-    shop_keys = EXT_PARAMS[shop_type]
-
-    for table_key, table_obj in shop.objects.items():
-        if table_key.hash == oead.aamp.Name("Header").hash:
-            tablenames = ParameterObject()
-            named_pio.objects["TableNames"] = ParameterObject()
-            tablenum = table_obj.params["TableNum"].v
-            for idx in range(1, tablenum + 1):
-                table_name = str(table_obj.params[f"Table{idx:02}"].v)
-                tablenames.params[oead.aamp.Name(table_name)] = table_name
-            named_pio.objects["TableNames"] = tablenames
-            continue
-        table_max = table_obj.params["ColumnNum"].v
-        table_obj_new = ParameterList()
-        for idx in range(1, table_max + 1):
-            if shop_type == "brecipe":
-                entry_key = "%02d" % idx
-            elif shop_type == "bshop":
-                entry_key = "%03d" % idx
-            else:
-                raise KeyError(shop_type)
-            entry_value = ParameterObject()
-            try:
-                for curr_shop_key in shop_keys:
-                    no_shop_key = curr_shop_key + entry_key
-                    entry_value.params[curr_shop_key] = table_obj.params[no_shop_key]
-            except KeyError:
-                continue
-            table_obj_new.objects[str(entry_value.params["ItemName"].v)] = entry_value
-        named_pio.lists[table_key] = table_obj_new
-    return named_pio
-
-
-def nand_pio_into_plist(
-    ref: Union[ParameterIO, ParameterList], mod: Union[ParameterIO, ParameterList],
-) -> ParameterList:
-    res_plist = ParameterList()
-    for key, plist in mod.lists.items():
-        if key not in ref.lists:
-            res_plist.lists[key] = plist
-        else:
-            processed_list = nand_pio_into_plist(ref.lists[key], plist)
-            if processed_list.lists or processed_list.objects:
-                res_plist.lists[key] = processed_list
-    for key, pobj in mod.objects.items():
-        if key not in ref.objects:
-            res_plist.objects[key] = pobj
-        else:
-            ref_pobj = ref.objects[key]
-            res_plist.objects[key] = ref_pobj
-            for param_key, param_value in pobj.params.items():
-                if param_key not in ref_pobj.params:
-                    continue  # new keys are garbage the game can't use, skip them
-                if not param_value.v == ref_pobj.params[param_key].v:
-                    res_plist.objects[key].params[param_key] = param_value
-    return res_plist
-
-
-def gen_diffs(ref: ParameterIO, mod: ParameterIO) -> ParameterList:
-    diffs = ParameterList()
-    tablenames_key = oead.aamp.Name("TableNames")
-    # generate additions, modifications
-    additions = nand_pio_into_plist(ref, mod)
-    if len(additions.lists) != 0:
-        additions.objects[tablenames_key] = ParameterObject()
-        add_names = additions.objects[tablenames_key]
-        mod_names = mod.objects[tablenames_key]
-        for table_key in additions.lists.keys():
-            add_names.params[table_key] = mod_names.params[table_key]
-    diffs.lists["Additions"] = additions
-    # generate deletions
-    removals = nand_pio_into_plist(mod, ref)
-    if len(removals.lists) != 0:
-        removals.objects[tablenames_key] = ParameterObject()
-        rem_names = removals.objects[tablenames_key]
-        ref_names = ref.objects[tablenames_key]
-        for table_key in removals.lists.keys():
-            rem_names.params[table_key] = ref_names.params[table_key]
-    diffs.lists["Removals"] = removals
+def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optional[dict]:
+    try:
+        ref_sarc = Sarc(util.unyaz_if_needed(util.get_game_file(file).read_bytes()))
+    except (FileNotFoundError, InvalidDataError, ValueError, RuntimeError) as err:
+        util.vprint(f"{file} ignored on stock side, cuz {err}")
+        return None
+    try:
+        sarc = Sarc(util.unyaz_if_needed((tmp_dir / file).read_bytes()))
+    except (FileNotFoundError, InvalidDataError, ValueError, RuntimeError):
+        util.vprint(f"{file} corrupt, ignored")
+        return None
+    diffs = _get_diffs_from_sarc(sarc, ref_sarc, tree, file)
+    del sarc
+    del ref_sarc
     return diffs
 
 
-def shop_merge(
-    base: ParameterIO, ext: str, adds: ParameterList, rems: ParameterList
-) -> ParameterIO:
-    base_sorted = get_named_pio(base, ext)
-    base_sorted = util.pio_subtract(base_sorted, rems)
-    base_sorted = util.pio_merge(base_sorted, adds)
-
-    if ext == "bshop":
-        fix_itemsorts(base_sorted)
-
-    merged = ParameterIO()
-    merged.objects["Header"] = ParameterObject()
-    merged.objects["Header"].params["TableNum"] = Parameter(len(base_sorted.lists))
-    table_no = 1
-    for table_key, table_list in base_sorted.lists.items():
-        merged.objects["Header"].params[f"Table{table_no:02}"] = Parameter(
-            base_sorted.objects["TableNames"].params[table_key].v
-        )
-        table_no += 1
-        merged_table_obj = ParameterObject()
-        merged_table_obj.params["ColumnNum"] = Parameter(len(table_list.objects))
-        for _, item_obj in table_list.objects.items():
-            if ext == "brecipe":
-                entry_key = "%02d" % (item_obj.params["ItemSort"].v + 1)
-            elif ext == "bshop":
-                entry_key = "%03d" % (item_obj.params["ItemSort"].v + 1)
-            else:
-                raise KeyError(ext)
-            for param_key in EXT_PARAMS[ext]:
-                param_name = param_key + entry_key
-                merged_table_obj.params[param_name] = item_obj.params[param_key]
-        merged.objects[table_key] = merged_table_obj
-    return merged
-
-
-def nested_patch(pack: oead.Sarc, nest: dict) -> Tuple[oead.SarcWriter, dict]:
-    new_sarc: oead.SarcWriter = oead.SarcWriter.from_sarc(pack)
-    failures: dict = {}
-
-    for file, stuff in nest.items():
-        file_bytes = pack.get_file(file).data
-        yazd = file_bytes[0:4] == b"Yaz0"
-        file_bytes = util.decompress(file_bytes) if yazd else file_bytes
-
-        if isinstance(stuff, dict):
-            sub_sarc = oead.Sarc(file_bytes)
-            new_sub_sarc, sub_failures = nested_patch(sub_sarc, stuff)
-            for failure in sub_failures:
-                failure[file + "//" + failure] = sub_failures[failure]
-            del sub_sarc
-            new_bytes = bytes(new_sub_sarc.write()[1])
-            new_sarc.files[file] = new_bytes if not yazd else util.compress(new_bytes)
-
-        elif isinstance(stuff, ParameterList):
+def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> dict:
+    diffs = {}
+    for file, edits in edits.items():
+        if edits:
             try:
-                if file_bytes[0:4] == b"AAMP":
-                    aamp_contents = ParameterIO.from_binary(file_bytes)
-                    try:
-                        file_ext = os.path.splitext(file)[1]
-                        aamp_contents = shop_merge(
-                            aamp_contents,
-                            file_ext.replace(".", ""),
-                            stuff.lists["Additions"],
-                            stuff.lists["Removals"],
-                        )
-                        aamp_bytes = ParameterIO.to_binary(aamp_contents)
-                    except:  # pylint: disable=bare-except
-                        raise RuntimeError(f"AAMP file {file} could be merged.")
-                    del aamp_contents
-                    new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
-                    cache_merged_shop(file, new_bytes)
-                else:
-                    raise ValueError("Wait, what the heck, this isn't an AAMP file?!")
-            except ValueError:
-                new_bytes = pack.get_file(file).data
-                print(f"Deep merging {file} failed. No changes were made.")
-
-            new_sarc.files[file] = oead.Bytes(new_bytes)
-    return new_sarc, failures
+                rsub_sarc = Sarc(util.unyaz_if_needed(ref_sarc.get_file(file).data))
+            except (AttributeError, InvalidDataError, ValueError, RuntimeError) as err:
+                util.vprint(f'Skipping "{path}//{file}", {err}')
+                continue
+            sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
+            diffs.update(_get_diffs_from_sarc(sub_sarc, rsub_sarc, edits, path + "//" + file))
+            del sub_sarc
+            del rsub_sarc
+        else:
+            full_path = f"{path}//{file}"
+            try:
+                ref_pio = ParameterIO.from_binary(ref_sarc.get_file(file).data)
+            except AttributeError:
+                continue
+            try:
+                pio = ParameterIO.from_binary(sarc.get_file(file).data)
+            except AttributeError as err:
+                raise ValueError(f"Failed to read nested file:\n{path}//{file}") from err
+            except (ValueError, RuntimeError, InvalidDataError) as err:
+                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
+            diffs.update({full_path: get_aamp_diff(pio, ref_pio)})
+    return diffs
 
 
-def threaded_merge(item) -> Tuple[str, dict]:
-    """Deep merges an individual file, suitable for multiprocessing"""
-    file, stuff = item
-    failures = {}
+def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
+    def diff_plist(
+        plist: Union[ParameterList, ParameterIO],
+        ref_plist: Union[ParameterIO, ParameterList],
+    ) -> ParameterList:
+        diff = ParameterList()
+        for key, sublist in plist.lists.items():
+            if key not in ref_plist.lists:
+                diff.lists[key] = sublist
+            elif ref_plist.lists[key] != sublist:
+                diff.lists[key] = diff_plist(sublist, ref_plist.lists[key])
+        for key, obj in plist.objects.items():
+            if key not in ref_plist.objects:
+                diff.objects[key] = obj
+            elif ref_plist.objects[key] != obj:
+                diff.objects[key] = diff_pobj(obj, ref_plist.objects[key])
+        return diff
 
+    def diff_pobj(pobj: ParameterObject, ref_pobj: ParameterObject) -> ParameterObject:
+        diff = ParameterObject()
+        for param, value in pobj.params.items():
+            if param not in ref_pobj.params or ref_pobj.params[param] != value:
+                diff.params[param] = value
+        return diff
+
+    return diff_plist(pio, ref_pio)
+
+
+def merge_plists(
+    plist: Union[ParameterList, ParameterIO],
+    other_plist: Union[ParameterList, ParameterIO],
+    file_table: bool = False,
+):
+    def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
+        for param, value in other_pobj.params.items():
+            pobj.params[param] = value
+
+    for key, sublist in other_plist.lists.items():
+        if key in plist.lists:
+            merge_plists(plist.lists[key], sublist)
+        else:
+            plist.lists[key] = sublist
+    for key, obj in other_plist.objects.items():
+        if key in plist.objects:
+            if key != "FileTable" or not file_table:
+                merge_pobj(plist.objects[key], obj)
+            else:
+                file_list = {f.v for i, f in plist.objects[key].params.items()} | {
+                    f.v for i, f in other_plist.objects[key].params.items()
+                }
+                for i, file in enumerate({f for f in file_list if f}):
+                    plist.objects[key].params[f"File{i}"] = file
+        else:
+            plist.objects[key] = obj
+
+
+def merge_aamp_files(file: str, tree: dict):
     try:
-        base_file = util.get_game_file(file, file.startswith(util.get_dlc_path()))
+        base_file = util.get_game_file(file)
     except FileNotFoundError:
-        return "", {}
+        util.vprint(f"Skipping {file}, not found in dump")
+        return
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
-    file_ext = os.path.splitext(file)[1]
-    if file_ext in util.SARC_EXTS and (util.get_master_modpack_dir() / file).exists():
-        base_file = util.get_master_modpack_dir() / file
-    file_bytes = base_file.read_bytes()
-    yazd = file_bytes[0:4] == b"Yaz0"
-    file_bytes = file_bytes if not yazd else util.decompress(file_bytes)
-    magic = file_bytes[0:4]
+    try:
+        sarc = Sarc(util.unyaz_if_needed(base_file.read_bytes()))
+    except (ValueError, InvalidDataError, RuntimeError):
+        return
+    new_data = _merge_in_sarc(sarc, tree)
+    if base_file.suffix.startswith(".s") and base_file.suffix != ".ssarc":
+        new_data = util.compress(new_data)
+    (util.get_master_modpack_dir() / file).parent.mkdir(parents=True, exist_ok=True)
+    (util.get_master_modpack_dir() / file).write_bytes(bytes(new_data))
 
-    if magic == b"SARC":
-        new_sarc, sub_failures = nested_patch(oead.Sarc(file_bytes), stuff)
-        del file_bytes
-        new_bytes = bytes(new_sarc.write()[1])
-        for failure, contents in sub_failures.items():
-            print(f"Some patches to {failure} failed to apply.")
-            failures[failure] = contents
-    elif magic == b"AAMP":
-        try:
-            aamp_contents = ParameterIO.from_binary(file_bytes)
+
+def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
+    new_sarc = SarcWriter.from_sarc(sarc)
+    for file, stuff in edits.items():
+        if isinstance(stuff, dict):
             try:
-                aamp_contents = shop_merge(
-                    aamp_contents,
-                    file_ext.replace(".", ""),
-                    stuff.lists["Additions"],
-                    stuff.lists["Removals"],
-                )
-                aamp_bytes = ParameterIO.to_binary(aamp_contents)
-            except:  # pylint: disable=bare-except
-                raise RuntimeError(f"AAMP file {file} could be merged.")
-            del aamp_contents
-            new_bytes = aamp_bytes if not yazd else util.compress(aamp_bytes)
-        except ValueError:
-            new_bytes = file_bytes
-            del file_bytes
-            print(f"Deep merging file {file} failed. No changes were made.")
-    else:
-        raise ValueError(f"{file} is not a SARC or AAMP file.")
+                if file not in {f.name for f in sarc.get_files()}:
+                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
+            except (
+                InvalidDataError,
+                ValueError,
+                AttributeError,
+                RuntimeError,
+                FileNotFoundError,
+            ):
+                util.vprint(f"Couldn't merge into nested SARC {file}")
+                continue
+            nsub_bytes = _merge_in_sarc(sub_sarc, stuff)
+            new_sarc.files[file] = (
+                util.compress(nsub_bytes)
+                if file[file.rindex(".") :].startswith(".s")
+                else nsub_bytes
+            )
+        elif isinstance(stuff, ParameterList):
+            try:
+                if file not in {f.name for f in sarc.get_files()}:
+                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                pio = ParameterIO.from_binary(sarc.get_file(file).data)
+            except (
+                AttributeError,
+                ValueError,
+                InvalidDataError,
+                FileNotFoundError,
+            ) as err:
+                util.vprint(f"Couldn't open {file}: {err}")
+                continue
+            merge_plists(pio, stuff)
+            new_sarc.files[file] = pio.to_binary()
+    return new_sarc.write()[1]
 
-    new_bytes = new_bytes if not yazd else util.compress(new_bytes)
-    output_file = util.get_master_modpack_dir() / file
-    if base_file == output_file:
-        output_file.unlink()
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_bytes(new_bytes)
-    del new_bytes
-    if magic == b"SARC":
-        util.vprint(f"Finished patching files inside {file}")
-    else:
-        util.vprint(f"Finished patching {file}")
-    return util.get_canon_name(file), failures
 
-
-class ShopMerger(mergers.Merger):
-    NAME: str = "shop"
+class DeepMerger(mergers.Merger):
+    NAME: str = "aamp"
 
     def __init__(self):
         super().__init__(
-            "shop merge", "Merges changes to shop and recipe files", "shop.aamp", {}
+            "AAMP merger",
+            "Merges changes to arbitrary AAMP files",
+            "deepmerge.aamp",
+            options={},
         )
 
-    def generate_diff(
-        self, mod_dir: Path, modded_files: List[Union[Path, str]]
-    ) -> ParameterIO:
-        print("Logging changes to shop files...")
+    def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
+        print("Detecting general changes to AAMP files...")
+        aamps = {
+            m
+            for m in modded_files
+            if isinstance(m, str) and m[m.rindex(".") :] in (util.AAMP_EXTS - HANDLED)
+        }
+        if not aamps:
+            return None
+
+        consolidated: Dict[str, Any] = {}
+        for aamp in aamps:
+            util.dict_merge(
+                consolidated,
+                reduce(
+                    lambda res, cur: {cur: res if res is not None else {}},  # type: ignore
+                    reversed(aamp.split("//")),
+                    None,
+                ),
+            )
+        this_pool = self._pool or Pool(maxtasksperchild=500)
+        results = this_pool.starmap(
+            partial(get_aamp_diffs, tmp_dir=mod_dir), list(consolidated.items())
+        )
+        if not self._pool:
+            this_pool.close()
+            this_pool.join()
+        del consolidated
+        del aamps
+
         diffs = ParameterIO()
-        file_names = ParameterObject()
-        for file in [file for file in modded_files if Path(file).suffix in EXT_FOLDERS]:
-            try:
-                mod_bytes = util.get_nested_file_bytes(str(mod_dir) + "/" + str(file))
-                nests = str(file).split("//", 1)
-                try:
-                    ref_path = str(util.get_game_file(Path(nests[0]))) + "//" + nests[1]
-                except FileNotFoundError:
-                    continue
-                try:
-                    ref_bytes = util.get_nested_file_bytes(ref_path)
-                except AttributeError:
-                    continue
-                shop_type = str(file).split(".")[-1]
-
-                mod_pio = get_named_pio(ParameterIO.from_binary(mod_bytes), shop_type)
-                ref_pio = get_named_pio(ParameterIO.from_binary(ref_bytes), shop_type)
-
-                file_names.params[oead.aamp.Name(file).hash] = Parameter(file)
-                diffs.lists[file] = gen_diffs(ref_pio, mod_pio)
-            except (KeyError, AttributeError) as err:
-                raise err
-        diffs.objects["Filenames"] = file_names
+        diffs.objects["FileTable"] = ParameterObject()
+        i: int = 0
+        for file, diff in sorted(
+            (k, v) for r in [r for r in results if r is not None] for k, v in r.items()
+        ):
+            diffs.objects["FileTable"].params[f"File{i}"] = Parameter(file)
+            diffs.lists[file] = diff
+            i += 1
         return diffs
 
-    def log_diff(
-        self, mod_dir: Path, diff_material: Union[ParameterIO, List[Union[Path, str]]],
-    ):
-        """ Saves generated diffs to a log file """
+    def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, list):
             diff_material = self.generate_diff(mod_dir, diff_material)
-        if diff_material.objects["Filenames"].params:
+        if diff_material:
             (mod_dir / "logs" / self._log_name).write_bytes(diff_material.to_binary())
+        del diff_material
 
-    def get_mod_diff(self, mod: util.BcmlMod) -> ParameterIO:
-        separate_diffs = []
+    def get_mod_diff(self, mod: util.BcmlMod):
+        diff = None
         if self.is_mod_logged(mod):
-            separate_diffs.append(
-                ParameterIO.from_binary((mod.path / "logs" / self._log_name).read_bytes())
-            )
+            diff = ParameterIO.from_binary((mod.path / "logs" / self._log_name).read_bytes())
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                separate_diffs.append(
-                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes())
+                if not diff:
+                    diff = ParameterIO()
+                merge_plists(
+                    diff,
+                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
+                    True,
                 )
-        return reduce(util.pio_merge, separate_diffs) if separate_diffs else None
+        return diff
 
-    def get_all_diffs(self) -> list:
-        diffs = []
+    def get_all_diffs(self):
+        diffs = None
         for mod in util.get_installed_mods():
             diff = self.get_mod_diff(mod)
             if diff:
-                diffs.append(diff)
+                if not diffs:
+                    diffs = ParameterIO()
+                merge_plists(diffs, diff, True)
         return diffs
 
-    def consolidate_diffs(self, diffs: list) -> dict:
+    def consolidate_diffs(self, diffs: ParameterIO):
         if not diffs:
-            return {}
-        all_diffs_pio: ParameterIO = reduce(util.pio_merge, diffs)
-        all_diffs: dict = {}
-        for file_key, file_list in all_diffs_pio.lists.items():
-            all_diffs[file_key] = file_list
-        consolidated_diffs: dict = {}
-        for file_key, diff_list in all_diffs.items():
-            file_name = all_diffs_pio.objects["Filenames"].params[file_key].v
-            nest = reduce(
-                lambda res, cur: {cur: res}, reversed(file_name.split("//")), diff_list
-            )
-            util.dict_merge(consolidated_diffs, nest)
-        return consolidated_diffs
+            return None
+        consolidated: Dict[str, Any] = {}
+        for _, file in diffs.objects["FileTable"].params.items():
+            try:
+                util.dict_merge(
+                    consolidated,
+                    reduce(
+                        lambda res, cur: {cur: res},  # type: ignore
+                        reversed(file.v.split("//")),
+                        diffs.lists[file.v],
+                    ),
+                )
+            except KeyError:
+                util.vprint(diffs)
+                raise Exception(f"{_}: {file} in diff lists: {file.v in diffs.lists}")
+        return consolidated
 
-    @staticmethod
-    def can_partial_remerge() -> bool:
-        return True
-
-    def get_mod_affected(self, mod: util.BcmlMod) -> set:
-        files = set()
-        diff = self.get_mod_diff(mod)
-        if diff:
-            for _, file_name in diff.objects["Filenames"].params.items():
-                files.add(file_name)
-        return files
-
+    @util.timed
     def perform_merge(self):
-        """ Merges all installed shop mods """
-        print("Loading and consolidating shop mods...")
+        print("Loading deep merge logs...")
         diffs = self.consolidate_diffs(self.get_all_diffs())
-        new_shop_files_list = []
-        for file_name in diffs:
-            new_shop_files_list.append(file_name)
-        shop_merge_log = util.get_master_modpack_dir() / "logs" / "shop.log"
-
-        print("Performing shop merge...")
-        if not self._pool:
-            multiprocessing.set_start_method("spawn", True)
-        pool = self._pool or multiprocessing.Pool(maxtasksperchild=500)
-        pool.map(partial(threaded_merge), diffs.items())
+        if not diffs:
+            print("No deep merge needed")
+            return
+        pool = self._pool or Pool(maxtasksperchild=500)
+        pool.starmap(merge_aamp_files, diffs.items())
         if not self._pool:
             pool.close()
             pool.join()
-
-        print("Saving shop merge log...")
-        shop_merge_log.parent.mkdir(parents=True, exist_ok=True)
-        with shop_merge_log.open("w", encoding="utf8") as s_log:
-            for file_name in new_shop_files_list:
-                print(file_name, file=s_log)
+        print("Finished deep merge")
 
     def get_checkbox_options(self):
         return []
 
-    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
-        return self.get_mod_affected(mod)
+    def get_mod_edit_info(self, mod: util.BcmlMod):
+        diff = self.get_mod_diff(mod)
+        if not diff:
+            return set()
+        return set(file.v for _, file in diff.objects["FileTable"].params.items())
