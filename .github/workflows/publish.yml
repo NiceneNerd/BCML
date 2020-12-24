@@ -30,7 +30,7 @@ jobs:
               run: |
                   python -m pip install --upgrade pip wheel setuptools
                   pip install twine pynsist mkdocs mkdocs-material
-                  apt install nsis
+                  sudo apt install nsis
             - name: Generate webpack bundle
               working-directory: ./bcml/assets
               run: |
