@@ -109,6 +109,20 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
     return shopdata
 
 
+def subtract_plists(plist: ParameterList, other_plist: ParameterList):
+    for key in other_plist.lists.keys():
+        if key in plist.lists:
+            for key2 in other_plist.lists[key].objects.keys():
+                if key2 in plist.lists[key].objects:
+                    del plist.lists[key].objects[key2]
+            if not plist.lists[key].lists and not plist.lists[key].objects:
+                del plist.lists[key]
+    # ignore wholesale table deletions, otherwise all hell breaks loose with old diffs
+    # for key in other_plist.objects.keys():
+    # if key in plist.lists:
+    # del plist.lists[key]
+
+
 def get_shop_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
     def diff_plist(
         plist: Union[ParameterList, ParameterIO],
@@ -139,27 +153,15 @@ def get_shop_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
     ref_shopdata = make_shopdata(ref_pio)
     adds = diff_plist(shopdata, ref_shopdata)
     if adds:
-        diff.lists["Additions"] = diff_plist(shopdata, ref_shopdata)
+        diff.lists["Additions"] = adds
     rems = diff_plist(ref_shopdata, shopdata)
     if rems:
-        diff.lists["Removals"] = diff_plist(ref_shopdata, shopdata)
+        subtract_plists(rems, adds)
+        diff.lists["Removals"] = rems
     return diff
 
 
 def merge_shopdata(pio: ParameterIO, plist: ParameterList):
-    def subtract_plists(plist: ParameterList, other_plist: ParameterList):
-        for key in other_plist.lists.keys():
-            if key in plist.lists:
-                for key2 in other_plist.lists[key].objects.keys():
-                    if key2 in plist.lists[key].objects:
-                        del plist.lists[key].objects[key2]
-                if not plist.lists[key].lists and not plist.lists[key].objects:
-                    del plist.lists[key]
-        # ignore wholesale table deletions, otherwise all hell breaks loose with old diffs
-        # for key in other_plist.objects.keys():
-        # if key in plist.lists:
-        # del plist.lists[key]
-
     def make_bshop(plist: ParameterList) -> ParameterIO:
         bshop = ParameterIO()
         tables: List[str] = [str(t.v) for _, t in plist.objects["TableNames"].params.items()]
@@ -181,6 +183,10 @@ def merge_shopdata(pio: ParameterIO, plist: ParameterList):
         return bshop
 
     shopdata = make_shopdata(pio)
+
+    # For backwards compatibility with new bnp's made since the rewrite
+    subtract_plists(plist.lists["Removals"], plist.lists["Additions"])
+
     subtract_plists(shopdata, plist.lists["Removals"])
     merge_plists(shopdata, plist.lists["Additions"])
     return make_bshop(shopdata)
