@@ -97,9 +97,12 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
             )
             item_obj = ParameterObject()
             for shop_key in shop_keys:
-                item_obj.params[shop_key] = pio.objects[table_hash].params[
-                    f"{shop_key}{item_no:03d}"
-                ]
+                try:
+                    item_obj.params[shop_key] = pio.objects[table_hash].params[
+                        f"{shop_key}{item_no:03d}"
+                    ]
+                except KeyError:
+                    raise KeyError(f"{shop_key}{item_no:03d}")
             table_plist.objects[item] = item_obj
         if table_plist.objects:
             shopdata.lists[table_hash] = table_plist
