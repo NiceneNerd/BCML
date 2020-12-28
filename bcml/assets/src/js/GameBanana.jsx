@@ -361,8 +361,7 @@ class ModModal extends React.Component {
                     <Modal.Title>{this.props.mod.name}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {this.props.mod.screenshots &&
-                    this.props.mod.screenshots.length > 0 ? (
+                    {this.props.mod.screenshots?.length > 0 ? (
                         <Carousel interval={null}>
                             {this.props.mod.screenshots.map(img => (
                                 <Carousel.Item key={img._sFile}>
@@ -375,12 +374,13 @@ class ModModal extends React.Component {
                             ))}
                         </Carousel>
                     ) : (
-                        <img className="d-block w-100" src={this.props.mod.preview} />
+                        <img className="d-block w-100" src={this.props.mod?.preview} />
                     )}
                     <br />
                     <div
+                        className="gb-mod-desc"
                         dangerouslySetInnerHTML={{
-                            __html: this.props.mod.text
+                            __html: this.props.mod.text?.replace(/\u00a0/g, " ")
                         }}></div>
                 </Modal.Body>
                 <Modal.Footer>

@@ -872,6 +872,12 @@ Fade {
     }
 }
 
+.gb-mod-desc {
+    img {
+        max-width: 100%;
+    }
+}
+
 .carousel-item img {
     opacity: 0.8;
     transition: opacity 0.2s ease-in;
