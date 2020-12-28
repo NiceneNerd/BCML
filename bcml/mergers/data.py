@@ -261,7 +261,7 @@ class GameDataMerger(mergers.Merger):
 
         merged_entries = Hash(
             {
-                data_type: oead.byml.Array({value for _, value in entries.items()})
+                data_type: oead.byml.Array([value for _, value in entries.items()])
                 for data_type, entries in merged_entries.items()
             }
         )
@@ -395,9 +395,9 @@ class SaveDataMerger(mergers.Merger):
         hashes = set()
         for diff in reversed(diffs):
             for entry in diff["add"]:
-                if entry["HashValue"] not in hashes:
+                if entry["HashValue"].v not in hashes:
                     all_diffs["add"].append(entry)
-                hashes.add(entry["HashValue"])
+                hashes.add(entry["HashValue"].v)
             for entry in diff["del"]:
                 if entry not in all_diffs["del"]:
                     all_diffs["del"].append(entry)

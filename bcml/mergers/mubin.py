@@ -311,14 +311,14 @@ def merge_map(
     if not no_del:
         for map_del in sorted(
             changes["Objs"]["del"],
-            key=lambda change: stock_obj_hashes.index(int(change))
-            if int(change) in stock_obj_hashes
+            key=lambda change: stock_obj_hashes.index(change)
+            if change in stock_obj_hashes
             else -1,
             reverse=True,
         ):
             if int(map_del) in stock_obj_hashes:
                 try:
-                    new_map["Objs"].pop(stock_obj_hashes.index(int(map_del)))
+                    new_map["Objs"].pop(stock_obj_hashes.index(map_del))
                 except IndexError:
                     try:
                         obj_to_delete = next(
@@ -587,7 +587,7 @@ class MapMerger(mergers.Merger):
                     "del": list(
                         set(
                             [
-                                hash_id
+                                hash_id.v
                                 for hashes in [mod["Objs"]["del"] for mod in mods]
                                 for hash_id in hashes
                             ]
@@ -600,7 +600,7 @@ class MapMerger(mergers.Merger):
                     "del": list(
                         set(
                             [
-                                hash_id
+                                hash_id.v
                                 for hashes in [
                                     mod["Rails"]["del"]
                                     for mod in mods
