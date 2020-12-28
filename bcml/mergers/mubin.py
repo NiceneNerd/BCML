@@ -201,7 +201,7 @@ def get_map_diff(
 
         diffs = Hash()
         diffs["add"] = Array(
-            {obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes}
+            [obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes]
         )
         diffs["mod"] = Hash(
             {
@@ -212,11 +212,14 @@ def get_map_diff(
             }
         )
         diffs["del"] = Array(
-            {
-                oead.U32(hash_id)
-                for hash_id in base_hashes
-                if hash_id not in {*mod_hashes, *base_links}
-            }
+            [
+                oead.U32(h)
+                for h in {
+                    hash_id
+                    for hash_id in base_hashes
+                    if hash_id not in {*mod_hashes, *base_links}
+                }
+            ]
             if not no_del
             else set()
         )
@@ -228,11 +231,11 @@ def get_map_diff(
 
         diffs = Hash()
         diffs["add"] = Array(
-            {
+            [
                 rail
                 for rail in mod_map["Rails"]
                 if int(rail["HashId"]) not in base_hashes
-            }
+            ]
         )
         diffs["mod"] = Hash(
             {
@@ -243,7 +246,12 @@ def get_map_diff(
             }
         )
         diffs["del"] = Array(
-            {oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes}
+            [
+                oead.U32(h)
+                for h in {
+                    hash_id for hash_id in base_hashes if hash_id not in mod_hashes
+                }
+            ]
             if not no_del
             else set()
         )
@@ -674,7 +682,8 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool(maxtasksperchild=500)
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del), map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
+            map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]

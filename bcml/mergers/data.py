@@ -89,7 +89,8 @@ def get_modded_gamedata_entries(gamedata: oead.Sarc, pool: pool.Pool = None) -> 
     mod_data = consolidate_gamedata(gamedata)
     del gamedata
     results = this_pool.starmap(
-        diff_gamedata_type, ((key, mod_data[key], stock_data[key]) for key in mod_data),
+        diff_gamedata_type,
+        ((key, mod_data[key], stock_data[key]) for key in mod_data),
     )
     diffs = Hash({data_type: diff for d in results for data_type, diff in d.items()})
     del results
@@ -110,18 +111,22 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> Hash:
     }
     new_entries = oead.byml.Array()
     mod_hashes = set()
-    for file in sorted(savedata.get_files(), key=lambda f: f.name,)[0:-2]:
+    for file in sorted(
+        savedata.get_files(),
+        key=lambda f: f.name,
+    )[0:-2]:
         entries = oead.byml.from_binary(file.data)["file_list"][1]
         mod_hashes |= {int(item["HashValue"]) for item in entries}
         new_entries.extend(
-            {item for item in entries if int(item["HashValue"]) not in ref_hashes}
+            [item for item in entries if int(item["HashValue"]) not in ref_hashes]
         )
     del ref_savedata
     return Hash(
         {
             "add": new_entries,
             "del": oead.byml.Array(
-                {oead.S32(item) for item in ref_hashes if item not in mod_hashes}
+                oead.S32(item)
+                for item in {item for item in ref_hashes if item not in mod_hashes}
             ),
         }
     )
