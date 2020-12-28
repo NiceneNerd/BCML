@@ -164,6 +164,7 @@ def get_shop_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
 def merge_shopdata(pio: ParameterIO, plist: ParameterList):
     def make_bshop(plist: ParameterList) -> ParameterIO:
         bshop = ParameterIO()
+        bshop.type = "xml"
         tables: List[str] = [str(t.v) for _, t in plist.objects["TableNames"].params.items()]
         bshop.objects["Header"] = ParameterObject()
         bshop.objects["Header"].params["TableNum"] = Parameter(len(tables))
