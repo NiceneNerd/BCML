@@ -184,10 +184,6 @@ def merge_shopdata(pio: ParameterIO, plist: ParameterList):
         return bshop
 
     shopdata = make_shopdata(pio)
-
-    # For backwards compatibility with new bnp's made since the rewrite
-    subtract_plists(plist.lists["Removals"], plist.lists["Additions"])
-
     subtract_plists(shopdata, plist.lists["Removals"])
     merge_plists(shopdata, plist.lists["Additions"])
     return make_bshop(shopdata)
