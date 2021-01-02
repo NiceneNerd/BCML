@@ -61,6 +61,8 @@ let messages = [
     "BCML tip: When using a set of related mods, put the base mod beneath the addons",
     "BCML tip: Back up your mods when making substantial changes",
     'BCML tip: The backup/restore feature can be used for mod "profiles"',
+    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com' target='_blank'>Theology Without Warranty</a>",
+    "<a href='https://www.patreon.com/nicenenerdbcml'>Support BCML on Patreon</a> so my wife will let me keep doing this",
     "Downloading RAM so Link goes fast",
     "Feeding Koroks",
     "Leaving Ganon in peace",
@@ -71,7 +73,7 @@ let messages = [
     "Planting Korok seeds",
     "Fleeing Daruk's crushing embrace",
     "Turning the Shrine of Resurrection into a tourist attraction",
-    "Climbing Death Mountian in the buff",
+    "Climbing Death Mountain in the buff",
     "Accidentally stoning a Korok",
     "Dying to Dark Beast Ganon",
     "Building a Master Rocket Zero to the moon",
@@ -84,8 +86,13 @@ let messages = [
     "Making Tik Toks on Sheikah Slate",
     "Old enough to save Hyrule, too young for The Noble Canteen",
     '"Hold on Zelda, only 842 more Koroks!"',
-    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com' target='_blank'>Theology Without Warranty</a>",
-    "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”"
+    "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”",
+    "“Not even Spider-Man climbs like me!”",
+    "Vandalizing private homes to find money",
+    "Enjoying some rock-hard food",
+    "Riding Dark Beast Ganon",
+    "Letting it all hang out on NakedIsland",
+    "Hiding feelings in English, expressing feelings in Japanese"
 ];
 
 function shuffle(array) {
