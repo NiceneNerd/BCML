@@ -25,14 +25,21 @@ from bcml.util import BcmlMod, get_7z_path
 
 
 def extract_mod_meta(mod: Path) -> Dict[str, Any]:
-    process = subprocess.Popen(
-        f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
-        stdout=subprocess.PIPE,
-        shell=True,
-    )
-    out, _ = process.communicate()
-    process.wait()
-    return json.loads(out.decode("utf-8")) if out else {}
+    result: subprocess.CompletedProcess
+    if util.SYSTEM == "Windows":
+        result = subprocess.run(
+            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            capture_output=True,
+            universal_newlines=True,
+            creationflags=util.CREATE_NO_WINDOW,
+        )
+    else:
+        result = subprocess.run(
+            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            capture_output=True,
+            universal_newlines=True,
+        )
+    return json.loads(result.stdout) if not result.stderr else {}
 
 
 def open_mod(path: Path) -> Path:
@@ -137,9 +144,7 @@ def find_modded_files(
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         if not (
-            tmp_dir
-            / util.get_dlc_path()
-            / ("0010" if util.get_settings("wiiu") else "")
+            tmp_dir / util.get_dlc_path() / ("0010" if util.get_settings("wiiu") else "")
         ).rglob("Map/**/?-?_*.smubin"):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
