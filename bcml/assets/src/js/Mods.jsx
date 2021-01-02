@@ -5,7 +5,7 @@ import {
     Dropdown,
     OverlayTrigger,
     Spinner,
-    Tooltip,
+    Tooltip
 } from "react-bootstrap";
 
 import InstallModal from "./Install.jsx";
@@ -28,14 +28,14 @@ class Mods extends React.Component {
             dirty: false,
             mergersReady: false,
             mergers: [],
-            hasCemu: false,
+            hasCemu: false
         };
         window.addEventListener("pywebviewready", () =>
             pywebview.api
                 .get_setup()
                 .then(setup =>
-                    this.setState({ mergersReady: true, ...setup }, this.sanityCheck),
-                ),
+                    this.setState({ mergersReady: true, ...setup }, this.sanityCheck)
+                )
         );
     }
 
@@ -59,7 +59,7 @@ class Mods extends React.Component {
                     short:
                         err.short +
                         " The setup wizard will be relaunched in 5 seconds.",
-                    error_text: err.error_text,
+                    error_text: err.error_text
                 });
                 setTimeout(() => (window.location = "index.html?firstrun=true"), 5000);
             });
@@ -74,7 +74,7 @@ class Mods extends React.Component {
                     name: mod.split("\\").slice(-1)[0],
                     priority: priority + i,
                     path: "QUEUE" + mod,
-                    options,
+                    options
                 });
             }
             return { mods: newMods, showInstall: false, dirty: true };
@@ -94,7 +94,7 @@ class Mods extends React.Component {
                     try {
                         const res = await pywebview.api.mod_action({
                             mod,
-                            action,
+                            action
                         });
                         if (!res.success) {
                             throw res.error;
@@ -114,7 +114,17 @@ class Mods extends React.Component {
                     break;
                 }
             }
-            if (!["enable", "update", "explore"].includes(action)) {
+            if (action !== "explore") {
+                try {
+                    const res = await pywebview.api.remerge({ name: "all" });
+                    if (!res.success) {
+                        throw res.error;
+                    }
+                } catch (error) {
+                    this.props.onError(error);
+                    this.props.onRefresh();
+                    return;
+                }
                 this.props.onDone();
             } else {
                 this.props.onCancel();
@@ -127,7 +137,7 @@ class Mods extends React.Component {
                 `Are you sure you want to ${action} ${this.state.selectedMods
                     .map(m => m.name)
                     .join(", ")}?`,
-                queue,
+                queue
             );
     };
 
@@ -141,9 +151,9 @@ class Mods extends React.Component {
                 }
                 this.setState(
                     {
-                        selectedMods: [],
+                        selectedMods: []
                     },
-                    () => this.props.onDone(),
+                    () => this.props.onDone()
                 );
             })
             .catch(this.props.onError);
@@ -163,11 +173,11 @@ class Mods extends React.Component {
                         this.props.onDone();
                         this.props.onRefresh();
                         this.setState({
-                            selectedMods: [],
+                            selectedMods: []
                         });
                     })
                     .catch(this.props.onError);
-            },
+            }
         );
     };
 
@@ -193,9 +203,9 @@ class Mods extends React.Component {
                     {
                         showHandle: false,
                         selectedMods: [],
-                        dirty: false,
+                        dirty: false
                     },
-                    () => this.props.onRefresh(),
+                    () => this.props.onRefresh()
                 );
             })
             .catch(this.props.onError);
@@ -240,7 +250,7 @@ class Mods extends React.Component {
                                     showHandle={this.state.showHandle}
                                     onSelect={selected =>
                                         this.setState({
-                                            selectedMods: selected,
+                                            selectedMods: selected
                                         })
                                     }
                                     onChange={mods =>
@@ -248,8 +258,8 @@ class Mods extends React.Component {
                                             this.props.onChange(
                                                 !this.state.sortReverse
                                                     ? mods
-                                                    : mods.reverse(),
-                                            ),
+                                                    : mods.reverse()
+                                            )
                                         )
                                     }
                                 />
@@ -291,7 +301,7 @@ class Mods extends React.Component {
                                         disabled={this.state.showHandle}
                                         onClick={() =>
                                             this.setState({
-                                                sortReverse: !this.state.sortReverse,
+                                                sortReverse: !this.state.sortReverse
                                             })
                                         }>
                                         <i
@@ -317,7 +327,7 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showHandle: !this.state.showHandle,
+                                                showHandle: !this.state.showHandle
                                             })
                                         }>
                                         <i className="material-icons">reorder</i>
@@ -335,7 +345,7 @@ class Mods extends React.Component {
                                         variant="secondary"
                                         onClick={() =>
                                             this.setState({
-                                                showDisabled: !this.state.showDisabled,
+                                                showDisabled: !this.state.showDisabled
                                             })
                                         }>
                                         <i className="material-icons">
@@ -433,7 +443,7 @@ class Mods extends React.Component {
                                                     fontSize="none"
                                                     textAnchor="none"
                                                     style={{
-                                                        mixBlendMode: "normal",
+                                                        mixBlendMode: "normal"
                                                     }}>
                                                     <path
                                                         d="M0,171.98863v-171.98863h171.98863v171.98863z"
@@ -480,7 +490,7 @@ class Mods extends React.Component {
                     show={this.state.showInstall}
                     onInstall={(mods, options) => {
                         this.setState({ showInstall: false }, () =>
-                            this.props.onInstall(mods, options),
+                            this.props.onInstall(mods, options)
                         );
                     }}
                     onQueue={this.handleQueue}

@@ -148,7 +148,7 @@ def find_modded_files(
                 ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
 
-    this_pool = pool or Pool()
+    this_pool = pool or Pool(maxtasksperchild=500)
     results = this_pool.map(
         partial(_check_modded, tmp_dir=tmp_dir),
         {
@@ -230,7 +230,7 @@ def generate_logs(
         options["disable"] = []
     util.vprint(options)
 
-    this_pool = pool or Pool()
+    this_pool = pool or Pool(maxtasksperchild=500)
     print("Scanning for modified files...")
     modded_files = find_modded_files(tmp_dir, pool=pool)
     if not modded_files:
@@ -360,7 +360,7 @@ def install_mod(
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
                     (tmp_dir / "logs" / merger.log_name).unlink()
         else:
-            this_pool = pool or Pool()
+            this_pool = pool or Pool(maxtasksperchild=500)
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
             (tmp_dir / ".processed").touch()
     except Exception as err:  # pylint: disable=broad-except
@@ -553,7 +553,7 @@ def refresh_merges():
     print("Cleansing old merges...")
     shutil.rmtree(util.get_master_modpack_dir(), True)
     print("Refreshing merged mods...")
-    with Pool() as pool:
+    with Pool(maxtasksperchild=500) as pool:
         for merger in mergers.sort_mergers(
             [merger_class() for merger_class in mergers.get_mergers()]
         ):
@@ -713,8 +713,11 @@ def link_master_mod(output: Path = None):
         raise RuntimeError(
             "There was a problem creating the master BCML graphic pack. "
             "It may be a one time fluke, so try remerging and/or restarting BCML. "
-            "If the problem persists, good luck, because it's something wonky about your "
-            "PC, I guess."
+            "This can also happen if BCML and/or Cemu are installed into Program "
+            "Files or any folder which requires administrator (or root) permissions. "
+            "You can try running BCML as administrator or root, but bear in mind this "
+            "is not officially supported. If the problem persists, good luck, because "
+            "it's something wonky about your PC, I guess."
         ) from err
 
     mod_folders: List[Path] = sorted(

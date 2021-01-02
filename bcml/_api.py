@@ -195,6 +195,22 @@ class Api:
         util.vprint(mods)
         return mods
 
+    def save_mod_list(self, params=None):
+        result = self.window.create_file_dialog(
+            webviewb.SAVE_DIALOG,
+            file_types=("JSON File (*.json)",),
+            allow_multiple=False,
+        )
+        if not result:
+            return
+        out = Path(result if isinstance(result, str) else result[0])
+        out.write_text(
+            json.dumps(
+                [mod.to_json() for mod in util.get_installed_mods(disabled=True)],
+                indent=4,
+            )
+        )
+
     def get_mod_info(self, params):
         mod = BcmlMod.from_json(params["mod"])
         util.vprint(mod)
@@ -272,7 +288,7 @@ class Api:
     @install.refresher
     def install_mod(self, params: dict):
         util.vprint(params)
-        with Pool(maxtasksperchild=1000) as pool:
+        with Pool(maxtasksperchild=500) as pool:
             selects = (
                 params["selects"] if "selects" in params and params["selects"] else {}
             )
@@ -295,7 +311,6 @@ class Api:
                 raise
 
     @win_or_lose
-    @install.refresher
     def update_mod(self, params):
         try:
             update_file = self.file_pick({"multiple": False})[0]
@@ -306,28 +321,16 @@ class Api:
             options = json.loads((mod.path / "options.json").read_text())
         else:
             options = {}
-        remergers = mergers.get_mergers_for_mod(mod)
         rmtree(mod.path)
-        with Pool(maxtasksperchild=1000) as pool:
+        with Pool(maxtasksperchild=500) as pool:
             new_mod = install.install_mod(
                 Path(update_file),
                 insert_priority=mod.priority,
                 options=options,
                 pool=pool,
             )
-            remergers |= {
-                m
-                for m in mergers.get_mergers_for_mod(new_mod)
-                if m.NAME not in {m.NAME for m in remergers}
-            }
-            try:
-                install.refresh_merges()
-            except Exception:  # pylint: disable=broad-except
-                pool.terminate()
-                raise
 
     @win_or_lose
-    @install.refresher
     def reprocess(self, params):
         mod = BcmlMod.from_json(params["mod"])
         rmtree(mod.path / "logs")
@@ -336,7 +339,6 @@ class Api:
         else:
             options = {}
         install.generate_logs(mod.path, options)
-        install.refresh_merges()
 
     @win_or_lose
     @install.refresher
@@ -351,7 +353,7 @@ class Api:
             mod = BcmlMod.from_json(move_mod["mod"])
             mods.append(mod)
             mod.change_priority(move_mod["priority"])
-        with Pool(maxtasksperchild=1000) as pool:
+        with Pool(maxtasksperchild=500) as pool:
             for i in params["installs"]:
                 print(i)
                 mods.append(
@@ -375,11 +377,11 @@ class Api:
         mod = BcmlMod.from_json(params["mod"])
         action = params["action"]
         if action == "enable":
-            install.enable_mod(mod)
+            install.enable_mod(mod, wait_merge=True)
         elif action == "disable":
-            install.disable_mod(mod)
+            install.disable_mod(mod, wait_merge=True)
         elif action == "uninstall":
-            install.uninstall_mod(mod)
+            install.uninstall_mod(mod, wait_merge=True)
         elif action == "update":
             self.update_mod(params)
         elif action == "reprocess":
@@ -794,6 +796,11 @@ class Api:
         )
         last = min(page * 24, len(mods))
         return mods[(page - 1) * 24 : last]
+
+    @win_or_lose
+    def update_gb_mod(self, mod_id: str):
+        self.gb_api.update_mod(str(mod_id))
+        return self.gb_api.get_mod_by_id(str(mod_id))
 
     @win_or_lose
     def install_gb_mod(self, file: dict):

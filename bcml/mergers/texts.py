@@ -95,7 +95,7 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
     ]
     if fix_msbts:
         print("Some MSBTs failed to convert. Trying again individually...")
-        this_pool = pool or multiprocessing.Pool()
+        this_pool = pool or multiprocessing.Pool(maxtasksperchild=500)
         this_pool.map(partial(_msyt_file), fix_msbts)
         fix_msbts = [
             msbt
@@ -243,7 +243,7 @@ def diff_language(bootup: Path, pool: multiprocessing.Pool = None) -> {}:
         extract_refs(ref_lang, tmp_dir)
         ref_dir = tmp_dir / "refs" / ref_lang
 
-        this_pool = pool or multiprocessing.Pool()
+        this_pool = pool or multiprocessing.Pool(maxtasksperchild=500)
         print("Identifying modified text files...")
         results = this_pool.map(
             partial(diff_msyt, ref_dir=ref_dir, hashes=hashes, mod_out=mod_out),
@@ -428,7 +428,7 @@ class TextsMerger(mergers.Merger):
                 ref_lang = "XXen" if lang.endswith("en") else lang
                 extract_refs(ref_lang, tmp_dir)
                 tmp_dir = tmp_dir / "refs" / ref_lang
-                this_pool = self._pool or multiprocessing.Pool()
+                this_pool = self._pool or multiprocessing.Pool(maxtasksperchild=500)
                 this_pool.map(partial(merge_msyt, tmp_dir=tmp_dir), diffs[lang].items())
                 if not self._pool:
                     this_pool.close()

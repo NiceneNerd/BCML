@@ -201,7 +201,7 @@ def get_map_diff(
 
         diffs = Hash()
         diffs["add"] = Array(
-            {obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes}
+            [obj for obj in mod_map["Objs"] if int(obj["HashId"]) not in base_hashes]
         )
         diffs["mod"] = Hash(
             {
@@ -212,11 +212,14 @@ def get_map_diff(
             }
         )
         diffs["del"] = Array(
-            {
-                oead.U32(hash_id)
-                for hash_id in base_hashes
-                if hash_id not in {*mod_hashes, *base_links}
-            }
+            [
+                oead.U32(h)
+                for h in {
+                    hash_id
+                    for hash_id in base_hashes
+                    if hash_id not in {*mod_hashes, *base_links}
+                }
+            ]
             if not no_del
             else set()
         )
@@ -228,11 +231,11 @@ def get_map_diff(
 
         diffs = Hash()
         diffs["add"] = Array(
-            {
+            [
                 rail
                 for rail in mod_map["Rails"]
                 if int(rail["HashId"]) not in base_hashes
-            }
+            ]
         )
         diffs["mod"] = Hash(
             {
@@ -243,7 +246,12 @@ def get_map_diff(
             }
         )
         diffs["del"] = Array(
-            {oead.U32(hash_id) for hash_id in base_hashes if hash_id not in mod_hashes}
+            [
+                oead.U32(h)
+                for h in {
+                    hash_id for hash_id in base_hashes if hash_id not in mod_hashes
+                }
+            ]
             if not no_del
             else set()
         )
@@ -270,7 +278,7 @@ def generate_modded_map_log(
     pool: multiprocessing.pool.Pool = None,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
-    this_pool = pool or Pool()
+    this_pool = pool or Pool(maxtasksperchild=500)
     diffs = oead.byml.Hash(
         {
             map_unit: oead.byml.from_text(diff)
@@ -303,14 +311,14 @@ def merge_map(
     if not no_del:
         for map_del in sorted(
             changes["Objs"]["del"],
-            key=lambda change: stock_obj_hashes.index(int(change))
-            if int(change) in stock_obj_hashes
+            key=lambda change: stock_obj_hashes.index(change)
+            if change in stock_obj_hashes
             else -1,
             reverse=True,
         ):
             if int(map_del) in stock_obj_hashes:
                 try:
-                    new_map["Objs"].pop(stock_obj_hashes.index(int(map_del)))
+                    new_map["Objs"].pop(stock_obj_hashes.index(map_del))
                 except IndexError:
                     try:
                         obj_to_delete = next(
@@ -579,7 +587,7 @@ class MapMerger(mergers.Merger):
                     "del": list(
                         set(
                             [
-                                hash_id
+                                hash_id.v
                                 for hashes in [mod["Objs"]["del"] for mod in mods]
                                 for hash_id in hashes
                             ]
@@ -592,7 +600,7 @@ class MapMerger(mergers.Merger):
                     "del": list(
                         set(
                             [
-                                hash_id
+                                hash_id.v
                                 for hashes in [
                                     mod["Rails"]["del"]
                                     for mod in mods
@@ -672,9 +680,10 @@ class MapMerger(mergers.Merger):
         rstb_calc = rstb.SizeCalculator()
         print("Merging modded map units...")
 
-        pool = self._pool or Pool()
+        pool = self._pool or Pool(maxtasksperchild=500)
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del), map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
+            map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]

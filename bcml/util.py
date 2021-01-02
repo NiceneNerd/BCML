@@ -1255,30 +1255,20 @@ def get_open_port():
 
 @lru_cache(1)
 def get_latest_bcml() -> str:
-    args = [
-        get_python_exe().replace("pythonw", "python"),
-        "-m",
-        "pip",
-        "--disable-pip-version-check",
-        "install",
-        "bcml==checkver",
-    ]
-    if SYSTEM == "Windows":
-        result = run(
-            args,
-            creationflags=CREATE_NO_WINDOW,
-            capture_output=True,
-            universal_newlines=True,
-            check=False,
-        )
-    else:
-        result = run(args, capture_output=True, universal_newlines=True, check=False)
-    vers = sorted(re.findall(r"[0-9]\.[0-9]+\.[0-9a-z]+", result.stderr))
-    if not DEBUG:
-        vers = [v for v in vers if ".a" not in v and ".b" not in v]
     try:
-        return vers[-1]
-    except IndexError:
+        res = requests.get("https://pypi.org/rss/project/bcml/releases.xml")
+        doc = minidom.parseString(res.text)
+        versions = sorted(
+            (
+                item.getElementsByTagName("title")[0].childNodes[0].data
+                for item in doc.getElementsByTagName("item")
+            ),
+            reverse=True,
+        )
+        if DEBUG:
+            return versions[0]
+        return next(v for v in versions if "a" not in v and "b" not in v)
+    except:  # pylint: disable=bare-except
         return "0.0.0"
 
 
