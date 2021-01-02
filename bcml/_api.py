@@ -100,7 +100,9 @@ class Api:
             if targets:
                 return str(targets[0].parent.parent)
         elif "update_dir" in params["type"]:
-            targets: List[Path] = list(folder.rglob("**/Pack/ActorObserverByActorTagTag.sbactorpack"))
+            targets: List[Path] = list(
+                folder.rglob("**/Pack/ActorObserverByActorTagTag.sbactorpack")
+            )
             if targets:
                 return str(targets[0].parent.parent.parent)
         elif "dlc_dir" in params["type"]:
@@ -301,9 +303,7 @@ class Api:
             return
         mod = BcmlMod.from_json(params["mod"])
         if (mod.path / "options.json").exists():
-            options = json.loads(
-                (mod.path / "options.json").read_text(), encoding="utf-8"
-            )
+            options = json.loads((mod.path / "options.json").read_text())
         else:
             options = {}
         remergers = mergers.get_mergers_for_mod(mod)
@@ -332,9 +332,7 @@ class Api:
         mod = BcmlMod.from_json(params["mod"])
         rmtree(mod.path / "logs")
         if (mod.path / "options.json").exists():
-            options = json.loads(
-                (mod.path / "options.json").read_text(), encoding="utf-8"
-            )
+            options = json.loads((mod.path / "options.json").read_text())
         else:
             options = {}
         install.generate_logs(mod.path, options)
@@ -441,12 +439,7 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(
-                    (
-                        "-g",
-                        "Z:\\" + str(uking).replace("/", "\\"),
-                    )
-                )
+                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -601,7 +594,7 @@ class Api:
     def get_existing_meta(self, params):
         path = Path(params["path"])
         if (path / "info.json").exists():
-            return json.loads((path / "info.json").read_text("utf-8"), encoding="utf-8")
+            return json.loads((path / "info.json").read_text("utf-8"))
         if (path / "rules.txt").exists():
             return upgrade.parse_rules(path / "rules.txt")
         return {}
@@ -633,8 +626,7 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod,
-                merge_now=True,
+                mod, merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -750,12 +742,7 @@ class Api:
                 text=True,
             )
         else:
-            result = run(
-                args,
-                capture_output=True,
-                check=False,
-                text=True,
-            )
+            result = run(args, capture_output=True, check=False, text=True,)
         if result.stderr:
             if parent.name == "pkgs":
                 try:

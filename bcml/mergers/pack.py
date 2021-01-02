@@ -97,7 +97,9 @@ class PackMerger(mergers.Merger):
     NAME: str = "packs"
 
     def __init__(self):
-        super().__init__("packs", "Merges modified files within SARCs", "packs.json", {})
+        super().__init__(
+            "packs", "Merges modified files within SARCs", "packs.json", {}
+        )
 
     def can_partial_remerge(self):
         return True
@@ -134,8 +136,7 @@ class PackMerger(mergers.Merger):
             diffs |= {
                 Path(path.replace("\\", "/")).as_posix()
                 for _, path in json.loads(
-                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8"),
-                    encoding="utf-8",
+                    (mod.path / "logs" / self._log_name).read_text(encoding="utf-8")
                 ).items()
             }
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
@@ -143,8 +144,7 @@ class PackMerger(mergers.Merger):
                 diffs |= {
                     Path(path.replace("\\", "/")).as_posix()
                     for _, path in json.loads(
-                        (opt / "logs" / self._log_name).read_text(encoding="utf-8"),
-                        encoding="utf-8",
+                        (opt / "logs" / self._log_name).read_text(encoding="utf-8")
                     ).items()
                 }
         return diffs
@@ -175,7 +175,9 @@ class PackMerger(mergers.Merger):
     def perform_merge(self):
         print("Loading modded SARC list...")
         sarcs = {
-            s: ss for s, ss in self.consolidate_diffs(self.get_all_diffs()).items() if ss
+            s: ss
+            for s, ss in self.consolidate_diffs(self.get_all_diffs()).items()
+            if ss
         }
         if "only_these" in self._options:
             for sarc_file in self._options["only_these"]:

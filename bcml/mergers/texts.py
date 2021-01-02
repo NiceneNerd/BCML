@@ -106,7 +106,9 @@ def msbt_to_msyt(folder: Path, pool: multiprocessing.Pool = None):
             this_pool.close()
             this_pool.join()
     if fix_msbts:
-        print(f"{len(fix_msbts)} MSBT files failed to convert. They will not be merged.")
+        print(
+            f"{len(fix_msbts)} MSBT files failed to convert. They will not be merged."
+        )
         util.vprint(fix_msbts)
     for msbt_file in folder.rglob("**/*.msbt"):
         Path(msbt_file).unlink()
@@ -148,7 +150,7 @@ def read_msbt(file: Union[Path, ByteString]):
     _msyt_file(file, tmp_file)
     tmp_text = tmp_file.read_text("utf-8")
     tmp_file.unlink()
-    return json.loads(tmp_text, encoding="utf-8")
+    return json.loads(tmp_text)
 
 
 def extract_refs(language: str, tmp_dir: Path, files: set = None):
@@ -190,12 +192,12 @@ def diff_msyt(msyt: Path, hashes: dict, mod_out: Path, ref_dir: Path):
     else:
         text = data.decode("utf8")
         if filename not in hashes:
-            diff[filename] = json.loads(text, encoding="utf-8")["entries"]
+            diff[filename] = json.loads(text)["entries"]
         else:
             ref_text = (ref_dir / filename).read_text("utf-8")
             if "".join(text.split()) != "".join(ref_text.split()):
-                ref_contents = json.loads(ref_text, encoding="utf-8")
-                contents = json.loads(text, encoding="utf-8")
+                ref_contents = json.loads(ref_text)
+                contents = json.loads(text)
                 diff[filename] = {
                     entry: value
                     for entry, value in contents["entries"].items()
@@ -260,9 +262,9 @@ def merge_msyt(file_data: tuple, tmp_dir: Path):
     changes: dict = file_data[1]
     out = tmp_dir / filename
     if out.exists():
-        text_data = json.loads(out.read_text("utf-8"), encoding="utf-8")
+        text_data = json.loads(out.read_text("utf-8"))
         text_data["entries"].update(changes)
-        out.write_text(json.dumps(text_data, ensure_ascii=False), encoding="utf-8")
+        out.write_text(json.dumps(text_data, ensure_ascii=False))
     else:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(
@@ -348,7 +350,8 @@ class TextsMerger(mergers.Merger):
         diff = {}
         if self.is_mod_logged(mod):
             util.dict_merge(
-                diff, json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+                diff,
+                json.loads((mod.path / "logs" / self._log_name).read_text("utf-8")),
             )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
@@ -404,7 +407,9 @@ class TextsMerger(mergers.Merger):
             diffs = self.consolidate_diffs(self.get_all_diffs())
             if not diffs or lang not in diffs:
                 print("No text merge necessary")
-                for bootup in util.get_master_modpack_dir().rglob("**/Bootup_????.pack"):
+                for bootup in util.get_master_modpack_dir().rglob(
+                    "**/Bootup_????.pack"
+                ):
                     bootup.unlink()
                 return
             util.vprint(
@@ -451,10 +456,7 @@ class TextsMerger(mergers.Merger):
 
                 else:
                     result = subprocess.run(
-                        m_args,
-                        capture_output=True,
-                        check=False,
-                        text=True,
+                        m_args, capture_output=True, check=False, text=True,
                     )
                 if result.stderr:
                     raise RuntimeError(

@@ -267,9 +267,7 @@ class BcmlMod:
     def __init__(self, mod_path):
         self.path = mod_path
         try:
-            self._info = json.loads(
-                (self.path / "info.json").read_text("utf-8"), encoding="utf-8"
-            )
+            self._info = json.loads((self.path / "info.json").read_text("utf-8"))
             assert "name" in self._info
             assert "id" in self._info
             assert "priority" in self._info
