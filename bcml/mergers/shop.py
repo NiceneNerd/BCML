@@ -24,6 +24,15 @@ shop_keys = ["ItemName", "ItemNum", "ItemAdjustPrice", "ItemLookGetFlg", "ItemAm
 name_table = get_default_name_table()
 
 
+def is_string(p: Parameter) -> bool:
+    return p.type() in [
+        Parameter.Type.String32,
+        Parameter.Type.String64,
+        Parameter.Type.String256,
+        Parameter.Type.StringRef,
+    ]
+
+
 def get_shop_diffs(file: str, tree: dict, tmp_dir: Path) -> Optional[dict]:
     try:
         ref_sarc = Sarc(util.unyaz_if_needed(util.get_game_file(file).read_bytes()))
@@ -51,7 +60,9 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
                 util.vprint(f'Skipping "{path}//{file}", {err}')
                 continue
             sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
-            diffs.update(_get_diffs_from_sarc(sub_sarc, rsub_sarc, edits, path + "//" + file))
+            diffs.update(
+                _get_diffs_from_sarc(sub_sarc, rsub_sarc, edits, path + "//" + file)
+            )
             del sub_sarc
             del rsub_sarc
         else:
@@ -73,9 +84,7 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
 def make_shopdata(pio: ParameterIO) -> ParameterList:
     shopdata = ParameterList()
     tables: List[Parameter] = [
-        str(t.v)
-        for _, t in pio.objects["Header"].params.items()
-        if t.type() == Parameter.Type.String64
+        str(t.v) for _, t in pio.objects["Header"].params.items() if is_string(t)
     ]
     if not tables:
         raise InvalidDataError("A shop file is invalid: has no tables")
@@ -87,7 +96,7 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
         items: Dict[str, List[int]] = {
             str(p.v): [k.hash, i]
             for i, (k, p) in enumerate(pio.objects[table_hash].params.items())
-            if p.type() == Parameter.Type.String64
+            if is_string(p)
         }
         for item in items.keys():
             item_no = int(
@@ -165,14 +174,20 @@ def merge_shopdata(pio: ParameterIO, plist: ParameterList):
     def make_bshop(plist: ParameterList) -> ParameterIO:
         bshop = ParameterIO()
         bshop.type = "xml"
-        tables: List[str] = [str(t.v) for _, t in plist.objects["TableNames"].params.items()]
+        tables: List[str] = [
+            str(t.v) for _, t in plist.objects["TableNames"].params.items()
+        ]
         bshop.objects["Header"] = ParameterObject()
         bshop.objects["Header"].params["TableNum"] = Parameter(len(tables))
         for i, table in enumerate(tables, 1):
             table_hash = crc32(table.encode())
-            bshop.objects["Header"].params[f"Table{i:02d}"] = Parameter(FixedSafeString64(table))
+            bshop.objects["Header"].params[f"Table{i:02d}"] = Parameter(
+                FixedSafeString64(table)
+            )
             table_pobj = ParameterObject()
-            table_pobj.params["ColumnNum"] = Parameter(len(plist.lists[table_hash].objects))
+            table_pobj.params["ColumnNum"] = Parameter(
+                len(plist.lists[table_hash].objects)
+            )
             for j, item in enumerate(
                 [item for _, item in plist.lists[table_hash].objects.items()], 1
             ):
@@ -284,15 +299,16 @@ class ShopMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "Shop merger",
-            "Merges changes to shop files",
-            "shop.aamp",
-            options={},
+            "Shop merger", "Merges changes to shop files", "shop.aamp", options={},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         print("Detecting changes to shop files...")
-        shops = {m for m in modded_files if isinstance(m, str) and m[m.rindex(".") :] in HANDLES}
+        shops = {
+            m
+            for m in modded_files
+            if isinstance(m, str) and m[m.rindex(".") :] in HANDLES
+        }
         if not shops:
             return None
 
@@ -337,7 +353,9 @@ class ShopMerger(mergers.Merger):
     def get_mod_diff(self, mod: util.BcmlMod):
         diff = None
         if self.is_mod_logged(mod):
-            diff = ParameterIO.from_binary((mod.path / "logs" / self._log_name).read_bytes())
+            diff = ParameterIO.from_binary(
+                (mod.path / "logs" / self._log_name).read_bytes()
+            )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 if not diff:
