@@ -264,7 +264,7 @@ def merge_msyt(file_data: tuple, tmp_dir: Path):
     if out.exists():
         text_data = json.loads(out.read_text("utf-8"))
         text_data["entries"].update(changes)
-        out.write_text(json.dumps(text_data, ensure_ascii=False))
+        out.write_text(json.dumps(text_data, ensure_ascii=False), encoding="utf-8")
     else:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(
