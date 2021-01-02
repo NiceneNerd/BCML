@@ -325,7 +325,10 @@ class App extends React.Component {
                         <Dropdown.Item onClick={() => pywebview.api.open_help()}>
                             Help
                         </Dropdown.Item>
-                        <Dropdown.Item onClick={this.updateBcml}>
+                        <Dropdown.Item
+                            as="a"
+                            href="https://github.com/NiceneNerd/BCML/releases/latest"
+                            target="_blank">
                             Update BCML
                         </Dropdown.Item>
                         <Dropdown.Item as="a" href="/index.html?firstrun">
@@ -573,10 +576,16 @@ const UpdateDialog = props => {
                 <Modal.Title>Update Available</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                There is a new update available for BCML. Would you like to install it?
+                There is a new update available for BCML. Would you like to update? (OK
+                will open a new window to the latest download.)
             </Modal.Body>
             <Modal.Footer>
-                <Button onClick={() => props.onClose(true)}>OK</Button>
+                <Button
+                    as="a"
+                    href="https://github.com/NiceneNerd/BCML/releases/latest"
+                    target="_blank">
+                    OK
+                </Button>
                 <Button variant="secondary" onClick={() => props.onClose(false)}>
                     Close
                 </Button>
