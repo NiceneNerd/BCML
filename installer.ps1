@@ -110,9 +110,9 @@ $Shortcut.IconLocation = "$InstallDir\data\bcml.ico"
 $Shortcut.Save()
 Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\BCML.lnk" "$home\Desktop\BCML.lnk"
 
-Write-Host "BCML has been installed! Go ahead and launch it from the shortcut if you wish."
+Write-Host "BCML has been installed! Go ahead and launch it from the shortcut if you wish.`n"
 Write-Host "Just a reminder: I have a full time job, a Masters program, and 6 children."
 Write-Host "So if you like what I do, consider supporting my Patreon (link above)."
-Write-Host "It's what convinces my wife (partially) this is all worth the time."
+Write-Host "It's what convinces my wife (partially) this is all worth the time.`n"
 Write-Host "Press any key to exit..."
 $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
