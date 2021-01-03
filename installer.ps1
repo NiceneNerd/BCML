@@ -109,3 +109,5 @@ $Shortcut.Save()
 
 Write-Host "Done installing BCML!"
 Write-Host "Now run use the shortcut in your Start Menu or run ``bcml`` to start using it!"
+Write-Host "Press any key to exit..."
+$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
