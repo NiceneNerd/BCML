@@ -82,22 +82,24 @@ try {
     $PythonVer = (python -V).Split()[-1]
     if ($PythonVer -lt "3.7.5") {
         throw "Python too old"
-    } else {
+    }
+    else {
         Write-Host "Python 3.7+ already installed, moving on..."
     }
-} catch {
+}
+catch {
     Write-Host "Looks like you need Python! Downloading Python 3.7.9..."
-    (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64-webinstall.exe", "$env:temp\python.exe")
+    (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64-webinstall.exe", "$env:temp\python-3.7.9-amd64-webinstall.exe")
     Write-Host "Downloaded Python. Extracting and installing..."
-    & "$env:temp\python.exe" /passive InstallAllUsers=0 "$env:LocalAppData\Programs\Python37" CompileAll=1 PrependPath=1 Shortcuts=0 Include_Test=0 Include_launcher=0 InstallLauncherAllUsers=0 | Out-Null
+    & "$env:temp\python-3.7.9-amd64-webinstall.exe" /passive InstallAllUsers=0 "$env:LocalAppData\Programs\Python37" CompileAll=1 PrependPath=1 Shortcuts=0 Include_Test=0 Include_launcher=0 InstallLauncherAllUsers=0 | Out-Null
     RefreshEnv.cmd | Out-Null
-    Write-Host "Python all set!"
+    Write-Host "Python is all set!"
 }
 
 Write-Host "Installing latest BCML from PyPI..."
 python -m pip install bcml --disable-pip-version-check --no-warn-script-location | Out-Null
 
-Write-Host "Creating shortcut..."
+Write-Host "Creating shortcuts..."
 $InstallDir = "$((python -m pip show bcml).Split("`n")[7].Split()[-1])\bcml"
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\BCML.lnk")
@@ -106,8 +108,11 @@ $Shortcut.Arguments = "-m bcml"
 $Shortcut.Description = "BCML"
 $Shortcut.IconLocation = "$InstallDir\data\bcml.ico"
 $Shortcut.Save()
+Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\BCML.lnk" "$home\Desktop\BCML.lnk"
 
-Write-Host "Done installing BCML!"
-Write-Host "Now run use the shortcut in your Start Menu or run ``bcml`` to start using it!"
+Write-Host "BCML has been installed! Go ahead and launch it from the shortcut if you wish."
+Write-Host "Just a reminder: I have a full time job, a Masters program, and 6 children."
+Write-Host "So if you like what I do, consider supporting my Patreon (link above)."
+Write-Host "It's what convinces my wife (partially) this is all worth the time."
 Write-Host "Press any key to exit..."
 $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null

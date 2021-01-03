@@ -29,8 +29,7 @@ jobs:
             - name: Install Python dependencies
               run: |
                   python -m pip install --upgrade pip wheel setuptools
-                  pip install twine pynsist mkdocs mkdocs-material
-                  sudo apt install nsis
+                  pip install twine mkdocs mkdocs-material
             - name: Generate webpack bundle
               working-directory: ./bcml/assets
               run: |
@@ -41,16 +40,6 @@ jobs:
             - name: Build Python packages
               run: |
                 python setup.py sdist bdist_wheel
-            - name: Build Windows installer
-              run: |
-                  rm bcml/helpers/7z.so
-                  pynsist installer.cfg
-            - name: Upload installer binary
-              uses: skx/github-action-publish-binaries@master
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  args: "build/nsis/*.exe"
             - name: Publish to PyPI
               env:
                   TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
