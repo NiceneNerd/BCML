@@ -23,11 +23,11 @@ just works.
 
 ## Prerequisites
 
-- Windows 10 (7-8 _might_ work but are not supported) or basically any modern Linux distribution
-- A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch (version
-  1.6.0) or Wii U (version 1.5.0)
-- [The latest x64 Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads#section-2)
-- Cemu (optional)
+-   Windows 10 (7-8 _might_ work but are not supported) or basically any modern Linux distribution
+-   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch (version
+    1.6.0) or Wii U (version 1.5.0)
+-   [The latest x64 Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads#section-2)
+-   Cemu (optional)
 
 ## Setup
 
@@ -43,31 +43,33 @@ supported, but 3.8+ can be used on Linux.
 
 Download the setup executable from the
 [latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
-[GameBanana](https://gamebanana.com/tools/6624). Double click to run and install BCML. Note: You can
-install wherever you like, but if you install to a location that required administrator permissions,
-you may run into complications down the line. Simply `C:\BCML` is often a good choice.
+[GameBanana](https://gamebanana.com/tools/6624). Double click to run and install BCML.
 
 ### Building from Source
 
 Building from source requires, in addition to the general prerequisites:
 
-- Python 3.7+ 64 bit
+-   Python 3.7+ 64 bit
 
-  (Note: 3.8+ will not work on Windows until `cefpython3` is updated.)
-- Node.js v14
+    (Note: 3.8+ will not work on Windows until `cefpython3` is updated.)
+
+-   Node.js v14
 
 Steps to build from source:
 
 1. Install Python requirements
-   1. Open terminal to repo root folder
-   2. Run `pip install -r requirements.txt`
+
+    1. Open terminal to repo root folder
+    2. Run `pip install -r requirements.txt`
 
 2. Prepare the webpack bundle
+
     1. Open terminal to `bcml/assets`
     2. Run `npm install`
     3. Run `npm run build` (or `npm run test` to watch while editing)
 
 3. Build the docs
+
     1. Open terminal to repo root folder
     2. Run `mkdocs build -d bcml/assets/help`
 
@@ -75,6 +77,19 @@ Steps to build from source:
 
 Note that on Linux, you can simply run `bootstrap.sh` to perform these steps automatically unless
 you would like more control.
+
+#### Building the Windows Installer
+
+The Windows installer is a Powershell script. It can be executed directly with Powershell, but BCML distributes an executable binary made with ps2exe. Instructions to build:
+
+1. Open Powershell.
+2. Install ps2exe: `Install-Module ps2exe`.
+3. CD to the repo root folder.
+4. Run:
+   ```powershell
+   ps2exe -inputFile .\installer.ps1 -outputFile .\build\installer.exe -x64 -iconFile .\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 0.9.0.0 -supportOS
+   ```
+5. The installer binary will be located under `build\installer.exe`.
 
 ## Usage and Troubleshooting
 
@@ -85,8 +100,8 @@ troubleshooting, please check the official
 
 ## Contributing
 
-- Issues: <https://github.com/NiceneNerd/BCML/issues>
-- Source: <https://github.com/NiceneNerd/BCML>
+-   Issues: <https://github.com/NiceneNerd/BCML/issues>
+-   Source: <https://github.com/NiceneNerd/BCML>
 
 BOTW is an immensely complex game, and there are a number of new mergers that could be written. If
 you find an aspect of the game that can be complicated by mod conflicts, but BCML doesn't yet handle
