@@ -85,11 +85,12 @@ The Windows installer is a Powershell script. It can be executed directly with P
 1. Open Powershell.
 2. Install ps2exe: `Install-Module ps2exe`.
 3. CD to the repo root folder.
-4. Run:
+4. Create a `build` folder if it does not already exist.
+5. Run:
    ```powershell
    ps2exe -inputFile .\installer.ps1 -outputFile .\build\installer.exe -x64 -iconFile .\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 0.9.0.0 -supportOS
    ```
-5. The installer binary will be located under `build\installer.exe`.
+6. The installer binary will be located under `build\installer.exe`.
 
 ## Usage and Troubleshooting
 
