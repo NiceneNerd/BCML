@@ -4,12 +4,6 @@ import sys
 version = sys.argv[1]
 major, minor, patch = version.split(".")
 
-installer_cfg = Path("installer.cfg")
-if installer_cfg.exists():
-    text = installer_cfg.read_text().splitlines()
-    text[3] = f"version={version}"
-    installer_cfg.write_text("\n".join(text))
-
 setup = Path("setup.py")
 setup_text = setup.read_text().splitlines()
 for i, line in enumerate(setup_text):
