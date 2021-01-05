@@ -20,7 +20,7 @@ from bcml import util, mergers
 
 
 HANDLES = {".bshop"}
-shop_keys = ["ItemName", "ItemNum", "ItemAdjustPrice", "ItemLookGetFlg", "ItemAmount"]
+SHOP_KEYS = ["ItemName", "ItemNum", "ItemAdjustPrice", "ItemLookGetFlg", "ItemAmount"]
 name_table = get_default_name_table()
 
 
@@ -91,7 +91,9 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
     shopdata.objects["TableNames"] = ParameterObject()
     for table in tables:
         table_plist = ParameterList()
-        shopdata.objects["TableNames"].params[table] = Parameter(FixedSafeString64(table))
+        shopdata.objects["TableNames"].params[table] = Parameter(
+            FixedSafeString64(table)
+        )
         table_hash = crc32(table.encode())
         items: Dict[str, List[int]] = {
             str(p.v): [k.hash, i]
@@ -105,7 +107,7 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
                 )
             )
             item_obj = ParameterObject()
-            for shop_key in shop_keys:
+            for shop_key in SHOP_KEYS:
                 try:
                     item_obj.params[shop_key] = pio.objects[table_hash].params[
                         f"{shop_key}{item_no:03d}"
@@ -192,7 +194,7 @@ def merge_shopdata(pio: ParameterIO, plist: ParameterList):
                 [item for _, item in plist.lists[table_hash].objects.items()], 1
             ):
                 table_pobj.params[f"ItemSort{j:03d}"] = Parameter(j - 1)
-                for shop_key in shop_keys:
+                for shop_key in SHOP_KEYS:
                     table_pobj.params[f"{shop_key}{j:03d}"] = item.params[shop_key]
             if table_pobj.params:
                 bshop.objects[table_hash] = table_pobj
@@ -299,7 +301,10 @@ class ShopMerger(mergers.Merger):
 
     def __init__(self):
         super().__init__(
-            "Shop merger", "Merges changes to shop files", "shop.aamp", options={},
+            "Shop merger",
+            "Merges changes to shop files",
+            "shop.aamp",
+            options={},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
@@ -362,7 +367,9 @@ class ShopMerger(mergers.Merger):
                     diff = ParameterIO()
                 merge_plists(
                     diff,
-                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
+                    ParameterIO.from_binary(
+                        (opt / "logs" / self._log_name).read_bytes()
+                    ),
                     True,
                 )
         return diff
