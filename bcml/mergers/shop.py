@@ -77,7 +77,13 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
                 raise ValueError(f"Failed to read nested file:\n{path}//{file}") from err
             except (ValueError, RuntimeError, InvalidDataError) as err:
                 raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
-            diffs.update({full_path: get_shop_diff(pio, ref_pio)})
+            try:
+                diffs.update({full_path: get_shop_diff(pio, ref_pio)})
+            except KeyError as e:
+                raise RuntimeError(
+                    f"The shop file {path + '//' + file} appears to be missing a key: "
+                    + str(e)
+                ) from e
     return diffs
 
 
