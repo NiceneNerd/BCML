@@ -2,6 +2,7 @@ import json
 import shlex
 import sys
 from time import time
+from typing import Tuple
 
 import requests
 
@@ -47,23 +48,20 @@ class GameBananaDb:
         self._data = json.loads(GB_DATA.read_text("utf-8"))
         self.update_db()
 
-    def search(self, search: str) -> list:
-        search = search.lower().replace("'", "\\\'")
-        terms = shlex.split(search)
+    def search(self, search: str) -> Tuple[list, list]:
+        search = search.lower().replace("'", "\\'")
+        terms = [t for t in shlex.split(search) if len(t) > 2 and t != "the"]
         special = {}
         for term in terms.copy():
             if ":" in term:
                 terms.remove(term)
                 key_val = term.split(":")
                 special[key_val[0]] = key_val[1]
-        return [
+        title_matches = [
             m
             for m in self.mods
             if (
-                any(
-                    t in (m["description"] + m["name"] + m["text"].lower())
-                    for t in terms
-                )
+                any(t in (m["description"] + m["name"]).lower() for t in terms)
                 or not terms
             )
             and (
@@ -71,6 +69,17 @@ class GameBananaDb:
                 or not special
             )
         ]
+        desc_matches = [
+            m
+            for m in self.mods
+            if (any(t in m["text"].lower() for t in terms) or not terms)
+            and (
+                all(k in m and v == m[k].lower() for k, v in special.items())
+                or not special
+            )
+            and m not in title_matches
+        ]
+        return title_matches, desc_matches
 
     def _send_request(self, url: str, params: dict) -> dict:
         params["format"] = "json_min"
@@ -168,7 +177,18 @@ class GameBananaDb:
             m
             for m in self._data["mods"].values()
             if (
-                "WiiU" in m["game"] if self._gameid == "5866" else "Switch" in m["game"]
+                (
+                    "WiiU" in m["game"]
+                    if self._gameid == "5866"
+                    else "Switch" in m["game"]
+                )
+                and (
+                    util.get_settings("nsfw")
+                    or all(
+                        nsfw not in (m["name"] + m["description"] + m["text"]).lower()
+                        for nsfw in {"nsfw", "thicc", "boob", "cosplay"}
+                    )
+                )
             )
         ]
 

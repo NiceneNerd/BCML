@@ -24,7 +24,8 @@ class Settings extends React.Component {
             force_7z: false,
             suppress_update: false,
             valid: false,
-            loaded: false
+            loaded: false,
+            nsfw: false
         };
         this.formRef = React.createRef();
     }
@@ -474,6 +475,24 @@ class Settings extends React.Component {
                                     type="checkbox"
                                     label="Disable BCML update notification"
                                     checked={this.state.suppress_update}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="nsfw">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        By default, BCML will not show NSFW mods in the
+                                        GameBanana browser. If you're full of lust and
+                                        need to repent, you can enable them here.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Idiot Mode: Show NSFW mods in GameBanana tab"
+                                    checked={this.state.nsfw}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>

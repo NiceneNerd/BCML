@@ -441,7 +441,12 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
+                cemu_args.extend(
+                    (
+                        "-g",
+                        "Z:\\" + str(uking).replace("/", "\\"),
+                    )
+                )
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -628,7 +633,8 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod, merge_now=True,
+                mod,
+                merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -744,7 +750,12 @@ class Api:
                 text=True,
             )
         else:
-            result = run(args, capture_output=True, check=False, text=True,)
+            result = run(
+                args,
+                capture_output=True,
+                check=False,
+                text=True,
+            )
         if result.stderr:
             if parent.name == "pkgs":
                 try:
@@ -769,6 +780,7 @@ class Api:
         mods = self.gb_api.mods
         if search:
             mods = self.gb_api.search(search)
+            mods = mods[0] + mods[1]
         return ceil(
             len(
                 mods if not category else [m for m in mods if m["category"] == category]
@@ -780,8 +792,6 @@ class Api:
         self, page: int, sort: str = "new", category: str = None, search: str = None
     ):
         mods = self.gb_api.mods
-        if search:
-            mods = self.gb_api.search(search)
         key = {
             "new": itemgetter("updated"),
             "old": itemgetter("updated"),
@@ -789,11 +799,38 @@ class Api:
             "abc": itemgetter("name"),
             "likes": itemgetter("likes"),
         }.get(sort)
-        mods = sorted(
-            mods if not category else [m for m in mods if m["category"] == category],
-            key=key,
-            reverse=sort not in {"old", "abc"},
-        )
+        if not search:
+            mods = sorted(
+                mods
+                if not category
+                else [m for m in mods if m["category"] == category],
+                key=key,
+                reverse=sort not in {"old", "abc"},
+            )
+        else:
+            title_matches, desc_matches = self.gb_api.search(search)
+            exacts = [
+                title_matches.pop(i)
+                for i in range(len(title_matches) - 1)
+                if title_matches[i]["name"].lower() == search.lower()
+            ]
+            mods = (
+                exacts
+                + sorted(
+                    title_matches
+                    if not category
+                    else [m for m in title_matches if m["category"] == category],
+                    key=key,
+                    reverse=sort not in {"old", "abc"},
+                )
+                + sorted(
+                    desc_matches
+                    if not category
+                    else [m for m in desc_matches if m["category"] == category],
+                    key=key,
+                    reverse=sort not in {"old", "abc"},
+                )
+            )
         last = min(page * 24, len(mods))
         return mods[(page - 1) * 24 : last]
 

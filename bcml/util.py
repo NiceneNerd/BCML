@@ -564,6 +564,7 @@ DEFAULT_SETTINGS = {
     "no_hardlinks": False,
     "force_7z": False,
     "suppress_update": False,
+    "nsfw": False,
 }
 
 
@@ -626,9 +627,7 @@ def parse_cemu_settings(path: Path = None):
 
 def get_game_dir() -> Path:
     game_dir = str(
-        get_settings("game_dir")
-        if get_settings("wiiu")
-        else get_settings("game_dir_nx")
+        get_settings("game_dir") if get_settings("wiiu") else get_settings("game_dir_nx")
     )
     game_path = Path(game_dir)
     if not game_dir or not game_path.is_dir():
@@ -1038,9 +1037,7 @@ def get_mod_preview(mod: BcmlMod) -> Path:
                         img_match.group(1), str(mod.path / image_path)
                     )
                 else:
-                    raise IndexError(
-                        f"Rule for {url} failed to find the remote preview"
-                    )
+                    raise IndexError(f"Rule for {url} failed to find the remote preview")
             else:
                 raise KeyError("No preview image available")
         else:
@@ -1229,10 +1226,7 @@ def pio_subtract(
     for key, plist in mod.lists.items():
         if key in merged.lists:
             pio_subtract(merged.lists[key], plist)
-            if (
-                len(merged.lists[key].objects) == 0
-                and len(merged.lists[key].lists) == 0
-            ):
+            if len(merged.lists[key].objects) == 0 and len(merged.lists[key].lists) == 0:
                 del merged.lists[key]
     for key, pobj in mod.objects.items():
         if key in merged.objects:
