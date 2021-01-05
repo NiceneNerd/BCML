@@ -39,7 +39,12 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
             capture_output=True,
             universal_newlines=True,
         )
-    return json.loads(result.stdout) if not result.stderr else {}
+    try:
+        assert not result.stderr
+        meta = json.loads(result.stdout)
+    except:
+        return {}
+    return meta
 
 
 def open_mod(path: Path) -> Path:
