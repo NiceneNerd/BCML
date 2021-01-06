@@ -100,31 +100,36 @@ try {
         Write-Host "Python already installed by BCML found. Using that, then."
         $Python = "$home\.python\python.exe"
     } else {
-        Write-Host "Looks like you need Python! Downloading Python 3.7.9..."
+        Write-Host "No Python? No problem! Downloading the BCML bundle..."
         try {
-            (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip", "$env:temp\python.zip")
+            $latestRelease = Invoke-WebRequest https://github.com/account/project/releases/latest -Headers @{"Accept"="application/json"}
+            $json = $latestRelease.Content | ConvertFrom-Json
+            $latestVersion = $json.tag_name
+            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/releases/download/$latestVersion/bcml-win64-bundle.exe", "$env:temp\bundle.zip")
+            $BundlePath = "$env:temp\bundle.zip"
         } catch {
-            Write-Error "Could not download Python. Please check your Internet connection."
-            PromptQuit
+            Write-Error "Could not download BCML bundle. Maybe it's your internet connection."
+            $UseLocal = Read-Host "If you have a downloaded BCML bundle to use offline, please enter the path to it now:"
+            if ([String]::IsNullOrWhiteSpace($UseLocal)) {
+                PromptQuit
+            } else {
+                $BundlePath = $UseLocal
+            }
         }
-        Write-Host "Downloaded Python. Where would you like it to be installed?"
-        Write-Host "(If you leave this blank, it will default to %USERPROFILE%\.python)"
+        Write-Host "Downloaded BCML bundle. Where would you like it to be installed?"
+        Write-Host "(If you leave this blank, it will default to %USERPROFILE%\.bcml)"
         Write-Host "> " -NoNewline
-        $PythonDir = Read-Host
-        if ([String]::IsNullOrWhiteSpace($PythonDir)) {
-            $PythonDir = "$home\.python"
+        $BcmlDir = Read-Host
+        if ([String]::IsNullOrWhiteSpace($BcmlDir)) {
+            $BcmlDir = "$home\.bcml"
         }
         try {
-            Expand-Archive -Path "$env:temp\python.zip" -DestinationPath "$PythonDir" -Force
+            Expand-Archive -Path $BundlePath -DestinationPath "$BcmlDir" -Force
         } catch {
             Write-Error "There was a problem extracting the Python package."
             PromptQuit
         }
-        $Python = "$PythonDir\python.exe"
-        Write-Host "Setting up pip..."
-        (New-Object Net.WebClient).DownloadFile("https://bootstrap.pypa.io/get-pip.py", "$PythonDir\get-pip.py") | Out-Null
-        & $Python "$PythonDir\get-pip.py" --disable-pip-version-check --no-warn-script-location | Out-Null
-        Set-Content -Path "$PythonDir\python37._pth" -Value "python37.zip`n.`n.\Lib`n.\Lib\site-packages`n.\DLLs`n"
+        $Python = "$BcmlDir\python.exe"
         Write-Host "Python is all set!"
     }
 }

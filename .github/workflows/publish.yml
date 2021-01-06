@@ -46,3 +46,38 @@ jobs:
                   TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
                   TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
               run: twine upload dist/*
+    build:
+      runs-on: windows-latest
+      steps:
+        - name: Download Embedded Python
+          run: (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip", "$env:temp\python.zip")
+        - name: Extract Python
+          run: |
+            Expand-Archive -Path "$env:temp\python.zip" -DestinationPath "$env:temp\python"
+            Set-Content -Path "$env:temp\python\python37._pth" -Value "python37.zip`n.`n.\Lib`n.\Lib\site-packages`n.\DLLs`n"
+        - name: Setup pip
+          run: |
+            (New-Object Net.WebClient).DownloadFile("https://bootstrap.pypa.io/get-pip.py", "$env:temp\get-pip.py")
+            & $env:temp\python\python.exe $env:temp\get-pip.py --disable-pip-version-check --no-warn-script-location
+        - name: Install BCML
+          run: \& $env:temp\python\python.exe -m pip install bcml --upgrade --disable-pip-version-check --no-warn-script-location
+        - name: Create Archive
+          run: Compress-Archive -Path "$env:temp\python" -DestinationPath ".\bcml-win64-bundle.zip"
+        - name: Upload Archive
+          uses: skx/github-action-publish-binaries@master
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+              args: "bcml-win64-bundle.zip"
+        - name: Prepare to Build Installer
+          run: Install-Module ps2exe
+        - name: Download Installer Script
+          run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/NiceneNerd/BCML/master/installer.ps1", ".\installer.ps1")
+        - name: Build Installer  
+          run: ps2exe -inputFile .\installer.ps1 -outputFile .\bcml-3-installer.exe -x64 -iconFile $env:temp\python\Lib\site-packages\bcml\data\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 1.0.0.0 -supportOS
+        - name: Upload Installer
+          uses: skx/github-action-publish-binaries@master
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+              args: "bcml-3-installer.exe"
