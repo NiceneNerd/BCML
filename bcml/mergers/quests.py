@@ -90,7 +90,11 @@ class QuestMerger(mergers.Merger):
         if not diffs:
             return {}
         all_diffs = oead.byml.Hash(
-            {"add": oead.byml.Array(), "mod": oead.byml.Hash(), "del": oead.byml.Array(),}
+            {
+                "add": oead.byml.Array(),
+                "mod": oead.byml.Hash(),
+                "del": oead.byml.Array(),
+            }
         )
         added_quests = set()
         for diff in reversed(diffs):
@@ -144,6 +148,13 @@ class QuestMerger(mergers.Merger):
                 quests.remove(quests[stock_names.index(delete)])
             except ValueError:
                 pass
+            except IndexError:
+                raise RuntimeError(
+                    f"An error occurred when attempting to remove a quest from your "
+                    "game. Most of the time this means the mod was accidentally made "
+                    "using the base game 1.0 TitleBG.pack instead of the latest updated "
+                    "version. Please contact the mod author for assistance."
+                )
         added_names = set()
         for add in diffs["add"]:
             if add["Name"] not in added_names:
@@ -166,7 +177,9 @@ class QuestMerger(mergers.Merger):
         if not diff:
             return set()
         return (
-            {a["Name"] for a in diff["add"]} | set(diff["mod"].keys()) | set(diff["del"])
+            {a["Name"] for a in diff["add"]}
+            | set(diff["mod"].keys())
+            | set(diff["del"])
         )
 
     def get_checkbox_options(self):
