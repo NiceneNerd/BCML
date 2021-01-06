@@ -1,8 +1,8 @@
 name: Build
 
 on:
-  - workflow_dispatch
-  - repository_dispatch:
+  workflow_dispatch
+  repository_dispatch:
     types: [trigger-build]
 
 jobs:
