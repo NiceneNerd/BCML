@@ -10,6 +10,12 @@ jobs:
     build:
       runs-on: windows-latest
       steps:
+        - name: Get Release
+          uses: oprypin/find-latest-tag@v1
+          with:
+            repository: NiceneNerd/BCML
+            releases-only: true
+          id: tag
         - name: Download Embedded Python
           run: (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip", "$env:temp\python.zip")
         - name: Extract Python
@@ -30,19 +36,21 @@ jobs:
             repo_token: ${{ secrets.GITHUB_TOKEN }}
             file: bcml-win64-bundle.zip
             asset_name: bcml-win64-bundle.zip
-            tag: ${{ github.ref }}
+            tag: ${{ steps.tag.outputs.tag }}
             overwrite: true
         - name: Prepare to Build Installer
-          run: Install-Module ps2exe -Force -Confirm:$false
+          run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/MScholtes/PS2EXE/master/Module/ps2exe.ps1", ".\ps2exe.ps1")
         - name: Download Installer Script
           run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/NiceneNerd/BCML/master/installer.ps1", ".\installer.ps1")
         - name: Build Installer  
-          run: ps2exe -inputFile .\installer.ps1 -outputFile .\bcml-3-installer.exe -x64 -iconFile $env:temp\python\Lib\site-packages\bcml\data\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 1.0.0.0 -supportOS
+          run: |
+            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/raw/master/bcml/data/bcml.ico", ".\bcml.ico")
+            powershell -command "& { . .\ps2exe.ps1; Invoke-ps2exe -inputFile .\installer.ps1 -outputFile .\bcml-3-installer.exe -x64 -iconFile .\bcml.ico -title BCML -description 'BOTW Cross-Platform Mod Loader' -version 1.0.0.0 -supportOS }"
         - name: Upload Installer
           uses: svenstaro/upload-release-action@v2
           with:
             repo_token: ${{ secrets.GITHUB_TOKEN }}
-            file: bcml-3-installer.zip
-            asset_name: bcml-3-installer.zip
-            tag: ${{ github.ref }}
+            file: bcml-3-installer.exe
+            asset_name: bcml-3-installer.exe
+            tag: ${{ steps.tag.outputs.tag }}
             overwrite: true

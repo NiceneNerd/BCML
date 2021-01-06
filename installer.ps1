@@ -102,12 +102,13 @@ try {
     } else {
         Write-Host "No Python? No problem! Downloading the BCML bundle..."
         try {
-            $latestRelease = Invoke-WebRequest https://github.com/account/project/releases/latest -Headers @{"Accept"="application/json"}
+            $latestRelease = Invoke-WebRequest https://github.com/NiceneNerd/BCML/releases/latest -Headers @{"Accept"="application/json"}
             $json = $latestRelease.Content | ConvertFrom-Json
             $latestVersion = $json.tag_name
-            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/releases/download/$latestVersion/bcml-win64-bundle.exe", "$env:temp\bundle.zip")
+            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/releases/download/$latestVersion/bcml-win64-bundle.zip", "$env:temp\bundle.zip")
             $BundlePath = "$env:temp\bundle.zip"
         } catch {
+            Write-Host $_
             Write-Error "Could not download BCML bundle. Maybe it's your internet connection."
             $UseLocal = Read-Host "If you have a downloaded BCML bundle to use offline, please enter the path to it now:"
             if ([String]::IsNullOrWhiteSpace($UseLocal)) {
@@ -125,6 +126,7 @@ try {
         }
         try {
             Expand-Archive -Path $BundlePath -DestinationPath "$BcmlDir" -Force
+            Move-Item -Path "$BcmlDir\python\*" -Destination "$BcmlDir\"
         } catch {
             Write-Error "There was a problem extracting the Python package."
             PromptQuit
@@ -138,6 +140,7 @@ try {
     Write-Host "Installing latest BCML from PyPI..."
     & $Python -m pip install bcml --upgrade --disable-pip-version-check --no-warn-script-location | Out-Null
 } catch {
+    Write-Host $_
     Write-Error "BCML did not install successfully from PyPI."
     PromptQuit
 }
