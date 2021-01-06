@@ -25,11 +25,13 @@ jobs:
         - name: Create Archive
           run: Compress-Archive -Path "$env:temp\python" -DestinationPath ".\bcml-win64-bundle.zip"
         - name: Upload Archive
-          uses: skx/github-action-publish-binaries@master
-          env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          uses: svenstaro/upload-release-action@v2
           with:
-              args: "bcml-win64-bundle.zip"
+            repo_token: ${{ secrets.GITHUB_TOKEN }}
+            file: bcml-win64-bundle.zip
+            asset_name: bcml-win64-bundle.zip
+            tag: ${{ github.ref }}
+            overwrite: true
         - name: Prepare to Build Installer
           run: Install-Module ps2exe
         - name: Download Installer Script
@@ -37,8 +39,10 @@ jobs:
         - name: Build Installer  
           run: ps2exe -inputFile .\installer.ps1 -outputFile .\bcml-3-installer.exe -x64 -iconFile $env:temp\python\Lib\site-packages\bcml\data\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 1.0.0.0 -supportOS
         - name: Upload Installer
-          uses: skx/github-action-publish-binaries@master
-          env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          uses: svenstaro/upload-release-action@v2
           with:
-              args: "bcml-3-installer.exe"
+            repo_token: ${{ secrets.GITHUB_TOKEN }}
+            file: bcml-3-installer.zip
+            asset_name: bcml-3-installer.zip
+            tag: ${{ github.ref }}
+            overwrite: true
