@@ -7,6 +7,8 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-18.04
+        strategy:
+          max-parallel: 1
         steps:
             - uses: actions/checkout@v2
             - name: local-fix
@@ -60,7 +62,7 @@ jobs:
             (New-Object Net.WebClient).DownloadFile("https://bootstrap.pypa.io/get-pip.py", "$env:temp\get-pip.py")
             & $env:temp\python\python.exe $env:temp\get-pip.py --disable-pip-version-check --no-warn-script-location
         - name: Install BCML
-          run: \& $env:temp\python\python.exe -m pip install bcml --upgrade --disable-pip-version-check --no-warn-script-location
+          run: "& \"$env:temp\\python\\python.exe\" -m pip install bcml --upgrade --disable-pip-version-check --no-warn-script-location"
         - name: Create Archive
           run: Compress-Archive -Path "$env:temp\python" -DestinationPath ".\bcml-win64-bundle.zip"
         - name: Upload Archive
