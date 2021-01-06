@@ -1,7 +1,7 @@
 name: Build
 
 on:
-  repository-dispatch:
+  repository_dispatch:
     types: [trigger-build]
 
 jobs:
