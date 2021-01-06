@@ -33,7 +33,7 @@ jobs:
             tag: ${{ github.ref }}
             overwrite: true
         - name: Prepare to Build Installer
-          run: Install-Module ps2exe
+          run: Install-Module ps2exe -Force -Confirm:$false
         - name: Download Installer Script
           run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/NiceneNerd/BCML/master/installer.ps1", ".\installer.ps1")
         - name: Build Installer  
