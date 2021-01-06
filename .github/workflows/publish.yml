@@ -1,4 +1,6 @@
 name: Upload Python Package
+strategy:
+  max-parallel: 1
 
 on:
     release:
@@ -7,8 +9,6 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-18.04
-        strategy:
-          max-parallel: 1
         steps:
             - uses: actions/checkout@v2
             - name: local-fix
