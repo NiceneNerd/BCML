@@ -5,7 +5,7 @@
 import json
 from multiprocessing import Pool
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import oead
 
@@ -21,10 +21,8 @@ SPECIAL = {
 EXCLUDE_EXTS = {".sbeventpack"}
 
 
-def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes):
+def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> Tuple[str, bytes]:
     opened_sarcs: List[oead.Sarc] = []
-    if "ThunderRodLv2" in file_name:
-        print()
     if isinstance(sarcs[0], Path):
         for i, sarc_path in enumerate(sarcs):
             sarcs[i] = sarc_path.read_bytes()
@@ -49,23 +47,22 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
     for opened_sarc in reversed(opened_sarcs):
         for file in [f for f in opened_sarc.get_files() if f.name not in files_added]:
             file_data = oead.Bytes(file.data)
+            canon = file.name.replace(".s", ".")
             if (
                 file.name[file.name.rindex(".") :] in util.SARC_EXTS - EXCLUDE_EXTS
             ) and file.name not in SPECIAL:
                 if file.name not in nested_sarcs:
                     nested_sarcs[file.name] = []
                 nested_sarcs[file.name].append(util.unyaz_if_needed(file_data))
-            elif util.is_file_modded(
-                file.name.replace(".s", "."), file_data, count_new=True
-            ):
+            elif (
+                canon not in util.get_hash_table(util.get_settings("wiiu"))
+            ) or util.is_file_modded(canon, file_data, count_new=True):
                 new_sarc.files[file.name] = file_data
                 files_added.add(file.name)
-    util.vprint(set(nested_sarcs.keys()))
-    for file, sarcs in nested_sarcs.items():
-        if not sarcs:
-            continue
+
+    for file, sarcs in [(f, s) for (f, s) in nested_sarcs.items() if s]:
         merged_bytes = merge_sarcs(file, sarcs[::-1])[1]
-        if Path(file).suffix.startswith(".s") and not file.endswith(".sarc"):
+        if file[file.rindex(".") :].startswith(".s") and not file.endswith(".sarc"):
             merged_bytes = util.compress(merged_bytes)
         new_sarc.files[file] = merged_bytes
         files_added.add(file)
@@ -79,16 +76,25 @@ def merge_sarcs(file_name: str, sarcs: List[Union[Path, bytes]]) -> (str, bytes)
             break
 
     if "Bootup.pack" in file_name:
-        for merger in [
-            merger() for merger in mergers.get_mergers() if merger.is_bootup_injector()
+        for inject in [
+            merger().get_bootup_injection()
+            for merger in mergers.get_mergers()
+            if merger.is_bootup_injector()
         ]:
-            inject = merger.get_bootup_injection()
             if not inject:
                 continue
             file, data = inject
             new_sarc.files[file] = data
 
     return (file_name, bytes(new_sarc.write()[1]))
+
+
+def write_sarc(file: str, data: bytes) -> None:
+    output_path = util.get_master_modpack_dir() / file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.suffix.startswith(".s"):
+        data = util.compress(data)
+    output_path.write_bytes(data)
 
 
 class PackMerger(mergers.Merger):
@@ -179,22 +185,12 @@ class PackMerger(mergers.Merger):
             for s, ss in self.consolidate_diffs(self.get_all_diffs()).items()
             if ss
         }
-        if "only_these" in self._options:
-            for sarc_file in self._options["only_these"]:
-                master_path = util.get_master_modpack_dir() / sarc_file
-                if master_path.exists():
-                    master_path.unlink()
-            for sarc_file in [
-                file for file in sarcs if file not in self._options["only_these"]
-            ]:
-                del sarcs[sarc_file]
-        else:
-            for file in [
-                file
-                for file in util.get_master_modpack_dir().rglob("**/*")
-                if file.suffix in util.SARC_EXTS
-            ]:
-                file.unlink()
+        for file in [
+            file
+            for file in util.get_master_modpack_dir().rglob("**/*")
+            if file.suffix in util.SARC_EXTS
+        ]:
+            file.unlink()
         for sarc_file in sarcs:
             try:
                 sarcs[sarc_file].insert(0, util.get_game_file(sarc_file))
@@ -206,13 +202,7 @@ class PackMerger(mergers.Merger):
         print(f"Merging {len(sarcs)} SARC files...")
         pool = self._pool or Pool(maxtasksperchild=500)
         results = pool.starmap(merge_sarcs, sarcs.items())
-        for result in results:
-            file, file_data = result
-            output_path = util.get_master_modpack_dir() / file
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            if output_path.suffix.startswith(".s"):
-                file_data = util.compress(file_data)
-            output_path.write_bytes(file_data)
+        pool.starmap(write_sarc, results)
         if not self._pool:
             pool.close()
             pool.join()
