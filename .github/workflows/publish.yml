@@ -1,12 +1,12 @@
 name: Upload Python Package
-strategy:
-  max-parallel: 1
 
 on:
     release:
         types: [created]
 
 jobs:
+    strategy:
+      max-parallel: 1
     deploy:
         runs-on: ubuntu-18.04
         steps:
