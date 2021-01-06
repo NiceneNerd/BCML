@@ -74,7 +74,9 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
             try:
                 pio = ParameterIO.from_binary(sarc.get_file(file).data)
             except AttributeError as err:
-                raise ValueError(f"Failed to read nested file:\n{path}//{file}") from err
+                raise ValueError(
+                    f"Failed to read nested file:\n{path}//{file}"
+                ) from err
             except (ValueError, RuntimeError, InvalidDataError) as err:
                 raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
             try:
@@ -102,13 +104,14 @@ def make_shopdata(pio: ParameterIO) -> ParameterList:
         )
         table_hash = crc32(table.encode())
         items: Dict[str, List[int]] = {
-            str(p.v): [k.hash, i]
-            for i, (k, p) in enumerate(pio.objects[table_hash].params.items())
+            str(p.v): k.hash
+            for k, p in pio.objects[table_hash].params.items()
             if is_string(p)
         }
+        total_params = len(pio.objects[table_hash].params)
         for item in items.keys():
             item_no = int(
-                name_table.get_name(items[item][0], items[item][1], table_hash).replace(
+                name_table.get_name(items[item], total_params, table_hash).replace(
                     "ItemName", ""
                 )
             )
@@ -266,7 +269,9 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
             try:
                 ofile = sarc.get_file(file)
                 if ofile == None:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 sub_sarc = Sarc(util.unyaz_if_needed(ofile.data))
             except (
                 InvalidDataError,
@@ -287,7 +292,9 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
             try:
                 ofile = sarc.get_file(file)
                 if ofile == None:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 pio = ParameterIO.from_binary(ofile.data)
             except (
                 AttributeError,
