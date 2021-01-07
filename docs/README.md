@@ -8,24 +8,25 @@ A mod merging and managing tool for _The Legend of Zelda: Breath of the Wild_
 
 ## Purpose
 
-Why a mod loader for BOTW? Installing a mod is usually easy enough once you have a homebrewed
-console or a emulator. Is there a need for a special tool?
+Why a mod loader for BOTW? Installing a mod is usually easy enough once you have a
+homebrewed console or a emulator. Is there a need for a special tool?
 
-Yes. As soon as you start trying to install multiple mods, you will find complications. The BOTW
-game ROM is fundamentally structured for performance and storage use on a family console, without
-any support for modification. As such, files like the
+Yes. As soon as you start trying to install multiple mods, you will find complications.
+The BOTW game ROM is fundamentally structured for performance and storage use on a
+family console, without any support for modification. As such, files like the
 [resource size table](https://zeldamods.org/wiki/Resource_system) or
-[TitleBG.pack](https://zeldamods.org/wiki/TitleBG.pack) will almost inevtiably begin to clash once
-you have more than a mod or two. Symptoms can include mods simply taking no effect, odd bugs, actors
-that don't load, hanging on the load screen, or complete crashing. BCML exists to resolve this
-problem. It identifies, isolates, and merges the changes made by each mod into a single modpack that
-just works.
+[TitleBG.pack](https://zeldamods.org/wiki/TitleBG.pack) will almost inevitably begin to
+clash once you have more than a mod or two. Symptoms can include mods simply taking no
+effect, odd bugs, actors that don't load, hanging on the load screen, or complete
+crashing. BCML exists to resolve this problem. It identifies, isolates, and merges the
+changes made by each mod into a single modpack that just works.
 
 ## Prerequisites
 
--   Windows 10 (7-8 _might_ work but are not supported) or basically any modern Linux distribution
--   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch (version
-    1.6.0) or Wii U (version 1.5.0)
+-   Windows 10 (7-8 _might_ work but are not supported) or basically any modern Linux
+    distribution
+-   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch
+    (version 1.6.0) or Wii U (version 1.5.0)
 -   [The latest x64 Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads#section-2)
 -   Cemu (optional)
 
@@ -35,9 +36,9 @@ There are a few ways to install BCML.
 
 ### PyPI
 
-Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then run
-`pip install bcml`. Note that, because of the `cefpython3` dependency, on Windows only Python 3.7 is
-supported, but 3.8+ can be used on Linux.
+Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
+run `pip install bcml`. Note that, because of the `cefpython3` dependency, on Windows
+only Python 3.7 is supported, but 3.8+ can be used on Linux.
 
 ### Windows Installer
 
@@ -49,10 +50,10 @@ Download the setup executable from the
 
 The Windows installer requires an Internet connection by default. To install offline,
 download `bcml-win64-bundle.zip` from the latest release. Then you can either use the
-default installer and provide the bundle file when prompted, *or* you can just extract
+default installer and provide the bundle file when prompted, _or_ you can just extract
 it where you would like. If you extract it, the only default way to run BCML will be
 with the command `PATH\TO\BCML\pythonw.exe -m bcml`. You can make a shortcut to make
-that easier if you like. 
+that easier if you like.
 
 ### Building from Source
 
@@ -82,23 +83,26 @@ Steps to build from source:
     1. Open terminal to repo root folder
     2. Run `mkdocs build -d bcml/assets/help`
 
-4. Install BCML with `python setup.py install` or run without installing with `python -m bcml`
+4. Install BCML with `python setup.py install` or run without installing with
+   `python -m bcml`
 
-Note that on Linux, you can simply run `bootstrap.sh` to perform these steps automatically unless
-you would like more control.
+Note that on Linux, you can simply run `bootstrap.sh` to perform these steps
+automatically unless you would like more control.
 
 #### Building the Windows Installer
 
-The Windows installer is a Powershell script. It can be executed directly with Powershell, but BCML distributes an executable binary made with ps2exe. Instructions to build:
+The Windows installer is a Powershell script. It can be executed directly with
+Powershell, but BCML distributes an executable binary made with ps2exe. Instructions to
+build:
 
 1. Open Powershell.
 2. Install ps2exe: `Install-Module ps2exe`.
 3. CD to the repo root folder.
 4. Create a `build` folder if it does not already exist.
 5. Run:
-   ```powershell
-   ps2exe -inputFile .\installer.ps1 -outputFile .\build\installer.exe -x64 -iconFile .\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 0.9.0.0 -supportOS
-   ```
+    ```powershell
+    ps2exe -inputFile .\installer.ps1 -outputFile .\build\installer.exe -x64 -iconFile .\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 0.9.0.0 -supportOS
+    ```
 6. The installer binary will be located under `build\installer.exe`.
 
 ## Usage and Troubleshooting
@@ -113,12 +117,14 @@ troubleshooting, please check the official
 -   Issues: <https://github.com/NiceneNerd/BCML/issues>
 -   Source: <https://github.com/NiceneNerd/BCML>
 
-BOTW is an immensely complex game, and there are a number of new mergers that could be written. If
-you find an aspect of the game that can be complicated by mod conflicts, but BCML doesn't yet handle
-it, feel free to try writing a merger for it and submitting a PR.
+BOTW is an immensely complex game, and there are a number of new mergers that could be
+written. If you find an aspect of the game that can be complicated by mod conflicts, but
+BCML doesn't yet handle it, feel free to try writing a merger for it and submitting a
+PR.
 
-Python and JSX code for BCML is subject to formatting standards. Python should be formatted with Black.
-JSX should be formatted with Prettier, using the following settings:
+Python and JSX code for BCML is subject to formatting standards. Python should be
+formatted with Black. JSX should be formatted with Prettier, using the following
+settings:
 
 ```json
 {
@@ -132,17 +138,18 @@ JSX should be formatted with Prettier, using the following settings:
 
 ## License
 
-This software is licensed under the terms of the GNU General Public License, version 3 or later. The
-source is publicly available on [GitHub](https://github.com/NiceneNerd/BCML).
+This software is licensed under the terms of the GNU General Public License, version 3
+or later. The source is publicly available on
+[GitHub](https://github.com/NiceneNerd/BCML).
 
-This software includes the 7-Zip console application `7z.exe` and the library `7z.dll`, which are
-licensed under the GNU Lesser General Public License. The source code for this application is
-available for free at <https://www.7-zip.org/download.html>.
+This software includes the 7-Zip console application `7z.exe` and the library `7z.dll`,
+which are licensed under the GNU Lesser General Public License. The source code for this
+application is available for free at <https://www.7-zip.org/download.html>.
 
-This software includes a fork of the console application `msyt.exe` by Kyle Clemens, copyrighted 2018
-under the MIT License. The source code for this application is available for free at
-<https://github.com/NiceneNerd/msyt/tree/bcml>.
+This software includes a fork of the console application `msyt.exe` by Kyle Clemens,
+copyrighted 2018 under the MIT License. The source code for this application is
+available for free at <https://github.com/NiceneNerd/msyt/tree/bcml>.
 
-This software includes part of a modified copy of the `pywebview` Python package, copyright 2020
-Roman Sirokov under the BSD-3-Clause License. The source code for the original library is available
-for free at <https://github.com/r0x0r/pywebview>.
+This software includes part of a modified copy of the `pywebview` Python package,
+copyright 2020 Roman Sirokov under the BSD-3-Clause License. The source code for the
+original library is available for free at <https://github.com/r0x0r/pywebview>.
