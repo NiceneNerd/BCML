@@ -31,7 +31,7 @@ just works.
 
 ## Setup
 
-There are three ways to install BCML.
+There are a few ways to install BCML.
 
 ### PyPI
 
@@ -44,6 +44,15 @@ supported, but 3.8+ can be used on Linux.
 Download the setup executable from the
 [latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
 [GameBanana](https://gamebanana.com/tools/6624). Double click to run and install BCML.
+
+#### Offline Windows Installation
+
+The Windows installer requires an Internet connection by default. To install offline,
+download `bcml-win64-bundle.zip` from the latest release. Then you can either use the
+default installer and provide the bundle file when prompted, *or* you can just extract
+it where you would like. If you extract it, the only default way to run BCML will be
+with the command `PATH\TO\BCML\pythonw.exe -m bcml`. You can make a shortcut to make
+that easier if you like. 
 
 ### Building from Source
 
