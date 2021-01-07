@@ -102,7 +102,7 @@ try {
     } else {
         Write-Host "No Python? No problem! Downloading the BCML bundle..."
         try {
-            $latestRelease = Invoke-WebRequest https://github.com/NiceneNerd/BCML/releases/latest -Headers @{"Accept"="application/json"}
+            $latestRelease = Invoke-WebRequest https://github.com/NiceneNerd/BCML/releases/latest -Headers @{"Accept"="application/json"} -UseBasicParsing
             $json = $latestRelease.Content | ConvertFrom-Json
             $latestVersion = $json.tag_name
             (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/releases/download/$latestVersion/bcml-win64-bundle.zip", "$env:temp\bundle.zip")
