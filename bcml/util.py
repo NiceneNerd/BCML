@@ -498,13 +498,6 @@ def get_exec_dir() -> Path:
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
 
-@lru_cache(1)
-def get_python_exe() -> str:
-    if get_exec_dir().parent.name == "pkgs":
-        return str(get_exec_dir().parent.parent / "Python" / "python.exe")
-    return sys.executable
-
-
 @lru_cache(None)
 def get_data_dir() -> Path:
     if system() == "Windows":

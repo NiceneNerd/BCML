@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import sys
 import traceback
 from math import ceil
 from multiprocessing import Pool
@@ -9,7 +10,7 @@ from pathlib import Path
 from platform import system
 from subprocess import run, PIPE, Popen
 from shutil import rmtree, copyfile
-from tempfile import mkdtemp
+from tempfile import NamedTemporaryFile, mkdtemp
 from time import sleep
 from threading import Thread
 from typing import List
@@ -41,7 +42,10 @@ def win_or_lose(func):
 
 def start_new_instance():
     sleep(0.33)
-    Popen([util.get_python_exe(), "-m", "bcml"], cwd=str(Path().resolve()))
+    Popen(
+        [sys.executable.replace("python.exe", "pythonw.exe"), "-m", "bcml"],
+        cwd=str(Path().resolve()),
+    )
 
 
 def help_window(host: str):
@@ -720,11 +724,8 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
-        if util.get_latest_bcml() <= VERSION:
-            return
-        exe = util.get_python_exe().replace("pythonw", "python")
+        exe = sys.executable.replace("pythonw", "python")
         args = [
-            exe,
             "-m",
             "pip",
             "install",
@@ -735,34 +736,30 @@ class Api:
         ]
         if DEBUG:
             args.insert(-2, "--pre")
-        parent = util.get_exec_dir().parent
-        if parent.name == "pkgs":
-            try:
-                (parent / "bcml").rename(parent / "bcml.bak")
-            except (OSError, PermissionError, FileExistsError, FileNotFoundError):
-                pass
         if SYSTEM == "Windows":
-            result = run(
-                args,
-                creationflags=util.CREATE_NO_WINDOW,
-                capture_output=True,
-                check=False,
-                text=True,
-            )
+            with NamedTemporaryFile("w", suffix=".bat", delete=False) as updater:
+                updater.write(
+                    "@echo off\n"
+                    f"\"{exe}\" {' '.join(args)}\n"
+                    "echo Finished updating, will launch BCML in a moment!\n"
+                    "timeout 2 >nul 2>&1\n"
+                    f"start \"\" \"{sys.executable.replace('python.exe', 'pythonw.exe')}\" -m bcml\n"
+                )
+                file = updater.name
+            os.system(f"timeout 2 >nul 2>&1 && start cmd /c {file}")
         else:
-            result = run(
-                args,
-                capture_output=True,
-                check=False,
-                text=True,
-            )
-        if result.stderr:
-            if parent.name == "pkgs":
-                try:
-                    (parent / "bcml.bak").rename(parent / "bcml")
-                except (OSError, PermissionError, FileExistsError, FileNotFoundError):
-                    pass
-            raise RuntimeError(result.stderr)
+            with NamedTemporaryFile("w", suffix=".sh", delete=False) as updater:
+                updater.write(
+                    "#!/usr/bin/bash\n"
+                    "sleep 2\n"
+                    f"\"{exe}\" {' '.join(args)}\n"
+                    "echo Finished updating, will launch BCML in a moment!\n"
+                    f"{exe} -m bcml"
+                )
+                file = updater.name
+            Popen(["bash", updater.name], close_fds=True)
+        for win in webviewb.windows:
+            win.destroy()
 
     def restart(self):
         opener = Thread(target=start_new_instance)

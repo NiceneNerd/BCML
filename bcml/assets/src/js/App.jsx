@@ -276,28 +276,11 @@ class App extends React.Component {
     };
 
     updateBcml = () => {
-        this.setState(
-            {
-                progressTitle: "Upgrading BCML",
-                progressStatus: "Please wait while BCML upgrades...",
-                showProgress: true
-            },
+        this.confirm(
+            "Are you sure you want to update BCML? " +
+                "Updating will close the program, run the update, and attempt to lauch it again.",
             () => {
-                pywebview.api
-                    .update_bcml()
-                    .then(res => {
-                        if (res.error) {
-                            throw res.error;
-                        }
-                        this.setState({
-                            showProgress: false,
-                            showConfirm: true,
-                            confirmText:
-                                "BCML has been updated successfully. You must restart the program for changes to take effect. Restart now?",
-                            confirmCallback: () => pywebview.api.restart()
-                        });
-                    })
-                    .catch(this.showError);
+                pywebview.api.update_bcml();
             }
         );
     };
@@ -328,10 +311,7 @@ class App extends React.Component {
                         <Dropdown.Item onClick={() => pywebview.api.save_mod_list()}>
                             Save Mod List
                         </Dropdown.Item>
-                        <Dropdown.Item
-                            as="a"
-                            href="https://github.com/NiceneNerd/BCML/releases/latest"
-                            target="_blank">
+                        <Dropdown.Item onClick={this.updateBcml}>
                             Update BCML
                         </Dropdown.Item>
                         <Dropdown.Item as="a" href="/index.html?firstrun">
@@ -579,16 +559,10 @@ const UpdateDialog = props => {
                 <Modal.Title>Update Available</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                There is a new update available for BCML. Would you like to update? (OK
-                will open a new window to the latest download.)
+                There is a new update available for BCML. Would you like to install it?
             </Modal.Body>
             <Modal.Footer>
-                <Button
-                    as="a"
-                    href="https://github.com/NiceneNerd/BCML/releases/latest"
-                    target="_blank">
-                    OK
-                </Button>
+                <Button onClick={() => props.onClose(true)}>OK</Button>
                 <Button variant="secondary" onClick={() => props.onClose(false)}>
                     Close
                 </Button>
