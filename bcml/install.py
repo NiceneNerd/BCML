@@ -28,14 +28,14 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
         )
@@ -149,9 +149,7 @@ def find_modded_files(
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         if not (
-            tmp_dir
-            / util.get_dlc_path()
-            / ("0010" if util.get_settings("wiiu") else "")
+            tmp_dir / util.get_dlc_path() / ("0010" if util.get_settings("wiiu") else "")
         ).rglob("Map/**/?-?_*.smubin"):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
@@ -230,9 +228,7 @@ def find_modded_sarc_files(
 
 
 def generate_logs(
-    tmp_dir: Path,
-    options: dict = None,
-    pool: Optional[multiprocessing.pool.Pool] = None,
+    tmp_dir: Path, options: dict = None, pool: Optional[multiprocessing.pool.Pool] = None,
 ) -> List[Union[Path, str]]:
     if isinstance(tmp_dir, str):
         tmp_dir = Path(tmp_dir)
@@ -420,9 +416,7 @@ def install_mod(
                             link_files = {f.name for f in link_sarc.get_files()}
                             for sarc_file in old_sarc.get_files():
                                 if sarc_file.name not in link_files:
-                                    new_sarc.files[sarc_file.name] = bytes(
-                                        sarc_file.data
-                                    )
+                                    new_sarc.files[sarc_file.name] = bytes(sarc_file.data)
                             del old_sarc
                             del link_sarc
                             out.write_bytes(new_sarc.write()[1])
@@ -595,9 +589,7 @@ def create_backup(name: str = ""):
             check=True,
         )
     else:
-        subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print(f'Backup "{name}" created')
 
 
@@ -624,9 +616,7 @@ def restore_backup(backup: Union[str, Path]):
             check=True,
         )
     else:
-        subprocess.run(
-            x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        subprocess.run(x_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     print("Re-enabling mods in Cemu...")
     refresh_master_export()
     print(f'Backup "{backup.name}" restored')
@@ -646,10 +636,7 @@ def enable_bcml_gfx():
             if new_cemu and entry.getElementsByTagName("filename"):
                 new_cemu = False
             try:
-                if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
-                ):
+                if "BCML" in entry.getElementsByTagName("filename")[0].childNodes[0].data:
                     break
             except IndexError:
                 if "BCML" in entry.getAttribute("filename"):
@@ -693,10 +680,7 @@ def disable_bcml_gfx():
             if new_cemu and entry.getElementsByTagName("filename"):
                 new_cemu = False
             try:
-                if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
-                ):
+                if "BCML" in entry.getElementsByTagName("filename")[0].childNodes[0].data:
                     gpack.removeChild(entry)
                     break
             except IndexError:
@@ -721,9 +705,7 @@ def link_master_mod(output: Path = None):
     try:
         output.mkdir(parents=True, exist_ok=True)
         if not util.get_settings("no_cemu"):
-            shutil.copy(
-                util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
-            )
+            shutil.copy(util.get_master_modpack_dir() / "rules.txt", output / "rules.txt")
     except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
         raise RuntimeError(
             "There was a problem creating the master BCML graphic pack. "
