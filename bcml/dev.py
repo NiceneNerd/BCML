@@ -376,10 +376,6 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
                 f"There was an error generating change logs for your mod. {str(err)}"
             )
 
-        _clean_sarcs(tmp_dir, hashes, pool)
-        for folder in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:
-            _clean_sarcs(folder, hashes, pool)
-
     print("Cleaning any junk files...")
     for file in {f for f in tmp_dir.rglob("**/*") if f.is_file()}:
         if "logs" in file.parts:

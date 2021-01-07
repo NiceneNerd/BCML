@@ -149,7 +149,9 @@ def find_modded_files(
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
         if not (
-            tmp_dir / util.get_dlc_path() / ("0010" if util.get_settings("wiiu") else "")
+            tmp_dir
+            / util.get_dlc_path()
+            / ("0010" if util.get_settings("wiiu") else "")
         ).rglob("Map/**/?-?_*.smubin"):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
@@ -264,6 +266,9 @@ def generate_logs(
                 merger.set_options(options["options"][merger.NAME])
             merger.set_pool(this_pool)
             merger.log_diff(tmp_dir, modded_files)
+        dev._clean_sarcs(
+            tmp_dir, util.get_hash_table(util.get_settings("wiiu")), this_pool
+        )
     except:  # pylint: disable=bare-except
         this_pool.close()
         this_pool.join()
