@@ -445,12 +445,7 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(
-                    (
-                        "-g",
-                        "Z:\\" + str(uking).replace("/", "\\"),
-                    )
-                )
+                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -637,8 +632,7 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod,
-                merge_now=True,
+                mod, merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -757,7 +751,7 @@ class Api:
                     f"{exe} -m bcml"
                 )
                 file = updater.name
-            Popen(["bash", updater.name], close_fds=True)
+            Popen(["/bin/sh", file], start_new_session=True)
         for win in webviewb.windows:
             win.destroy()
 
