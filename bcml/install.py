@@ -28,28 +28,14 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            [
-                get_7z_path(),
-                "e",
-                str(mod.resolve()),
-                "-r",
-                "-so",
-                "info.json",
-            ],
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            [
-                get_7z_path(),
-                "e",
-                str(mod.resolve()),
-                "-r",
-                "-so",
-                "info.json",
-            ],
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
         )
@@ -354,11 +340,14 @@ def install_mod(
         mod_name = rules["name"].strip(" '\"").replace("_", "")
         print(f"Identified mod: {mod_name}")
         if rules["depends"]:
-            installed_metas = {
-                v[0]: v[1]
-                for m in util.get_installed_mods()
-                for v in util.BcmlMod.meta_from_id(m.id)
-            }
+            try:
+                installed_metas = {
+                    v[0]: v[1]
+                    for m in util.get_installed_mods()
+                    for v in util.BcmlMod.meta_from_id(m.id)
+                }
+            except (IndexError, TypeError) as err:
+                raise RuntimeError(f"This BNP has invalid or corrupt dependency data.")
             for depend in rules["depends"]:
                 depend_name, depend_version = util.BcmlMod.meta_from_id(depend)
                 if (depend_name not in installed_metas) or (
