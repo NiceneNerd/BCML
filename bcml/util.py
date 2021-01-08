@@ -498,6 +498,26 @@ def get_exec_dir() -> Path:
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
 
+@lru_cache(2)
+def get_python_exe(gui: bool) -> Path:
+    embedded = [
+        d
+        for d in get_exec_dir().parents
+        if (d / "python37._pth").exists() and (d / "pythonw.exe").exists()
+    ]
+    if embedded:
+        return embedded[0] / ("pythonw.exe" if gui else "python.exe")
+    else:
+        if SYSTEM == "Windows":
+            return (
+                sys.executable.replace("pythonw.exe", "python.exe")
+                if not gui
+                else sys.executable.replace("python.exe", "pythonw.exe")
+            )
+        else:
+            return sys.executable
+
+
 @lru_cache(None)
 def get_data_dir() -> Path:
     if system() == "Windows":

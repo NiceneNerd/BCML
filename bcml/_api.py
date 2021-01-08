@@ -724,7 +724,7 @@ class Api:
 
     @win_or_lose
     def update_bcml(self):
-        exe = sys.executable.replace("pythonw", "python")
+        exe = str(util.get_python_exe(False))
         args = [
             "-m",
             "pip",
@@ -743,7 +743,7 @@ class Api:
                     f"\"{exe}\" {' '.join(args)}\n"
                     "echo Finished updating, will launch BCML in a moment!\n"
                     "timeout 2 >nul 2>&1\n"
-                    f"start \"\" \"{sys.executable.replace('python.exe', 'pythonw.exe')}\" -m bcml\n"
+                    f'start "" "{str(util.get_python_exe(True))}" -m bcml\n'
                 )
                 file = updater.name
             os.system(f"timeout 2 >nul 2>&1 && start cmd /c {file}")

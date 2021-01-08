@@ -120,24 +120,7 @@ def _win_create_handler():
     # pylint: disable=import-error,import-outside-toplevel,undefined-variable
     import winreg
 
-    if (util.get_exec_dir().parent.parent.parent / "Scripts" / "bcml.exe").exists():
-        exec_path = (
-            '"'
-            + str(
-                (
-                    util.get_exec_dir().parent.parent.parent / "Scripts" / "bcml.exe"
-                ).resolve()
-            )
-            + '"'
-        )
-    elif (util.get_exec_dir().parent.parent / "bin" / "bcml.exe").exists():
-        exec_path = (
-            '"'
-            + str((util.get_exec_dir().parent.parent / "bin" / "bcml.exe").resolve())
-            + '"'
-        )
-    else:
-        exec_path = f'"{sys.executable}" -m bcml'
+    exec_path = f'"{util.get_python_exe(True)}" -m bcml'
 
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\bcml") as key:
         try:
