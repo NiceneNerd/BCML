@@ -28,29 +28,22 @@ jobs:
             & $env:temp\python\python.exe $env:temp\get-pip.py --disable-pip-version-check --no-warn-script-location
         - name: Install BCML
           run: "& \"$env:temp\\python\\python.exe\" -m pip install bcml --upgrade --disable-pip-version-check --no-warn-script-location"
+        - name: Get Latest Installer Version
+          uses: oprypin/find-latest-tag@v1
+          with:
+            repository: NiceneNerd/bcml-installer
+            releases-only: true
+          id: inst
+        - name: Add Installer
+          run: |
+            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/bcml-installer/releases/download/${{ steps.inst.outputs.tag }}/setup.exe", "$env:temp\python\setup.exe")
         - name: Create Archive
-          run: Compress-Archive -Path "$env:temp\python" -DestinationPath ".\bcml-win64-bundle.zip"
+          run: Compress-Archive -Path "$env:temp\python\*" -DestinationPath ".\bcml-win64-bundle.zip"
         - name: Upload Archive
           uses: svenstaro/upload-release-action@v2
           with:
             repo_token: ${{ secrets.GITHUB_TOKEN }}
             file: bcml-win64-bundle.zip
             asset_name: bcml-win64-bundle.zip
-            tag: ${{ steps.tag.outputs.tag }}
-            overwrite: true
-        - name: Prepare to Build Installer
-          run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/MScholtes/PS2EXE/master/Module/ps2exe.ps1", ".\ps2exe.ps1")
-        - name: Download Installer Script
-          run: (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/NiceneNerd/BCML/master/installer.ps1", ".\installer.ps1")
-        - name: Build Installer  
-          run: |
-            (New-Object Net.WebClient).DownloadFile("https://github.com/NiceneNerd/BCML/raw/master/bcml/data/bcml.ico", ".\bcml.ico")
-            powershell -command "& { . .\ps2exe.ps1; Invoke-ps2exe -inputFile .\installer.ps1 -outputFile .\bcml-3-installer.exe -x64 -iconFile .\bcml.ico -title BCML -description 'BOTW Cross-Platform Mod Loader' -version 1.0.0.0 -supportOS }"
-        - name: Upload Installer
-          uses: svenstaro/upload-release-action@v2
-          with:
-            repo_token: ${{ secrets.GITHUB_TOKEN }}
-            file: bcml-3-installer.exe
-            asset_name: bcml-3-installer.exe
             tag: ${{ steps.tag.outputs.tag }}
             overwrite: true
