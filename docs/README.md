@@ -42,18 +42,11 @@ only Python 3.7 is supported, but 3.8+ can be used on Linux.
 
 ### Windows Installer
 
-Download the setup executable from the
-[latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
-[GameBanana](https://gamebanana.com/tools/6624). Double click to run and install BCML.
-
-#### Offline Windows Installation
-
-The Windows installer requires an Internet connection by default. To install offline,
-download `bcml-win64-bundle.zip` from the latest release. Then you can either use the
-default installer and provide the bundle file when prompted, _or_ you can just extract
-it where you would like. If you extract it, the only default way to run BCML will be
-with the command `PATH\TO\BCML\pythonw.exe -m bcml`. You can make a shortcut to make
-that easier if you like.
+1. Download the setup bundle from the
+   [latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
+   [GameBanana](https://gamebanana.com/tools/6624).
+2. Extract it where you want to install BCML.
+3. Run `setup.exe` to make shortcuts.
 
 ### Building from Source
 
@@ -88,22 +81,6 @@ Steps to build from source:
 
 Note that on Linux, you can simply run `bootstrap.sh` to perform these steps
 automatically unless you would like more control.
-
-#### Building the Windows Installer
-
-The Windows installer is a Powershell script. It can be executed directly with
-Powershell, but BCML distributes an executable binary made with ps2exe. Instructions to
-build:
-
-1. Open Powershell.
-2. Install ps2exe: `Install-Module ps2exe`.
-3. CD to the repo root folder.
-4. Create a `build` folder if it does not already exist.
-5. Run:
-    ```powershell
-    ps2exe -inputFile .\installer.ps1 -outputFile .\build\installer.exe -x64 -iconFile .\bcml\data\bcml.ico -title BCML -description "BOTW Cross-Platform Mod Loader" -version 0.9.0.0 -supportOS
-    ```
-6. The installer binary will be located under `build\installer.exe`.
 
 ## Usage and Troubleshooting
 
