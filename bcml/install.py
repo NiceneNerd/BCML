@@ -28,14 +28,28 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            f'"{get_7z_path()}" e "{str(mod.resolve())}" -r -so info.json',
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
         )
