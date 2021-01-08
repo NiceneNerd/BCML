@@ -1010,7 +1010,14 @@ def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
             / f"{actor}.sbactorpack"
         )
         if not actor_path.exists():
-            actor_path = get_game_file(f"Actor/Pack/{actor}.sbactorpack")
+            for m in reversed(get_installed_mods()):
+                try:
+                    actor_path = list(m.path.rglob(f"{actor}.sbactorpack"))[0]
+                    break
+                except IndexError:
+                    continue
+            else:
+                actor_path = get_game_file(f"Actor/Pack/{actor}.sbactorpack")
         actor_sarc = oead.Sarc(decompress(actor_path.read_bytes()))
     new_sarc = oead.SarcWriter.from_sarc(actor_sarc)
     del actor_sarc
