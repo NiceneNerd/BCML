@@ -6,6 +6,7 @@ botw-havok~=0.3.18
 cefpython3~=66.0; platform_system == 'Windows'
 oead~=1.2.0
 pythonnet>=2.5.0rc2; platform_system == 'Windows'
+pyqtwebengine~=5.15.2; platform_system == 'Linux'
 PyYAML~=5.3.1
 requests~=2.23.0
 rstb>=1.2.0
