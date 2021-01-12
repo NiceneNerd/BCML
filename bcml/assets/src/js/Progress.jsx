@@ -123,7 +123,7 @@ class ProgressModal extends React.Component {
                                 : 0
                     });
                 }
-            }, 3000);
+            }, 5000);
         } else if (prevProps.show && !this.props.show) {
             clearInterval(this.timer);
         }
