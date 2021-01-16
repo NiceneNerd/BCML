@@ -135,7 +135,7 @@ class ProgressModal extends React.Component {
                 <Modal.Header>
                     <Modal.Title>{this.props.title}</Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="d-flex align-items-start">
+                <Modal.Body className="d-flex align-items-center">
                     <Spinner
                         animation="border"
                         role="status"
