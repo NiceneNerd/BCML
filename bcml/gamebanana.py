@@ -155,7 +155,7 @@ class GameBananaDb:
         files = json.dumps(res["Files().aFiles()"])
         if not (
             "info.json" in files
-            or ("rules.txt" in files and ("content" in files or "aoc" in files))
+            or ("rules.txt" in files and ("content" in files or "aoc" in files or "logs" in files))
         ):
             return {}
 
