@@ -28,14 +28,28 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
         )
@@ -148,14 +162,21 @@ def find_modded_files(
         / "AocMainField.pack"
     )
     if aoc_field.exists() and aoc_field.stat().st_size > 0:
-        if not (
-            tmp_dir
-            / util.get_dlc_path()
-            / ("0010" if util.get_settings("wiiu") else "")
-        ).rglob("Map/**/?-?_*.smubin"):
+        if not list(
+            (
+                tmp_dir
+                / util.get_dlc_path()
+                / ("0010" if util.get_settings("wiiu") else "")
+            ).rglob("Map/**/?-?_*.smubin")
+        ):
             aoc_pack = oead.Sarc(aoc_field.read_bytes())
             for file in aoc_pack.get_files():
-                ex_out = tmp_dir / util.get_dlc_path() / "0010" / file.name
+                ex_out = (
+                    tmp_dir
+                    / util.get_dlc_path()
+                    / ("0010" if util.get_settings("wiiu") else "")
+                    / file.name
+                )
                 ex_out.parent.mkdir(parents=True, exist_ok=True)
                 ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
