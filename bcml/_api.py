@@ -64,11 +64,19 @@ class Api:
         self.tmp_files = []
 
     def get_ver(self, params=None):
-        return {
+        updated = util.get_settings("last_version") < VERSION
+        res = {
             "version": USER_VERSION,
-            "update": util.get_latest_bcml() > VERSION
-            and not util.get_settings("suppress_update"),
+            "update": (
+                util.get_latest_bcml() > VERSION
+                and not util.get_settings("suppress_update")
+            ),
+            "showChangelog": updated and util.get_settings("changelog"),
         }
+        if updated:
+            util.get_settings()["last_version"] = VERSION
+            util.save_settings()
+        return res
 
     @win_or_lose
     def sanity_check(self, kwargs=None):
@@ -445,7 +453,12 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
+                cemu_args.extend(
+                    (
+                        "-g",
+                        "Z:\\" + str(uking).replace("/", "\\"),
+                    )
+                )
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -632,7 +645,8 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod, merge_now=True,
+                mod,
+                merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
