@@ -13,10 +13,13 @@ import ReactMarkdown from "react-markdown";
 import SelectsDialog from "./Selects.jsx";
 import Settings from "./Settings.jsx";
 
+const TABS = ["mod-list", "gamebanana", "dev-tools", "settings"];
+
 class App extends React.Component {
     constructor() {
         super();
         this.state = {
+            tab: "mod-list",
             mods: [],
             modsLoaded: false,
             selects: null,
@@ -52,7 +55,15 @@ class App extends React.Component {
                 this.refreshMods();
             }, 250);
         });
+        window.addEventListener("focus", () => {
+            console.log("Here");
+            document.body.focus();
+        });
     }
+
+    componentDidUpdate = () => {
+        document.body.focus();
+    };
 
     componentDidCatch = error => {
         this.showError(error);
@@ -62,6 +73,36 @@ class App extends React.Component {
         window.onMsg = msg => {
             this.setState({ progressStatus: msg });
         };
+
+        document.addEventListener("keyup", e => {
+            try {
+                e.persist();
+            } catch {}
+            if (e.key == "F5") {
+                window.location.reload();
+            }
+            if (e.ctrlKey) {
+                switch (e.key) {
+                    case "Tab":
+                        let idx = TABS.indexOf(this.state.tab) + 1;
+                        if (idx == TABS.length) idx = 0;
+                        this.setState({ tab: TABS[idx] });
+                        return;
+                    default:
+                        break;
+                }
+            } else if (e.altKey) {
+                switch (e.key) {
+                    case "m":
+                        document.querySelector("#dropdown-basic").click();
+                        document.querySelector(".dropdown-menu a:first-child").focus();
+                        return;
+                    default:
+                        break;
+                }
+            }
+            return window.handleKeyMods(e);
+        });
     };
 
     saveSettings = settings => {
@@ -304,7 +345,7 @@ class App extends React.Component {
         return (
             <>
                 <Dropdown alignRight className="overflow-menu">
-                    <Dropdown.Toggle id="dropdown-basic">
+                    <Dropdown.Toggle id="dropdown-basic" title="Overflow Menu (Alt+M)">
                         <i className="material-icons">menu</i>
                     </Dropdown.Toggle>
                     <Dropdown.Menu>
@@ -331,7 +372,12 @@ class App extends React.Component {
                         mods: this.state.mods,
                         busy: this.state.showProgress
                     }}>
-                    <Tabs id="tabs" mountOnEnter transition={Fade}>
+                    <Tabs
+                        id="tabs"
+                        mountOnEnter
+                        activeKey={this.state.tab}
+                        onSelect={k => this.setState({ tab: k })}
+                        transition={Fade}>
                         <Tab eventKey="mod-list" title="Mods">
                             <Mods
                                 onBackup={() => this.setState({ showBackups: true })}
@@ -547,8 +593,8 @@ class DoneDialog extends React.Component {
 
 const ConfirmDialog = props => {
     return (
-        <Modal show={props.show}>
-            <Modal.Header>
+        <Modal show={props.show} onHide={props.onClose}>
+            <Modal.Header closeButton>
                 <Modal.Title>Please Confirm</Modal.Title>
             </Modal.Header>
             <Modal.Body>{props.message}</Modal.Body>

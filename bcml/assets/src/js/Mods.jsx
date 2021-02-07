@@ -37,6 +37,54 @@ class Mods extends React.Component {
                     this.setState({ mergersReady: true, ...setup }, this.sanityCheck)
                 )
         );
+        window.handleKeyMods = e => {
+            if (e.ctrlKey) {
+                switch (e.key) {
+                    case "i":
+                        this.setState({ showInstall: true });
+                        break;
+                    case "d":
+                        this.handleAction("disable");
+                        break;
+                    case "e":
+                        this.handleAction("enable");
+                        break;
+                    case "x":
+                        this.handleAction("explore");
+                        break;
+                    case "u":
+                        if (e.shiftKey) {
+                            this.uninstallAll();
+                        } else {
+                            this.handleAction("uninstall");
+                        }
+                        break;
+                    case "p":
+                        this.handleAction("reprocess");
+                        break;
+                    case "m":
+                        this.handleRemerge("all");
+                        break;
+                    case "l":
+                        this.props.onLaunch();
+                        break;
+                    case "h":
+                        this.setState({ showDisabled: !this.state.showDisabled });
+                        break;
+                    case "s":
+                        this.setState({ showHandle: !this.state.showHandle });
+                        break;
+                    case "o":
+                        this.setState({ sortReverse: !this.state.sortReverse });
+                        break;
+                    case "b":
+                        this.props.onBackup();
+                        break;
+                    default:
+                        return e;
+                }
+            }
+        };
     }
 
     defaultSelect = () => {
@@ -482,7 +530,7 @@ class Mods extends React.Component {
                 </div>
                 <a
                     className="fab"
-                    title="Install"
+                    title="Install (Ctrl+I)"
                     onClick={() => this.setState({ showInstall: true })}>
                     <i className="material-icons">add</i>
                 </a>
