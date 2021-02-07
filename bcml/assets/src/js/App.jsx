@@ -9,6 +9,7 @@ import ModContext from "./Context.jsx";
 import Mods from "./Mods.jsx";
 import ProgressModal from "./Progress.jsx";
 import React from "react";
+import ReactMarkdown from "react-markdown";
 import SelectsDialog from "./Selects.jsx";
 import Settings from "./Settings.jsx";
 
@@ -36,6 +37,8 @@ class App extends React.Component {
             confirmCallback: () => {},
             showAbout: false,
             update: false,
+            changelog: true,
+            showChangelog: false,
             version: "3.0"
         };
         this.selects = null;
@@ -483,6 +486,13 @@ class App extends React.Component {
                         );
                     }}
                 />
+                {this.state.changelog && (
+                    <Changelog
+                        show={this.state.showChangelog}
+                        onClose={() => this.setState({ showChangelog: false })}
+                        version={this.state.version}
+                    />
+                )}
             </>
         );
     }
@@ -570,5 +580,54 @@ const UpdateDialog = props => {
         </Modal>
     );
 };
+
+class Changelog extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            info: {}
+        };
+    }
+
+    componentDidUpdate = async prevProps => {
+        if (this.props.version != prevProps.version) {
+            try {
+                const releases = await (
+                    await fetch(
+                        "https://api.github.com/repos/NiceneNerd/BCML/releases?per_page=5"
+                    )
+                ).json();
+                console.log(releases);
+                const latest = releases.find(
+                    r => r.tag_name.substring(1, 7) == this.props.version.trim()
+                );
+                this.setState({
+                    info: latest
+                });
+            } catch (e) {}
+        }
+    };
+
+    render = () => {
+        return this.state.info?.body ? (
+            <Modal show={this.props.show}>
+                <Modal.Header closeButton>
+                    <Modal.Title>BCML Updated</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>
+                        BCML has been updated to {this.state.info?.tag_name}. Changelog:
+                    </p>
+                    <ReactMarkdown>{this.state.info?.body}</ReactMarkdown>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => this.props.onClose()}>OK</Button>
+                </Modal.Footer>
+            </Modal>
+        ) : (
+            <></>
+        );
+    };
+}
 
 export default App;

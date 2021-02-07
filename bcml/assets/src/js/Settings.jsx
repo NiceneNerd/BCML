@@ -25,7 +25,8 @@ class Settings extends React.Component {
             suppress_update: false,
             valid: false,
             loaded: false,
-            nsfw: false
+            nsfw: false,
+            changelog: true
         };
         this.formRef = React.createRef();
     }
@@ -475,6 +476,23 @@ class Settings extends React.Component {
                                     type="checkbox"
                                     label="Disable BCML update notification"
                                     checked={this.state.suppress_update}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="changelog">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        If checked, BCML will show a changelog popup
+                                        after updating to a new version.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Show changelog after update"
+                                    checked={this.state.changelog}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>

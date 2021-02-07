@@ -37,6 +37,7 @@ from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webviewb import Window  # pylint: disable=wrong-import-order
 
 from bcml import pickles, DEBUG  # pylint: disable=unused-import
+from bcml.__version__ import VERSION
 
 
 CREATE_NO_WINDOW = 0x08000000
@@ -578,6 +579,8 @@ DEFAULT_SETTINGS = {
     "force_7z": False,
     "suppress_update": False,
     "nsfw": False,
+    "last_version": VERSION,
+    "changelog": True,
 }
 
 

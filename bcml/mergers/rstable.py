@@ -135,26 +135,25 @@ def _get_nest_file_sizes(
     ) -> Dict[str, int]:
         prefix = "" if not dlc else "Aoc/0010/"
         vals = {}
-        if isinstance(contents, list):
-            for file in contents:
+        for file, subs in contents.items():
+            if not subs:
                 if file[file.rindex(".") :] in EXCLUDE_EXTS:
                     continue
                 canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
-        elif isinstance(contents, dict):
-            for subpath, subcontents in contents.items():
-                ext = subpath[subpath.rindex(".") :]
+            else:
+                ext = file[file.rindex(".") :]
                 if ext in EXCLUDE_EXTS:
                     continue
-                data = util.unyaz_if_needed(sarc.get_file(subpath).data)
-                canon = prefix + subpath.replace(".s", ".")
+                data = util.unyaz_if_needed(sarc.get_file(file).data)
+                canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, data, guess)
                 if ext not in SARC_EXCLUDES:
                     try:
                         subsarc = oead.Sarc(data)
                     except (ValueError, RuntimeError, oead.InvalidDataError):
                         continue
-                    vals.update(get_sizes_in_sarc(subsarc, subcontents, guess, dlc))
+                    vals.update(get_sizes_in_sarc(subsarc, subs, guess, dlc))
         return vals
 
     dlc = util.get_dlc_path() in file
@@ -238,7 +237,7 @@ class RstbMerger(mergers.Merger):
             util.dict_merge(
                 nested_files,
                 reduce(
-                    lambda res, cur: {cur: res} if res is not None else [cur],
+                    lambda res, cur: {cur: res if res is not None else {}},  # type: ignore
                     reversed(nest.split("//")),
                     None,
                 ),

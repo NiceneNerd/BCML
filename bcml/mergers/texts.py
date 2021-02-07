@@ -285,7 +285,7 @@ class TextsMerger(mergers.Merger):
     """ A merger for game texts """
     NAME: str = "texts"
 
-    def __init__(self, all_langs: bool = True):
+    def __init__(self, all_langs: bool = False):
         super().__init__(
             "game texts",
             "Merges changes to game texts",
@@ -456,7 +456,10 @@ class TextsMerger(mergers.Merger):
 
                 else:
                     result = subprocess.run(
-                        m_args, capture_output=True, check=False, text=True,
+                        m_args,
+                        capture_output=True,
+                        check=False,
+                        text=True,
                     )
                 if result.stderr:
                     raise RuntimeError(
