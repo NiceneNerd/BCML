@@ -341,7 +341,8 @@ class Mods extends React.Component {
                                             {"Sort priority:\n" +
                                                 (this.state.sortReverse
                                                     ? "highest to lowest"
-                                                    : "lowest to highest")}
+                                                    : "lowest to highest") +
+                                                " (Ctrl+O)"}
                                         </Tooltip>
                                     }>
                                     <Button
@@ -366,9 +367,9 @@ class Mods extends React.Component {
                                 <OverlayTrigger
                                     overlay={
                                         <Tooltip>
-                                            {this.state.showHandle
+                                            {(this.state.showHandle
                                                 ? "Hide sort handles"
-                                                : "Show sort handles"}
+                                                : "Show sort handles") + " (Ctrl+S)"}
                                         </Tooltip>
                                     }>
                                     <Button
@@ -384,9 +385,9 @@ class Mods extends React.Component {
                                 <OverlayTrigger
                                     overlay={
                                         <Tooltip>
-                                            {this.state.showDisabled
+                                            {(this.state.showDisabled
                                                 ? "Hide disabled mods"
-                                                : "Show disabled mods"}
+                                                : "Show disabled mods") + " (Ctrl+H)"}
                                         </Tooltip>
                                     }>
                                     <Button
@@ -405,7 +406,7 @@ class Mods extends React.Component {
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <OverlayTrigger overlay={<Tooltip>Remerge</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Remerge (Ctrl+M)</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={() => this.handleRemerge("all")}>
@@ -431,7 +432,7 @@ class Mods extends React.Component {
                             </Dropdown>
                             <ButtonGroup size="xs">
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Backup and restore</Tooltip>}>
+                                    overlay={<Tooltip>Backup and restore (Ctrl+B)</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onBackup}>
@@ -449,7 +450,7 @@ class Mods extends React.Component {
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Uninstall all mods</Tooltip>}>
+                                    overlay={<Tooltip>Uninstall all mods (Ctrl+Shift+U)</Tooltip>}>
                                     <Button
                                         variant="danger"
                                         onClick={this.uninstallAll}>
@@ -462,7 +463,7 @@ class Mods extends React.Component {
                                 <Dropdown as={ButtonGroup} size="xs">
                                     <OverlayTrigger
                                         overlay={
-                                            <Tooltip>Launch Breath of the Wild</Tooltip>
+                                            <Tooltip>Launch Breath of the Wild (Ctrl+L)</Tooltip>
                                         }>
                                         <Button
                                             variant="primary"
