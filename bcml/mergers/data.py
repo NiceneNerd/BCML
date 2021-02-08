@@ -425,6 +425,7 @@ class SaveDataMerger(mergers.Merger):
 
         savedata = get_stock_savedata()
         save_files = sorted(savedata.get_files(), key=lambda f: f.name)[0:-2]
+        del_ids = {item.v for item in new_entries["del"]}
 
         print("Merging changes...")
         merged_entries = oead.byml.Array(
@@ -439,7 +440,7 @@ class SaveDataMerger(mergers.Merger):
                         ],
                         *new_entries["add"],
                     ]
-                    if entry not in new_entries["del"]
+                    if entry["HashValue"].v not in del_ids
                 }.values(),
                 key=itemgetter("HashValue"),
             )
