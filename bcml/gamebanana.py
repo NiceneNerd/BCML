@@ -46,7 +46,6 @@ class GameBananaDb:
                 )
             )
         self._data = json.loads(GB_DATA.read_text("utf-8"))
-        self.update_db()
 
     def search(self, search: str) -> Tuple[list, list]:
         search = search.lower().replace("'", "\\'")
@@ -86,7 +85,8 @@ class GameBananaDb:
         req = f"https://api.gamebanana.com/{url}?" + "&".join(
             f"{k}={v}" for k, v in params.items()
         )
-        return requests.get(req).json()
+        res = requests.get(req)
+        return res.json()
 
     def update_db(self):
         page = 1
@@ -116,15 +116,24 @@ class GameBananaDb:
             )
             page += 1
 
+        error_count = 0
         for mod, info in mods.copy().items():
-            data = self._get_mod_data(mod, info["category"])
-            if data:
+            try:
+                data = self._get_mod_data(mod, info["category"])
+                assert data
                 mods[mod].update(data)
-            else:
+            except:
+                error_count += 1
                 del mods[mod]
         self._data["mods"].update(mods)
         self._data["last_update"] = int(time())
         self.save_db()
+        if error_count > 0:
+            raise Exception(
+                f"The metadata for {error_count} mods could not be updated. "
+                "This is probably a problem with your internet connection or, much "
+                "more likely, with GameBanana's servers."
+            )
 
     def _get_mod_data(self, mod_id: str, category: str) -> dict:
         data = {}
@@ -155,7 +164,10 @@ class GameBananaDb:
         files = json.dumps(res["Files().aFiles()"])
         if not (
             "info.json" in files
-            or ("rules.txt" in files and ("content" in files or "aoc" in files or "logs" in files))
+            or (
+                "rules.txt" in files
+                and ("content" in files or "aoc" in files or "logs" in files)
+            )
         ):
             return {}
 

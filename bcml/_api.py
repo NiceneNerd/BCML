@@ -778,8 +778,10 @@ class Api:
     def is_wiiu(self):
         return util.get_settings("wiiu")
 
+    @win_or_lose
     def init_gb(self):
         self.gb_api = GameBananaDb()
+        self.gb_api.update_db()
 
     def get_gb_pages(self, category: str = None, search: str = None) -> int:
         mods = self.gb_api.mods
