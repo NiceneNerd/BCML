@@ -99,7 +99,7 @@ class ModInfo extends React.Component {
                     <Button
                         variant="primary"
                         size="sm"
-                        title="Explore"
+                        title="Explore (Ctrl+X)"
                         disabled={!this.props.mod || this.props.multi}
                         onClick={() => this.props.onAction("explore")}>
                         <i className="material-icons">folder_open</i>{" "}
@@ -110,7 +110,7 @@ class ModInfo extends React.Component {
                             <Button
                                 variant="success"
                                 size="sm"
-                                title="Enable"
+                                title="Enable (Ctrl+E)"
                                 disabled={!this.props.mod}
                                 onClick={() => this.props.onAction("enable")}>
                                 <i className="material-icons">check_box</i>{" "}
@@ -120,7 +120,7 @@ class ModInfo extends React.Component {
                             <Button
                                 variant="warning"
                                 size="sm"
-                                title="Disable"
+                                title="Disable (Ctrl+D)"
                                 disabled={!this.props.mod}
                                 onClick={() => this.props.onAction("disable")}>
                                 <i className="material-icons">block</i>{" "}
@@ -139,7 +139,7 @@ class ModInfo extends React.Component {
                         <Button
                             variant="secondary"
                             size="sm"
-                            title="Reprocess"
+                            title="Reprocess (Ctrl+P)"
                             disabled={!this.props.mod || this.props.multi}
                             onClick={() => this.props.onAction("reprocess")}>
                             <i className="material-icons">refresh</i>{" "}
@@ -149,7 +149,7 @@ class ModInfo extends React.Component {
                     <Button
                         variant="danger"
                         size="sm"
-                        title="Uninstall"
+                        title="Uninstall (Ctrl+U)"
                         disabled={!this.props.mod}
                         onClick={() => this.props.onAction("uninstall")}>
                         <i className="material-icons">delete</i> <span>Uninstall</span>
