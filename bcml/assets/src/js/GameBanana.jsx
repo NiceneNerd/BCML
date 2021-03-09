@@ -412,6 +412,12 @@ class ModModal extends React.Component {
                     <Button variant="secondary" onClick={this.props.onClose}>
                         Close
                     </Button>
+                    <Button
+                        variant="primary"
+                        href={`https://www.gamebanana.com/${this.props.mod?.category?.toLowerCase()}s/${this.props.mod?.itemid}`}
+                        target="_blank">
+                        View on GB
+                    </Button>
                     {this.props.mod.files &&
                         (this.props.mod.files.length == 1 ? (
                             <Button
