@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, Button, Badge } from "react-bootstrap";
+import DonateWidget from "./Donate.jsx";
 
 const AboutDialog = props => {
     return (
@@ -51,6 +52,8 @@ const AboutDialog = props => {
                 <p>
                     Special thanks to contributors Ginger Avanlanche, CEObrainz, & Kreny.
                 </p>
+                <h4>Donate</h4>
+                <DonateWidget />
             </Modal.Body>
             <Modal.Footer>
                 <Button onClick={props.onClose} variant="secondary">

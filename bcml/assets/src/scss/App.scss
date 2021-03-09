@@ -41,12 +41,15 @@ $scrollbar-width: 0.5rem;
     background: scale-color($color: $bg-lighter, $lightness: -25%);
 }
 
+code {
+    color: #00C853;
+}
+
 html,
 body,
 #root,
 #tabs {
-    font-family: Roboto, "Droid Sans", "Source Sans Pro", "Open Sans",
-        sans-serif;
+    font-family: Roboto, "Droid Sans", "Source Sans Pro", "Open Sans", sans-serif;
     height: 100vh;
     overflow: hidden;
 }
@@ -140,6 +143,20 @@ body,
     }
 }
 
+.donate-list {
+    list-style-type: none;
+    padding-left: 0;
+
+    li {
+        margin-top: 0.5rem;
+
+        code {
+            user-select: text;
+            cursor: text;
+        }
+    }
+}
+
 .nav-tabs .nav-link {
     color: $fg2;
     border-radius: 0;
@@ -210,8 +227,8 @@ body,
     border: 1px solid $bg2;
     color: $fg1;
     display: block;
-    font-family: "Fira Code", "Source Code Pro", "Droid Mono", "Consolas",
-        "Courier New", Courier, monospace !important;
+    font-family: "Fira Code", "Source Code Pro", "Droid Mono", "Consolas", "Courier New",
+        Courier, monospace !important;
     font-size: smaller;
     margin: 0.5rem 0;
     max-height: 100%;
@@ -888,9 +905,8 @@ Fade {
 }
 
 .carousel-caption {
-    text-shadow: 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
-        0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
-        0 0 24px $bg-darkest;
+    text-shadow: 0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest,
+        0 0 24px $bg-darkest, 0 0 24px $bg-darkest, 0 0 24px $bg-darkest;
 }
 
 .gb-menu {
@@ -940,4 +956,30 @@ Fade {
 
 .slide-tab-exit-active {
     transform: translateX(-100vw);
+}
+
+/* Custom Icons */
+.paypal-icon {
+    path {
+        fill: #ffffff;
+    }
+}
+
+.grt-icon {
+    height: 28px;
+    enable-background:new 0 0 96 96;
+
+    .st0 {
+        fill: #6747ed;
+    }
+    .st1 {
+        fill-rule: evenodd;
+        clip-rule: evenodd;
+        fill: #ffffff;
+    }
+}
+
+.patreon-icon {
+    width: 16px;;
+    height: 16px;
 }
