@@ -406,7 +406,8 @@ class Mods extends React.Component {
                                 </OverlayTrigger>
                             </ButtonGroup>
                             <Dropdown as={ButtonGroup} size="xs">
-                                <OverlayTrigger overlay={<Tooltip>Remerge (Ctrl+M)</Tooltip>}>
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Remerge (Ctrl+M)</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={() => this.handleRemerge("all")}>
@@ -432,7 +433,9 @@ class Mods extends React.Component {
                             </Dropdown>
                             <ButtonGroup size="xs">
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Backup and restore (Ctrl+B)</Tooltip>}>
+                                    overlay={
+                                        <Tooltip>Backup and restore (Ctrl+B)</Tooltip>
+                                    }>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onBackup}>
@@ -450,7 +453,11 @@ class Mods extends React.Component {
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Uninstall all mods (Ctrl+Shift+U)</Tooltip>}>
+                                    overlay={
+                                        <Tooltip>
+                                            Uninstall all mods (Ctrl+Shift+U)
+                                        </Tooltip>
+                                    }>
                                     <Button
                                         variant="danger"
                                         onClick={this.uninstallAll}>
@@ -463,7 +470,9 @@ class Mods extends React.Component {
                                 <Dropdown as={ButtonGroup} size="xs">
                                     <OverlayTrigger
                                         overlay={
-                                            <Tooltip>Launch Breath of the Wild (Ctrl+L)</Tooltip>
+                                            <Tooltip>
+                                                Launch Breath of the Wild (Ctrl+L)
+                                            </Tooltip>
                                         }>
                                         <Button
                                             variant="primary"

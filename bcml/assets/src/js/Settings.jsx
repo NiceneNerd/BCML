@@ -26,7 +26,8 @@ class Settings extends React.Component {
             valid: false,
             loaded: false,
             nsfw: false,
-            changelog: true
+            changelog: true,
+            strip_gfx: false
         };
         this.formRef = React.createRef();
     }
@@ -90,7 +91,7 @@ class Settings extends React.Component {
     }
 
     async componentDidUpdate(prevProps, prevState) {
-        if (!this.state.loaded) return;
+        if (!prevState.loaded) return;
         if (!prevProps.saving && this.props.saving) {
             if (!(await this.checkValid())) {
                 this.setState({ valid: false }, () => this.props.onFail());
@@ -420,6 +421,26 @@ class Settings extends React.Component {
                                     disabled={!this.state.wiiu}
                                     label="Use BCML without a Cemu installation"
                                     checked={this.state.no_cemu}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="strip_gfx">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        To save disk space, BCML can optionally remove
+                                        unmodified files contained in the SARC files in
+                                        graphic pack mods. This disables the Reprocess
+                                        button, so it may not be desirable mod
+                                        developers.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Clean SARCs in graphic packs to save space"
+                                    checked={this.state.strip_gfx}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>

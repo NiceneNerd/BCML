@@ -26,6 +26,7 @@ class App extends React.Component {
             selectMod: null,
             selectPath: null,
             settingsLoaded: false,
+            settings: {},
             settingsValid: false,
             savingSettings: false,
             showDone: false,
@@ -48,15 +49,19 @@ class App extends React.Component {
         this.backupRef = React.createRef();
         window.addEventListener("pywebviewready", () => {
             setTimeout(async () => {
-                let res = await pywebview.api.get_ver();
-                this.setState({ ...res });
+                let settings = await pywebview.api.get_settings();
+                console.log(settings);
+                this.setState({ settings }, async () => {
+                    console.log("Settings updated");
+                    let res = await pywebview.api.get_ver();
+                    this.setState({ ...res });
+                });
             }, 500);
             setTimeout(() => {
                 this.refreshMods();
             }, 250);
         });
         window.addEventListener("focus", () => {
-            console.log("Here");
             document.body.focus();
         });
     }
@@ -370,7 +375,8 @@ class App extends React.Component {
                 <ModContext.Provider
                     value={{
                         mods: this.state.mods,
-                        busy: this.state.showProgress
+                        busy: this.state.showProgress,
+                        settings: this.state.settings
                     }}>
                     <Tabs
                         id="tabs"

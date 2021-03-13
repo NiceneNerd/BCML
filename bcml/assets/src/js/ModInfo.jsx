@@ -1,8 +1,10 @@
 import { Badge, Button, Spinner } from "react-bootstrap";
 import ReactMarkdown from "react-markdown";
 import React from "react";
+import ModContext from "./Context.jsx";
 
 class ModInfo extends React.Component {
+    static contextType = ModContext;
     constructor(props) {
         super(props);
         this.state = {
@@ -135,7 +137,7 @@ class ModInfo extends React.Component {
                         onClick={() => this.props.onAction("update")}>
                         <i className="material-icons">update</i> <span>Update</span>
                     </Button>
-                    {this.state.processed && (
+                    {this.state.processed && !this.context.settings?.strip_gfx && (
                         <Button
                             variant="secondary"
                             size="sm"

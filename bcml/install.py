@@ -287,9 +287,10 @@ def generate_logs(
                 merger.set_options(options["options"][merger.NAME])
             merger.set_pool(this_pool)
             merger.log_diff(tmp_dir, modded_files)
-        dev._clean_sarcs(
-            tmp_dir, util.get_hash_table(util.get_settings("wiiu")), this_pool
-        )
+        if util.get_settings("strip_gfx"):
+            dev._clean_sarcs(
+                tmp_dir, util.get_hash_table(util.get_settings("wiiu")), this_pool
+            )
     except:  # pylint: disable=bare-except
         this_pool.close()
         this_pool.join()
@@ -401,7 +402,8 @@ def install_mod(
         else:
             this_pool = pool or Pool(maxtasksperchild=500)
             generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
-            (tmp_dir / ".processed").touch()
+            if not util.get_settings("strip_gfx"):
+                (tmp_dir / ".processed").touch()
     except Exception as err:  # pylint: disable=broad-except
         try:
             name = mod_name

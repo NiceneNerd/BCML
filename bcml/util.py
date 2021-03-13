@@ -581,6 +581,7 @@ DEFAULT_SETTINGS = {
     "nsfw": False,
     "last_version": VERSION,
     "changelog": True,
+    "strip_gfx": False,
 }
 
 
