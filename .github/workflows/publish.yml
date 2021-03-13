@@ -46,11 +46,3 @@ jobs:
                   TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
                   TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
               run: twine upload dist/*
-            - name: Trigger build
-              if: success()
-              uses: peter-evans/repository-dispatch@v1
-              with:
-                token: ${{ secrets.REPO_GHA_PAT }}
-                repository: ${{ github.repository }}
-                event-type: trigger-build
-                client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
