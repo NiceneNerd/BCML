@@ -38,7 +38,7 @@ There are a few ways to install BCML.
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
 run `pip install bcml`. Note that, because of the `cefpython3` dependency, on Windows
-only Python 3.7 is supported, but 3.8+ can be used on Linux.
+Python 3.9 is not supported.
 
 ### Windows Installer
 
@@ -54,7 +54,7 @@ Building from source requires, in addition to the general prerequisites:
 
 -   Python 3.7+ 64 bit
 
-    (Note: 3.8+ will not work on Windows until `cefpython3` is updated.)
+    (Note: 3.9+ will not work on Windows until `cefpython3` is updated.)
 
 -   Node.js v14
 
