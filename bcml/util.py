@@ -582,6 +582,7 @@ DEFAULT_SETTINGS = {
     "last_version": VERSION,
     "changelog": True,
     "strip_gfx": False,
+    "auto_gb": True,
 }
 
 

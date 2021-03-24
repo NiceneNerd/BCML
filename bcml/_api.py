@@ -781,6 +781,11 @@ class Api:
     @win_or_lose
     def init_gb(self):
         self.gb_api = GameBananaDb()
+        if util.get_settings("auto_gb"):
+            self.gb_api.update_db()
+
+    @win_or_lose
+    def update_gb(self):
         self.gb_api.update_db()
 
     def get_gb_pages(self, category: str = None, search: str = None) -> int:

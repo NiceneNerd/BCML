@@ -27,7 +27,8 @@ class Settings extends React.Component {
             loaded: false,
             nsfw: false,
             changelog: true,
-            strip_gfx: false
+            strip_gfx: false,
+            auto_gb: true,
         };
         this.formRef = React.createRef();
     }
@@ -514,6 +515,24 @@ class Settings extends React.Component {
                                     type="checkbox"
                                     label="Show changelog after update"
                                     checked={this.state.changelog}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="auto_gb">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        By default, BCML automatically synchronize with
+                                        GameBanana whenever the GB tab is opened. Turn
+                                        this off to sync manually.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Automatically sync GameBanana tab"
+                                    checked={this.state.auto_gb}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>
