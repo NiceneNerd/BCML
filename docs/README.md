@@ -32,21 +32,13 @@ changes made by each mod into a single modpack that just works.
 
 ## Setup
 
-There are a few ways to install BCML.
+There are two main ways to install BCML.
 
 ### PyPI
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
 run `pip install bcml`. Note that, because of the `cefpython3` dependency, on Windows
 Python 3.9 is not supported.
-
-### Windows Installer
-
-1. Download the setup bundle from the
-   [latest GitHub release](https://github.com/NiceneNerd/BCML/releases/latest) or from
-   [GameBanana](https://gamebanana.com/tools/6624).
-2. Extract it where you want to install BCML.
-3. Run `setup.exe` to make shortcuts.
 
 ### Building from Source
 
