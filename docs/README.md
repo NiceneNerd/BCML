@@ -9,7 +9,7 @@ A mod merging and managing tool for _The Legend of Zelda: Breath of the Wild_
 ## Purpose
 
 Why a mod loader for BOTW? Installing a mod is usually easy enough once you have a
-homebrewed console or a emulator. Is there a need for a special tool?
+homebrewed console or an emulator. Is there a need for a special tool?
 
 Yes. As soon as you start trying to install multiple mods, you will find complications.
 The BOTW game ROM is fundamentally structured for performance and storage use on a
@@ -37,7 +37,7 @@ There are two main ways to install BCML.
 ### PyPI
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
-run `pip install bcml`. Note that, because of the `cefpython3` dependency, on Windows
+run `pip install bcml`. Note that, because of the `pythonnet` dependency, on Windows
 Python 3.9 is not supported.
 
 ### Building from Source
@@ -46,7 +46,7 @@ Building from source requires, in addition to the general prerequisites:
 
 -   Python 3.7+ 64 bit
 
-    (Note: 3.9+ will not work on Windows until `cefpython3` is updated.)
+    (Note: 3.9+ will not work on Windows until `pythonnet` is updated.)
 
 -   Node.js v14
 
