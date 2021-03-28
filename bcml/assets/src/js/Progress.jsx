@@ -61,8 +61,9 @@ let messages = [
     "BCML tip: When using a set of related mods, put the base mod beneath the addons",
     "BCML tip: Back up your mods when making substantial changes",
     'BCML tip: The backup/restore feature can be used for mod "profiles"',
-    "Shameless plug: I blog at <a href='https://calebdixonsmith.wordpress.com' target='_blank'>Theology Without Warranty</a>",
+    "Shameless plug: I blog at <a href='https://calebdixonsmith.top' target='_blank'>Theology Without Warranty</a>",
     "<a href='https://www.patreon.com/nicenenerdbcml'>Support BCML on Patreon</a> so my wife will let me keep doing this",
+    "While Link fights Ganon, <a href='https://www.tiktok.com/@nicenenerd?lang=en'>I fight bad theology on TikTok</a>",
     "Downloading RAM so Link goes fast",
     "Feeding Koroks",
     "Leaving Ganon in peace",
@@ -92,7 +93,11 @@ let messages = [
     "Enjoying some rock-hard food",
     "Riding Dark Beast Ganon",
     "Letting it all hang out on NakedIsland",
-    "Hiding feelings in English, expressing feelings in Japanese"
+    "Hiding feelings in English, expressing feelings in Japanese",
+    "“Those bananas sure are expensive...”",
+    "Wrecking Guardians with pot-lid parries",
+    "Racing Sidon and Teba",
+    "Thinking about Paya's awkward embrace"
 ];
 
 function shuffle(array) {
