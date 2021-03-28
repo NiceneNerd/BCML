@@ -109,11 +109,14 @@ def _linux_create_handler():
     StartupNotify=false
     MimeType=x-schema-handler/bcml;
     """
-    schema_file.write_text(desktop)
-    run(
-        f"xdg-mime default '{schema_file.as_posix()}' x-scheme-handler/bcml".split(),
-        check=True,
-    )
+    try:
+        schema_file.write_text(desktop)
+        run(
+            f"xdg-mime default '{schema_file.as_posix()}' x-scheme-handler/bcml".split(),
+            check=True,
+        )
+    except:
+        pass
 
 
 def _win_create_handler():

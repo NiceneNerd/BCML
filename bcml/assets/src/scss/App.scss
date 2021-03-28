@@ -650,6 +650,11 @@ Fade {
     cursor: pointer;
 }
 
+.settings {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 /* Utilities */
 
 .height100 {

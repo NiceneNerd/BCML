@@ -156,6 +156,12 @@ class Api:
     def get_settings(self, params=None):
         return util.get_settings()
 
+    def get_user_langs(self, params):
+        if params["dir"] and Path(params["dir"]).exists():
+            return list(util.get_user_languages(Path(params["dir"])))
+        else:
+            return []
+
     def save_settings(self, params):
         print("Saving settings, BCML will reload momentarily...")
         if util.get_settings("wiiu") != params["settings"]["wiiu"]:

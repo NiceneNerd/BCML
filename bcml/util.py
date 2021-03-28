@@ -763,6 +763,13 @@ def get_dlc_path() -> str:
     return "aoc" if get_settings("wiiu") else "01007EF00011F001/romfs"
 
 
+def get_user_languages(folder: Optional[Path] = None) -> set:
+    langs = set()
+    for file in ((folder or get_update_dir()) / "Pack").glob("Bootup_????.pack"):
+        langs.add(get_file_language(file.name))
+    return langs
+
+
 class TempSettingsContext(AbstractContextManager):
     _settings: dict
     _tmp_settings: dict

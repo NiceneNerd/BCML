@@ -61,13 +61,6 @@ def get_text_hashes(language: str = None) -> {}:
         return hashes
 
 
-def get_user_languages() -> set:
-    langs = set()
-    for file in (util.get_update_dir() / "Pack").glob("Bootup_????.pack"):
-        langs.add(util.get_file_language(file.name))
-    return langs
-
-
 def match_language(lang: str, log_dir: Path) -> str:
     logged_langs = set([util.get_file_language(l) for l in log_dir.glob("*texts*")])
     if lang in logged_langs:
@@ -400,7 +393,7 @@ class TextsMerger(mergers.Merger):
         langs = (
             {util.get_settings("lang")}
             if not self._options["all_langs"]
-            else get_user_languages()
+            else util.get_user_languages()
         )
         for lang in langs:
             print("Loading text mods...")

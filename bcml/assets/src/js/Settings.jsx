@@ -29,6 +29,7 @@ class Settings extends React.Component {
             changelog: true,
             strip_gfx: false,
             auto_gb: true,
+            languages: []
         };
         this.formRef = React.createRef();
     }
@@ -85,11 +86,15 @@ class Settings extends React.Component {
         );
     };
 
-    componentDidMount() {
-        pywebview.api.get_settings().then(settings => {
-            this.setState({ ...settings }, () => this.setState({ loaded: true }));
+    componentDidMount = async () => {
+        const settings = await pywebview.api.get_settings();
+        const languages = await pywebview.api.get_user_langs({
+            dir: settings.game_dir || settings.game_dir_nx
         });
-    }
+        this.setState({ ...settings, languages }, () =>
+            this.setState({ loaded: true })
+        );
+    };
 
     async componentDidUpdate(prevProps, prevState) {
         if (!prevState.loaded) return;
@@ -98,7 +103,7 @@ class Settings extends React.Component {
                 this.setState({ valid: false }, () => this.props.onFail());
             } else {
                 this.setState({ valid: true }, () => {
-                    let { valid, ...settings } = this.state;
+                    let { valid, languages, ...settings } = this.state;
                     this.props.onSubmit(settings);
                 });
             }
@@ -116,6 +121,17 @@ class Settings extends React.Component {
                         }))
                     });
                 }
+            }
+            if (
+                prevState.game_dir != this.state.game_dir ||
+                prevState.game_dir_nx != this.state.game_dir_nx
+            ) {
+                const languages = await pywebview.api.get_user_langs({
+                    dir: this.state.game_dir || this.state.game_dir_nx
+                });
+                this.setState({
+                    languages
+                });
             }
             for (const key of Object.keys(this.state).filter(
                 k =>
@@ -153,7 +169,8 @@ class Settings extends React.Component {
                 noValidate
                 validated={this.state.valid}
                 onSubmit={this.handleSubmit}
-                ref={this.formRef}>
+                ref={this.formRef}
+                className="settings">
                 <h5>Game Folders</h5>
                 <Row>
                     <Col>
@@ -353,7 +370,7 @@ class Settings extends React.Component {
                                     isValid={this.state.lang != ""}
                                     onChange={this.handleChange}>
                                     <option value={""}>Select a language</option>
-                                    {LANGUAGES.map(lang => (
+                                    {this.state.languages.map(lang => (
                                         <option value={lang} key={lang}>
                                             {lang}
                                         </option>
