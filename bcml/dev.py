@@ -20,7 +20,7 @@ from bcml import util, install
 from bcml.util import BYML_EXTS, SARC_EXTS, TempSettingsContext
 from bcml.mergers.pack import SPECIAL
 
-EXCLUDE_EXTS = {".yml", ".yaml", ".bak", ".txt", ".json", ".old"}
+EXCLUDE_EXTS = {".yml", ".yaml", ".bak", ".txt", ".json", ".old", ".bnp"}
 
 
 def _yml_to_byml(file: Path):
@@ -386,7 +386,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
         if "logs" in file.parts:
             continue
         if (
-            file.suffix in {".yml", ".json", ".bak", ".tmp", ".old"}
+            file.suffix in {".yml", ".json", ".bak", ".tmp", ".old", ".bnp"}
             and file.stem != "info"
         ):
             file.unlink()
