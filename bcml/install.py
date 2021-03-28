@@ -91,7 +91,11 @@ def open_mod(path: Path) -> Path:
             "or meta file (rules.txt or info.json)."
         )
     if not tmpdir.exists():
-        raise Exception("No files were extracted.")
+        raise Exception(
+            "No files were extracted. This may be because of an invalid or corrupted "
+            "download. If using the GameBanana tab, you may need to try again later, as"
+            " the problem could be caused by server errors."
+        )
 
     rulesdir = tmpdir
     if (rulesdir / "info.json").exists():
