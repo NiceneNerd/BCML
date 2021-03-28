@@ -131,6 +131,7 @@ def get_mergers() -> List[Type[Merger]]:
         actors,
         quests,
         effects,
+        residents,
     )
 
     return [
@@ -146,6 +147,7 @@ def get_mergers() -> List[Type[Merger]]:
         data.SaveDataMerger,
         events.EventInfoMerger,
         effects.StatusEffectMerger,
+        residents.ResidentsMerger,
         quests.QuestMerger,
         rstable.RstbMerger,
     ]
