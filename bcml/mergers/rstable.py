@@ -175,7 +175,8 @@ def _get_sizes_in_sarc(
         try:
             file = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
         except (RuntimeError, oead.InvalidDataError):
-            print(f"{file} could not be opened")
+            if "AocMainField" not in file:
+                print(f"{file} could not be opened")
             return {}
     for nest_file, data in [(file.name, file.data) for file in file.get_files()]:
         canon = nest_file.replace(".s", ".")
