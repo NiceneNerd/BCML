@@ -1,4 +1,13 @@
-import { Button, Dropdown, Fade, Modal, Tab, Tabs } from "react-bootstrap";
+import {
+    Button,
+    Dropdown,
+    Fade,
+    Modal,
+    OverlayTrigger,
+    Tab,
+    Tabs,
+    Tooltip
+} from "react-bootstrap";
 
 import AboutDialog from "./About.jsx";
 import BackupModal from "./Backup.jsx";
@@ -85,6 +94,9 @@ class App extends React.Component {
             } catch {}
             if (e.key == "F5") {
                 window.location.reload();
+            }
+            if (e.key == "F1") {
+                pywebview.api.open_help();
             }
             if (e.ctrlKey) {
                 switch (e.key) {
@@ -349,29 +361,42 @@ class App extends React.Component {
     render() {
         return (
             <>
-                <Dropdown alignRight className="overflow-menu">
-                    <Dropdown.Toggle id="dropdown-basic" title="Overflow Menu (Alt+M)">
-                        <i className="material-icons">menu</i>
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu>
-                        <Dropdown.Item onClick={() => pywebview.api.open_help()}>
-                            Help
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={() => pywebview.api.save_mod_list()}>
-                            Save Mod List
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={this.updateBcml}>
-                            Update BCML
-                        </Dropdown.Item>
-                        <Dropdown.Item as="a" href="/index.html?firstrun">
-                            Run Setup Wizard
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                            onClick={() => this.setState({ showAbout: true })}>
-                            About
-                        </Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
+                <div className="overflow-menu d-flex">
+                    <Dropdown alignRight>
+                        <Dropdown.Toggle
+                            id="dropdown-basic"
+                            title="Overflow Menu (Alt+M)">
+                            <i className="material-icons">menu</i>
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            <Dropdown.Item
+                                onClick={() => pywebview.api.save_mod_list()}>
+                                Save Mod List
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={this.updateBcml}>
+                                Update BCML
+                            </Dropdown.Item>
+                            <Dropdown.Item as="a" href="/index.html?firstrun">
+                                Run Setup Wizard
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                                onClick={() => this.setState({ showAbout: true })}>
+                                About
+                            </Dropdown.Item>
+                        </Dropdown.Menu>
+                    </Dropdown>
+                    <OverlayTrigger
+                        overlay={<Tooltip>Help (F1)</Tooltip>}
+                        placement="bottom">
+                        <Button
+                            size="xs"
+                            variant="outline text-light"
+                            alignRight
+                            onClick={() => pywebview.api.open_help()}>
+                            <i className="material-icons">help</i>
+                        </Button>
+                    </OverlayTrigger>
+                </div>
                 <ModContext.Provider
                     value={{
                         mods: this.state.mods,
