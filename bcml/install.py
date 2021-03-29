@@ -28,28 +28,14 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            [
-                get_7z_path(),
-                "e",
-                str(mod.resolve()),
-                "-r",
-                "-so",
-                "info.json",
-            ],
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            [
-                get_7z_path(),
-                "e",
-                str(mod.resolve()),
-                "-r",
-                "-so",
-                "info.json",
-            ],
+            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
             capture_output=True,
             universal_newlines=True,
         )
@@ -392,6 +378,8 @@ def install_mod(
                 f'"{mod_name}" is for {friendly_plaform(rules["platform"])}, not '
                 f" {friendly_plaform(user_platform)}.'"
             )
+        if "priority" in rules and rules["priority"] == "base":
+            insert_priority = 100
 
         logs = tmp_dir / "logs"
         if logs.exists():

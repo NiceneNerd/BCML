@@ -329,6 +329,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
     meta["platform"] = (
         "any" if any_platform else "wiiu" if util.get_settings("wiiu") else "switch"
     )
+    if options["options"].get("general", {}).get("base_priority", False):
+        meta["priority"] = "base"
     (tmp_dir / "info.json").write_text(
         dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -376,10 +378,10 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
                 f"There was an error generating change logs for your mod. {str(err)}"
             )
 
-    if not util.get_settings("strip_gfx"):
-        _clean_sarcs(tmp_dir, hashes, pool)
-        for folder in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:
-            _clean_sarcs(folder, hashes, pool)
+        if not util.get_settings("strip_gfx"):
+            _clean_sarcs(tmp_dir, hashes, pool)
+            for folder in {d for d in tmp_dir.glob("options/*") if d.is_dir()}:
+                _clean_sarcs(folder, hashes, pool)
 
     print("Cleaning any junk files...")
     for file in {f for f in tmp_dir.rglob("**/*") if f.is_file()}:

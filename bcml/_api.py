@@ -272,7 +272,13 @@ class Api:
         return result or []
 
     def get_options(self):
-        opts = []
+        opts = [
+            {
+                "name": "general",
+                "friendly": "general options",
+                "options": {"base_priority": "Default to lowest priority"},
+            }
+        ]
         for merger in mergers.get_mergers():
             merger = merger()
             opts.append(
@@ -459,12 +465,7 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(
-                    (
-                        "-g",
-                        "Z:\\" + str(uking).replace("/", "\\"),
-                    )
-                )
+                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -651,8 +652,7 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod,
-                merge_now=True,
+                mod, merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
