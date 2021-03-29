@@ -173,9 +173,7 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
     return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(
-    map_unit: Map, tmp_dir: Path, no_del: bool = False, link_del: bool = False
-) -> Hash:
+def get_map_diff(map_unit: Map, tmp_dir: Path) -> Hash:
     mod_map = get_modded_map(map_unit, tmp_dir)
     stock_map = True
     for obj in mod_map["Objs"]:
@@ -187,16 +185,6 @@ def get_map_diff(
 
     def diff_objs() -> Hash:
         base_hashes = [int(obj["HashId"]) for obj in base_map["Objs"]]
-        base_links = (
-            set()
-            if link_del
-            else {
-                int(link["DestUnitHashId"])
-                for obj in base_map["Objs"]
-                for link in obj.get("LinksToObj", Array())
-                if "LinksToObj" in obj
-            }
-        )
         mod_hashes = [int(obj["HashId"]) for obj in mod_map["Objs"]]
 
         diffs = Hash()
@@ -215,13 +203,9 @@ def get_map_diff(
             [
                 oead.U32(h)
                 for h in {
-                    hash_id
-                    for hash_id in base_hashes
-                    if hash_id not in {*mod_hashes, *base_links}
+                    hash_id for hash_id in base_hashes if hash_id not in mod_hashes
                 }
             ]
-            if not no_del
-            else set()
         )
         return diffs
 
@@ -252,8 +236,6 @@ def get_map_diff(
                     hash_id for hash_id in base_hashes if hash_id not in mod_hashes
                 }
             ]
-            if not no_del
-            else set()
         )
         return diffs
 
@@ -271,11 +253,7 @@ def get_map_diff(
 
 
 def generate_modded_map_log(
-    tmp_dir: Path,
-    modded_mubins: List[Path],
-    no_del: bool = False,
-    link_del: bool = False,
-    pool: multiprocessing.pool.Pool = None,
+    tmp_dir: Path, modded_mubins: List[Path], pool: multiprocessing.pool.Pool = None,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
     this_pool = pool or Pool(maxtasksperchild=500)
@@ -283,10 +261,7 @@ def generate_modded_map_log(
         {
             map_unit: oead.byml.from_text(diff)
             for map_unit, diff in this_pool.imap_unordered(
-                partial(
-                    get_map_diff, tmp_dir=tmp_dir, no_del=no_del, link_del=link_del
-                ),
-                modded_maps,
+                partial(get_map_diff, tmp_dir=tmp_dir,), modded_maps,
             )
         }
     )
@@ -297,7 +272,7 @@ def generate_modded_map_log(
 
 
 def merge_map(
-    map_pair: tuple, rstb_calc: rstb.SizeCalculator, no_del: bool = False
+    map_pair: tuple, rstb_calc: rstb.SizeCalculator
 ) -> Dict[str, Tuple[str, int]]:
     map_unit, changes = map_pair[0], map_pair[1]
     util.vprint(f'Merging {len(changes)} versions of {"_".join(map_unit)}...')
@@ -308,31 +283,30 @@ def merge_map(
             new_map["Objs"][stock_obj_hashes.index(int(hash_id))] = actor
         except ValueError:
             changes["Objs"]["add"].append(actor)
-    if not no_del:
-        for map_del in sorted(
-            changes["Objs"]["del"],
-            key=lambda change: stock_obj_hashes.index(change)
-            if change in stock_obj_hashes
-            else -1,
-            reverse=True,
-        ):
-            if int(map_del) in stock_obj_hashes:
+    for map_del in sorted(
+        changes["Objs"]["del"],
+        key=lambda change: stock_obj_hashes.index(change)
+        if change in stock_obj_hashes
+        else -1,
+        reverse=True,
+    ):
+        if int(map_del) in stock_obj_hashes:
+            try:
+                new_map["Objs"].pop(stock_obj_hashes.index(map_del))
+            except IndexError:
                 try:
-                    new_map["Objs"].pop(stock_obj_hashes.index(map_del))
-                except IndexError:
-                    try:
-                        obj_to_delete = next(
-                            iter(
-                                [
-                                    actor
-                                    for actor in new_map["Objs"]
-                                    if actor["HashId"] == map_del
-                                ]
-                            )
+                    obj_to_delete = next(
+                        iter(
+                            [
+                                actor
+                                for actor in new_map["Objs"]
+                                if actor["HashId"] == map_del
+                            ]
                         )
-                        new_map["Objs"].remove(obj_to_delete)
-                    except (StopIteration, ValueError):
-                        util.vprint(f"Could not delete actor with HashId {map_del}")
+                    )
+                    new_map["Objs"].remove(obj_to_delete)
+                except (StopIteration, ValueError):
+                    util.vprint(f"Could not delete actor with HashId {map_del}")
     new_map["Objs"].extend(
         [
             change
@@ -349,31 +323,30 @@ def merge_map(
                 new_map["Rails"][stock_rail_hashes.index(int(hash_id))] = rail
             except ValueError:
                 changes["Rails"]["add"].append(rail)
-        if not no_del:
-            for map_del in sorted(
-                changes["Rails"]["del"],
-                key=lambda change: stock_rail_hashes.index(int(change))
-                if int(change) in stock_rail_hashes
-                else -1,
-                reverse=True,
-            ):
-                if int(map_del) in stock_rail_hashes:
+        for map_del in sorted(
+            changes["Rails"]["del"],
+            key=lambda change: stock_rail_hashes.index(int(change))
+            if int(change) in stock_rail_hashes
+            else -1,
+            reverse=True,
+        ):
+            if int(map_del) in stock_rail_hashes:
+                try:
+                    new_map["Rails"].pop(stock_rail_hashes.index(int(map_del)))
+                except IndexError:
                     try:
-                        new_map["Rails"].pop(stock_rail_hashes.index(int(map_del)))
-                    except IndexError:
-                        try:
-                            obj_to_delete = next(
-                                iter(
-                                    [
-                                        rail
-                                        for rail in new_map["Rails"]
-                                        if rail["HashId"] == map_del
-                                    ]
-                                )
+                        obj_to_delete = next(
+                            iter(
+                                [
+                                    rail
+                                    for rail in new_map["Rails"]
+                                    if rail["HashId"] == map_del
+                                ]
                             )
-                            new_map["Rails"].remove(obj_to_delete)
-                        except (StopIteration, ValueError):
-                            util.vprint(f"Could not delete rail with HashId {map_del}")
+                        )
+                        new_map["Rails"].remove(obj_to_delete)
+                    except (StopIteration, ValueError):
+                        util.vprint(f"Could not delete rail with HashId {map_del}")
         new_map["Rails"].extend(
             [
                 change
@@ -527,13 +500,7 @@ class MapMerger(mergers.Merger):
         ]
         if modded_mubins:
             print("Logging changes to mainfield maps...")
-            return generate_modded_map_log(
-                mod_dir,
-                modded_mubins,
-                no_del=self._options.get("no_del", False),
-                link_del=self._options.get("link_del", False),
-                pool=self._pool,
-            )
+            return generate_modded_map_log(mod_dir, modded_mubins, pool=self._pool,)
         return {}
 
     def log_diff(self, mod_dir: Path, diff_material):
@@ -634,7 +601,6 @@ class MapMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        no_del = self._options.get("no_del", False)
         shutil.rmtree(
             str(
                 util.get_master_modpack_dir()
@@ -682,8 +648,7 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool(maxtasksperchild=500)
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc, no_del=no_del),
-            map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc), map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
@@ -700,10 +665,7 @@ class MapMerger(mergers.Merger):
         print("Map merge complete")
 
     def get_checkbox_options(self):
-        return [
-            ("no_del", "Never remove stock actors from merged maps"),
-            ("link_del", "Allow deleting actors with links from merged maps"),
-        ]
+        return []
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return {
