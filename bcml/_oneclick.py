@@ -110,6 +110,7 @@ def _linux_create_handler():
     MimeType=x-schema-handler/bcml;
     """
     try:
+        schema_file.parent.mkdir(parents=True, exist_ok=True)
         schema_file.write_text(desktop)
         run(
             f"xdg-mime default '{schema_file.as_posix()}' x-scheme-handler/bcml".split(),
@@ -141,10 +142,7 @@ def _win_create_handler():
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp") as key:
         try:
             with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\Classes\.bnp",
-                0,
-                winreg.KEY_READ,
+                winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp", 0, winreg.KEY_READ,
             ) as okey:
                 assert winreg.QueryValueEx(okey, "")[0] == "bcml"
         except (WindowsError, OSError, AssertionError):
