@@ -5,7 +5,8 @@ import {
     Modal,
     Spinner,
     OverlayTrigger,
-    Tooltip
+    Tooltip,
+    FormCheck
 } from "react-bootstrap";
 
 import React from "react";
@@ -31,7 +32,8 @@ class FirstRun extends React.Component {
             handledError: null,
             modProgress: "",
             error: null,
-            showError: false
+            showError: false,
+            willRead: false
         };
         this.goBack = () => {
             const page = this.state.page - 1;
@@ -123,7 +125,7 @@ class FirstRun extends React.Component {
                 <Modal.Header>
                     <Modal.Title>Welcome to BCML</Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="d-flex flex-column flex-grow-1">
+                <Modal.Body className="d-flex flex-column flex-grow-1 overflow-y">
                     <Carousel
                         id="pages"
                         controls={false}
@@ -178,24 +180,36 @@ class FirstRun extends React.Component {
                                             check that everything seems right.
                                         </p>
                                     ) : (
-                                        <p>
-                                            Take a moment to configure your basic
-                                            settings. If you need help, consult the BCML{" "}
-                                            <a
-                                                href="https://github.com/NiceneNerd/BCML/blob/master/docs/README.md#readme"
-                                                title="BCML/README.md on GitHub"
-                                                target="_blank">
-                                                readme
-                                            </a>{" "}
-                                            or{" "}
-                                            <a
-                                                href="https://github.com/NiceneNerd/BCML/wiki/Troubleshooting"
-                                                title="Troubleshooting · NiceneNerd/BCML Wiki"
-                                                target="_blank">
-                                                Troubleshooting
-                                            </a>{" "}
-                                            page. Folders will turn green when valid.
-                                        </p>
+                                        <div className="d-flex">
+                                            <p className="flex-grow-1">
+                                                Take a moment to configure your basic
+                                                settings. Folders will turn green when
+                                                valid.
+                                            </p>
+                                            <div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="warning"
+                                                    onClick={() =>
+                                                        pywebview.api.open_help()
+                                                    }>
+                                                    <i className="material-icons">
+                                                        help_outline
+                                                    </i>{" "}
+                                                    Help
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="danger"
+                                                    href="https://www.youtube.com/embed/8gKRifYyA68"
+                                                    target="_blank">
+                                                    <i className="material-icons">
+                                                        play_circle_outline
+                                                    </i>{" "}
+                                                    Tutorial
+                                                </Button>
+                                            </div>
+                                        </div>
                                     )}
                                     <Settings
                                         saving={this.state.savingSettings}
@@ -316,6 +330,19 @@ class FirstRun extends React.Component {
                                     try <strong>the in-app help</strong> and consider{" "}
                                     <strong>clicking the Remerge button</strong>.
                                 </p>
+                                <FormCheck
+                                    label={
+                                        "I will read the help or I already know what I am doing." +
+                                        " I will not ask questions if I haven't checked the help first."
+                                    }
+                                    checked={this.state.willRead}
+                                    onChange={e =>
+                                        this.setState({
+                                            willRead: e.currentTarget.checked
+                                        })
+                                    }
+                                    style={{ fontWeight: "bold" }}
+                                />
                             </Alert>
                             <h3>Donate</h3>
                             <p>
@@ -356,7 +383,14 @@ class FirstRun extends React.Component {
                             </Button>
                         )
                     ) : (
-                        <Button className="btn-nav" onClick={this.goHome}>
+                        <Button
+                            className="btn-nav"
+                            onClick={this.goHome}
+                            disabled={!this.state.willRead}
+                            title={
+                                !this.state.willRead &&
+                                "You must check the consent box first."
+                            }>
                             <i className="material-icons">check</i>
                         </Button>
                     )}
