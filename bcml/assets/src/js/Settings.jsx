@@ -29,7 +29,7 @@ class Settings extends React.Component {
             changelog: true,
             strip_gfx: false,
             auto_gb: true,
-            languages: []
+            languages: [...LANGUAGES]
         };
         this.formRef = React.createRef();
     }
