@@ -386,7 +386,7 @@ class BrowserView(QMainWindow):
                 save_filename = os.path.join(str(directory), str(save_filename))
 
             self._file_name = QFileDialog.getSaveFileName(
-                self, localization["global.saveFile"], save_filename
+                self, localization["global.saveFile"], save_filename, file_filter
             )
 
         self._file_name_semaphore.release()

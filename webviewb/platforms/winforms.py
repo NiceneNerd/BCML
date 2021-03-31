@@ -501,7 +501,14 @@ def create_file_dialog(
 
         elif dialog_type == SAVE_DIALOG:
             dialog = WinForms.SaveFileDialog()
-            dialog.Filter = localization["windows.fileFilter.allFiles"] + " (*.*)|"
+            if len(file_types) > 0:
+                dialog.Filter = "|".join(
+                    ["{0} ({1})|{1}".format(*parse_file_type(f)) for f in file_types]
+                )
+            else:
+                dialog.Filter = (
+                    localization["windows.fileFilter.allFiles"] + " (*.*)|*.*"
+                )
             dialog.InitialDirectory = directory
             dialog.RestoreDirectory = True
             dialog.FileName = save_filename
