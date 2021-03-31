@@ -16,11 +16,15 @@ Run `bcml` from the command line. You can also create a shortcut on your desktop
 the Start Menu. On Windows, point it to `bcml.exe` in the Scripts folder where you
 installed Python.
 
-#### Why won't BCML accept my folders?
+#### How do I get an unpacked game dump to use with BCML?
+
+Follow the instructions from [this tutorial](https://zeldamods.org/wiki/Help:Dumping_games).
+
+#### How do I setup my game folders in BCML?
 
 Here are the rules for the folders you need to set in BCML.
 
-(Note that if you use Cemu, BCML should automatically find your game folders when you
+(*Note*: If you use Cemu, BCML should automatically find your game folders when you
 select the Cemu folder. If it doesn't, you can find them by right-clicking the game in
 Cemu and clicking the buttons to open the game, update, and DLC folders. These will
 _not_ be the exact folders you need but will be very close to them; read on to find out
@@ -51,8 +55,8 @@ _(Required: Wii U)_ Must be the root content folder for BOTW's update files, ver
 Cemu's MLC storage. For Cemu/Wii U, the first half of the title ID will end in the
 letter E. Example: `C:\Cemu\mlc01\usr\title\0005000E\101C9400\content`
 
-Switch users should not need an update folder, because dumping will ordinarily merge the
-base game and update files.
+*Switch users should not need an update folder, because dumping will ordinarily merge the
+base game and update files.*
 
 You can tell this folder is set correctly if it contains approximately 7000 files in the
 folder `Actor/Pack`.
@@ -71,6 +75,25 @@ You can tell this folder is set correctly if it contains `Pack/AocMainField.pack
 
 ### Installing Mods
 
+#### No files were extracted.
+
+This usually means the mod download is corrupt. This is especially common when if you
+download using the GameBanana tab while GameBanana is experiencing server issues (which
+is unfortunately common).
+
+#### FileNotFoundError: No `rules.txt` or `info.json` was found in mod
+
+This one is as it says. BCML didn't find a recongized meta file in the mod you picked.
+BCML only supports graphic pack mods and BNPs (Switch: BNPs only). Other formats will
+need to be converted first.
+
+#### Progress is stuck on "One Sec" forever
+
+This happens when somehow your system fails to check and load a mod's metadata for
+custom install options. What causes this is not known and it only occurs on a few
+random PCs running Windows. No fix has ever been discovered, and I myself have never
+been able to reproduce it.
+
 #### FileNotFoundError: File `X` not found in game dump
 
 In most cases, this indicates that, despite BCML's attempts to check your folder
@@ -79,18 +102,11 @@ to BCML are incorrect. See the [previous section](#why-wont-bcml-accept-my-folde
 help with folders. In rare cases it may relate to a mod that adds new files in a way or
 place that BCML does not anticipate.
 
-#### FileNotFoundError: No `rules.txt` or `info.json` was found in mod
+#### AAMP file `X` could not be merged.
 
-This one is as it says. BCML didn't find a recongized meta file in the mod you picked.
-BCML only supports graphic pack mods and BNPs (Switch: BNPs only). Other formats will
-need to be converted first.
-
-#### ValueError: Invalid version: 1-wiiu (expected 1-3)
-
-The mod you are trying to install contains a [BYML](https://zeldamods.org/wiki/BYML)
-file (usually `ActorInfo.product.sbyml` ) that has been corrupted by an outdated BYML
-tool. The only solution to this is to _contact the mod creator for help_ or to repair
-the file manually.
+Usually this means one of your mods has an outdated or broken file, often a `.bshop` file.
+Contact the mod creator for help. This _also_ applies to the error "Shop file `X` appears
+to be missing a key."
 
 #### There was an error installing MOD. It processed successfully, but could not be added to your BCML mods
 
@@ -98,6 +114,13 @@ If the full text of the error includes anything about XML, you probably either (
 an old version of Cemu or (2) have a corrupt Cemu settings file. Make sure you have at
 least Cemu 1.15, and if you still have issues, try deleting `settings.xml` from the Cemu
 folder.
+
+#### ValueError: Invalid version: 1-wiiu (expected 1-3)
+
+The mod you are trying to install contains a [BYML](https://zeldamods.org/wiki/BYML)
+file (usually `ActorInfo.product.sbyml` ) that has been corrupted by an outdated BYML
+tool. The only solution to this is to _contact the mod creator for help_ or to repair
+the file manually.
 
 ### Creating BNPs
 
@@ -132,12 +155,14 @@ There are a few possible causes:
 1. You have mods installed outside of BCML that conflict with the BCML pack. **Running
    BCML alongside mods installed with other methods is not supported.**
 2. You still have the master graphic pack for BCML 2.8 enabled in Cemu after upgrading
-   (under `{BCML: DON'T TOUCH}`.
-3. Your load order is backwards.
+   (under `{BCML: DON'T TOUCH}`).
+3. Your load order is backwards or otherwise incorrect.
 4. Your game language in BCML does not match the region and language you use in BOTW.
 5. Your game directory settings in BCML are set incorrectly.
 6. There is something wrong with one of your mods itself.
-7. Your game dump is corrupt.
+7. One or more of the mods you are using are incompatible with the others in game-breaking
+   ways even after merging.
+8. Your game dump is corrupt.
 
 ### I've installed my mods in BCML, but they don't take effect in-game
 
@@ -155,3 +180,8 @@ priority than any mods that alter armour stats or other mods that affect `TitleB
 If you have already done so, try remerging. If it still doesn't work, it could be a more
 complicated problem with your mod configuration; consider clearing your mods and
 starting fresh.
+
+### New items added by my mod(s) have no names or descriptions
+
+Check to make sure your region and language settings in BCML match your game, and then
+remerge.
