@@ -465,7 +465,12 @@ class Api:
         else:
             cemu_args = ["wine", str(cemu)]
             if params["run_game"]:
-                cemu_args.extend(("-g", "Z:\\" + str(uking).replace("/", "\\"),))
+                cemu_args.extend(
+                    (
+                        "-g",
+                        "Z:\\" + str(uking).replace("/", "\\"),
+                    )
+                )
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose
@@ -652,7 +657,8 @@ class Api:
                     )
                 )
             install.install_mod(
-                mod, merge_now=True,
+                mod,
+                merge_now=True,
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
@@ -754,6 +760,7 @@ class Api:
             with NamedTemporaryFile("w", suffix=".bat", delete=False) as updater:
                 updater.write(
                     "@echo off\n"
+                    'taskkill /fi "WINDOWTITLE eq BOTW Cross-Platform Mod Loader"\n'
                     f"\"{exe}\" {' '.join(args)}\n"
                     "echo Finished updating, will launch BCML in a moment!\n"
                     "timeout 2 >nul 2>&1\n"
