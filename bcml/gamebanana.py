@@ -88,6 +88,17 @@ class GameBananaDb:
         res = requests.get(req)
         return res.json()
 
+    def reset_update_time(self, wiiu: bool):
+        self._data["last_update"] = sorted(
+            {
+                m["updated"]
+                for m in self._data["mods"].values()
+                if ("WiiU" in m["game"] if wiiu else "Switch" in m["game"])
+            },
+            reverse=True,
+        )[0]
+        self.save_db()
+
     def update_db(self):
         page = 1
         max_age = (
