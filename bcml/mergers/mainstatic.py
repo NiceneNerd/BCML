@@ -60,15 +60,17 @@ class MainfieldStaticMerger(mergers.Merger):
             / util.get_dlc_path()
             / ("0010" if util.get_settings("wiiu") else "")
             / STATIC_PATH
-        ).exists():
+        ) in modded_files:
             static_path = (
                 mod_dir
                 / util.get_dlc_path()
                 / ("0010" if util.get_settings("wiiu") else "")
                 / STATIC_PATH
             )
-            stock_static_path = util.get_game_file("Map/MainField/Static.smubin", aoc=True)
-        elif (mod_dir / util.get_content_path() / STATIC_PATH).exists():
+            stock_static_path = util.get_game_file(
+                "Map/MainField/Static.smubin", aoc=True
+            )
+        elif (mod_dir / util.get_content_path() / STATIC_PATH) in modded_files:
             static_path = mod_dir / util.get_content_path() / STATIC_PATH
             stock_static_path = util.get_game_file("Map/MainField/Static.smubin")
         else:
@@ -76,7 +78,35 @@ class MainfieldStaticMerger(mergers.Merger):
         stock_static = Hash.from_binary(util.decompress(stock_static_path.read_bytes()))
         mod_static = Hash.from_binary(util.decompress(static_path.read_bytes()))
         diffs = Hash()
+        get_trans = itemgetter("Translate")
+        get_trans_id = lambda x: key_from_coords(x.x.v, x.y.v, x.z.v)
         for cat, key in KEY_MAP.items():
+            if key == "Translate":
+                id_getter = lambda x: get_trans_id(get_trans(x))
+            else:
+                id_getter = itemgetter(key)
             if cat not in stock_static:
                 continue
-            
+            stock_items = {id_getter(item): item for item in stock_static[cat]}
+            mod_items = {id_getter(item): item for item in mod_static[cat]}
+            diffs[cat] = Hash(
+                {
+                    item_id: item
+                    for item_id, item in mod_items.items()
+                    if item_id not in stock_items or item != stock_items[item_id]
+                }
+            )
+            for item_id, item in [
+                (i1, i2) for i1, i2 in stock_items.items() if i1 not in mod_items
+            ]:
+                item["remove"] = True
+                diffs[cat][item_id] = item
+        return diffs
+
+    def log_diff(self, mod_dir: Path, diff_material):
+        if isinstance(diff_material, List):
+            diff_material = self.generate_diff(mod_dir, diff_material)
+        if diff_material:
+            (mod_dir / "logs" / self._log_name).write_text(
+                oead.byml.to_text(diff_material), encoding="utf-8"
+            )
