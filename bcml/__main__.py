@@ -1,9 +1,11 @@
 import os
 import sys
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime
 from multiprocessing import set_start_method, Process
 from os import chmod  # pylint: disable=ungrouped-imports
 from pathlib import Path
+from random import randint
 from subprocess import Popen, DEVNULL
 from shutil import rmtree
 from threading import Thread
@@ -91,7 +93,24 @@ def main(debug: bool = False):
     if SYSTEM == "Windows":
         configure_cef(debug)
 
-    if (util.get_data_dir() / "settings.json").exists():
+    now = datetime.now()
+    if (
+        now.month == 4
+        and now.day == 1
+        and not (util.get_data_dir() / ".fooled").exists()
+    ):
+        (util.get_data_dir() / ".fooled").write_bytes(b"")
+        url = (
+            [
+                "https://www.youtube.com/embed/Lrj2Hq7xqQ8",
+                "https://www.youtube.com/embed/8B1fu3AuDrQ",
+                "https://www.youtube.com/embed/jRMHp7_kPec",
+                "https://www.youtube.com/embed/N9qYF9DZPdw",
+                "https://www.youtube.com/embed/j1FGaCNN1aw",
+            ][randint(0, 4)]
+        ) + "?autoplay=1"
+        width, height = 640, 360
+    elif (util.get_data_dir() / "settings.json").exists():
         url = f"{host}/index.html"
         width, height = 907, 680
     else:
