@@ -48,9 +48,6 @@ class MainfieldStaticMerger(mergers.Merger):
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         mod_data: bytes
         stock_data: bytes
-        vanilla_needle = (
-            f"{util.get_content_path()}/Pack/Bootup.pack//Map/MainField/Static.smubin"
-        )
         if (
             mod_dir
             / util.get_dlc_path()
@@ -66,7 +63,9 @@ class MainfieldStaticMerger(mergers.Merger):
             stock_data = util.get_game_file(
                 "Map/MainField/Static.smubin", aoc=True
             ).read_bytes()
-        elif vanilla_needle in modded_files:
+        elif (
+            f"{util.get_content_path()}/Pack/Bootup.pack//Map/MainField/Static.smubin"
+        ) in modded_files:
             mod_data = util.get_nested_file_bytes(
                 (
                     str(mod_dir / util.get_content_path() / "Pack" / "Bootup.pack")
@@ -152,7 +151,7 @@ class MainfieldStaticMerger(mergers.Merger):
     def perform_merge(self):
         diffs = self.consolidate_diffs(self.get_all_diffs())
         output: Path
-        static_path: Path
+        static_data: Path
         try:
             util.get_aoc_dir()
             output = (
@@ -161,24 +160,35 @@ class MainfieldStaticMerger(mergers.Merger):
                 / ("0010" if util.get_settings("wiiu") else "")
                 / STATIC_PATH
             )
-            static_path = util.get_game_file("Map/MainField/Static.smubin", aoc=True)
+            static_data = util.get_game_file(
+                "Map/MainField/Static.smubin", aoc=True
+            ).read_bytes()
         except FileNotFoundError:
             output = util.get_master_modpack_dir() / "logs" / "mainstatic.smubin"
-            static_path = util.get_game_file("Map/MainField/Static.smubin")
+            static_data = util.get_nested_file_bytes(
+                (
+                    str(util.get_game_file("Pack/Bootup.pack"))
+                    + "//Map/MainField/Static.smubin"
+                ),
+                unyaz=False,
+            )
         if not diffs:
             try:
                 output.unlink()
             except:
                 pass
             return
-        stock_static = oead.byml.from_binary(util.decompress(static_path.read_bytes()))
+        stock_static = oead.byml.from_binary(util.decompress(static_data))
         merged = Hash()
         for cat in stock_static:
-            items = {get_id(item): item for item in stock_static[cat]}
-            util.dict_merge(items, diffs[cat])
-            merged[cat] = Array(
-                [item for _, item in items.items() if "remove" not in item]
-            )
+            if cat in diffs:
+                items = {get_id(item): item for item in stock_static[cat]}
+                util.dict_merge(items, diffs[cat])
+                merged[cat] = Array(
+                    [item for _, item in items.items() if "remove" not in item]
+                )
+            else:
+                merged[cat] = stock_static[cat]
         data = util.compress(
             oead.byml.to_binary(merged, big_endian=util.get_settings("wiiu"))
         )
@@ -197,7 +207,11 @@ class MainfieldStaticMerger(mergers.Merger):
 
     @staticmethod
     def is_bootup_injector():
-        return True
+        try:
+            util.get_aoc_dir()
+            return False
+        except FileNotFoundError:
+            return True
 
     def get_bootup_injection(self):
         tmp_sarc = util.get_master_modpack_dir() / "logs" / "mainstatic.smubin"
