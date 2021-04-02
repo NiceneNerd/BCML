@@ -46,31 +46,45 @@ class MainfieldStaticMerger(mergers.Merger):
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
-        static_path: Path
+        mod_data: bytes
+        stock_data: bytes
+        vanilla_needle = (
+            f"{util.get_content_path()}/Pack/Bootup.pack//Map/MainField/Static.smubin"
+        )
         if (
             mod_dir
             / util.get_dlc_path()
             / ("0010" if util.get_settings("wiiu") else "")
             / STATIC_PATH
         ) in modded_files:
-            static_path = (
+            mod_data = (
                 mod_dir
                 / util.get_dlc_path()
                 / ("0010" if util.get_settings("wiiu") else "")
                 / STATIC_PATH
-            )
-            stock_static_path = util.get_game_file(
+            ).read_bytes()
+            stock_data = util.get_game_file(
                 "Map/MainField/Static.smubin", aoc=True
+            ).read_bytes()
+        elif vanilla_needle in modded_files:
+            mod_data = util.get_nested_file_bytes(
+                (
+                    str(mod_dir / util.get_content_path() / "Pack" / "Bootup.pack")
+                    + "//Map/MainField/Static.smubin"
+                ),
+                unyaz=False,
             )
-        elif (mod_dir / util.get_content_path() / STATIC_PATH) in modded_files:
-            static_path = mod_dir / util.get_content_path() / STATIC_PATH
-            stock_static_path = util.get_game_file("Map/MainField/Static.smubin")
+            stock_data = util.get_nested_file_bytes(
+                (
+                    str(util.get_game_file("Pack/Bootup.pack"))
+                    + "//Map/MainField/Static.smubin"
+                ),
+                unyaz=False,
+            )
         else:
             return None
-        stock_static = oead.byml.from_binary(
-            util.decompress(stock_static_path.read_bytes())
-        )
-        mod_static = oead.byml.from_binary(util.decompress(static_path.read_bytes()))
+        stock_static: Hash = oead.byml.from_binary(util.decompress(stock_data))
+        mod_static: Hash = oead.byml.from_binary(util.decompress(mod_data))
         diffs = Hash()
         for cat in stock_static:
             if cat not in stock_static:
@@ -89,6 +103,8 @@ class MainfieldStaticMerger(mergers.Merger):
             ]:
                 item["remove"] = True
                 diffs[cat][item_id] = item
+            if not diffs[cat]:
+                del diffs[cat]
         return diffs
 
     def log_diff(self, mod_dir: Path, diff_material):
@@ -147,9 +163,7 @@ class MainfieldStaticMerger(mergers.Merger):
             )
             static_path = util.get_game_file("Map/MainField/Static.smubin", aoc=True)
         except FileNotFoundError:
-            output = (
-                util.get_master_modpack_dir() / util.get_content_path() / STATIC_PATH
-            )
+            output = util.get_master_modpack_dir() / "logs" / "mainstatic.smubin"
             static_path = util.get_game_file("Map/MainField/Static.smubin")
         if not diffs:
             try:
@@ -162,10 +176,37 @@ class MainfieldStaticMerger(mergers.Merger):
         for cat in stock_static:
             items = {get_id(item): item for item in stock_static[cat]}
             util.dict_merge(items, diffs[cat])
-            merged[cat] = Array([item for _, item in items.items() if "remove" not in item])
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes(
-            util.compress(
-                oead.byml.to_binary(merged, big_endian=util.get_settings("wiiu"))
+            merged[cat] = Array(
+                [item for _, item in items.items() if "remove" not in item]
             )
+        data = util.compress(
+            oead.byml.to_binary(merged, big_endian=util.get_settings("wiiu"))
         )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(data)
+        if "mainstatic" in str(output):
+            util.inject_file_into_sarc(
+                "Map/MainField/Static.smubin",
+                data,
+                "Pack/Bootup.pack",
+                create_sarc=True,
+            )
+
+    def get_checkbox_options(self):
+        return []
+
+    @staticmethod
+    def is_bootup_injector():
+        return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / "logs" / "mainstatic.smubin"
+        if tmp_sarc.exists():
+            return (
+                "Map/MainField/Static.smubin",
+                tmp_sarc,
+            )
+        return
+
+    def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
+        return set(self.get_mod_diff(mod).keys())
