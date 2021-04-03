@@ -371,7 +371,7 @@ class Api:
     @install.refresher
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob("*") if d.is_dir()}:
-            rmtree(folder)
+            rmtree(folder, onerror=install.force_del)
 
     @win_or_lose
     def apply_queue(self, params):

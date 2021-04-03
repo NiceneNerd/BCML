@@ -3,11 +3,13 @@
 # Licensed under GPLv3+
 # pylint: disable=too-many-lines
 import datetime
+import errno
 import json
 import multiprocessing
 import os
 import re
 import shutil
+import stat
 import subprocess
 from functools import partial
 from multiprocessing import Pool
@@ -28,14 +30,28 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
     result: subprocess.CompletedProcess
     if util.SYSTEM == "Windows":
         result = subprocess.run(
-            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
         )
     else:
         result = subprocess.run(
-            [get_7z_path(), "e", str(mod.resolve()), "-r", "-so", "info.json",],
+            [
+                get_7z_path(),
+                "e",
+                str(mod.resolve()),
+                "-r",
+                "-so",
+                "info.json",
+            ],
             capture_output=True,
             universal_newlines=True,
         )
@@ -553,12 +569,27 @@ def enable_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"{mod.name} enabled")
 
 
+def force_del(func, path, exc):
+    excvalue = exc[1]
+    if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
+        func(path)
+    else:
+        raise RuntimeError(
+            f"The folder {path} could not be removed. "
+            "You may need to delete it manually and remerge, or "
+            "close all open programs (including BCML and Windows Explorer) "
+            "and try again. The location of the folder is "
+            f"<code>{str(path)}</code>."
+        )
+
+
 @refresher
 def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     print(f"Uninstalling {mod.name}...")
     try:
-        shutil.rmtree(str(mod.path))
-    except (OSError, PermissionError) as err:
+        shutil.rmtree(str(mod.path), onerror=force_del)
+    except (OSError, PermissionError, WindowsError) as err:
         raise RuntimeError(
             f"The folder for {mod.name} could not be removed. "
             "You may need to delete it manually and remerge, or "
