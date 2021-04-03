@@ -253,7 +253,9 @@ def get_map_diff(map_unit: Map, tmp_dir: Path) -> Hash:
 
 
 def generate_modded_map_log(
-    tmp_dir: Path, modded_mubins: List[Path], pool: multiprocessing.pool.Pool = None,
+    tmp_dir: Path,
+    modded_mubins: List[Path],
+    pool: multiprocessing.pool.Pool = None,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
     this_pool = pool or Pool(maxtasksperchild=500)
@@ -261,7 +263,11 @@ def generate_modded_map_log(
         {
             map_unit: oead.byml.from_text(diff)
             for map_unit, diff in this_pool.imap_unordered(
-                partial(get_map_diff, tmp_dir=tmp_dir,), modded_maps,
+                partial(
+                    get_map_diff,
+                    tmp_dir=tmp_dir,
+                ),
+                modded_maps,
             )
         }
     )
@@ -409,14 +415,19 @@ def merge_map(
     }
 
 
-def get_dungeonstatic_diff(file: Path) -> dict:
-    base_pos = oead.byml.from_binary(
-        util.decompress(
-            (util.get_aoc_dir() / "Map" / "CDungeon" / "Static.smubin").read_bytes()
-        )
-    )["StartPos"]
-
-    mod_pos = oead.byml.from_binary(util.decompress(file.read_bytes()))["StartPos"]
+def get_dungeonstatic_diff(mod_pos: Array) -> dict:
+    try:
+        base_pos = oead.byml.from_binary(
+            util.decompress(
+                (util.get_aoc_dir() / "Map" / "CDungeon" / "Static.smubin").read_bytes()
+            )
+        )["StartPos"]
+    except FileNotFoundError:
+        base_pos = oead.byml.from_binary(
+            util.get_nested_file_bytes(
+                f"{util.get_game_file('Pack/Bootup.pack')}//Map/CDungeon/Static.smubin"
+            )
+        )["StartPos"]
 
     base_dungeons = [str(dungeon["Map"]) for dungeon in base_pos]
     diffs = {}
@@ -438,13 +449,23 @@ def get_dungeonstatic_diff(file: Path) -> dict:
 def merge_dungeonstatic(diffs: dict = None):
     """Merges all changes to the CDungeon Static.smubin"""
     if not diffs:
+        (util.get_master_modpack_dir() / "logs" / "dungeonstatic.smubin").unlink(
+            missing_ok=True
+        )
         return
 
-    new_static = oead.byml.from_binary(
-        util.decompress(
-            (util.get_aoc_dir() / "Map" / "CDungeon" / "Static.smubin").read_bytes()
+    try:
+        new_static = oead.byml.from_binary(
+            util.decompress(
+                (util.get_aoc_dir() / "Map" / "CDungeon" / "Static.smubin").read_bytes()
+            )
         )
-    )
+    except FileNotFoundError:
+        new_static = oead.byml.from_binary(
+            util.get_nested_file_bytes(
+                f"{util.get_game_file('Pack/Bootup.pack')}//Map/CDungeon/Static.smubin"
+            )
+        )
 
     base_dungeons = [str(dungeon["Map"]) for dungeon in new_static["StartPos"]]
     for dungeon, diff in diffs.items():
@@ -454,20 +475,29 @@ def merge_dungeonstatic(diffs: dict = None):
             for key, value in diff.items():
                 new_static["StartPos"][base_dungeons.index(dungeon)][key] = value
 
-    output_static = (
-        util.get_master_modpack_dir()
-        / util.get_dlc_path()
-        / ("0010" if util.get_settings("wiiu") else "")
-        / "Map"
-        / "CDungeon"
-        / "Static.smubin"
+    data = util.compress(
+        oead.byml.to_binary(new_static, big_endian=util.get_settings("wiiu"))
     )
-    output_static.parent.mkdir(parents=True, exist_ok=True)
-    output_static.write_bytes(
-        util.compress(
-            oead.byml.to_binary(new_static, big_endian=util.get_settings("wiiu"))
+    try:
+        util.get_aoc_dir()
+        output_static = (
+            util.get_master_modpack_dir()
+            / util.get_dlc_path()
+            / ("0010" if util.get_settings("wiiu") else "")
+            / "Map"
+            / "CDungeon"
+            / "Static.smubin"
         )
-    )
+    except FileNotFoundError:
+        output_static = util.get_master_modpack_dir() / "logs" / "dungeonstatic.smubin"
+        util.inject_file_into_sarc(
+            "Map/CDungeon/Static.smubin",
+            data,
+            "Pack/Bootup.pack",
+            create_sarc=True,
+        )
+    output_static.parent.mkdir(parents=True, exist_ok=True)
+    output_static.write_bytes(data)
 
 
 def parse_legacy_diff(text: str) -> Hash:
@@ -500,7 +530,11 @@ class MapMerger(mergers.Merger):
         ]
         if modded_mubins:
             print("Logging changes to mainfield maps...")
-            return generate_modded_map_log(mod_dir, modded_mubins, pool=self._pool,)
+            return generate_modded_map_log(
+                mod_dir,
+                modded_mubins,
+                pool=self._pool,
+            )
         return {}
 
     def log_diff(self, mod_dir: Path, diff_material):
@@ -648,7 +682,8 @@ class MapMerger(mergers.Merger):
 
         pool = self._pool or Pool(maxtasksperchild=500)
         rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc), map_diffs.items(),
+            partial(merge_map, rstb_calc=rstb_calc),
+            map_diffs.items(),
         )
         for result in rstb_results:
             rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
@@ -657,6 +692,24 @@ class MapMerger(mergers.Merger):
             pool.close()
             pool.join()
 
+        stock_static = [m for m in map_diffs if m[1] == "Static"]
+        if stock_static:
+            title_path = (
+                util.get_master_modpack_dir()
+                / util.get_content_path()
+                / "Pack"
+                / "TitleBG.pack"
+            )
+            if not title_path.exists():
+                shutil.copyfile(util.get_game_file("Pack/TitleBG.pack"), title_path)
+            title_bg: oead.SarcWriter = oead.SarcWriter.from_sarc(
+                oead.Sarc(title_path.read_bytes())
+            )
+            for static in stock_static:
+                del title_bg.files[
+                    f"Map/MainField/{static[0]}/{static[0]}_Static.smubin"
+                ]
+            title_path.write_bytes(title_bg.write()[1])
         print("Adjusting RSTB...")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("w", encoding="utf-8") as l_file:
@@ -697,7 +750,22 @@ class DungeonStaticMerger(mergers.Merger):
         )
         if dstatic_path.exists():
             print("Logging changes to shrine entry coordinates...")
-            return get_dungeonstatic_diff(dstatic_path)
+            return get_dungeonstatic_diff(
+                oead.byml.from_binary(util.decompress(dstatic_path.read_bytes()))[
+                    "StartPos"
+                ]
+            )
+        elif (
+            f"{util.get_content_path()}/Pack/Bootup.pack//Map/CDungeon/Static.smubin"
+            in modded_files
+        ):
+            return get_dungeonstatic_diff(
+                oead.byml.from_binary(
+                    util.get_nested_file_bytes(
+                        f"{mod_dir}/{util.get_content_path()}/Pack/Bootup.pack//Map/CDungeon/Static.smubin"
+                    )
+                )["StartPos"]
+            )
         else:
             return {}
 
@@ -752,6 +820,23 @@ class DungeonStaticMerger(mergers.Merger):
 
     def get_checkbox_options(self):
         return []
+
+    @staticmethod
+    def is_bootup_injector():
+        try:
+            util.get_aoc_dir()
+            return False
+        except FileNotFoundError:
+            return True
+
+    def get_bootup_injection(self):
+        tmp_sarc = util.get_master_modpack_dir() / "logs" / "dungeonstatic.smubin"
+        if tmp_sarc.exists():
+            return (
+                "Map/CDungeon/Static.smubin",
+                tmp_sarc,
+            )
+        return
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return set(self.get_mod_diff(mod).keys())
