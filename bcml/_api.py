@@ -391,12 +391,11 @@ class Api:
                         pool=pool,
                     )
                 )
-                print("Remerging...")
-                try:
-                    install.refresh_merges()
-                except Exception:  # pylint: disable=broad-except
-                    pool.terminate()
-                    raise
+            try:
+                install.refresh_merges()
+            except Exception:  # pylint: disable=broad-except
+                pool.terminate()
+                raise
         install.refresh_master_export()
 
     @win_or_lose
