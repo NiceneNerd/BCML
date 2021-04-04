@@ -608,7 +608,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
     for file in {
         f for f in all_files if f.suffix in BYML_EXTS and f.name not in special_files
     }:
-        byml = oead.byml./from_binary(util.unyaz_if_needed(file.read_bytes()))
+        byml = oead.byml.from_binary(util.unyaz_if_needed(file.read_bytes()))
         data = oead.byml.to_binary(byml, big_endian=to_wiiu)
         if file.suffix.startswith(".s"):
             data = util.compress(data)
