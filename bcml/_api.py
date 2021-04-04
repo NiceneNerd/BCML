@@ -166,9 +166,10 @@ class Api:
         print("Saving settings, BCML will reload momentarily...")
         if util.get_settings("wiiu") != params["settings"]["wiiu"]:
             util.clear_all_caches()
-            self.gb_api.reset_update_time(params["settings"]["wiiu"])
-            del self.gb_api
-            self.gb_api = GameBananaDb()
+            if hasattr(self, "gb_api"):
+                self.gb_api.reset_update_time(params["settings"]["wiiu"])
+                del self.gb_api
+                self.gb_api = GameBananaDb()
         util.get_settings.settings = params["settings"]
         util.save_settings()
 
