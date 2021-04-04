@@ -449,9 +449,10 @@ def get_dungeonstatic_diff(mod_pos: Array) -> dict:
 def merge_dungeonstatic(diffs: dict = None):
     """Merges all changes to the CDungeon Static.smubin"""
     if not diffs:
-        (util.get_master_modpack_dir() / "logs" / "dungeonstatic.smubin").unlink(
-            missing_ok=True
-        )
+        try:
+            (util.get_master_modpack_dir() / "logs" / "dungeonstatic.smubin").unlink()
+        except:
+            pass
         return
 
     try:
