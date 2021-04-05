@@ -702,6 +702,7 @@ class MapMerger(mergers.Merger):
                 / "TitleBG.pack"
             )
             if not title_path.exists():
+                title_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(util.get_game_file("Pack/TitleBG.pack"), title_path)
             title_bg: oead.SarcWriter = oead.SarcWriter.from_sarc(
                 oead.Sarc(title_path.read_bytes())
