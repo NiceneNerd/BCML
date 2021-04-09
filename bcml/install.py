@@ -482,7 +482,7 @@ def install_mod(
     mod_dir = util.get_modpack_dir() / mod_id
 
     try:
-        if (updated == False):
+        if not updated:
             for existing_mod in util.get_installed_mods(True):
                 if existing_mod.priority >= priority:
                     existing_mod.change_priority(existing_mod.priority + 1)
