@@ -331,6 +331,7 @@ def install_mod(
     pool: Optional[multiprocessing.pool.Pool] = None,
     insert_priority: int = 0,
     merge_now: bool = False,
+    updated: bool = False,
 ):
     if not insert_priority:
         insert_priority = get_next_priority()
@@ -481,9 +482,10 @@ def install_mod(
     mod_dir = util.get_modpack_dir() / mod_id
 
     try:
-        for existing_mod in util.get_installed_mods(True):
-            if existing_mod.priority >= priority:
-                existing_mod.change_priority(existing_mod.priority + 1)
+        if not updated:
+            for existing_mod in util.get_installed_mods(True):
+                if existing_mod.priority >= priority:
+                    existing_mod.change_priority(existing_mod.priority + 1)
 
         if (tmp_dir / "patches").exists() and not util.get_settings("no_cemu"):
             patch_dir = (

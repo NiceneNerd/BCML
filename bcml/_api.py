@@ -357,6 +357,7 @@ class Api:
                 insert_priority=mod.priority,
                 options=options,
                 pool=pool,
+                updated=True,
             )
 
     @win_or_lose
