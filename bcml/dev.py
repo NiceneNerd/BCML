@@ -114,11 +114,14 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
         )
 
 
+CLEAN_EXTS = util.SARC_EXTS - {".beventpack", ".sbeventpack"}
+
+
 def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
     sarc_files = {
         file
         for file in tmp_dir.rglob("**/*")
-        if file.suffix in util.SARC_EXTS
+        if file.suffix in CLEAN_EXTS
         and "options" not in file.relative_to(tmp_dir).parts
     }
     if sarc_files:
@@ -128,12 +131,12 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
     sarc_files = {
         file
         for file in tmp_dir.rglob("**/*")
-        if file.suffix in util.SARC_EXTS
+        if file.suffix in CLEAN_EXTS
         and "options" not in file.relative_to(tmp_dir).parts
     }
     if sarc_files:
         print("Updating pack log...")
-        final_packs = [file for file in sarc_files if file.suffix in util.SARC_EXTS]
+        final_packs = [file for file in sarc_files if file.suffix in CLEAN_EXTS]
         if final_packs:
             (tmp_dir / "logs").mkdir(parents=True, exist_ok=True)
             (tmp_dir / "logs" / "packs.json").write_text(
@@ -178,7 +181,7 @@ def _clean_sarc(old_sarc: oead.Sarc, base_sarc: oead.Sarc) -> Optional[oead.Sarc
             file_data != old_data and ext not in util.AAMP_EXTS
         ):
             if (
-                ext in util.SARC_EXTS
+                ext in CLEAN_EXTS
                 and nest_file in old_files
                 and nest_file not in SPECIAL
             ):
