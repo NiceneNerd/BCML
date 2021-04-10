@@ -485,6 +485,19 @@ def install_mod(
             if existing_mod.priority >= priority:
                 existing_mod.change_priority(existing_mod.priority + 1)
 
+        if (tmp_dir / "patches").exists() and not util.get_settings("no_cemu"):
+            patch_dir = (
+                util.get_cemu_dir()
+                / "graphicPacks"
+                / f"bcmlPatches"
+                / util.get_safe_pathname(rules["name"])
+            )
+            patch_dir.mkdir(parents=True, exist_ok=True)
+            for file in {f for f in (tmp_dir / "patches").rglob("*") if f.is_file()}:
+                out = patch_dir / file.relative_to(tmp_dir / "patches")
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(file, out)
+
         mod_dir.parent.mkdir(parents=True, exist_ok=True)
         print(f"Moving mod to {str(mod_dir)}...")
         if mod.is_file():
@@ -502,6 +515,7 @@ def install_mod(
                     )
         elif mod.is_dir():
             shutil.copytree(str(tmp_dir), str(mod_dir))
+
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
         rules["priority"] = priority
@@ -518,8 +532,6 @@ def install_mod(
             util.get_mod_preview(output_mod)
         except Exception:  # pylint: disable=broad-except
             pass
-
-        print(f"Enabling {mod_name} in Cemu...")
     except Exception as err:  # pylint: disable=broad-except
         if mod_dir.exists():
             try:
@@ -586,7 +598,7 @@ def force_del(func, path, exc):
 
 @refresher
 def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
-    print(f"Uninstalling {mod.name}...")
+    has_patches = (mod.path / "patches").exists()
     try:
         shutil.rmtree(str(mod.path), onerror=force_del)
     except (OSError, PermissionError, WindowsError) as err:
@@ -609,6 +621,15 @@ def uninstall_mod(mod: BcmlMod, wait_merge: bool = False):
     else:
         if not wait_merge:
             refresh_merges()
+
+    if has_patches and not util.get_settings("no_cemu"):
+        shutil.rmtree(
+            util.get_cemu_dir()
+            / "graphicPacks"
+            / "bcmlPatches"
+            / util.get_safe_pathname(mod.name),
+            ignore_errors=True,
+        )
 
     print(f"{mod.name} has been uninstalled.")
 
@@ -682,50 +703,53 @@ def restore_backup(backup: Union[str, Path]):
 
 
 def enable_bcml_gfx():
-    if not util.get_settings("no_cemu"):
-        settings = util.parse_cemu_settings()
-        try:
-            gpack = settings.getElementsByTagName("GraphicPack")[0]
-        except IndexError:
-            gpack = settings.createElement("GraphicPack")
-            settings.appendChild(gpack)
-        new_cemu = True
-        entry: minidom.Element
-        for entry in gpack.getElementsByTagName("Entry"):
-            if new_cemu and entry.getElementsByTagName("filename"):
-                new_cemu = False
+    if util.get_settings("no_cemu"):
+        return
+
+    settings = util.parse_cemu_settings()
+    try:
+        gpack = settings.getElementsByTagName("GraphicPack")[0]
+    except IndexError:
+        gpack = settings.createElement("GraphicPack")
+        settings.appendChild(gpack)
+    new_cemu = True
+
+    def create_entry(path: str):
+        def entry_matches(entry):
             try:
-                if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
-                ):
-                    break
+                return (
+                    path == entry.getElementsByTagName("filename")[0].childNodes[0].data
+                )
             except IndexError:
-                if "BCML" in entry.getAttribute("filename"):
-                    break
+                return path == entry.getAttribute("filename")
+
+        if any(entry_matches(entry) for entry in gpack.getElementsByTagName("Entry")):
+            return
+        entry: minidom.Element = settings.createElement("Entry")
+        if new_cemu:
+            entry.setAttribute("filename", path)
         else:
-            bcmlentry = settings.createElement("Entry")
-            if new_cemu:
-                bcmlentry.setAttribute(
-                    "filename", "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
-                )
-            else:
-                entryfile = settings.createElement("filename")
-                entryfile.appendChild(
-                    settings.createTextNode(
-                        "graphicPacks\\BreathOfTheWild_BCML\\rules.txt"
-                    )
-                )
-                bcmlentry.appendChild(entryfile)
-            entrypreset = settings.createElement("preset")
-            entrypreset.appendChild(settings.createTextNode(""))
-            bcmlentry.appendChild(entrypreset)
-            gpack.appendChild(bcmlentry)
-            settings.writexml(
-                (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
-                addindent="    ",
-                newl="\n",
-            )
+            entryfile = settings.createElement("filename")
+            entryfile.appendChild(settings.createTextNode(path))
+            entry.appendChild(entryfile)
+        entrypreset = settings.createElement("preset")
+        entrypreset.appendChild(settings.createTextNode(""))
+        entry.appendChild(entrypreset)
+        gpack.appendChild(entry)
+
+    create_entry("graphicPacks\\BreathOfTheWild_BCML\\rules.txt")
+
+    if (util.get_cemu_dir() / "graphicPacks" / "bcmlPatches").exists():
+        for rules in (util.get_cemu_dir() / "graphicPacks" / "bcmlPatches").rglob(
+            "rules.txt"
+        ):
+            create_entry(str(rules.relative_to(util.get_cemu_dir())))
+
+        settings.writexml(
+            (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
+            addindent="    ",
+            newl="\n",
+        )
 
 
 def disable_bcml_gfx():
@@ -743,15 +767,15 @@ def disable_bcml_gfx():
                 new_cemu = False
             try:
                 if (
-                    "BCML"
-                    in entry.getElementsByTagName("filename")[0].childNodes[0].data
+                    "bcml"
+                    in entry.getElementsByTagName("filename")[0]
+                    .childNodes[0]
+                    .data.lower()
                 ):
                     gpack.removeChild(entry)
-                    break
             except IndexError:
-                if "BCML" in entry.getAttribute("filename"):
+                if "bcml" in entry.getAttribute("filename").lower():
                     gpack.removeChild(entry)
-                    break
         settings.writexml(
             (util.get_cemu_dir() / "settings.xml").open("w", encoding="utf-8"),
             addindent="    ",

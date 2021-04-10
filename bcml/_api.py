@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import shutil
 import sys
 import traceback
 from math import ceil
@@ -373,6 +374,10 @@ class Api:
     def uninstall_all(self):
         for folder in {d for d in util.get_modpack_dir().glob("*") if d.is_dir()}:
             rmtree(folder, onerror=install.force_del)
+        if not util.get_settings("no_cemu"):
+            shutil.rmtree(
+                util.get_cemu_dir() / "graphicPacks" / "bcmlPatches", ignore_errors=True
+            )
 
     @win_or_lose
     def apply_queue(self, params):

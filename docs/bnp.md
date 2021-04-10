@@ -20,6 +20,7 @@ folder layout:
 .
 ├── content
 ├── aoc (optional: for DLC files)
+├── patches (optional: for Cemu code patches)
 └── options (optional: for optional mod components)
     ├── option1 (any name allowed)
     │   ├── content

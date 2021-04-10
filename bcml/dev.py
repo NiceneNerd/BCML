@@ -40,6 +40,30 @@ def _yml_to_aamp(file: Path):
     file.unlink()
 
 
+def _package_code(tmp_dir: Path, meta: dict):
+    patch_file: Path
+    if (tmp_dir / "patches.txt").exists():
+        patch_file = tmp_dir / "patches.txt"
+    elif list(tmp_dir.glob("patch_*.asm")):
+        patch_file = list(tmp_dir.glob("patch_*.asm"))[0]
+    if not patch_file:
+        return
+    (tmp_dir / "patches").mkdir(exist_ok=True)
+    shutil.move(patch_file, tmp_dir / "patches" / patch_file.name)
+    if not (tmp_dir / "patches" / "rules.txt").exists():
+        rules = {
+            "titleIds": "00050000101C9300,00050000101C9400,00050000101C9500",
+            "name": meta["name"] + " - Executable Patch",
+            "path": f'"The Legend of Zelda: Breath of the Wild/Mods/{meta["name"]} Patch (BCML)"',
+            "description": f"Contains executable patch(es) for {meta['name']}",
+            "version": 4,
+        }
+        nl = "\n"
+        (tmp_dir / "patches" / "rules.txt").write_text(
+            f"[Definition]{nl}{nl.join(f'{k} = {v}' for k, v in rules.items())}"
+        )
+
+
 def _pack_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
     sarc_folders = {
         d
@@ -337,6 +361,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
     (tmp_dir / "info.json").write_text(
         dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+    _package_code(tmp_dir, meta)
 
     with Pool(maxtasksperchild=500) as pool:
         yml_files = set(tmp_dir.glob("**/*.yml"))
