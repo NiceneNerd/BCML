@@ -122,9 +122,7 @@ def _pack_sarc(folder: Path, tmp_dir: Path, hashes: dict):
                 old_hash = xxhash.xxh64_intdigest(
                     util.unyaz_if_needed(old_sarc.get_file(file_name).data)
                 )
-            if file_name not in old_files or (
-                xhash != old_hash and file.suffix not in util.AAMP_EXTS
-            ):
+            if file_name not in old_files or (xhash != old_hash):
                 packed.files[file_name] = file_data
     finally:
         shutil.rmtree(folder)

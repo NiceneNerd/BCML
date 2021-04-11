@@ -410,7 +410,10 @@ def install_mod(
                     (tmp_dir / "logs" / merger.log_name).unlink()
         else:
             this_pool = pool or Pool(maxtasksperchild=500)
-            generate_logs(tmp_dir=tmp_dir, options=options, pool=pool)
+            dev._pack_sarcs(
+                tmp_dir, util.get_hash_table(util.get_settings("wiiu")), this_pool
+            )
+            generate_logs(tmp_dir=tmp_dir, options=options, pool=this_pool)
             if not util.get_settings("strip_gfx"):
                 (tmp_dir / ".processed").touch()
     except Exception as err:  # pylint: disable=broad-except
