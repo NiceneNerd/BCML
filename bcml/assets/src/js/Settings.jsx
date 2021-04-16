@@ -14,6 +14,7 @@ class Settings extends React.Component {
             dlc_dir: "",
             dlc_dir_nx: "",
             store_dir: "",
+            export_dir: "",
             load_reverse: false,
             site_meta: "",
             no_guess: false,
@@ -394,10 +395,26 @@ class Settings extends React.Component {
                                     </Tooltip>
                                 }
                             />
+                            <Form.Control.Feedback type="invalid">
+                                The BCML data folder is required
+                            </Form.Control.Feedback>
                         </Form.Group>
-                        <Form.Control.Feedback type="invalid">
-                            The BCML data folder is required
-                        </Form.Control.Feedback>
+                        <Form.Group controlId="export_dir">
+                            <Form.Label>Merged Export Directory</Form.Label>
+                            <FolderInput
+                                value={this.state.export_dir}
+                                onChange={this.handleChange}
+                                isValid={true}
+                                overlay={
+                                    <Tooltip>
+                                        (Optional) Where to automatically export the
+                                        final merged mod pack. For Cemu users you
+                                        normally want this in your graphic packs.
+                                    </Tooltip>
+                                }
+                                placeholder="Optional"
+                            />
+                        </Form.Group>
                     </Col>
                     <Col>
                         <br />

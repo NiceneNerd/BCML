@@ -568,6 +568,7 @@ DEFAULT_SETTINGS = {
     "dlc_dir": "",
     "dlc_dir_nx": "",
     "store_dir": str(get_data_dir()),
+    "export_dir": "",
     "load_reverse": False,
     "site_meta": "",
     "dark_theme": False,
@@ -606,6 +607,12 @@ def get_settings(name: str = "") -> Any:
                         settings[k] = v
                 if settings["store_dir"] == "":
                     settings["store_dir"] = str(get_data_dir())
+                if settings["export_dir"] == "" and not settings["no_cemu"]:
+                    settings["export_dir"] = str(
+                        Path(settings["cemu_dir"])
+                        / "graphicPacks"
+                        / "BreathOfTheWild_BCML"
+                    )
             setattr(get_settings, "settings", settings)
         if name:
             return getattr(get_settings, "settings", {}).get(name, False)

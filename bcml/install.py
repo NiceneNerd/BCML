@@ -791,9 +791,9 @@ def disable_bcml_gfx():
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
     if not output:
-        if util.get_settings("no_cemu"):
+        if not util.get_settings("export_dir"):
             return
-        output = util.get_cemu_dir() / "graphicPacks" / "BreathOfTheWild_BCML"
+        output = Path(util.get_settings("export_dir"))
     if output.exists():
         shutil.rmtree(output, ignore_errors=True)
     try:

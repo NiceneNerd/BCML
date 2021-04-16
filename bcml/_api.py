@@ -149,6 +149,7 @@ class Api:
                 "game_dir": str(game_dir),
                 "update_dir": str(update_dir) if update_dir else "",
                 "dlc_dir": str(dlc_dir) if dlc_dir else "",
+                "export_dir": str(cemu / "graphicPacks" / "BreathOfTheWild_BCML"),
             }
         except Exception as err:  # pylint: disable=broad-except
             print(err)
