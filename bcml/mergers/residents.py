@@ -142,7 +142,7 @@ class ResidentsMerger(mergers.Merger):
         del residents
         util.inject_file_into_sarc(
             "Actor/ResidentActors.byml",
-            util.compress(resident_bytes),
+            resident_bytes,
             "Pack/Bootup.pack",
             create_sarc=True,
         )
