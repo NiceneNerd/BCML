@@ -62,8 +62,8 @@ let messages = [
     "BCML tip: Back up your mods when making substantial changes",
     'BCML tip: The backup/restore feature can be used for mod "profiles"',
     "Shameless plug: I blog at <a href='https://calebdixonsmith.top' target='_blank'>Theology Without Warranty</a>",
-    "<a href='https://www.patreon.com/nicenenerdbcml'>Support BCML on Patreon</a> so my wife will let me keep doing this",
-    "While Link fights Ganon, <a href='https://www.tiktok.com/@nicenenerd?lang=en'>I fight bad theology on TikTok</a>",
+    "<a href='https://www.patreon.com/nicenenerdbcml' target='_blank'>Support BCML on Patreon</a> so my wife will let me keep doing this",
+    "While Link fights Ganon, <a href='https://www.tiktok.com/@nicenenerd?lang=en' target='_blank'>I fight bad theology on TikTok</a>",
     "Downloading RAM so Link goes fast",
     "Feeding Koroks",
     "Leaving Ganon in peace",
@@ -84,7 +84,7 @@ let messages = [
     "Collecting monk dust for elixirs",
     "Chasing a Hinox eyeball",
     "Abusing ghost rabbits for money",
-    "Making Tik Toks on Sheikah Slate",
+    "Making TikToks on Sheikah Slate",
     "Old enough to save Hyrule, too young for The Noble Canteen",
     '"Hold on Zelda, only 842 more Koroks!"',
     "“What we call Man's power over Nature turns out to be a power exercised by some men over other men with Nature as its instrument.”",
@@ -97,7 +97,12 @@ let messages = [
     "“Those bananas sure are expensive...”",
     "Wrecking Guardians with pot-lid parries",
     "Racing Sidon and Teba",
-    "Thinking about Paya's awkward embrace"
+    "Thinking about Paya's awkward embrace",
+    "Getting lost in a labyrinth",
+    "Hiding dubious food from Gordon Ramsay",
+    "Singing karaoke with Kass",
+    "Stanning King Rhoam Bosphoramus Hyrule",
+    "Getting kicked out of Lurelin for bomb fishing"
 ];
 
 function shuffle(array) {
