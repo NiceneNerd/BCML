@@ -41,7 +41,7 @@ def _yml_to_aamp(file: Path):
 
 
 def _package_code(tmp_dir: Path, meta: dict):
-    patch_file: Path
+    patch_file: Optional[Path] = None
     if (tmp_dir / "patches.txt").exists():
         patch_file = tmp_dir / "patches.txt"
     elif list(tmp_dir.glob("patch_*.asm")):
