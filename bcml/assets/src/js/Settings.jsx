@@ -137,7 +137,7 @@ class Settings extends React.Component {
             for (const key of Object.keys(this.state).filter(
                 k =>
                     k.includes("dir") &&
-                    !["cemu_dir", "store_dir"].includes(k) &&
+                    !["cemu_dir", "store_dir", "export_dir"].includes(k) &&
                     prevState[k] != this.state[k] &&
                     !prevState[k]
             )) {
@@ -399,7 +399,7 @@ class Settings extends React.Component {
                                 The BCML data folder is required
                             </Form.Control.Feedback>
                         </Form.Group>
-                        <Form.Group controlId="export_dir">
+                        <Form.Group controlId="export_dir" className={!this.state.no_cemu && "d-none"}>
                             <Form.Label>Merged Export Directory</Form.Label>
                             <FolderInput
                                 value={this.state.export_dir}
@@ -408,8 +408,7 @@ class Settings extends React.Component {
                                 overlay={
                                     <Tooltip>
                                         (Optional) Where to automatically export the
-                                        final merged mod pack. For Cemu users you
-                                        normally want this in your graphic packs.
+                                        final merged mod pack. 
                                     </Tooltip>
                                 }
                                 placeholder="Optional"
