@@ -7,6 +7,7 @@ Licensed under BSD license
 http://github.com/r0x0r/pywebview/
 """
 
+import importlib.util
 import os
 import sys
 import logging
@@ -83,7 +84,8 @@ class BrowserView:
 
             # Application icon
             handle = windll.kernel32.GetModuleHandleW(None)
-            icon_handle = windll.shell32.ExtractIconW(handle, sys.executable, 0)
+            icon_path = os.path.join(os.path.dirname(os.path.realpath(importlib.util.find_spec("bcml").origin)), "data", "bcml.ico")
+            icon_handle = windll.shell32.ExtractIconW(handle, icon_path, 0)
 
             if icon_handle != 0:
                 self.Icon = Icon.FromHandle(
