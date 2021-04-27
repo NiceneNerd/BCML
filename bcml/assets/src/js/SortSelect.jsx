@@ -30,20 +30,26 @@ class ModSelect extends React.Component {
 
     componentDidUpdate(prevProps, prevState) {
         if (prevState.selectedItems != this.state.selectedItems) {
-            this.props.onSelect(
-                this.state.mods.filter(
-                    mod =>
-                        this.state.selectedItems.includes(mod.priority) &&
-                        !mod.path.startsWith("QUEUE")
-                )
+            const selectedMods = this.state.mods.filter(
+                mod =>
+                    this.state.selectedItems.includes(mod.priority) &&
+                    !mod.path.startsWith("QUEUE")
             );
+            this.props.onSelect(selectedMods);
+            if (selectedMods.length > 0) {
+                let query = `[data-id='${selectedMods[0].id}']`;
+                try {
+                    document.querySelector(query).scrollIntoView();
+                } catch (err) {
+                    console.log(query);
+                }
+            }
+
             return;
         }
         if (JSON.stringify(prevProps.mods) != JSON.stringify(this.state.mods)) {
             this.setState({
-                selectedItems: this.state.justSorted
-                    ? prevState.selectedItems
-                    : [],
+                selectedItems: this.state.justSorted ? prevState.selectedItems : [],
                 justSorted: false
             });
         }
@@ -94,9 +100,7 @@ class ModSelect extends React.Component {
                         <ModItem
                             key={JSON.stringify(mod)}
                             mod={mod}
-                            active={this.state.selectedItems.includes(
-                                mod.priority
-                            )}
+                            active={this.state.selectedItems.includes(mod.priority)}
                             showHandle={this.props.showHandle}
                             hide={!this.props.showDisabled && mod.disabled}
                             onClick={e => this.onItemSelect(e, mod)}
@@ -119,7 +123,7 @@ class ModItem extends React.Component {
             <div
                 className={classes.join(" ")}
                 onClick={this.props.onClick}
-                data-id={JSON.stringify(this.props.mod)}>
+                data-id={this.props.mod.id}>
                 <span
                     className={
                         "mod-handle" + (!this.props.showHandle ? " d-none" : "")
