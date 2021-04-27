@@ -6,7 +6,7 @@ Licensed under BSD license
 
 http://github.com/r0x0r/pywebview/
 """
-
+import importlib
 import os
 import platform
 import json
@@ -49,7 +49,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QAction,
 )
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QIcon
 
 try:
     from PyQt5.QtWebEngineWidgets import (
@@ -270,6 +270,7 @@ class BrowserView(QMainWindow):
         self.resize(window.initial_width, window.initial_height)
         self.title = window.title
         self.setWindowTitle(window.title)
+        self.setWindowIcon(QIcon(os.path.join(os.path.dirname(os.path.realpath(importlib.util.find_spec("bcml").origin)), "data", "bcml.ico")))
 
         # Set window background color
         self.background_color = QColor()
