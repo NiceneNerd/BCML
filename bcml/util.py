@@ -569,6 +569,7 @@ DEFAULT_SETTINGS = {
     "dlc_dir_nx": "",
     "store_dir": str(get_data_dir()),
     "export_dir": "",
+    "export_dir_nx": "",
     "load_reverse": False,
     "site_meta": "",
     "dark_theme": False,
@@ -607,7 +608,7 @@ def get_settings(name: str = "") -> Any:
                         settings[k] = v
                 if settings["store_dir"] == "":
                     settings["store_dir"] = str(get_data_dir())
-                if settings["export_dir"] == "" and not settings["no_cemu"]:
+                if settings["export_dir"] == "" and settings["cemu_dir"]:
                     settings["export_dir"] = str(
                         Path(settings["cemu_dir"])
                         / "graphicPacks"

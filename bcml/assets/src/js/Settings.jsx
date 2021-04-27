@@ -15,6 +15,7 @@ class Settings extends React.Component {
             dlc_dir_nx: "",
             store_dir: "",
             export_dir: "",
+            export_dir_nx: "",
             load_reverse: false,
             site_meta: "",
             no_guess: false,
@@ -399,7 +400,11 @@ class Settings extends React.Component {
                                 The BCML data folder is required
                             </Form.Control.Feedback>
                         </Form.Group>
-                        <Form.Group controlId="export_dir" className={!this.state.no_cemu && "d-none"}>
+                        <Form.Group
+                            controlId="export_dir"
+                            className={
+                                (!this.state.wiiu || !this.state.no_cemu) && "d-none"
+                            }>
                             <Form.Label>Merged Export Directory</Form.Label>
                             <FolderInput
                                 value={this.state.export_dir}
@@ -408,7 +413,24 @@ class Settings extends React.Component {
                                 overlay={
                                     <Tooltip>
                                         (Optional) Where to automatically export the
-                                        final merged mod pack. 
+                                        final merged mod pack.
+                                    </Tooltip>
+                                }
+                                placeholder="Optional"
+                            />
+                        </Form.Group>
+                        <Form.Group
+                            controlId="export_dir_nx"
+                            className={this.state.wiiu && "d-none"}>
+                            <Form.Label>Merged Export Directory</Form.Label>
+                            <FolderInput
+                                value={this.state.export_dir_nx}
+                                onChange={this.handleChange}
+                                isValid={true}
+                                overlay={
+                                    <Tooltip>
+                                        (Optional) Where to automatically export the
+                                        final merged mod pack.
                                     </Tooltip>
                                 }
                                 placeholder="Optional"
