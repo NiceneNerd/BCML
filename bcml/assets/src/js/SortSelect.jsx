@@ -37,7 +37,7 @@ class ModSelect extends React.Component {
             );
             this.props.onSelect(selectedMods);
             if (selectedMods.length > 0) {
-                let query = `[data-id='${selectedMods[0].id}']`;
+                let query = `[id='mod-${selectedMods[0].id}']`;
                 try {
                     document.querySelector(query).scrollIntoView();
                 } catch (err) {
@@ -123,7 +123,8 @@ class ModItem extends React.Component {
             <div
                 className={classes.join(" ")}
                 onClick={this.props.onClick}
-                data-id={this.props.mod.id}>
+                data-id={JSON.stringify(this.props.mod)}
+                id={`mod-${this.props.mod.id}`}>
                 <span
                     className={
                         "mod-handle" + (!this.props.showHandle ? " d-none" : "")
