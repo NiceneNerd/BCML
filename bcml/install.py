@@ -799,6 +799,7 @@ def link_master_mod(output: Path = None):
     try:
         output.mkdir(parents=True, exist_ok=True)
         if not util.get_settings("no_cemu"):
+            output.mkdir(parents=True, exist_ok=True)
             shutil.copy(
                 util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
             )

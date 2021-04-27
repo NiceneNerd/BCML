@@ -340,12 +340,11 @@ class Api:
                 pool.terminate()
                 raise
 
-    @win_or_lose
     def update_mod(self, params):
         try:
             update_file = self.file_pick({"multiple": False})[0]
         except IndexError:
-            return
+            raise Exception("canceled")
         mod = BcmlMod.from_json(params["mod"])
         if (mod.path / "options.json").exists():
             options = json.loads((mod.path / "options.json").read_text())

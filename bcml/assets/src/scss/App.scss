@@ -322,19 +322,37 @@ body,
 }
 
 #mod-info {
+    background-image: linear-gradient(to top, #212121, $fg-dark);
+    display: flex;
+    overflow-x: hidden;
+    width: 66.6%;
+}
+
+.mod-content {
+    background-color: $bg1;
     -ms-overflow-style: -ms-autohiding-scrollbar;
     padding: 0;
+    margin: 0 auto;
     position: relative;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
     max-height: 100%;
+    max-width: 1000px;
 
     .btn .material-icons {
         line-height: unset;
         margin: -0.25rem 0rem;
         vertical-align: middle;
+    }
+
+    & > div {
+        flex-shrink: 1;
+    }
+
+    @media (min-width: 1000px) {
+        box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
     }
 }
 
@@ -342,10 +360,6 @@ body,
     line-height: unset;
     margin: -0.25rem 0rem;
     vertical-align: middle;
-}
-
-#mod-info > div {
-    flex-shrink: 1;
 }
 
 .load-backdrop {
