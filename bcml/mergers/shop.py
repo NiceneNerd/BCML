@@ -325,7 +325,7 @@ class ShopMerger(mergers.Merger):
         shops = {
             m
             for m in modded_files
-            if isinstance(m, str) and m[m.rindex(".") :] in HANDLES
+            if isinstance(m, str) and m[m.rindex(".") :] in HANDLES and "Dummy" not in m
         }
         if not shops:
             return None

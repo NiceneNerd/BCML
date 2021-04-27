@@ -20,9 +20,9 @@ def _drop_to_dict(drop: ParameterIO) -> dict:
             .params["OccurrenceSpeedType"]
             .v,
             "items": {
-                str(drop.objects[str(table.v)].params[f"ItemName{i:02}"].v): drop.objects[
-                    str(table.v)
-                ]
+                str(
+                    drop.objects[str(table.v)].params[f"ItemName{i:02}"].v
+                ): drop.objects[str(table.v)]
                 .params[f"ItemProbability{i:02}"]
                 .v
                 for i in range(
@@ -68,7 +68,9 @@ def _dict_to_drop(drop_dict: dict) -> ParameterIO:
 def log_drop_file(file: str, mod_dir: Path):
     if "Bootup.pack" in file:
         return {}
-    drop = ParameterIO.from_binary(util.get_nested_file_bytes(str(mod_dir) + "/" + file))
+    drop = ParameterIO.from_binary(
+        util.get_nested_file_bytes(str(mod_dir) + "/" + file)
+    )
     drop_table = _drop_to_dict(drop)
     del drop
     try:
@@ -107,7 +109,9 @@ def merge_drop_file(file: str, drop_table: dict):
     try:
         ref_drop = _drop_to_dict(
             ParameterIO.from_binary(
-                util.get_nested_file_bytes(str(util.get_game_file(base_path)) + sub_path)
+                util.get_nested_file_bytes(
+                    str(util.get_game_file(base_path)) + sub_path
+                )
             )
         )
         for table in set(ref_drop.keys()):
@@ -139,7 +143,11 @@ class DropMerger(mergers.Merger):
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
-        drops = {f for f in modded_files if isinstance(f, str) and f.endswith(".bdrop")}
+        drops = {
+            f
+            for f in modded_files
+            if isinstance(f, str) and f.endswith(".bdrop") and "Dummy" not in f
+        }
         if not drops:
             return {}
         print("Logging changes to drop tables...")
@@ -162,7 +170,8 @@ class DropMerger(mergers.Merger):
         diff: Dict[str, dict] = {}
         if self.is_mod_logged(mod):
             util.dict_merge(
-                diff, json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+                diff,
+                json.loads((mod.path / "logs" / self._log_name).read_text("utf-8")),
             )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():

@@ -27,9 +27,7 @@ def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optiona
     return diffs
 
 
-def _get_diffs_from_sarc(
-    sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str
-) -> dict:
+def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> dict:
     diffs = {}
     for file, edits in edits.items():
         if edits:
@@ -198,7 +196,9 @@ class DeepMerger(mergers.Merger):
         aamps = {
             m
             for m in modded_files
-            if isinstance(m, str) and m[m.rindex(".") :] in (util.AAMP_EXTS - HANDLED)
+            if isinstance(m, str)
+            and m[m.rindex(".") :] in (util.AAMP_EXTS - HANDLED)
+            and "Dummy" not in m
         }
         if not aamps:
             return None
