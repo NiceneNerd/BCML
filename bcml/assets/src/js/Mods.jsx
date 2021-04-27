@@ -144,11 +144,16 @@ class Mods extends React.Component {
                             mod,
                             action
                         });
+                        console.log(res);
                         if (!res.success) {
                             throw res.error;
                         }
                     } catch (err) {
-                        this.props.onError(err);
+                        if (err.short == "canceled") {
+                            this.props.onCancel();
+                        } else {
+                            this.props.onError(err);
+                        }
                     }
                 });
             }
