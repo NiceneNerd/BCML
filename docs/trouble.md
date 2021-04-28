@@ -131,6 +131,11 @@ correct folder structure for a BNP mod. If it still doesn't work, make sure to c
 casing of the folder names, as they are in fact case-sensitive (e.g. `content/Actor`
 works but `Content/actor` does not).
 
+*Note that you will get this error if the foler structure is correct but you select the
+wrong folder when making the BNP.* For example, Switch users often rightly create a
+`01007EF00011E000/romfs` folder for their mod but then select the `romfs` folder when
+they should select the root folder that *contains* the title ID folder.
+
 ### Usage Problems
 
 #### BCML takes me back to the setup wizard each time.
