@@ -164,14 +164,17 @@ There are a few possible causes:
    ways even after merging.
 8. Your game dump is corrupt.
 
-### I've installed my mods in BCML, but they don't take effect in-game
+### I've installed my mods in BCML, but they don't take effect in Cemu
 
-Make sure that the BCML graphic pack is enabled in Cemu. BCML attempts to do this
-automatically, but sometimes it can fail. The graphic pack will appear in the Cemu menu
-under `The Legend of Zelda: Breath of the Wild/Mods/BCML`. If the graphic pack is
-enabled but you still see no effects from any mods, it could be a bug involving hard
-links and file permissions. To avoid this, check the "Disable hard links for master mod"
-option in BCML's setttings.
+There are four common causes for this:
+
+1. You accidentally turned on the "Use BCML without a Cemu installation" setting.
+2. The BCML graphic pack is not enabled in Cemu. BCML attempts to enable it automatically,
+   but permissions issues can prevent this sometimes. Enable the pack in the Cemu grahpic
+   pack menu at `The Legend of Zelda: Breath of the Wild/Mods/BCML`.
+3. Your Cemu folder is in OneDrive, which doesn't cooperate for some reason.
+4. You have a weird problem involving hard links and filesystem permissions, in which
+   turn on the "Disable hard links for master mod" setting.
 
 ### I installed the Linkle mod, and it kind of works, but Linkle looks mixed with Link
 
