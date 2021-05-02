@@ -74,7 +74,9 @@ def calculate_size(
                 size = guess_aamp_size(data, be, ext)
             elif ext in {".bfres", ".sbfres"}:
                 size = guess_bfres_size(
-                    data, be, path if isinstance(path, str) else path.name,
+                    data,
+                    be,
+                    path if isinstance(path, str) else path.name,
                 )
         return size
     except struct.error:
@@ -121,14 +123,18 @@ def _get_modded_file_size(file: Path, mod_dir: Path, guess: bool) -> Dict[str, i
     if file.suffix not in EXCLUDE_EXTS and canon not in EXCLUDE_NAMES:
         return {
             canon: calculate_size(
-                file, guess=guess or file.suffix in {".bas", ".baslist"},
+                file,
+                guess=guess or file.suffix in {".bas", ".baslist"},
             )
         }
     return {}
 
 
 def _get_nest_file_sizes(
-    file: str, contents: Contents, mod_dir: Path, guess: bool,
+    file: str,
+    contents: Contents,
+    mod_dir: Path,
+    guess: bool,
 ) -> Dict[str, int]:
     def get_sizes_in_sarc(
         sarc: oead.Sarc, contents: Contents, guess: bool, dlc: bool
@@ -347,7 +353,10 @@ class RstbMerger(mergers.Merger):
             {
                 k: v
                 for r in pool.map(
-                    partial(_get_sizes_in_sarc, guess=not util.get_settings("no_guess"),),
+                    partial(
+                        _get_sizes_in_sarc,
+                        guess=not util.get_settings("no_guess"),
+                    ),
                     {
                         f
                         for f in master_files
