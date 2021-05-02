@@ -668,6 +668,12 @@ class Api:
             install.install_mod(
                 mod,
                 merge_now=True,
+                options={
+                    "options": {},
+                    "disable": [
+                        m.NAME for m in mergers.get_mergers() if m.NAME != "rstb"
+                    ],
+                },
             )
             (mod / util.get_content_path() / "System" / "Resource").mkdir(
                 parents=True, exist_ok=True
