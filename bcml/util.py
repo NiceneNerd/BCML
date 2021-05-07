@@ -608,7 +608,7 @@ def get_settings(name: str = "") -> Any:
                         settings[k] = v
                 if settings["store_dir"] == "":
                     settings["store_dir"] = str(get_data_dir())
-                if settings["export_dir"] == "" and settings["cemu_dir"]:
+                if settings["cemu_dir"] and settings["use_cemu"]:
                     settings["export_dir"] = str(
                         Path(settings["cemu_dir"])
                         / "graphicPacks"
