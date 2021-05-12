@@ -1,7 +1,13 @@
 # Installing Mods
 
-To install mods, click the floating action button on the Mods tab of the main BCML window. This
-will open up the installation dialog. Click "Browse..." to select the mod(s) you wish to install. 
+There are basically two ways to install mods into BCML: the GameBanana tab or adding a manual
+download. To use the GameBanana tab, just switch to the tab, find a mod you want, and click Install.
+You can also view the mod first, and you may be presented with a dropdown offering alternative or
+additional mod files you can install.
+
+To install manually, click the floating action button on the Mods tab of the main BCML window.
+(Though you can also drag-and-drop files onto the BCML window or double-click the mod in Windows).
+This will open up the installation dialog. Click "Browse..." to select the mod(s) you wish to install. 
 BCML supports two kinds of mods: graphic packs (Cemu/Wii U only) and BNPs (Cemu/Wii U/Switch). When
 browsing for mods, you can either select a packaged mod (BNP, ZIP, 7z, or RAR file) or select the 
 meta file (`info.json` or `rules.txt`) in an unzipped mod folder.
