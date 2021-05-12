@@ -2,17 +2,17 @@ import {
     Alert,
     Button,
     Carousel,
+    FormCheck,
     Modal,
-    Spinner,
     OverlayTrigger,
-    Tooltip,
-    FormCheck
+    Spinner,
+    Tooltip
 } from "react-bootstrap";
 
+import DonateWidget from "./Donate.jsx";
+import ErrorDialog from "./Error.jsx";
 import React from "react";
 import Settings from "./Settings.jsx";
-import ErrorDialog from "./Error.jsx";
-import DonateWidget from "./Donate.jsx";
 
 class FirstRun extends React.Component {
     pageCount = 4;
@@ -184,7 +184,9 @@ class FirstRun extends React.Component {
                                             <p className="flex-grow-1">
                                                 Take a moment to configure your basic
                                                 settings. Folders will turn green when
-                                                valid.
+                                                valid. If you need help with this, click
+                                                the buttons to the right for the in-app
+                                                Help or the YouTube tutorial.
                                             </p>
                                             <div>
                                                 <Button
