@@ -85,6 +85,8 @@ class Mods extends React.Component {
                 }
             }
         };
+        document.addEventListener("dragover", e => e.preventDefault());
+        document.addEventListener("drop", this.handleDrop);
     }
 
     defaultSelect = () => {
@@ -111,6 +113,23 @@ class Mods extends React.Component {
                 });
                 setTimeout(() => (window.location = "index.html?firstrun=true"), 5000);
             });
+    };
+
+    handleDrop = async e => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            for (let f of e.dataTransfer.files) {
+                let reader = new FileReader();
+                reader.readAsBinaryString(f);
+                reader.onload = async () => {
+                    const file = await pywebview.api.file_drop({
+                        file: f.name,
+                        data: reader.result
+                    });
+                    window.oneClick(file);
+                };
+            }
+        }
     };
 
     handleQueue = (mods, options) => {

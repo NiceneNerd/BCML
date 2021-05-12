@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import traceback
 from math import ceil
 from multiprocessing import Pool
@@ -276,6 +277,11 @@ class Api:
             allow_multiple=params.get("multiple", True),
         )
         return result or []
+
+    def file_drop(self, params):
+        file = Path(tempfile.mkdtemp()) / params["file"]
+        file.write_bytes(params["data"].encode("latin-1"))
+        return str(file)
 
     def get_options(self):
         opts = [
