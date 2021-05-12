@@ -31,7 +31,7 @@ class Settings extends React.Component {
             changelog: true,
             strip_gfx: false,
             auto_gb: true,
-            languages: [...LANGUAGES]
+            languages: [...Array.from(Object.keys(LANGUAGE_MAP))]
         };
         this.formRef = React.createRef();
     }
@@ -374,7 +374,7 @@ class Settings extends React.Component {
                                     <option value={""}>Select a language</option>
                                     {this.state.languages.map(lang => (
                                         <option value={lang} key={lang}>
-                                            {lang}
+                                            {LANGUAGE_MAP[lang]}
                                         </option>
                                     ))}
                                 </Form.Control>
@@ -638,21 +638,22 @@ class Settings extends React.Component {
     }
 }
 
-const LANGUAGES = [
-    "USen",
-    "EUen",
-    "USfr",
-    "USes",
-    "EUde",
-    "EUes",
-    "EUfr",
-    "EUit",
-    "EUnl",
-    "EUru",
-    "CNzh",
-    "JPja",
-    "KRko",
-    "TWzh"
-];
+const LANGUAGE_MAP = {
+    USen: "US English",
+    EUen: "EU English",
+    USfr: "US French (Français)",
+    USes: "US Spanish (Español)",
+    EUde: "EU German (Deutsch)",
+    EUes: "EU Spanish (Español)",
+    EUfr: "EU French (Français)",
+    EUit: "EU Italian (Italiano)",
+    EUnl: "EU Dutch (Nederlands)",
+    EUru: "EU Russian (Русский)",
+    CNzh: "Chinese (中文)",
+    JPja: "Japanese (日本語)",
+    KRko: "Korean (한국어)",
+    TWzh: "Traditional Chinese (‪中文(台灣)‬)",
+    "": "Please select a language"
+};
 
 export default Settings;
