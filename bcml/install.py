@@ -791,9 +791,9 @@ def disable_bcml_gfx():
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
     if not output:
-        if not util.get_settings("export_dir"):
+        if not util.get_settings("export_dir" if util.get_settings("wiiu") else "export_dir_nx"):
             return
-        output = Path(util.get_settings("export_dir"))
+        output = Path(util.get_settings("export_dir" if util.get_settings("wiiu") else "export_dir_nx"))
     if output.exists():
         shutil.rmtree(output, ignore_errors=True)
     try:
