@@ -795,7 +795,18 @@ def link_master_mod(output: Path = None):
             return
         output = Path(util.get_settings("export_dir" if util.get_settings("wiiu") else "export_dir_nx"))
     if output.exists():
-        shutil.rmtree(output, ignore_errors=True)
+        if not util.get_settings("no_cemu"):
+            shutil.rmtree(output, ignore_errors=True)
+        elif util.get_settings("wiiu"):
+            if (output / "content").exists():
+                shutil.rmtree((output / "content"), ignore_errors=True)
+            if (output / "aoc").exists():
+                shutil.rmtree((output / "aoc"), ignore_errors=True)
+        elif not util.get_settings("wiiu"):
+            if (output / "01007EF00011E000").exists():
+                shutil.rmtree((output / "01007EF00011E000"), ignore_errors=True)
+            if (output / "01007EF00011F001").exists():
+                shutil.rmtree((output / "01007EF00011F001"), ignore_errors=True)
     try:
         output.mkdir(parents=True, exist_ok=True)
         if not util.get_settings("no_cemu"):
