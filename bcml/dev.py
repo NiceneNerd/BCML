@@ -336,6 +336,11 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
             tmp_dir = tmp_dir.parent
         elif util.get_settings("wiiu") and (tmp_dir / "Content").exists():
             (tmp_dir / "Content").rename(tmp_dir / "content")
+        elif not util.get_settings("wiiu") and ((tmp_dir / "base").exists() or (tmp_dir / "dlc").exists()):
+            if (tmp_dir / "base").exists():
+                (tmp_dir / "base").rename(tmp_dir / "01007EF00011E000")
+            if (tmp_dir / "dlc").exists():
+                (tmp_dir / "dlc").rename(tmp_dir / "01007EF00011F001")
         else:
             raise FileNotFoundError(
                 "This mod does not appear to have a valid folder structure"
