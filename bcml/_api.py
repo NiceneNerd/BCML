@@ -280,7 +280,7 @@ class Api:
 
     def file_drop(self, params):
         file = Path(tempfile.mkdtemp()) / params["file"]
-        file.write_bytes(params["data"].encode("latin-1"))
+        file.write_bytes(base64.b64decode(params["data"]))
         return str(file)
 
     def get_options(self):
