@@ -46,7 +46,7 @@ def _package_code(tmp_dir: Path, meta: dict):
         patch_file = tmp_dir / "patches.txt"
     elif list(tmp_dir.glob("patch_*.asm")):
         patch_file = list(tmp_dir.glob("patch_*.asm"))[0]
-    if not patch_file:
+    if not patch_file and not (tmp_dir / "patches").exists():
         return
     (tmp_dir / "patches").mkdir(exist_ok=True)
     shutil.move(patch_file, tmp_dir / "patches" / patch_file.name)
@@ -331,12 +331,15 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
     if not (
         (tmp_dir / util.get_content_path()).exists()
         or (tmp_dir / util.get_dlc_path()).exists()
+        or (tmp_dir / "patches").exists()
     ):
         if (tmp_dir.parent / util.get_content_path()).exists():
             tmp_dir = tmp_dir.parent
         elif util.get_settings("wiiu") and (tmp_dir / "Content").exists():
             (tmp_dir / "Content").rename(tmp_dir / "content")
-        elif not util.get_settings("wiiu") and ((tmp_dir / "base").exists() or (tmp_dir / "dlc").exists()):
+        elif not util.get_settings("wiiu") and (
+            (tmp_dir / "base").exists() or (tmp_dir / "dlc").exists()
+        ):
             if (tmp_dir / "base").exists():
                 (tmp_dir / "base").rename(tmp_dir / "01007EF00011E000")
             if (tmp_dir / "dlc").exists():

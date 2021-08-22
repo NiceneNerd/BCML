@@ -272,7 +272,7 @@ def generate_logs(
     this_pool = pool or Pool(maxtasksperchild=500)
     print("Scanning for modified files...")
     modded_files = find_modded_files(tmp_dir, pool=pool)
-    if not modded_files:
+    if not (modded_files or (tmp_dir / "patches").exists()):
         raise RuntimeError(
             f"No modified files were found in {str(tmp_dir)}."
             "This probably means this mod is not in a supported format."
@@ -791,9 +791,15 @@ def disable_bcml_gfx():
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
     if not output:
-        if not util.get_settings("export_dir" if util.get_settings("wiiu") else "export_dir_nx"):
+        if not util.get_settings(
+            "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+        ):
             return
-        output = Path(util.get_settings("export_dir" if util.get_settings("wiiu") else "export_dir_nx"))
+        output = Path(
+            util.get_settings(
+                "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+            )
+        )
     if output.exists():
         if not util.get_settings("no_cemu"):
             shutil.rmtree(output, ignore_errors=True)
