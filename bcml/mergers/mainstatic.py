@@ -27,10 +27,20 @@ def key_from_coords(x: float, y: float, z: float) -> str:
 
 
 def get_id(item: Hash) -> str:
-    return key_from_coords(
-        item["Translate"]["X"].v,
-        item["Translate"]["Y"].v,
-        item["Translate"]["Z"].v,
+    def find_name(item: Hash) -> str:
+        for k, v in item.items():
+            if "name" in k.lower():
+                return v
+        else:
+            return ""
+
+    return (
+        key_from_coords(
+            item["Translate"]["X"].v,
+            item["Translate"]["Y"].v,
+            item["Translate"]["Z"].v,
+        )
+        + find_name(item)
     )
 
 
