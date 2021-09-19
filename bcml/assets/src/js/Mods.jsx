@@ -200,7 +200,13 @@ class Mods extends React.Component {
                     break;
                 }
             }
-            if (action !== "explore") {
+            if (
+                action !== "explore" &&
+                !(
+                    this.state.selectedMods.every(m => m.disabled) &&
+                    action == "uninstall"
+                )
+            ) {
                 try {
                     const res = await pywebview.api.remerge({ name: "all" });
                     if (!res.success) {
