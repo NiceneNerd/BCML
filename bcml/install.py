@@ -423,7 +423,7 @@ def install_mod(
             name = "your mod, the name of which could not be detected"
         raise util.InstallError(err, name) from err
 
-    if selects:
+    if selects is not None:
         for opt_dir in {d for d in (tmp_dir / "options").glob("*") if d.is_dir()}:
             if opt_dir.name not in selects:
                 shutil.rmtree(opt_dir, ignore_errors=True)
