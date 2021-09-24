@@ -1196,7 +1196,8 @@ def create_bcml_graphicpack_if_needed():
             "name = BCML\n"
             "path = The Legend of Zelda: Breath of the Wild/Mods/BCML\n"
             "description = Complete pack of mods merged using BCML\n"
-            "version = 4\n"
+            "version = 7\n"
+            "default = true\n"
             "fsPriority = 9999",
             encoding="utf-8",
         )

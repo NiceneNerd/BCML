@@ -176,6 +176,7 @@ class App extends React.Component {
                 )
             );
             this.selects = await pywebview.api.check_mod_options({ mods });
+            console.log(this.selects);
             await new Promise(resolve =>
                 this.setState(
                     {

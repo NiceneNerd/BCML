@@ -1,4 +1,4 @@
-import { Button, Form, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Alert, Button, Form, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 
 import React from "react";
 
@@ -6,7 +6,8 @@ class SelectsDialog extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            folders: []
+            folders: [],
+            error: null
         };
         this.handleChange = this.handleChange.bind(this);
     }
@@ -49,15 +50,36 @@ class SelectsDialog extends React.Component {
         }
     }
 
+    submit = () => {
+        if (
+            document.querySelectorAll(".selects checkbox[type='radio']").length <
+            this.props.mod.options.single.filter(g => g.required).length
+        ) {
+            this.setState({
+                error: "One or more required options have not been selected."
+            });
+        } else {
+            this.setState({ error: null });
+            this.props.onSet(this.state.folders);
+        }
+    };
+
     render() {
         return (
-            <Modal show={this.props.show} scrollable={true} onHide={this.props.onClose}>
+            <Modal
+                show={this.props.show}
+                scrollable={true}
+                onHide={this.props.onClose}
+                class="selects">
                 <Modal.Header closeButton>
                     <Modal.Title>
                         Select Options for {this.props.mod && this.props.mod.name}
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
+                    {this.state.error && (
+                        <Alert variant="danger">{this.state.error}</Alert>
+                    )}
                     <p>
                         {this.props.mod && this.props.mod.name} has customization
                         options. Please select the options you would like to use below.
@@ -96,10 +118,20 @@ class SelectsDialog extends React.Component {
                                 <>
                                     <h5>Single Choice Options</h5>
                                     {this.props.mod.options.single.map(s => (
-                                        <div key={s.name} className="radio-group">
-                                            <strong>{s.name}</strong>
-                                            <br />
-                                            {s.desc}
+                                        <div key={s.name} className="radio-group my-2">
+                                            <strong>
+                                                {s.name}{" "}
+                                                {s.required && (
+                                                    <span
+                                                        className="text-danger"
+                                                        title="Required">
+                                                        *
+                                                    </span>
+                                                )}
+                                            </strong>
+                                            <small className="my-1 d-block">
+                                                {s.desc}
+                                            </small>
                                             {s.options.map(opt => (
                                                 <Form.Group
                                                     controlId={opt.folder}
@@ -128,9 +160,7 @@ class SelectsDialog extends React.Component {
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button
-                        variant="primary"
-                        onClick={() => this.props.onSet(this.state.folders)}>
+                    <Button variant="primary" onClick={this.submit}>
                         OK
                     </Button>
                     <Button variant="secondary" onClick={this.props.onClose}>
