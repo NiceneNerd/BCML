@@ -868,6 +868,17 @@ def link_master_mod(output: Path = None):
                         link_or_copy(str(item), str(output / rel_path))
                     else:
                         raise
+    if len(list(output.rglob("*"))) == 0:
+        raise RuntimeError(
+            "No files were created in your export directory. This may mean BCML"
+            " lacked then necessary permissions to write to the folder, or "
+            "the folder is otherwise unusable by Python. (This often happens"
+            " if the target folder is connected to OneDrive, WinFUSE, or "
+            "perhaps network drives._ If possible, try changing your export "
+            "folder or its permissions. If you are a Cemu user and your Cemu "
+            "folder is in your OneDrive, you will probably need to move Cemu "
+            "somewhere else."
+        )
 
 
 def export(output: Path):
