@@ -272,7 +272,9 @@ def generate_logs(
     this_pool = pool or Pool(maxtasksperchild=500)
     print("Scanning for modified files...")
     modded_files = find_modded_files(tmp_dir, pool=pool)
-    if not (modded_files or (tmp_dir / "patches").exists()):
+    if not (
+        modded_files or (tmp_dir / "patches").exists() or (tmp_dir / "logs").exists()
+    ):
         raise RuntimeError(
             f"No modified files were found in {str(tmp_dir)}."
             "This probably means this mod is not in a supported format."
