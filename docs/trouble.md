@@ -18,7 +18,7 @@ installed Python.
 
 #### How do I get an unpacked game dump to use with BCML?
 
-Follow the instructions from [this tutorial](https://zeldamods.org/wiki/Help:Dumping_games).
+Follow the instructions from <a href="https://zeldamods.org/wiki/Help:Dumping_games" target="_blank">this tutorial</a>.
 
 #### How do I setup my game folders in BCML?
 

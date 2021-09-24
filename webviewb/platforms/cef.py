@@ -31,8 +31,7 @@ command_line_switches = {}
 
 
 def _set_dpi_mode(enabled):
-    """
-    """
+    """ """
     try:
         import _winreg as winreg  # Python 2
     except ImportError:
@@ -59,7 +58,9 @@ def _set_dpi_mode(enabled):
         subprocess_path = os.path.join(os.path.dirname(cef.__file__), "subprocess.exe")
 
     if enabled:
-        winreg.SetValueEx(dpi_support, subprocess_path, 0, winreg.REG_SZ, "~HIGHDPIAWARE")
+        winreg.SetValueEx(
+            dpi_support, subprocess_path, 0, winreg.REG_SZ, "~HIGHDPIAWARE"
+        )
     else:
         winreg.DeleteValue(dpi_support, subprocess_path)
 
@@ -213,10 +214,17 @@ def init(window):
 
         default_settings = {
             "multi_threaded_message_loop": True,
+            "ignore_certificate_errors": True,
             "context_menu": {"enabled": _debug},
         }
 
-        default_command_line_switches = {"enable-media-stream": ""}
+        default_command_line_switches = {
+            "ignore-certificate-errors": "",
+            "ignore-ssl-errors": "",
+            "accept-ssl-certs": "",
+            "ignore-ssl-errors": "",
+            "enable-media-stream": "",
+        }
 
         if not _debug:
             default_settings["remote_debugging_port"] = -1
