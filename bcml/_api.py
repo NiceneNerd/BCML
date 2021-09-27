@@ -308,6 +308,36 @@ class Api:
             for b in [(b.stem.split("---"), str(b)) for b in install.get_backups()]
         ]
 
+    def get_profiles(self):
+        return [
+            {"name": (d / ".profile").read_text("utf-8"), "path": d}
+            for d in {d for d in util.get_profiles_dir().glob("*") if d.is_dir()}
+        ]
+
+    def get_current_profile(self):
+        profile = util.get_modpack_dir() / ".profile"
+        if not (util.get_modpack_dir() / ".profile").exists():
+            profile.write_text("Default")
+            return "Default"
+        return profile.read_text("utf-8")
+
+    @win_or_lose
+    @install.refresher
+    def set_profile(self, params):
+        mod_dir = util.get_modpack_dir()
+        profile_dir = util.get_profiles_dir()
+        profile = util.get_safe_pathname((mod_dir / ".profile").read_text("utf-8"))
+        mod_dir.rename(profile_dir / profile)
+        Path(params["profile"]).rename(mod_dir)
+
+    @win_or_lose
+    def delete_profile(self, params):
+        rmtree(params["profile"])
+
+    def save_profile(self, params):
+        profile = util.get_modpack_dir() / ".profile"
+        profile.write_text(params["profile"])
+
     def check_mod_options(self, params):
         metas = {
             mod: install.extract_mod_meta(Path(mod))

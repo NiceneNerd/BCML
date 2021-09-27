@@ -42,7 +42,7 @@ $scrollbar-width: 0.5rem;
 }
 
 code {
-    color: #00C853;
+    color: #00c853;
 }
 
 .overflow-y {
@@ -311,7 +311,7 @@ body,
 }
 
 .list-actions .btn-group-xs {
-    margin-right: 0.25rem;
+    margin-right: 0.125rem;
 }
 
 .mod-list .mod-handle .material-icons {
@@ -352,7 +352,7 @@ body,
     }
 
     @media (min-width: 1000px) {
-        box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
     }
 }
 
@@ -770,7 +770,7 @@ Fade {
 
 .btn-group-xs > .btn,
 .btn-xs {
-    padding: 0.2rem 0.25rem;
+    padding: 0.2rem 0.125rem;
     font-size: 0.667rem;
     line-height: 0.5;
     border-radius: 0.2rem;
@@ -990,7 +990,7 @@ Fade {
 
 .grt-icon {
     height: 28px;
-    enable-background:new 0 0 96 96;
+    enable-background: new 0 0 96 96;
 
     .st0 {
         fill: #6747ed;
@@ -1003,6 +1003,6 @@ Fade {
 }
 
 .patreon-icon {
-    width: 16px;;
+    width: 16px;
     height: 16px;
 }

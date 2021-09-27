@@ -11,6 +11,7 @@ import {
 
 import AboutDialog from "./About.jsx";
 import BackupModal from "./Backup.jsx";
+import ProfileModal from "./Profile.jsx";
 import DevTools from "./DevTools.jsx";
 import ErrorDialog from "./Error.jsx";
 import GameBanana from "./GameBanana.jsx";
@@ -40,6 +41,7 @@ class App extends React.Component {
             savingSettings: false,
             showDone: false,
             showBackups: false,
+            showProfiles: false,
             showError: false,
             error: null,
             showProgress: false,
@@ -59,9 +61,7 @@ class App extends React.Component {
         window.addEventListener("pywebviewready", () => {
             setTimeout(async () => {
                 let settings = await pywebview.api.get_settings();
-                console.log(settings);
                 this.setState({ settings }, async () => {
-                    console.log("Settings updated");
                     let res = await pywebview.api.get_ver();
                     this.setState({ ...res });
                 });
@@ -176,7 +176,6 @@ class App extends React.Component {
                 )
             );
             this.selects = await pywebview.api.check_mod_options({ mods });
-            console.log(this.selects);
             await new Promise(resolve =>
                 this.setState(
                     {
@@ -266,6 +265,49 @@ class App extends React.Component {
             );
         if (operation == "delete")
             this.confirm("Are you sure you want to delete this backup?", task);
+        else task();
+    };
+
+    handleProfile = async (profile, operation) => {
+        let progressTitle;
+        let action;
+        if (operation == "save") {
+            progressTitle = "Saving Profile";
+            action = pywebview.api.save_profile;
+        } else if (operation == "load") {
+            progressTitle = `Loading ${profile.name}`;
+            action = pywebview.api.set_profile;
+            profile = profile.path;
+        } else {
+            progressTitle = `Deleting ${profile.name}`;
+            action = pywebview.api.delete_profile;
+            profile = profile.path;
+        }
+        const task = () =>
+            this.setState(
+                {
+                    showProgress: operation == "delete" ? false : true,
+                    showProfiles: operation == "delete" ? true : false,
+                    progressTitle
+                },
+                () =>
+                    action({ profile })
+                        .then(res => {
+                            if (!res.success) {
+                                throw res.error;
+                            }
+                            this.setState(
+                                { showProgress: false, showDone: true },
+                                () => {
+                                    this.profileRef.current.refreshProfiles();
+                                    if (operation == "load") this.refreshMods();
+                                }
+                            );
+                        })
+                        .catch(this.showError)
+            );
+        if (operation == "delete")
+            this.confirm("Are you sure you want to delete this profile?", task);
         else task();
     };
 
@@ -413,6 +455,7 @@ class App extends React.Component {
                         <Tab eventKey="mod-list" title="Mods">
                             <Mods
                                 onBackup={() => this.setState({ showBackups: true })}
+                                onProfile={() => this.setState({ showProfiles: true })}
                                 loaded={this.state.modsLoaded}
                                 onRefresh={this.refreshMods}
                                 onConfirm={this.confirm}
@@ -522,6 +565,15 @@ class App extends React.Component {
                     onOldRestore={this.handleOldRestore}
                     onDelete={this.handleBackups}
                     onClose={() => this.setState({ showBackups: false })}
+                />
+                <ProfileModal
+                    show={this.state.showProfiles}
+                    busy={this.state.showProgress}
+                    ref={this.profileRef}
+                    onLoad={this.handleProfile}
+                    onSave={this.handleProfile}
+                    onDelete={this.handleProfile}
+                    onClose={() => this.setState({ showProfiles: false })}
                 />
                 <AboutDialog
                     show={this.state.showAbout}

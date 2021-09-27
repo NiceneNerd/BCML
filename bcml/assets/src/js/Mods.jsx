@@ -486,6 +486,14 @@ class Mods extends React.Component {
                                         <i className="material-icons">restore</i>
                                     </Button>
                                 </OverlayTrigger>
+                                <OverlayTrigger
+                                    overlay={<Tooltip>Profiles (Ctrl+P)</Tooltip>}>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={this.props.onProfile}>
+                                        <i className="material-icons">dynamic_feed</i>
+                                    </Button>
+                                </OverlayTrigger>
                                 <OverlayTrigger overlay={<Tooltip>Export</Tooltip>}>
                                     <Button
                                         variant="secondary"

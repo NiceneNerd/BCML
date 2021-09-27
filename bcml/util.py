@@ -816,6 +816,10 @@ def get_modpack_dir() -> Path:
     return get_storage_dir() / ("mods" if get_settings("wiiu") else "mods_nx")
 
 
+def get_profiles_dir() -> Path:
+    return get_storage_dir() / ("profiles" if get_settings("wiiu") else "profiles_nx")
+
+
 @lru_cache(None)
 def get_game_file(path: Union[Path, str], aoc: bool = False) -> Path:
     if str(path).replace("\\", "/").startswith(f"{get_content_path()}/"):
