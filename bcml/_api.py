@@ -11,7 +11,7 @@ from operator import itemgetter
 from pathlib import Path
 from platform import system
 from subprocess import run, PIPE, Popen
-from shutil import rmtree, copyfile
+from shutil import copytree, rmtree, copyfile
 from tempfile import NamedTemporaryFile, mkdtemp
 from time import sleep
 from threading import Thread
@@ -310,7 +310,7 @@ class Api:
 
     def get_profiles(self):
         return [
-            {"name": (d / ".profile").read_text("utf-8"), "path": d}
+            {"name": (d / ".profile").read_text("utf-8"), "path": str(d)}
             for d in {d for d in util.get_profiles_dir().glob("*") if d.is_dir()}
         ]
 
@@ -325,18 +325,24 @@ class Api:
     @install.refresher
     def set_profile(self, params):
         mod_dir = util.get_modpack_dir()
-        profile_dir = util.get_profiles_dir()
-        profile = util.get_safe_pathname((mod_dir / ".profile").read_text("utf-8"))
-        mod_dir.rename(profile_dir / profile)
-        Path(params["profile"]).rename(mod_dir)
+        rmtree(mod_dir)
+        copytree(params["profile"], mod_dir)
 
     @win_or_lose
     def delete_profile(self, params):
         rmtree(params["profile"])
 
+    @win_or_lose
     def save_profile(self, params):
-        profile = util.get_modpack_dir() / ".profile"
+        mod_dir = util.get_modpack_dir()
+        profile = mod_dir / ".profile"
         profile.write_text(params["profile"])
+        profile_dir = util.get_profiles_dir() / util.get_safe_pathname(
+            params["profile"]
+        )
+        if profile_dir.exists():
+            rmtree(profile_dir)
+        copytree(mod_dir, profile_dir)
 
     def check_mod_options(self, params):
         metas = {

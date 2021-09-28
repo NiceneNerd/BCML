@@ -58,6 +58,7 @@ class App extends React.Component {
         };
         this.selects = null;
         this.backupRef = React.createRef();
+        this.profileRef = React.createRef();
         window.addEventListener("pywebviewready", () => {
             setTimeout(async () => {
                 let settings = await pywebview.api.get_settings();
@@ -293,6 +294,7 @@ class App extends React.Component {
                 () =>
                     action({ profile })
                         .then(res => {
+                            console.log(res);
                             if (!res.success) {
                                 throw res.error;
                             }

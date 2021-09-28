@@ -69,15 +69,15 @@ class ProfileModal extends React.Component {
                                 <ButtonGroup size="xs">
                                     <Button
                                         variant="success"
+                                        title="Load Profile"
                                         onClick={() =>
                                             this.props.onLoad(profile, "load")
                                         }>
-                                        <i className="material-icons">
-                                            settings_backup_restore
-                                        </i>
+                                        <i className="material-icons">refresh</i>
                                     </Button>
                                     <Button
                                         variant="danger"
+                                        title="Delete Profile"
                                         onClick={() =>
                                             this.props.onDelete(profile, "delete")
                                         }>

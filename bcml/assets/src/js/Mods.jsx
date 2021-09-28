@@ -80,6 +80,9 @@ class Mods extends React.Component {
                     case "b":
                         this.props.onBackup();
                         break;
+                    case "f":
+                        this.props.onProfile();
+                        break;
                     default:
                         return e;
                 }
@@ -487,7 +490,7 @@ class Mods extends React.Component {
                                     </Button>
                                 </OverlayTrigger>
                                 <OverlayTrigger
-                                    overlay={<Tooltip>Profiles (Ctrl+P)</Tooltip>}>
+                                    overlay={<Tooltip>Profiles (Ctrl+F)</Tooltip>}>
                                     <Button
                                         variant="secondary"
                                         onClick={this.props.onProfile}>
