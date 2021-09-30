@@ -111,7 +111,7 @@ class Settings extends React.Component {
                 });
             }
         } else {
-            if (prevState.cemu_dir != this.state.cemu_dir && !this.state.game_dir) {
+            if (prevState.cemu_dir != this.state.cemu_dir) {
                 if (
                     await pywebview.api.dir_exists({
                         folder: this.state.cemu_dir,
