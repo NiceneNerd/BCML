@@ -78,7 +78,8 @@ class DevTools extends React.Component {
                     options: {
                         options: {},
                         disable: []
-                    }
+                    },
+                    selects: info["selects"] || {}
                 });
             }
         );
@@ -545,15 +546,22 @@ class ModOptions extends React.Component {
             });
             this.setState({ folders }, () => this.cleanFolders());
         }
-        if (this.props.options != prevProps.options && this.props.options.length > 0) {
-            const { single, ...rest } = this.props.options;
-            this.setState(
-                {
-                    singles: single,
-                    ...rest
-                },
-                () => this.cleanFolders()
-            );
+        if (this.props.options != prevProps.options) {
+            if (this.props.options?.hasOwnProperty("single")) {
+                const { single, ...rest } = this.props.options;
+                this.setState(
+                    {
+                        singles: single,
+                        ...rest
+                    },
+                    () => this.cleanFolders()
+                );
+            } else {
+                this.setState({
+                    singles: [],
+                    multi: []
+                });
+            }
         }
     };
 

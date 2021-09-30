@@ -621,8 +621,9 @@ class Api:
             raise Exception("canceled")
         meta = params.copy()
         del meta["folder"]
-        meta["options"] = params["selects"]
-        del meta["selects"]
+        meta["options"] = params.get("selects", {})
+        if "selects" in meta:
+            del meta["selects"]
         dev.create_bnp_mod(
             mod=Path(params["folder"]),
             output=Path(out if isinstance(out, str) else out[0]),
