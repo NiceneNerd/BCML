@@ -1,3 +1,5 @@
+import "array-flat-polyfill";
+
 import {
     Alert,
     Badge,
@@ -532,23 +534,28 @@ class ModOptions extends React.Component {
             .flatMap(g => g.options.map(o => o.folder))
             .concat(this.state.multi.map(m => m.folder));
         this.setState({
-            folders: this.state.folders.filter(f => !usedFolders.includes(f))});
-    }
+            folders: this.state.folders.filter(f => !usedFolders.includes(f))
+        });
+    };
 
     componentDidUpdate = async prevProps => {
         if (this.props.show != prevProps.show) {
-            const folders = await pywebview.api
-                .get_option_folders({ mod: this.props.folder });
+            const folders = await pywebview.api.get_option_folders({
+                mod: this.props.folder
+            });
             this.setState({ folders }, () => this.cleanFolders());
         }
         if (this.props.options != prevProps.options) {
             const { single, ...rest } = this.props.options;
-            this.setState({ 
-                singles: single,
-                ...rest 
-            }, () => this.cleanFolders());
+            this.setState(
+                {
+                    singles: single,
+                    ...rest
+                },
+                () => this.cleanFolders()
+            );
         }
-    }
+    };
 
     addGroup() {
         this.setState({

@@ -28,6 +28,7 @@
     },
     "dependencies": {
         "@babel/runtime": "^7.6.2",
+        "array-flat-polyfill": "^1.0.1",
         "react": "^16.10.2",
         "react-bootstrap": "^1.0.0-beta.16",
         "react-bootstrap-dialog": "^0.13.0",
