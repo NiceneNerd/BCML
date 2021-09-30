@@ -11,12 +11,12 @@ import {
 
 import AboutDialog from "./About.jsx";
 import BackupModal from "./Backup.jsx";
-import ProfileModal from "./Profile.jsx";
 import DevTools from "./DevTools.jsx";
 import ErrorDialog from "./Error.jsx";
 import GameBanana from "./GameBanana.jsx";
 import ModContext from "./Context.jsx";
 import Mods from "./Mods.jsx";
+import ProfileModal from "./Profile.jsx";
 import ProgressModal from "./Progress.jsx";
 import React from "react";
 import ReactMarkdown from "react-markdown";
@@ -476,13 +476,17 @@ class App extends React.Component {
                                 onLaunch={this.launchGame}
                             />
                         </Tab>
-                        <Tab eventKey="gamebanana" title="GameBanana">
-                            <GameBanana
-                                onError={this.showError}
-                                onProgress={this.setProgress}
-                                onDone={() => this.setState({ showProgress: false })}
-                            />
-                        </Tab>
+                        {this.state.settings.show_gb && (
+                            <Tab eventKey="gamebanana" title="GameBanana">
+                                <GameBanana
+                                    onError={this.showError}
+                                    onProgress={this.setProgress}
+                                    onDone={() =>
+                                        this.setState({ showProgress: false })
+                                    }
+                                />
+                            </Tab>
+                        )}
                         <Tab eventKey="dev-tools" title="Dev Tools">
                             <DevTools
                                 onError={this.showError}

@@ -585,6 +585,7 @@ DEFAULT_SETTINGS = {
     "changelog": True,
     "strip_gfx": False,
     "auto_gb": True,
+    "show_gb": True
 }
 
 

@@ -31,6 +31,7 @@ class Settings extends React.Component {
             changelog: true,
             strip_gfx: false,
             auto_gb: true,
+            show_gb: true,
             languages: [...Array.from(Object.keys(LANGUAGE_MAP))]
         };
         this.formRef = React.createRef();
@@ -570,6 +571,23 @@ class Settings extends React.Component {
                                     type="checkbox"
                                     label="Show changelog after update"
                                     checked={this.state.changelog}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="show_gb">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        By default, BCML will show a GameBanana browser
+                                        tab. Disable it if you feel like it.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Show GameBanana tab"
+                                    checked={this.state.show_gb}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>
