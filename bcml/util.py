@@ -585,7 +585,7 @@ DEFAULT_SETTINGS = {
     "changelog": True,
     "strip_gfx": False,
     "auto_gb": True,
-    "show_gb": True
+    "show_gb": True,
 }
 
 
@@ -1225,7 +1225,7 @@ def dict_merge(
             and (isinstance(dct[k], (dict, oead.byml.Hash)))
             and (isinstance(merge_dct[k], (Mapping, oead.byml.Hash)))
         ):
-            dict_merge(dct[k], merge_dct[k])
+            dict_merge(dct[k], merge_dct[k], overwrite_lists=overwrite_lists)
         elif (
             k in dct
             and (isinstance(dct[k], (list, oead.byml.Array)))
