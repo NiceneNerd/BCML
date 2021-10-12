@@ -111,11 +111,11 @@ def get_modded_savedata_entries(savedata: oead.Sarc) -> Hash:
     }
     new_entries = oead.byml.Array()
     mod_hashes = set()
-    for file in sorted(
-        savedata.get_files(),
-        key=lambda f: f.name,
-    )[0:-2]:
-        entries = oead.byml.from_binary(file.data)["file_list"][1]
+    for file in savedata.get_files():
+        data = oead.byml.from_binary(file.data)
+        if data["file_list"][0]["file_name"] != "game_data.sav":
+            continue
+        entries = data["file_list"][1]
         mod_hashes |= {int(item["HashValue"]) for item in entries}
         new_entries.extend(
             [item for item in entries if int(item["HashValue"]) not in ref_hashes]
