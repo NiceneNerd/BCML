@@ -4,11 +4,11 @@ aamp~=1.4.1
 byml~=2.3.1
 botw-utils~=0.2.3
 botw-havok~=0.3.18
-cefpython3~=66.1; platform_system == 'Windows'
 oead~=1.2.0
 pythonnet~=2.5.2; platform_system == 'Windows'
 pyqtwebengine~=5.15.2; platform_system == 'Linux'
 PyYAML~=5.3.1
+pywebview~=3.5
 requests~=2.23.0
 rstb>=1.2.0
 xxhash~=1.4

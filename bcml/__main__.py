@@ -11,9 +11,10 @@ from shutil import rmtree
 from threading import Thread
 from time import sleep
 
-import webviewb as webview
+import webview
 
 from bcml import DEBUG, util, _oneclick
+import bcml
 from bcml.util import Messager, LOG, SYSTEM
 from bcml._api import Api
 from bcml._server import start_server
@@ -85,13 +86,29 @@ def main(debug: bool = False):
 
     api = Api(host)
 
-    gui = "cef" if SYSTEM == "Windows" else "qt"
-
     if not debug:
         debug = DEBUG or "bcml-debug" in sys.argv
 
+    gui: str
     if SYSTEM == "Windows":
-        configure_cef(debug)
+        from webview.platforms.winforms import _is_chromium
+
+        if _is_chromium():
+            gui = "edgechromium"
+        else:
+            try:
+                import cefpython3
+
+                del cefpython3
+                gui = "cef"
+                configure_cef(debug)
+            except ImportError:
+                bcml.native_msg(
+                    "Neither Edge WebView2 nor CEF is available. You may experience bugs."
+                    " Please install the WebView2 runtime at https://go.microsoft.com/fwlink/p/?LinkId=2124703."
+                )
+    else:
+        gui = "qt"
 
     now = datetime.now()
     if (

@@ -12,4 +12,3 @@ recursive-include bcml/assets/icon *
 recursive-include bcml/assets/scripts *.js
 recursive-exclude bcml/assets/src *
 include bcml/assets/scripts/bundle.js
-recursive-include webviewb/lib *
