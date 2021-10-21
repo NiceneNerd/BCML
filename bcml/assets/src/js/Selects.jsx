@@ -52,8 +52,13 @@ class SelectsDialog extends React.Component {
 
     submit = () => {
         if (
-            document.querySelectorAll(".selects checkbox[type='radio']").length <
-            this.props.mod.options.single.filter(g => g.required).length
+            this.props.mod.options.single
+                .filter(g => g.required)
+                .some(
+                    g =>
+                        document.querySelector(`input[name="${g.name}"]:checked`)
+                            ?.value == null
+                )
         ) {
             this.setState({
                 error: "One or more required options have not been selected."

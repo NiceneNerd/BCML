@@ -572,7 +572,7 @@ class ModOptions extends React.Component {
                 {
                     name: document.querySelector("#groupName").value,
                     desc: document.querySelector("#groupDesc").value,
-                    required: document.querySelector("#groupReq").value,
+                    required: document.querySelector("#groupReq").checked,
                     options: []
                 }
             ]
