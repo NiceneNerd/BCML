@@ -572,7 +572,7 @@ class Api:
         except IndexError:
             return
         tmp_dir = Path(mkdtemp())
-        x_args = [get_7z_path(), "x", str(file), f"-o{str(tmp_dir)}"]
+        x_args = [get_7z_path(), "x", str(file), f"-o{str(tmp_dir)}", "-aoa"]
         if system() == "Windows":
             run(
                 x_args,
