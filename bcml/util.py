@@ -34,7 +34,7 @@ import oead
 import requests
 import xxhash  # pylint: disable=wrong-import-order
 from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
-from webviewb import Window  # pylint: disable=wrong-import-order
+from webview import Window  # pylint: disable=wrong-import-order
 
 from bcml import pickles, DEBUG  # pylint: disable=unused-import
 from bcml.__version__ import VERSION

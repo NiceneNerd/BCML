@@ -44,7 +44,7 @@ def stop_it(messager: Messager = None):
 
 
 def configure_cef(debug):
-    from webviewb.platforms.cef import (  # pylint: disable=import-outside-toplevel
+    from webview.platforms.cef import (  # pylint: disable=import-outside-toplevel
         settings,
     )
 

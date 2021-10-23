@@ -7,7 +7,7 @@ from subprocess import run
 from tempfile import mkdtemp
 
 import requests
-import webviewb
+import webview
 from bcml import util
 
 
@@ -83,7 +83,7 @@ def process_arg(arg: str = None):
         ) as err:
             print(err)
             return
-    webviewb.windows[0].evaluate_js(
+    webview.windows[0].evaluate_js(
         f'setTimeout(() => window.oneClick("{path.resolve().as_posix()}"), 500)'
     )
 
@@ -142,7 +142,10 @@ def _win_create_handler():
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp") as key:
         try:
             with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, r"Software\Classes\.bnp", 0, winreg.KEY_READ,
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Classes\.bnp",
+                0,
+                winreg.KEY_READ,
             ) as okey:
                 assert winreg.QueryValueEx(okey, "")[0] == "bcml"
         except (WindowsError, OSError, AssertionError):

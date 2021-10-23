@@ -19,7 +19,7 @@ from typing import List
 from xml.dom import minidom
 
 import requests
-import webviewb
+import webview
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
 from bcml.gamebanana import GameBananaDb
@@ -51,12 +51,12 @@ def start_new_instance():
 
 
 def help_window(host: str):
-    webviewb.create_window("BCML Help", url=f"{host}/help/")
+    webview.create_window("BCML Help", url=f"{host}/help/")
 
 
 class Api:
     # pylint: disable=unused-argument,no-self-use,too-many-public-methods
-    window: webviewb.Window
+    window: webview.Window
     host: str
     gb_api: GameBananaDb
     tmp_files: List[Path]
@@ -85,7 +85,7 @@ class Api:
         util.sanity_check()
 
     def get_folder(self):
-        return self.window.create_file_dialog(webviewb.FOLDER_DIALOG)[0]
+        return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
         path = Path(params["folder"])
@@ -222,7 +222,7 @@ class Api:
 
     def save_mod_list(self, params=None):
         result = self.window.create_file_dialog(
-            webviewb.SAVE_DIALOG,
+            webview.SAVE_DIALOG,
             file_types=("JSON File (*.json)",),
             allow_multiple=False,
         )
@@ -593,7 +593,7 @@ class Api:
         if not util.get_installed_mods():
             raise Exception("No mods installed to export.")
         out = self.window.create_file_dialog(
-            webviewb.SAVE_DIALOG,
+            webview.SAVE_DIALOG,
             file_types=(
                 f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
                 "BOTW Nano Patch (*.bnp)",
@@ -613,7 +613,7 @@ class Api:
     @win_or_lose
     def create_bnp(self, params):
         out = self.window.create_file_dialog(
-            webviewb.SAVE_DIALOG,
+            webview.SAVE_DIALOG,
             file_types=("BOTW Nano Patch (*.bnp)", "All files (*.*)"),
             save_filename=util.get_safe_pathname(params["name"]) + ".bnp",
         )
@@ -645,7 +645,7 @@ class Api:
         mod = install.open_mod(bnp)
         warnings = dev.convert_mod(mod, params["wiiu"], params["warn"])
         out = self.window.create_file_dialog(
-            webviewb.SAVE_DIALOG,
+            webview.SAVE_DIALOG,
             file_types=("BOTW Nano Patch (*.bnp)", "All files (*.*)"),
             save_filename=bnp.stem + f"_{'wiiu' if params['wiiu'] else 'switch'}.bnp",
         )
@@ -747,7 +747,7 @@ class Api:
                 options={"options": {"texts": {"all_langs": True}}, "disable": []},
             )
             out = self.window.create_file_dialog(
-                webviewb.SAVE_DIALOG,
+                webview.SAVE_DIALOG,
                 file_types=(
                     f"{('Graphic Pack' if util.get_settings('wiiu') else 'Atmosphere')} (*.zip)",
                     "BOTW Nano Patch (*.bnp)",
@@ -778,7 +778,7 @@ class Api:
             return
         tmp_dir = install.open_mod(path)
         output = self.window.create_file_dialog(
-            webviewb.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
+            webview.SAVE_DIALOG, file_types=tuple(["BOTW Nano Patch (*.bnp)"])
         )
         if not output:
             return
@@ -837,13 +837,13 @@ class Api:
                 )
                 file = updater.name
             Popen(["/bin/sh", file], start_new_session=True)
-        for win in webviewb.windows:
+        for win in webview.windows:
             win.destroy()
 
     def restart(self):
         opener = Thread(target=start_new_instance)
         opener.start()
-        for win in webviewb.windows:
+        for win in webview.windows:
             win.destroy()
 
     def is_wiiu(self):
