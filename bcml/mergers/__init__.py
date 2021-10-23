@@ -33,89 +33,89 @@ class Merger(metaclass=ABCMeta):
 
     @property
     def friendly_name(self) -> str:
-        """ The name of this merger in the UI """
+        """The name of this merger in the UI"""
         return self._friendly_name
 
     @property
     def description(self) -> str:
-        """ The description of this merger in the UI """
+        """The description of this merger in the UI"""
         return self._description
 
     @property
     def log_name(self) -> str:
-        """ The name of the log file created by this merger """
+        """The name of the log file created by this merger"""
         return self._log_name
 
     def set_pool(self, pool: Pool):
-        """ Sets the multiprocessing Pool to use when merging """
+        """Sets the multiprocessing Pool to use when merging"""
         self._pool = pool
 
     def set_options(self, options: dict):
-        """ Sets custom options for this merger """
+        """Sets custom options for this merger"""
         self._options = options
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
-        """ Detects changes made to a modded file or files from the base game """
+        """Detects changes made to a modded file or files from the base game"""
         raise NotImplementedError
 
     def log_diff(self, mod_dir: Path, diff_material):
-        """ Saves generated diffs to a log file """
+        """Saves generated diffs to a log file"""
         raise NotImplementedError
 
     def is_mod_logged(self, mod: util.BcmlMod) -> bool:
-        """ Checks if a mod is logged for this merge """
+        """Checks if a mod is logged for this merge"""
         return (mod.path / "logs" / self._log_name).exists()
 
     def get_mod_diff(self, mod: util.BcmlMod):
-        """ Gets the logged diff for this merge in a given mod """
+        """Gets the logged diff for this merge in a given mod"""
         raise NotImplementedError
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
-        """ Gets a list of modified items in mod for this merger """
+        """Gets a list of modified items in mod for this merger"""
         raise NotImplementedError
 
     def get_all_diffs(self):
-        """ Loads the installed diffs for this merge from all installed mods """
+        """Loads the installed diffs for this merge from all installed mods"""
         raise NotImplementedError
 
     def consolidate_diffs(self, diffs: list):
-        """ Combines and orders a collection of diffs into a single set of patches """
+        """Combines and orders a collection of diffs into a single set of patches"""
         raise NotImplementedError
 
     @staticmethod
     def can_partial_remerge() -> bool:
-        """ Checks whether this merger can perform a partial remerge """
+        """Checks whether this merger can perform a partial remerge"""
         return False
 
     @staticmethod
     def is_bootup_injector() -> bool:
-        """ Checks whether this merger needs to inject a file into `Bootup.pack` """
+        """Checks whether this merger needs to inject a file into `Bootup.pack`"""
         return False
 
     def get_bootup_injection(self) -> Tuple[Optional[str], Optional[bytes]]:
-        """ Gets whatever file this merger needs to inject into `Bootup.pack` """
+        """Gets whatever file this merger needs to inject into `Bootup.pack`"""
         return (None, None)
 
     def get_mod_affected(
         self, mod: util.BcmlMod  # pylint: disable=unused-argument
     ) -> List[str]:
-        """ Gets a list of files affected by a mod, if merger supports partial remerge """
+        """Gets a list of files affected by a mod, if merger supports partial remerge"""
         return []
 
     def perform_merge(self):
-        """ Applies one or more patches to the current mod installation """
+        """Applies one or more patches to the current mod installation"""
         raise NotImplementedError
 
     def get_checkbox_options(self) -> List[tuple]:
-        """ Gets the options for this merge as a tuple of internal name and UI description """
+        """Gets the options for this merge as a tuple of internal name and UI description"""
         return []
 
     def perform_unmerge(self):
-        """ Performs any cleanup tasks needed when a merge mod is uninstalled """
+        """Performs any cleanup tasks needed when a merge mod is uninstalled"""
 
 
 def get_mergers() -> List[Type[Merger]]:
-    """ Retrieves all available types of mod mergers """
+    """Retrieves all available types of mod mergers"""
     # pylint: disable=import-outside-toplevel
 
     from bcml.mergers import (
@@ -124,6 +124,7 @@ def get_mergers() -> List[Type[Merger]]:
         merge,
         drop,
         shop,
+        aslist,
         data,
         mubin,
         mainstatic,
@@ -140,6 +141,7 @@ def get_mergers() -> List[Type[Merger]]:
         merge.DeepMerger,
         drop.DropMerger,
         shop.ShopMerger,
+        aslist.ASListMerger,
         texts.TextsMerger,
         actors.ActorInfoMerger,
         mubin.DungeonStaticMerger,
@@ -166,5 +168,7 @@ def get_mergers_for_mod(mod: util.BcmlMod) -> Set[Merger]:
 def sort_mergers(mergers: Iterable[Merger]) -> List[Merger]:
     merger_names = [m.NAME for m in get_mergers()]
     return sorted(
-        mergers, key=lambda merger: merger_names.index(merger.NAME), reverse=False,
+        mergers,
+        key=lambda merger: merger_names.index(merger.NAME),
+        reverse=False,
     )

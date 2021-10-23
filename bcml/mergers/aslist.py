@@ -37,7 +37,9 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
                 util.vprint(f'Skipping "{path}//{file}", {err}')
                 continue
             sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
-            diffs.update(_get_diffs_from_sarc(sub_sarc, rsub_sarc, edits, path + "//" + file))
+            diffs.update(
+                _get_diffs_from_sarc(sub_sarc, rsub_sarc, edits, path + "//" + file)
+            )
             del sub_sarc
             del rsub_sarc
         else:
@@ -49,7 +51,9 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
             try:
                 pio = ParameterIO.from_binary(sarc.get_file(file).data)
             except AttributeError as err:
-                raise ValueError(f"Failed to read nested file:\n{path}//{file}") from err
+                raise ValueError(
+                    f"Failed to read nested file:\n{path}//{file}"
+                ) from err
             except (ValueError, RuntimeError, InvalidDataError) as err:
                 raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
             diffs.update({full_path: get_aamp_diff(pio, ref_pio)})
@@ -93,19 +97,22 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
         for i, v in enumerate(bfres):
             key = f"AddRes_{i}"
             diff.objects[key] = ParameterObject()
-            diff.objects[key].params["Anim"] = Parameter(FixedSafeString64(v))
+            diff.objects[key].params["Anim"] = Parameter(v)
         return diff
 
     def diff_asdefine(asdef: ParameterList, ref_asdef: ParameterList) -> ParameterList:
         diff = ParameterList()
         defs: Dict[str, str] = {}
         for _, pobj in asdef.objects.items():
-            defs[pobj.params["Name"].v] = pobj.params["Filename"].v
+            defs[str(pobj.params["Name"].v)] = pobj.params["Filename"].v
         for _, ref_pobj in ref_asdef.objects.items():
             try:
-                if defs[ref_pobj.params["Name"].v] == ref_pobj.params["Filename"].v:
-                    defs.pop(ref_pobj.params["Name"].v)
-            except ValueError:
+                if (
+                    defs[str(ref_pobj.params["Name"].v)]
+                    == ref_pobj.params["Filename"].v
+                ):
+                    defs.pop(str(ref_pobj.params["Name"].v))
+            except (ValueError, KeyError):
                 continue
         for i, (k, v) in enumerate(defs.items()):
             key = f"ASDefine_{i}"
@@ -132,9 +139,9 @@ def merge_plists(
     def merge_addres(plist: ParameterList, other_plist: ParameterList):
         bfres: List[str] = []
         for _, pobj in plist.objects.items():
-            bfres.append(pobj.params["Anim"].v)
+            bfres.append(str(pobj.params["Anim"].v))
         for _, other_pobj in other_plist.objects.items():
-            bfres.append(other_pobj.params["Anim"].v)
+            bfres.append(str(other_pobj.params["Anim"].v))
         for i, v in enumerate(list(dict.fromkeys(bfres))):
             key = f"AddRes_{i}"
             if not key in plist.objects:
@@ -144,15 +151,15 @@ def merge_plists(
     def merge_asdefine(plist: ParameterList, other_plist: ParameterList):
         defs: Dict[str, str] = {}
         for _, pobj in plist.objects.items():
-            defs[pobj.params["Name"].v] = pobj.params["Filename"].v
+            defs[str(pobj.params["Name"].v)] = pobj.params["Filename"].v
         for _, other_pobj in other_plist.objects.items():
-            defs[other_pobj.params["Name"].v] = other_pobj.params["Filename"].v
+            defs[str(other_pobj.params["Name"].v)] = other_pobj.params["Filename"].v
         for i, (k, v) in enumerate(defs.items()):
             key = f"ASDefine_{i}"
             if not key in plist.objects:
                 plist.objects[key] = ParameterObject()
             plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
-            plist.objects[key].params["Filename"] = Parameter(FixedSafeString64(v))
+            plist.objects[key].params["Filename"] = Parameter(v)
 
     def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
         for param, value in other_pobj.params.items():
@@ -206,7 +213,9 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
         if isinstance(stuff, dict):
             try:
                 if file not in {f.name for f in sarc.get_files()}:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 sub_sarc = Sarc(util.unyaz_if_needed(sarc.get_file(file).data))
             except (
                 InvalidDataError,
@@ -226,7 +235,9 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
         elif isinstance(stuff, ParameterList):
             try:
                 if file not in {f.name for f in sarc.get_files()}:
-                    raise FileNotFoundError(f"Could not find nested file {file} in SARC")
+                    raise FileNotFoundError(
+                        f"Could not find nested file {file} in SARC"
+                    )
                 pio = ParameterIO.from_binary(sarc.get_file(file).data)
             except (
                 AttributeError,
@@ -241,20 +252,24 @@ def _merge_in_sarc(sarc: Sarc, edits: dict) -> ByteString:
     return new_sarc.write()[1]
 
 
-class DeepMerger(mergers.Merger):
-    NAME: str = "aamp"
+class ASListMerger(mergers.Merger):
+    NAME: str = "aslist"
 
     def __init__(self):
         super().__init__(
-            "AAMP merger",
-            "Merges changes to arbitrary AAMP files",
-            "deepmerge.aamp",
+            "AS list merger",
+            "Merges changes to animation lists",
+            "aslist.aamp",
             options={},
         )
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
-        print("Detecting general changes to AAMP files...")
-        aamps = {m for m in modded_files if isinstance(m, str) and m[m.rindex(".") :] in HANDLES}
+        print("Detecting general changes to AS lists...")
+        aamps = {
+            m
+            for m in modded_files
+            if isinstance(m, str) and m[m.rindex(".") :] in HANDLES
+        }
         if not aamps:
             return None
 
@@ -299,14 +314,18 @@ class DeepMerger(mergers.Merger):
     def get_mod_diff(self, mod: util.BcmlMod):
         diff = None
         if self.is_mod_logged(mod):
-            diff = ParameterIO.from_binary((mod.path / "logs" / self._log_name).read_bytes())
+            diff = ParameterIO.from_binary(
+                (mod.path / "logs" / self._log_name).read_bytes()
+            )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 if not diff:
                     diff = ParameterIO()
                 merge_plists(
                     diff,
-                    ParameterIO.from_binary((opt / "logs" / self._log_name).read_bytes()),
+                    ParameterIO.from_binary(
+                        (opt / "logs" / self._log_name).read_bytes()
+                    ),
                     True,
                 )
         return diff
@@ -342,17 +361,17 @@ class DeepMerger(mergers.Merger):
 
     @util.timed
     def perform_merge(self):
-        print("Loading deep merge logs...")
+        print("Loading AS list merge logs...")
         diffs = self.consolidate_diffs(self.get_all_diffs())
         if not diffs:
-            print("No deep merge needed")
+            print("No AS list merge needed")
             return
         pool = self._pool or Pool()
         pool.starmap(merge_aamp_files, diffs.items())
         if not self._pool:
             pool.close()
             pool.join()
-        print("Finished deep merge")
+        print("Finished AS list merge")
 
     def get_checkbox_options(self):
         return []
