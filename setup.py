@@ -13,7 +13,7 @@ with open("docs/README.md", "r") as readme:
 
 setup(
     name="bcml",
-    version="3.6.3",
+    version="3.7.0",
     author="NiceneNerd",
     author_email="macadamiadaze@gmail.com",
     description="A mod manager for The Legend of Zelda: Breath of the Wild",
@@ -21,17 +21,13 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/NiceneNerd/BCML",
     include_package_data=True,
-    packages=["bcml", "webviewb", "webviewb.js", "webviewb.platforms"],
-    package_dir={"webviewb": "webviewb", "bcml": "bcml"},
-    package_data={
-        "webviewb": [
-            "webviewb/lib/Microsoft.WindowsAPICodePack.dll",
-            "webviewb/lib/Microsoft.WindowsAPICodePack.Shell.dll",
-        ],
-    },
+    packages=["bcml"],
+    package_dir={"bcml": "bcml"},
     entry_points={
         "gui_scripts": ["bcml = bcml.__main__:main"],
-        "console_scripts": ["bcml-debug = bcml.__main__:main_debug",],
+        "console_scripts": [
+            "bcml-debug = bcml.__main__:main_debug",
+        ],
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
