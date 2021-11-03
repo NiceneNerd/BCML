@@ -627,7 +627,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                 "utf-8",
             )
 
-    for log in {"deepmerge.aamp", "shop.aamp"}:
+    for log in {"deepmerge.aamp", "shop.aamp", "aslist.aamp"}:
         log_path = mod / "logs" / log
         if log_path.exists():
             pio = oead.aamp.ParameterIO.from_binary(log_path.read_bytes())
