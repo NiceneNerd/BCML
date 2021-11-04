@@ -81,16 +81,16 @@ def log_drop_file(file: str, mod_dir: Path):
         )
         ref_table = _drop_to_dict(ref_drop)
         del ref_drop
-        for table, contents in drop_table.items():
-            if table not in ref_table:
-                continue
-            for item, prob in {
-                (i, p)
-                for i, p in contents["items"].items()
-                if i in ref_table[table]["items"]
-            }:
-                if prob == ref_table[table]["items"][item]:
-                    drop_table[table]["items"][item] = util.UNDERRIDE
+        # for table, contents in drop_table.items():
+        #     if table not in ref_table:
+        #         continue
+        #     for item, prob in {
+        #         (i, p)
+        #         for i, p in contents["items"].items()
+        #         if i in ref_table[table]["items"]
+        #     }:
+        #         if prob == ref_table[table]["items"][item]:
+        #             drop_table[table]["items"][item] = util.UNDERRIDE
         del ref_table
     except (
         FileNotFoundError,
@@ -191,7 +191,10 @@ class DropMerger(mergers.Merger):
     def consolidate_diffs(self, diffs):
         consolidated = {}
         for diff in diffs:
-            util.dict_merge(consolidated, diff)
+            for file, tables in diff.items():
+                if file not in consolidated:
+                    consolidated[file] = {}
+                consolidated[file].update(tables)
         return consolidated
 
     @util.timed
