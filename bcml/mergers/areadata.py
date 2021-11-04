@@ -159,7 +159,10 @@ class AreaDataMerger(mergers.Merger):
                 except FileNotFoundError:
                     pass
             return
-        if areadata_merge_log.exists() and areadata_merge_log.read_text() == areadata_mod_hash:
+        if (
+            areadata_merge_log.exists()
+            and areadata_merge_log.read_text() == areadata_mod_hash
+        ):
             print("No area data merging necessary")
             return
 
@@ -168,7 +171,10 @@ class AreaDataMerger(mergers.Merger):
 
         print("Writing new area data...")
         areadata_bytes = oead.byml.to_binary(
-            oead.byml.Array([v for _, v in new_areadata.items()]), big_endian=util.get_settings("wiiu")
+            oead.byml.Array(
+                [v for _, v in sorted(new_areadata.items(), key=lambda x: int(x[0]))]
+            ),
+            big_endian=util.get_settings("wiiu"),
         )
         del new_areadata
         util.inject_file_into_sarc(
