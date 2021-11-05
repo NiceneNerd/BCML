@@ -129,12 +129,12 @@ class Mods extends React.Component {
                     if (reader.result.byteLength > 52428800) {
                         this.props.onCancel();
                         this.props.onError({
-                            short: "You can only drag and drop files under 50 MB.",
+                            short: "You can only drag and drop files under 50 MB. Use the floating Install button instead.",
                             error_text:
                                 "Due to technical limitations, files over 50 MB are not supported\n" +
                                 `for drag-and-drop install. This file is ${
                                     reader.result.byteLength / 1024 / 1024
-                                } MB.`
+                                } MB. Please use the Install button (big floating icon) instead.`
                         });
                         return;
                     }
