@@ -756,7 +756,7 @@ class Api:
             )
             if out:
                 output = Path(out if isinstance(out, str) else out[0])
-                install.export(output)
+                install.export(output, standalone=True)
 
     def get_mod_edits(self, params=None):
         mod = BcmlMod.from_json(params["mod"])

@@ -881,7 +881,7 @@ def link_master_mod(output: Path = None):
         )
 
 
-def export(output: Path):
+def export(output: Path, standalone: bool = False):
     print("Loading files...")
     tmp_dir = Path(mkdtemp())
     if tmp_dir.exists():
@@ -897,12 +897,18 @@ def export(output: Path):
     rules_path = tmp_dir / "rules.txt"
     mods = util.get_installed_mods()
     if util.get_settings("wiiu"):
+        name = "Exported BCML mod" if not standalone else mods[0].name
+        desc = (
+            f'Exported merge of {", ".join([mod.name for mod in mods])}'
+            if not standalone
+            else mods[0].description
+        )
         rules_path.write_text(
             "[Definition]\n"
             "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
-            "name = Exported BCML Mod\n"
-            "path = The Legend of Zelda: Breath of the Wild/Mods/Exported BCML\n"
-            f'description = Exported merge of {", ".join([mod.name for mod in mods])}\n'
+            f"name = {name}\n"
+            f"path = The Legend of Zelda: Breath of the Wild/Mods/{name}\n"
+            f"description = {desc}\n"
             "version = 4\n",
             encoding="utf-8",
         )
