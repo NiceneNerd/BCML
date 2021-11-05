@@ -3,7 +3,7 @@ import re
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Optional, Union, List, Dict
 
 import oead
 from oead.aamp import ParameterIO, ParameterList, ParameterObject, Name, Parameter
@@ -167,17 +167,38 @@ class DropMerger(mergers.Merger):
         )
 
     def get_mod_diff(self, mod: util.BcmlMod):
+        def rem_underride(data: dict):
+            for file, tables in data.items():
+                stock: Optional[dict] = None
+                for name, table in tables.items():
+                    for actor, prob in table["items"].items():
+                        if prob == util.UNDERRIDE:
+                            if stock == None:
+                                base_file = file[: file.index("//")]
+                                sub_file = file[file.index("//") :]
+                                ref_drop = ParameterIO.from_binary(
+                                    util.get_nested_file_bytes(
+                                        str(util.get_game_file(base_file)) + sub_file
+                                    )
+                                )
+                                stock = _drop_to_dict(ref_drop)
+                            data[file][name]["items"][actor] = stock[name]["items"][
+                                actor
+                            ]
+
         diff: Dict[str, dict] = {}
         if self.is_mod_logged(mod):
+            data = json.loads((mod.path / "logs" / self._log_name).read_text("utf-8"))
+            rem_underride(data)
             util.dict_merge(
                 diff,
-                json.loads((mod.path / "logs" / self._log_name).read_text("utf-8")),
+                data,
             )
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
-                util.dict_merge(
-                    diff, json.loads((opt / "logs" / self._log_name).read_text("utf-8"))
-                )
+                data = json.loads((opt / "logs" / self._log_name).read_text("utf-8"))
+                rem_underride(data)
+                util.dict_merge(diff, data)
         return diff
 
     def get_all_diffs(self):
