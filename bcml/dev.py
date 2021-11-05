@@ -11,6 +11,7 @@ from pathlib import Path
 from platform import system
 from tempfile import TemporaryDirectory
 from typing import Optional, Union, List, Tuple
+from zlib import crc32
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
@@ -611,10 +612,114 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
     actorinfo_log = mod / "logs" / "actorinfo.yml"
     if actorinfo_log.exists():
         actorinfo = oead.byml.from_text(actorinfo_log.read_text("utf-8"))
-        if any("instSize" in actor for _, actor in actorinfo.items()):
-            handle_warning(
-                "This mod contains changes to actor instSize values, "
-                "which cannot be automatically converted."
+        from bcml.mergers.actors import get_stock_actorinfo
+
+        profiles = {
+            str(crc32(actor["name"].v.encode("utf-8"))): actor["profile"].v
+            for actor in get_stock_actorinfo()["Actors"]
+        }
+        profile_ratios = {
+            "ComplexTag": 1.58580,
+            "ArmorLower": 2.77174,
+            "MapConstActive": 2.62619,
+            "Horse": 1.57119,
+            "MapConstPassive": 3.34795,
+            "Prey": 1.90845,
+            "MapDynamicActive": 2.54314,
+            "Anchor": 1.54027,
+            "NPC": 1.75036,
+            "DemoNPC": 2.44085,
+            "MapDynamicPassive": 2.87003,
+            "OptionalWeapon": 3.32726,
+            "ArmorUpper": 2.11312,
+            "ArmorHead": 2.27533,
+            "Item": 2.59118,
+            "WeaponBow": 2.43674,
+            "Enemy": 1.70107,
+            "CookResult": 1.47792,
+            "HorseSaddle": 2.41971,
+            "System": 1.59686,
+            "WeaponShield": 2.58867,
+            "MergedDungeonParts": 2.26925,
+            "NoCalcActor": 1.56243,
+            "SoundProxy": 1.57575,
+            "WeaponSmallSword": 2.56363,
+            "SiteBoss": 1.61253,
+            "ActorReaction": 1.95015,
+            "WeaponLargeSword": 2.40451,
+            "EffectLocater": 1.68679,
+            "Beam": 1.58558,
+            "SoleTag": 1.60180,
+            "GelEnemy": 1.69351,
+            "PlayerItem": 1.82444,
+            "WeaponSpear": 2.41490,
+            "Bullet": 2.12249,
+            "LinkTag": 1.67059,
+            "ActorOption": 1.47986,
+            "GiantEnemy": 1.64212,
+            "EventSystem": 1.58667,
+            "Dummy": 1.57355,
+            "Rope": 2.45780,
+            "Guardian": 2.00911,
+            "Swarm": 2.29493,
+            "GiantArmor": 2.74482,
+            "Dragon": 1.62425,
+            "GuardianComponent": 2.75823,
+            "Remains": 2.23782,
+            "CapturedActor": 2.33165,
+            "ArmorExtra1": 3.64020,
+            "AreaManagementForOthers": 1.56662,
+            "SpotBgmTag": 1.54055,
+            "Area": 1.57014,
+            "AreaManagementForPlayer": 1.57471,
+            "LineBeam": 1.58024,
+            "EnvSeEmitPoint": 1.59169,
+            "DemoEquipment": 2.78588,
+            "SoundSystemActor": 1.66232,
+            "HorseObject": 1.96967,
+            "Motorcycle": 1.89353,
+            "Sandworm": 1.66948,
+            "GameBlanceLocater": 2.71996,
+            "HorseReins": 2.78040,
+            "AirWall": 1.55907,
+            "NoWork": 1.55033,
+            "Weapon": 2.47555,
+            "SweepCollision": 1.53318,
+            "ArmorExtra0": 3.24801,
+            "Player": 1.44917,
+            "EnemySwarm": 2.03859,
+            "ArmorExtra2": 2.81442,
+            "WolfLink": 1.87220,
+            "PauseMenuPlayer": 1.86665,
+            "LastBoss": 1.68402,
+            "StaticAnchor": 1.53173,
+            "EditCamera": 1.59361,
+            "EventTag": 1.59889,
+            "GlobalParameter": 1.55041,
+            "Camera": 1.53002,
+        }
+        for hash_id, actor in [
+            (hash_id, actor)
+            for hash_id, actor in actorinfo.items()
+            if "instSize" in actor
+        ]:
+            profile = actor.get("profile", profiles.get(hash_id))
+            if not profile:
+                handle_warning(
+                    f"Could not detect profile for actor with hash {hash_id}. "
+                    "The instSize value was not converted."
+                )
+                continue
+            ratio = profile_ratios[profile]
+            actor["instSize"] = oead.S32(
+                int(
+                    (
+                        (actor["instSize"].v * ratio)
+                        if not to_wiiu
+                        else (actor["instSize"].v / ratio)
+                    )
+                    * 1.1 # safety buffer, since we're dealing with averages
+                )
             )
         del actorinfo
 
