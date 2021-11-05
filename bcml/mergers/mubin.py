@@ -8,6 +8,7 @@ from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Dict, Union, List, Tuple
+from zlib import crc32
 
 import oead
 from oead.byml import Hash, Array  # pylint: disable=import-error
@@ -173,7 +174,7 @@ def get_modded_map(map_unit: Union[Map, tuple], tmp_dir: Path) -> Hash:
     return oead.byml.from_binary(map_bytes)
 
 
-def get_map_diff(map_unit: Map, tmp_dir: Path) -> Hash:
+def get_map_diff(map_unit: Map, tmp_dir: Path, new_hashes: bool = False) -> Hash:
     mod_map = get_modded_map(map_unit, tmp_dir)
     stock_map = True
     for obj in mod_map["Objs"]:
@@ -207,6 +208,20 @@ def get_map_diff(map_unit: Map, tmp_dir: Path) -> Hash:
                 }
             ]
         )
+
+        if new_hashes:
+            hash_map: Dict[int, int] = {}
+            for obj in diffs["add"]:
+                new_hash = crc32(oead.byml.to_text(obj).encode("utf8"))
+                hash_map[obj["HashId"].v] = new_hash
+                obj["HashId"] = oead.U32(new_hash)
+            for obj in [*diffs["add"], *[v for k, v in diffs["mod"].items()]]:
+                if "LinksToObj" in obj:
+                    for link in obj["LinksToObj"]:
+                        if link["DestUnitHashId"].v in hash_map:
+                            link["DestUnitHashId"] = oead.U32(
+                                hash_map[link["DestUnitHashId"].v]
+                            )
         return diffs
 
     def diff_rails() -> Hash:
@@ -256,6 +271,7 @@ def generate_modded_map_log(
     tmp_dir: Path,
     modded_mubins: List[Path],
     pool: multiprocessing.pool.Pool = None,
+    new_hashes: bool = False,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
     this_pool = pool or Pool(maxtasksperchild=500)
@@ -263,10 +279,7 @@ def generate_modded_map_log(
         {
             map_unit: oead.byml.from_text(diff)
             for map_unit, diff in this_pool.imap_unordered(
-                partial(
-                    get_map_diff,
-                    tmp_dir=tmp_dir,
-                ),
+                partial(get_map_diff, tmp_dir=tmp_dir, new_hashes=new_hashes),
                 modded_maps,
             )
         }
@@ -535,6 +548,7 @@ class MapMerger(mergers.Merger):
                 mod_dir,
                 modded_mubins,
                 pool=self._pool,
+                new_hashes=self._options.get("new_hashes", False),
             )
         return {}
 
@@ -720,7 +734,9 @@ class MapMerger(mergers.Merger):
         print("Map merge complete")
 
     def get_checkbox_options(self):
-        return []
+        return [
+            ("new_hashes", "Generate unique hashes for added map actors"),
+        ]
 
     def get_mod_edit_info(self, mod: util.BcmlMod) -> set:
         return {
