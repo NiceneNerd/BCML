@@ -436,7 +436,6 @@ class App extends React.Component {
                         <Button
                             size="xs"
                             variant="outline text-light"
-                            alignRight
                             onClick={() => pywebview.api.open_help()}>
                             <i className="material-icons">help</i>
                         </Button>

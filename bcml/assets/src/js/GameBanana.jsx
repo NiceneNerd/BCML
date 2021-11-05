@@ -286,7 +286,7 @@ class ModList extends React.Component {
                             <Card.Img src={mod.preview} alt={mod.name} />
                             <Card.Body>
                                 <Card.Title>{mod.name}</Card.Title>
-                                <Card.Text>
+                                <Card.Text as="div">
                                     <div>{mod.description}</div>
                                 </Card.Text>
                                 <div
