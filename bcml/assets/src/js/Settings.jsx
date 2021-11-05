@@ -445,20 +445,21 @@ class Settings extends React.Component {
                                 placeholder="Optional"
                             />
                         </Form.Group>
-                        <h5>Create BCML Shortcuts</h5>
-                        <Button
-                            variant="success"
-                            onClick={() => this.makeShortcut(true)}>
-                            Desktop
-                        </Button>{" "}
-                        <Button
-                            variant="success"
-                            onClick={() => this.makeShortcut(false)}>
-                            {window.navigator.platform.includes("inux")
-                                ? "Application"
-                                : "Start"}{" "}
-                            Menu
-                        </Button>
+                        {!window.navigator.platform.includes("inux") && (
+                            <>
+                                <h5>Create BCML Shortcuts</h5>
+                                <Button
+                                    variant="success"
+                                    onClick={() => this.makeShortcut(true)}>
+                                    Desktop
+                                </Button>{" "}
+                                <Button
+                                    variant="success"
+                                    onClick={() => this.makeShortcut(false)}>
+                                    Start Menu
+                                </Button>
+                            </>
+                        )}
                     </Col>
                     <Col>
                         <br />
