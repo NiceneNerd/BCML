@@ -23,11 +23,12 @@ changes made by each mod into a single modpack that just works.
 
 ## Prerequisites
 
--   Windows 10 (7-8 _might_ work but are not supported) or basically any modern Linux
+-   Windows 10 (7-8 _might_ work but are not officially supported) or basically any modern Linux
     distribution
 -   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch
     (version 1.6.0) or Wii U (version 1.5.0)
 -   [The latest x64 Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads#section-2)
+-   [The Edge WebView2 runtime](https://go.microsoft.com/fwlink/p/?LinkId=2124703) (optional but recommended)
 -   Cemu (optional)
 
 ## Setup
@@ -37,8 +38,18 @@ There are two main ways to install BCML.
 ### PyPI
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
-run `pip install bcml`. Note that, because of the `pythonnet` dependency, on Windows
-Python 3.9+ is not supported.
+run `pip install bcml`. *Note that, because of certain dependencies, on Windows
+Python 3.9+ is not supported.*
+
+**Note for Linux users**: Because of the ways different distros handle Python packaging, it
+often works better to install BCML using a virtual environment ("venv"). To do so, you can
+run something like this:
+
+```sh
+python -m venv bcml_env
+source bcml_env/bin/activate # will activate the venv
+pip install bcml
+```
 
 ### Building from Source
 
@@ -46,7 +57,7 @@ Building from source requires, in addition to the general prerequisites:
 
 -   Python 3.7+ 64 bit
 
-    (Note: 3.9+ will not work on Windows until `pythonnet` is updated.)
+    *(Note: 3.9+ will not work on Windows until `pythonnet` is updated.)*
 
 -   Node.js v14
 
