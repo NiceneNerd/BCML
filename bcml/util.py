@@ -1208,6 +1208,19 @@ def create_bcml_graphicpack_if_needed():
         )
 
 
+def create_shortcuts(desktop: bool, start_menu: bool):
+    from pycrosskit.shortcuts import Shortcut
+
+    Shortcut(
+        "BCML",
+        shutil.which("bcml"),
+        "BOTW Cross-Platform Mod Loader",
+        str(get_exec_dir() / "data" / "bcml.ico"),
+        desktop,
+        start_menu,
+    )
+
+
 def download_webview2():
     from bcml import native_msg
 

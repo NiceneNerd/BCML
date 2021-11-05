@@ -159,6 +159,10 @@ class Api:
     def get_settings(self, params=None):
         return util.get_settings()
 
+    @win_or_lose
+    def make_shortcut(self, params):
+        util.create_shortcuts(params["desktop"], not params["desktop"])
+
     def get_user_langs(self, params):
         if params["dir"] and Path(params["dir"]).exists():
             return list(util.get_user_languages(Path(params["dir"])))

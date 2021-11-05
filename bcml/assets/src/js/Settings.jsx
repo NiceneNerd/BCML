@@ -1,4 +1,4 @@
-import { Col, Form, OverlayTrigger, Row, Tooltip } from "react-bootstrap";
+import { Button, Col, Form, OverlayTrigger, Row, Tooltip } from "react-bootstrap";
 
 import FolderInput from "./Folder.jsx";
 import React from "react";
@@ -164,6 +164,14 @@ class Settings extends React.Component {
             [e.target.id]:
                 e.target.type != "checkbox" ? e.target.value : e.target.checked
         });
+    };
+
+    makeShortcut = async desktop => {
+        try {
+            await pywebview.api.make_shortcut({ desktop });
+        } catch (error) {
+            this.props.onError(error);
+        }
     };
 
     render() {
@@ -437,6 +445,20 @@ class Settings extends React.Component {
                                 placeholder="Optional"
                             />
                         </Form.Group>
+                        <h5>Create BCML Shortcuts</h5>
+                        <Button
+                            variant="success"
+                            onClick={() => this.makeShortcut(true)}>
+                            Desktop
+                        </Button>{" "}
+                        <Button
+                            variant="success"
+                            onClick={() => this.makeShortcut(false)}>
+                            {window.navigator.platform.includes("inux")
+                                ? "Application"
+                                : "Start"}{" "}
+                            Menu
+                        </Button>
                     </Col>
                     <Col>
                         <br />

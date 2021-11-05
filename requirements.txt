@@ -5,6 +5,7 @@ byml~=2.4.2
 botw-utils~=0.2.3
 botw-havok~=0.3.18
 oead~=1.2.0
+pycrosskit~=1.0.4.1
 pythonnet~=2.5.2; platform_system == 'Windows'
 pyqtwebengine~=5.15.2; platform_system == 'Linux'
 pywebview~=3.5

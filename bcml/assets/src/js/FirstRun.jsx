@@ -215,6 +215,7 @@ class FirstRun extends React.Component {
                                     )}
                                     <Settings
                                         saving={this.state.savingSettings}
+                                        onError={this.showError}
                                         onFail={() =>
                                             this.setState({
                                                 savingSettings: false,
