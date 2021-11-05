@@ -103,10 +103,7 @@ def main(debug: bool = False):
             if _is_chromium():
                 gui = "edgechromium"
             else:
-                bcml.native_msg(
-                    "Neither Edge WebView2 nor CEF is available. You may experience bugs."
-                    " Please install the WebView2 runtime at https://go.microsoft.com/fwlink/p/?LinkId=2124703."
-                )
+                util.download_webview2()
     else:
         gui = "qt"
 

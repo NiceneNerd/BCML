@@ -24,7 +24,7 @@ from multiprocessing import current_process
 from pathlib import Path
 from platform import system, python_version_tuple
 from pprint import pformat
-from subprocess import run
+from subprocess import run, PIPE
 from tempfile import mkdtemp
 from time import time_ns
 from typing import Union, List, Dict, ByteString, Tuple, Any, Optional, IO
@@ -1206,6 +1206,44 @@ def create_bcml_graphicpack_if_needed():
             "fsPriority = 9999",
             encoding="utf-8",
         )
+
+
+def download_webview2():
+    from bcml import native_msg
+
+    native_msg(
+        "Neither CEF nor Edge WebView2 is available. "
+        " Click OK to download the WebView2 runtime at https://go.microsoft.com/fwlink/p/?LinkId=2124703. "
+        " The download may take a few moments. Once done, install it and restart BCML.",
+        "Error",
+    )
+    path = Path(mkdtemp()) / f"webview.exe"
+    try:
+        res: requests.Response = requests.get(
+            "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
+        )
+        with path.open("wb") as tmp_file:
+            for chunk in res.iter_content(chunk_size=1024):
+                tmp_file.write(chunk)
+    except (
+        FileNotFoundError,
+        PermissionError,
+        OSError,
+        requests.ConnectionError,
+        requests.RequestException,
+    ) as err:
+        native_msg(str(err), "Error")
+    try:
+        run(
+            [str(path)],
+            stdout=PIPE,
+            stderr=PIPE,
+            creationflags=CREATE_NO_WINDOW,
+            check=True,
+        )
+    except Exception as err:
+        native_msg(str(err), "Error")
+    sys.exit(0)
 
 
 UNDERRIDE = "UNDERRIDE_CONST"
