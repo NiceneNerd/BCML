@@ -87,22 +87,22 @@ def main(debug: bool = False):
     api = Api(host)
 
     if not debug:
-        debug = DEBUG or "bcml-debug" in sys.argv
+        debug = DEBUG or "bcml-debug" in sys.argv or "--debug" in sys.argv
 
     gui: str
     if SYSTEM == "Windows":
-        from webview.platforms.winforms import _is_chromium
+        try:
+            import cefpython3
 
-        if _is_chromium():
-            gui = "edgechromium"
-        else:
-            try:
-                import cefpython3
+            del cefpython3
+            gui = "cef"
+            configure_cef(debug)
+        except ImportError:
+            from webview.platforms.winforms import _is_chromium
 
-                del cefpython3
-                gui = "cef"
-                configure_cef(debug)
-            except ImportError:
+            if _is_chromium():
+                gui = "edgechromium"
+            else:
                 bcml.native_msg(
                     "Neither Edge WebView2 nor CEF is available. You may experience bugs."
                     " Please install the WebView2 runtime at https://go.microsoft.com/fwlink/p/?LinkId=2124703."
