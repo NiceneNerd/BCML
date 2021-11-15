@@ -373,6 +373,8 @@ class Settings extends React.Component {
                                     <Tooltip>
                                         The game language you play with. This will be
                                         prioritized when attempting to merge text mods.
+                                        You must load game files before this dropdown
+                                        populates.
                                     </Tooltip>
                                 }>
                                 <Form.Control
