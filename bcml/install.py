@@ -367,7 +367,7 @@ def install_mod(
 
     this_pool: Optional[multiprocessing.pool.Pool] = None  # type: ignore
     try:
-        rules = json.loads((tmp_dir / "info.json").read_text("utf-8"))
+        rules = json.loads((tmp_dir / "info.json").read_text("iso8859-1"))
         mod_name = rules["name"].strip(" '\"").replace("_", "")
         print(f"Identified mod: {mod_name}")
         if rules["depends"]:
