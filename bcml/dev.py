@@ -459,7 +459,6 @@ NO_CONVERT_EXTS = {
     ".bfres",
     ".hkcl",
     ".hkrg",
-    ".bphyssb",
     ".sesetlist",
     ".sbfarc",
     ".shknm2",
@@ -475,7 +474,6 @@ NO_CONVERT_EXTS = {
     ".bfsar",
     ".sbmapopen",
     ".sbmaptex",
-    ".sbreviewtex",
 }
 
 
@@ -800,7 +798,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
     if (mod / "options").exists():
         for folder in {d for d in (mod / "options").glob("*") if d.is_dir()}:
             convert_mod(folder, to_wiiu=to_wiiu, warn_only=warn_only)
-
+    
     meta = loads((mod / "info.json").read_text("utf-8"))
     meta["platform"] = "wiiu" if to_wiiu else "switch"
     (mod / "info.json").write_text(dumps(meta, indent=2, ensure_ascii=False), "utf-8")
