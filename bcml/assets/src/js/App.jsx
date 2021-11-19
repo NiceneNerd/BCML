@@ -187,11 +187,7 @@ class App extends React.Component {
             );
         }
         const num_selects = Object.keys(this.selects).length;
-        if (
-            num_selects > 0 &&
-            (!this.state.selects ||
-                num_selects > Object.keys(this.state.selects).length)
-        ) {
+        if (num_selects > 0 && num_selects > (this.state.selects?.length || 0)) {
             this.installArgs = { mods, options };
             this.setState({
                 selectPath: Object.keys(this.selects)[0],
@@ -212,6 +208,7 @@ class App extends React.Component {
                             throw res.error;
                         }
                         this.selects = null;
+                        this.installArgs = null;
                         this.setState(
                             {
                                 showProgress: false,
@@ -616,7 +613,6 @@ class App extends React.Component {
                                     this.installArgs.mods,
                                     this.installArgs.options
                                 );
-                                this.installArgs = null;
                             }
                         );
                     }}
