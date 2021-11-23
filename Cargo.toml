@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 botw-utils = "0.3.1"
 cow-utils = "0.1.2"
+dirs2 = "3.0.1"
 glob = "0.3.0"
 indexmap = { version = "1.7.0", features = ["serde", "rayon"] }
 lazy_static = "1.4.0"
@@ -18,5 +19,6 @@ path-slash = "0.1.4"
 pyo3 = { version = "0.15.0", features = ["extension-module"] }
 rayon = "1.5.1"
 roead = { git = "https://github.com/NiceneNerd/roead", rev = "02b5e5d791aa331ad5e4d598b680cb1607db2cce" }
+serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.71"
 thiserror = "1.0.30"

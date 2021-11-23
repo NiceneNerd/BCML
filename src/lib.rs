@@ -1,3 +1,4 @@
+pub mod settings;
 pub mod util;
 use cow_utils::CowUtils;
 use path_slash::{PathBufExt, PathExt};

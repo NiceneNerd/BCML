@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+pub mod maps;
 pub mod texts;
 
 pub fn mergers_mod(py: Python, parent: &PyModule) -> PyResult<()> {
