@@ -4,16 +4,12 @@ from sys import argv
 from pathlib import Path
 from setuptools import setup
 
-if "install" in argv and os.name == "posix":
-    os.chmod("bcml/helpers/7z", int("755", 8))
-    os.chmod("bcml/helpers/msyt", int("755", 8))
-
 with open("docs/README.md", "r") as readme:
     long_description = readme.read()
 
 setup(
     name="bcml",
-    version="3.7.0",
+    version="3.8.0-beta1",
     author="NiceneNerd",
     author_email="macadamiadaze@gmail.com",
     description="A mod manager for The Legend of Zelda: Breath of the Wild",

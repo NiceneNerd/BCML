@@ -168,6 +168,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+**/node_modules/
 jspm_packages/
 
 # Distribution directories
@@ -199,3 +200,11 @@ test.py
 tmp.*
 Cargo.lock
 bundle.js
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+/target
+#Cargo.lock
