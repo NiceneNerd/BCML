@@ -722,7 +722,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                     * 1.1 # safety buffer, since we're dealing with averages
                 )
             )
-        del actorinfo
+        actorinfo_log.write_text(oead.byml.to_text(actorinfo))
 
     for log in {"drops.json", "packs.json"}:
         log_path = mod / "logs" / log
