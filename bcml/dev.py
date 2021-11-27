@@ -616,7 +616,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         from bcml.mergers.actors import get_stock_actorinfo
 
         profiles = {
-            str(crc32(actor["name"].v.encode("utf-8"))): actor["profile"].v
+            str(crc32(actor["name"].encode("utf-8"))): actor["profile"]
             for actor in get_stock_actorinfo()["Actors"]
         }
         profile_ratios = {
