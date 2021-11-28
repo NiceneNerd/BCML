@@ -704,7 +704,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
             for hash_id, actor in actorinfo.items()
             if "instSize" in actor
         ]:
-            profile = actor["profile"] or profiles[hash_id]
+            profile = dict(actor).get("profile", profiles.get(hash_id))
             if not profile:
                 handle_warning(
                     f"Could not detect profile for actor with hash {hash_id}. "
