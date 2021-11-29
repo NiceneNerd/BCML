@@ -104,12 +104,12 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
         diff = ParameterList()
         defs: Dict[str, str] = {}
         for _, pobj in asdef.objects.items():
-            defs[str(pobj.params["Name"].v)] = pobj.params["Filename"].v
+            defs[str(pobj.params["Name"].v)] = str(pobj.params["Filename"].v)
         for _, ref_pobj in ref_asdef.objects.items():
             try:
                 if (
                     defs[str(ref_pobj.params["Name"].v)]
-                    == ref_pobj.params["Filename"].v
+                    == str(ref_pobj.params["Filename"].v)
                 ):
                     defs.pop(str(ref_pobj.params["Name"].v))
             except (ValueError, KeyError):
