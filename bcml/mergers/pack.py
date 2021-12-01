@@ -98,7 +98,7 @@ def write_sarc(file: str, data: bytes) -> None:
 
 
 class PackMerger(mergers.Merger):
-    """ A merger for modified pack files """
+    """A merger for modified pack files"""
 
     NAME: str = "packs"
 
@@ -173,8 +173,6 @@ class PackMerger(mergers.Merger):
                         all_diffs[modded_sarc] = []
                     if (mod.path / modded_sarc).exists():
                         all_diffs[modded_sarc].append(mod.path / modded_sarc)
-        util.vprint("All SARC diffs:")
-        util.vprint(all_diffs)
         return all_diffs
 
     @util.timed
@@ -196,16 +194,21 @@ class PackMerger(mergers.Merger):
                 sarcs[sarc_file].insert(0, util.get_game_file(sarc_file))
             except FileNotFoundError:
                 continue
+        util.vprint("All SARC diffs:")
+        util.vprint(sarcs)
         if not sarcs:
             print("No SARC merging necessary")
             return
         print(f"Merging {len(sarcs)} SARC files...")
-        pool = self._pool or Pool(maxtasksperchild=500)
-        results = pool.starmap(merge_sarcs, sarcs.items())
-        pool.starmap(write_sarc, results)
-        if not self._pool:
-            pool.close()
-            pool.join()
+        from bcml import bcml as rsext
+
+        rsext.mergers.packs.merge_sarcs(sarcs)
+        # pool = self._pool or Pool(maxtasksperchild=500)
+        # results = pool.starmap(merge_sarcs, sarcs.items())
+        # pool.starmap(write_sarc, results)
+        # if not self._pool:
+        #     pool.close()
+        #     pool.join()
         print("Finished merging SARCs")
 
     def get_checkbox_options(self):

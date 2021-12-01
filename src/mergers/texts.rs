@@ -127,7 +127,7 @@ pub fn merge_language(
             .into_par_iter()
             .map(|(file, diff)| -> Result<(String, Vec<u8>)> {
                 let file = file.replace("msyt", "msbt");
-                if let Some(stock_file) = stock_bootup.get_file_data(&file) {
+                if let Some(stock_file) = stock_message.get_file_data(&file) {
                     let mut stock_text = Msyt::from_msbt_bytes(stock_file)
                         .map_err(|e| RustError::MsbtError(e.to_string()))?;
                     stock_text.entries.extend(diff.into_iter());

@@ -16,6 +16,12 @@ pub mod mergers;
 
 #[derive(Debug, Error)]
 pub enum RustError {
+    #[error("File not found: {0}")]
+    FileNotFoundError(String),
+    #[error(transparent)]
+    BymlError(#[from] roead::byml::BymlError),
+    #[error(transparent)]
+    AampError(#[from] roead::aamp::AampError),
     #[error(transparent)]
     SarcError(#[from] roead::sarc::SarcError),
     #[error(transparent)]
@@ -28,6 +34,8 @@ pub enum RustError {
     MsbtError(String),
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 impl From<RustError> for PyErr {
@@ -44,51 +52,55 @@ fn bcml(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn find_modified_files(mod_dir: String, be: bool) -> PyResult<Vec<String>> {
+fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<String>> {
     println!("Finding modified files...");
     let mod_dir = Path::new(&mod_dir);
-    let content = mod_dir.join(util::content(be));
-    let dlc = mod_dir.join(util::dlc(be));
-    let files: Vec<PathBuf> = glob::glob(mod_dir.join("**/*").to_str().unwrap())
-        .unwrap()
-        .filter_map(std::result::Result::ok)
-        .collect::<Vec<_>>()
-        .into_par_iter()
-        .filter(|f| {
-            f.is_file()
-                && (f.starts_with(&content) || f.starts_with(&dlc))
-                && util::get_canon_name(f.strip_prefix(&mod_dir).unwrap())
-                    .and_then(|canon| {
-                        std::fs::read(f)
-                            .ok()
-                            .map(|data| util::is_file_modded(&canon, &data, be))
-                    })
-                    .unwrap_or(false)
-        })
-        .collect();
+    let content = mod_dir.join(util::content());
+    let dlc = mod_dir.join(util::dlc());
+    let files: Vec<PathBuf> = py.allow_threads(|| {
+        glob::glob(mod_dir.join("**/*").to_str().unwrap())
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .filter(|f| {
+                f.is_file()
+                    && (f.starts_with(&content) || f.starts_with(&dlc))
+                    && util::get_canon_name(f.strip_prefix(&mod_dir).unwrap())
+                        .and_then(|canon| {
+                            std::fs::read(f)
+                                .ok()
+                                .map(|data| util::is_file_modded(&canon, &data))
+                        })
+                        .unwrap_or(false)
+            })
+            .collect()
+    });
     println!("Found {} modified files...", files.len());
-    let sarc_files: Vec<String> = files
-        .par_iter()
-        .filter(|f| {
-            std::fs::metadata(f).unwrap().len() > 4
-                && f.extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| botw_utils::extensions::SARC_EXTS.contains(&ext))
-                    .unwrap_or(false)
-        })
-        .map(|file| -> Result<Vec<String>> {
-            let sarc = Sarc::read(std::fs::read(file)?)?;
-            find_modded_sarc_files(
-                &sarc,
-                file.starts_with(&dlc),
-                be,
-                &file.strip_prefix(&mod_dir).unwrap().to_slash_lossy(),
-            )
-        })
-        .collect::<Result<Vec<_>>>()?
-        .into_par_iter()
-        .flatten()
-        .collect();
+    let sarc_files: Vec<String> = py.allow_threads(|| -> Result<Vec<String>> {
+        Ok(files
+            .par_iter()
+            .filter(|f| {
+                std::fs::metadata(f).unwrap().len() > 4
+                    && f.extension()
+                        .and_then(|ext| ext.to_str())
+                        .map(|ext| botw_utils::extensions::SARC_EXTS.contains(&ext))
+                        .unwrap_or(false)
+            })
+            .map(|file| -> Result<Vec<String>> {
+                let sarc = Sarc::read(std::fs::read(file)?)?;
+                find_modded_sarc_files(
+                    &sarc,
+                    file.starts_with(&dlc),
+                    be,
+                    &file.strip_prefix(&mod_dir).unwrap().to_slash_lossy(),
+                )
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_par_iter()
+            .flatten()
+            .collect())
+    })?;
     println!("Found {} modified files in SARCs...", sarc_files.len());
     Ok(files
         .into_par_iter()
@@ -107,7 +119,7 @@ fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Resul
             if aoc {
                 canon = Cow::Owned(["Aoc/0010", &canon].join(""));
             }
-            util::is_file_modded(&canon, d, be)
+            util::is_file_modded(&canon, d)
         })
         .map(|file| -> Result<Vec<String>> {
             let (f, d) = (file.name_unchecked(), file.data());

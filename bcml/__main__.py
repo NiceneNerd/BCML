@@ -141,13 +141,11 @@ def main(debug: bool = False):
     logger = Messager(api.window)
     api.window.closing += stop_it
 
-    messager = Messager(api.window)
-    with redirect_stderr(sys.stdout):
-        with redirect_stdout(messager):  # type: ignore
-            sleep(0.25)
-            webview.start(
-                gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg
-            )
+    # messager = Messager(api.window)
+    # with redirect_stderr(sys.stdout):
+    #     with redirect_stdout(messager):  # type: ignore
+    sleep(0.25)
+    webview.start(gui=gui, debug=debug, http_server=True, func=_oneclick.process_arg)
     api.cleanup()
     stop_it()  # messager=messager)
 
