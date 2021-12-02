@@ -23,7 +23,7 @@ changes made by each mod into a single modpack that just works.
 
 ## Prerequisites
 
--   Windows 10 (7-8 _might_ work but are not officially supported) or basically any modern Linux
+-   Windows 10+ (7-8 _might_ work but are not officially supported) or basically any modern Linux
     distribution
 -   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch
     (version 1.6.0) or Wii U (version 1.5.0)
@@ -38,8 +38,8 @@ There are two main ways to install BCML.
 ### PyPI
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
-run `pip install bcml`. *Note that, because of certain dependencies, on Windows
-Python 3.9+ is not supported.*
+run `pip install bcml`. **Note that, because of certain dependencies, on Windows
+Python 3.9+ is not supported.**
 
 **Note for Arch users**: BCML is now [on the AUR](https://aur.archlinux.org/packages/bcml-git/)
 (thanks [ibrokemypie](https://github.com/ibrokemypie)), so you can install it with pamac or yay or

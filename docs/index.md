@@ -17,10 +17,10 @@ Here's how BCML works:
 -   You [install mods](install.md) into BCML. Use the GameBanana tab or click the
     floating action button on the Mods tab to open the install dialog and go from there.
     (You can also drag-and-drop mods from your OS file browser.)
--   Use the sort handles if you need to edit load order. Use the Remege button liberally
+-   Use the sort handles if you need to edit load order. Use the Remerge button liberally
     when anything goes wrong.
 -   If you're a Cemu user, all installed mods should take effect next time you run the
-    game.
+    game. If this doesn't happen, try restarting BCML and Cemu, then remerging.
 -   You do _not_ have to launch BOTW from BCML. BCML installs its merged mods as a single
     graphic pack into your Cemu `graphicPacks` folder, and it will work the same as any
     other graphic pack mod.
