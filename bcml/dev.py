@@ -616,7 +616,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         from bcml.mergers.actors import get_stock_actorinfo
 
         profiles = {
-            str(crc32(actor["name"].v.encode("utf-8"))): actor["profile"].v
+            str(crc32(actor["name"].encode("utf-8"))): actor["profile"]
             for actor in get_stock_actorinfo()["Actors"]
         }
         profile_ratios = {
@@ -704,7 +704,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
             for hash_id, actor in actorinfo.items()
             if "instSize" in actor
         ]:
-            profile = actor.get("profile", profiles.get(hash_id))
+            profile = dict(actor).get("profile", profiles.get(hash_id))
             if not profile:
                 handle_warning(
                     f"Could not detect profile for actor with hash {hash_id}. "
@@ -722,7 +722,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                     * 1.1 # safety buffer, since we're dealing with averages
                 )
             )
-        del actorinfo
+        actorinfo_log.write_text(oead.byml.to_text(actorinfo))
 
     for log in {"drops.json", "packs.json"}:
         log_path = mod / "logs" / log
