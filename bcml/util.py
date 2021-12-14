@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring,no-member,too-many-lines,invalid-name
 # Copyright 2020 Nicene Nerd <macadamiadaze@gmail.com>
 # Licensed under GPLv3+
+import argparse
 import functools
 import gc
 import json
@@ -519,9 +520,30 @@ def get_python_exe(gui: bool) -> Path:
             return sys.executable
 
 
+command_args: argparse.Namespace
+
+
+@lru_cache(1)
+def parse_arguments() -> argparse.Namespace:
+    global command_args
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--portable", help="Runs BCML in portable mode preferring to store the working directory locally.", action="store_true")
+    command_args = parser.parse_args()
+    return command_args
+
+
+@lru_cache(1)
+def get_is_portable_mode() -> bool:
+    args = parse_arguments()
+    return args.portable == True
+
+
 @lru_cache(None)
 def get_data_dir() -> Path:
-    if system() == "Windows":
+    if get_is_portable_mode():
+        data_dir = Path(os.getcwd()) / "bcml-data"
+    elif system() == "Windows":
         data_dir = Path(os.path.expandvars("%LOCALAPPDATA%")) / "bcml"
     else:
         data_dir = Path.home() / ".config" / "bcml"
