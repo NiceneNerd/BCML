@@ -528,7 +528,10 @@ def parse_arguments() -> argparse.Namespace:
     global command_args
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--portable", help="Runs BCML in portable mode preferring to store the working directory locally.", action="store_true")
+        "--portable",
+        help="Runs BCML in portable mode preferring to store the working directory locally.",
+        action="store_true",
+    )
     command_args = parser.parse_args()
     return command_args
 
@@ -1465,7 +1468,9 @@ def get_7z_path():
     bundle_path = get_exec_dir() / "helpers" / "7z"
     if not os.access(bundle_path, os.X_OK):
         if not os.access(bundle_path, os.W_OK):
-            raise PermissionError(f"{bundle_path} is not executable and we don't have the permissions to change that")
+            raise PermissionError(
+                f"{bundle_path} is not executable and we don't have the permissions to change that"
+            )
         os.chmod(bundle_path, 0o755)
     if get_settings("force_7z"):
         return str(bundle_path)
