@@ -65,6 +65,10 @@ Building from source requires, in addition to the general prerequisites:
 
 -   Node.js v14
 
+-   mkdocs and mkdocs-material
+
+    Run `pip install mkdocs mkdocs-material` if not using `bootstrap.sh`
+
 Steps to build from source:
 
 1. Install Python requirements
@@ -81,7 +85,7 @@ Steps to build from source:
 3. Build the docs
 
     1. Open terminal to repo root folder
-    2. Run `mkdocs build -d bcml/assets/help`
+    2. Run `mkdocs build`
 
 4. Install BCML with `python setup.py install` or run without installing with
    `python -m bcml`
