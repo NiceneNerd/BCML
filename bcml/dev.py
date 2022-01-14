@@ -279,6 +279,11 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         ]:
             file.unlink()
 
+    if (tmp_dir / "logs" / "mainstatic.yml").exists():
+        print("Removing MainField/Static.smubin...")
+        for file in tmp_dir.rglob("MainField/Static.smubin"):
+            file.unlink()
+
     if set((tmp_dir / "logs").glob("*texts*")):
         print("Removing language bootup packs...")
         for bootup_lang in (tmp_dir / util.get_content_path() / "Pack").glob(
