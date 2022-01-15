@@ -51,6 +51,7 @@ class ProfileModal extends React.Component {
                         <InputGroup.Append>
                             <Button
                                 variant="primary"
+                                disabled={!this.state.profileName}
                                 onClick={() =>
                                     this.props.onSave(this.state.profileName, "save")
                                 }>
