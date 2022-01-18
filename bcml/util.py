@@ -1227,7 +1227,8 @@ def download_webview2():
     native_msg(
         "Neither CEF nor Edge WebView2 is available. "
         " Click OK to download the WebView2 runtime at https://go.microsoft.com/fwlink/p/?LinkId=2124703. "
-        " The download may take a few moments. Once done, install it and restart BCML.",
+        " Run 'pip install cefpython3' in CMD to install CEF. "
+        "Once both have been installed, restart BCML.",
         "Error",
     )
     path = Path(mkdtemp()) / f"webview.exe"
