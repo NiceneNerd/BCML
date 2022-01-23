@@ -473,7 +473,6 @@ NO_CONVERT_EXTS = {
     ".sbreviewtex",
     ".sbitemico",
     ".sstats",
-    ".sblwp",
     ".sbstftex",
     ".sblarc",
     ".bfsar",
