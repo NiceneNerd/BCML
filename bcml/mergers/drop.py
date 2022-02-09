@@ -13,12 +13,14 @@ from bcml import mergers, util
 def _drop_to_dict(drop: ParameterIO) -> dict:
     return {
         str(table.v): {
-            "repeat_num_min": drop.objects[str(table.v)].params["RepeatNumMin"].v,
-            "repeat_num_max": drop.objects[str(table.v)].params["RepeatNumMax"].v,
-            "approach_type": drop.objects[str(table.v)].params["ApproachType"].v,
-            "occurrence_speed_type": drop.objects[str(table.v)]
-            .params["OccurrenceSpeedType"]
-            .v,
+            "repeat_num_min": int(drop.objects[str(table.v)].params["RepeatNumMin"].v),
+            "repeat_num_max": int(drop.objects[str(table.v)].params["RepeatNumMax"].v),
+            "approach_type": int(drop.objects[str(table.v)].params["ApproachType"].v),
+            "occurrence_speed_type": int(
+                drop.objects[str(table.v)]
+                .params["OccurrenceSpeedType"]
+                .v
+            ),
             "items": {
                 str(
                     drop.objects[str(table.v)].params[f"ItemName{i:02}"].v
