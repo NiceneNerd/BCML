@@ -279,6 +279,11 @@ def _make_bnp_logs(tmp_dir: Path, options: dict):
         ]:
             file.unlink()
 
+    if (tmp_dir / "logs" / "mainstatic.yml").exists():
+        print("Removing MainField/Static.smubin...")
+        for file in tmp_dir.rglob("MainField/Static.smubin"):
+            file.unlink()
+
     if set((tmp_dir / "logs").glob("*texts*")):
         print("Removing language bootup packs...")
         for bootup_lang in (tmp_dir / util.get_content_path() / "Pack").glob(
@@ -558,7 +563,10 @@ def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> Tuple[bytes, List[str]]:
             )
         elif ext in BYML_EXTS:
             byml = oead.byml.from_binary(util.unyaz_if_needed(file.data))
-            new_sarc.files[file.name] = oead.byml.to_binary(byml, big_endian=to_wiiu)
+            data = oead.byml.to_binary(byml, big_endian=to_wiiu)
+            if ext.startswith("s"):
+                data = util.compress(data)
+            new_sarc.files[file.name] = data
         elif ext in SARC_EXTS and ext not in NO_CONVERT_EXTS:
             nest = oead.Sarc(util.unyaz_if_needed(file.data))
             new_bytes, errs = _convert_sarc(nest, to_wiiu)
@@ -574,9 +582,12 @@ def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> Tuple[bytes, List[str]]:
 def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
     warnings = []
 
-    def handle_warning(warning: str) -> None:
+    def handle_warning(warning: Union[str, list]) -> None:
         if not warn_only:
             raise ValueError(warning)
+        elif isinstance(warning, list):
+            for warning_ in warning:
+                warnings.append(warning_)
         else:
             warnings.append(warning)
 
@@ -597,14 +608,14 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
 
     special_files = {"ActorInfo.product.sbyml"}
     all_files = {
-        f for f in mod.rglob("**/*.*") if f.is_file() and "options" not in f.parts
+        f for f in mod.rglob("*.*") if f.is_file() and f not in (mod / "options").rglob("*.*")
     }
 
     for file in all_files:
         if file.suffix in NO_CONVERT_EXTS:
             handle_warning(
                 "This mod contains a file which the platform converter does not support:"
-                f" {str(file.relative_to(mod))}"
+                f" {str(file.relative_to(mod)) if 'options' not in mod.parts else str(file.relative_to(mod.parent))}"
             )
 
     actorinfo_log = mod / "logs" / "actorinfo.yml"
@@ -613,7 +624,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         from bcml.mergers.actors import get_stock_actorinfo
 
         profiles = {
-            str(crc32(actor["name"].v.encode("utf-8"))): actor["profile"].v
+            str(crc32(actor["name"].encode("utf-8"))): actor["profile"]
             for actor in get_stock_actorinfo()["Actors"]
         }
         profile_ratios = {
@@ -701,7 +712,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
             for hash_id, actor in actorinfo.items()
             if "instSize" in actor
         ]:
-            profile = actor.get("profile", profiles.get(hash_id))
+            profile = dict(actor).get("profile", profiles.get(hash_id))
             if not profile:
                 handle_warning(
                     f"Could not detect profile for actor with hash {hash_id}. "
@@ -719,7 +730,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                     * 1.1 # safety buffer, since we're dealing with averages
                 )
             )
-        del actorinfo
+        actorinfo_log.write_text(oead.byml.to_text(actorinfo))
 
     for log in {"drops.json", "packs.json"}:
         log_path = mod / "logs" / log
@@ -797,9 +808,12 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
 
     if (mod / "options").exists():
         for folder in {d for d in (mod / "options").glob("*") if d.is_dir()}:
-            convert_mod(folder, to_wiiu=to_wiiu, warn_only=warn_only)
+            option_warnings = convert_mod(folder, to_wiiu=to_wiiu, warn_only=warn_only)
+            handle_warning(option_warnings)
     
-    meta = loads((mod / "info.json").read_text("utf-8"))
-    meta["platform"] = "wiiu" if to_wiiu else "switch"
-    (mod / "info.json").write_text(dumps(meta, indent=2, ensure_ascii=False), "utf-8")
+    if (mod / "info.json").exists():
+        meta = loads((mod / "info.json").read_text("utf-8"))
+        meta["platform"] = "wiiu" if to_wiiu else "switch"
+        (mod / "info.json").write_text(dumps(meta, indent=2, ensure_ascii=False), "utf-8")
+
     return warnings

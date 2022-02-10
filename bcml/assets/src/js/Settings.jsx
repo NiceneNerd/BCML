@@ -512,7 +512,7 @@ class Settings extends React.Component {
                                         To save disk space, BCML can optionally remove
                                         unmodified files contained in the SARC files in
                                         graphic pack mods. This disables the Reprocess
-                                        button, so it may not be desirable mod
+                                        button, so it may not be desirable for mod
                                         developers.
                                     </Tooltip>
                                 }

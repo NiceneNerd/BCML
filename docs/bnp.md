@@ -85,4 +85,5 @@ though JSON is also used. This means a BNP can be opened and extracted with 7-Zi
 of the logs will be readable to anyone familiar with YAML-based BOTW modding tools.
 
 When the BNP is installed, BCML will extract its contents into an internal mods directory and
-process the logs inside to apply the changes to vanilla or existing merged files.
+process the logs inside to apply the changes to vanilla or existing merged files. Options which
+have not been selected are removed from the installed mod.

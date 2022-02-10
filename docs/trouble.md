@@ -90,9 +90,9 @@ need to be converted first.
 #### Progress is stuck on "One Sec" forever
 
 This happens when somehow your system fails to check and load a mod's metadata for
-custom install options. What causes this is not known and it only occurs on a few
-random PCs running Windows. No fix has ever been discovered, and I myself have never
-been able to reproduce it.
+custom install options. I have never been able to reproduce this and can't say why
+it happens, except in some cases it can be caused by Unicode characters in the 7-Zip
+path.
 
 #### FileNotFoundError: File `X` not found in game dump
 
@@ -175,8 +175,9 @@ There are four common causes for this:
 
 1. You accidentally turned on the "Use BCML without a Cemu installation" setting.
 2. The BCML graphic pack is not enabled in Cemu. BCML attempts to enable it automatically,
-   but permissions issues can prevent this sometimes. Enable the pack in the Cemu grahpic
-   pack menu at `The Legend of Zelda: Breath of the Wild/Mods/BCML`.
+   but permissions issues can prevent this sometimes. Enable the pack in the Cemu graphic
+   pack menu at `The Legend of Zelda: Breath of the Wild/Mods/BCML`. In some rare cases,
+   you may need to restart both BCML and Cemu and remerge for this to work.
 3. Your Cemu folder is in OneDrive, which doesn't cooperate for some reason.
 4. You have a weird problem involving hard links and filesystem permissions, in which
    turn on the "Disable hard links for master mod" setting.
