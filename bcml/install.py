@@ -280,10 +280,18 @@ def generate_logs(
     if not (
         modded_files or (tmp_dir / "patches").exists() or (tmp_dir / "logs").exists()
     ):
-        raise RuntimeError(
-            f"No modified files were found in {str(tmp_dir)}."
-            "This probably means this mod is not in a supported format."
-        )
+        if "options" in tmp_dir.parts:
+            message = (
+                f"No modified files were found in {str(tmp_dir)}. "
+                f"This may mean that this option's files are identical to the "
+                f"base mod's, or that the folder has an improper structure."
+            )
+        else:
+            message = (
+                f"No modified files were found in {str(tmp_dir)}. "
+                f"This probably means this mod is not in a supported format."
+            )
+        raise RuntimeError(message)
 
     (tmp_dir / "logs").mkdir(parents=True, exist_ok=True)
     try:

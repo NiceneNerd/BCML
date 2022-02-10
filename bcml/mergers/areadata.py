@@ -167,7 +167,7 @@ class AreaDataMerger(mergers.Merger):
             return
 
         new_areadata = get_stock_areadata()
-        util.dict_merge(new_areadata, modded_areadata)
+        util.dict_merge(new_areadata, modded_areadata, overwrite_lists=True)
 
         print("Writing new area data...")
         areadata_bytes = oead.byml.to_binary(

@@ -85,7 +85,16 @@ class Api:
         util.sanity_check()
 
     def get_folder(self):
-        return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
+        if SYSTEM == "Windows":
+            from tkinter import filedialog
+            from tkinter import Tk
+
+            root = Tk()
+            root.attributes("-alpha", 0.0)
+            folder = filedialog.askdirectory(parent=root)
+            return folder if folder != "" else None
+        else:
+            return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
         path = Path(params["folder"])
