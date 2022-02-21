@@ -1023,7 +1023,7 @@ def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
             title_path = get_game_file("Pack/TitleBG.pack")
         title_sarc = oead.Sarc(title_path.read_bytes())
         actor_sarc = oead.Sarc(
-            decompress(title_sarc.get_file_data(f"Actor/Pack/{actor}.sbactorpack").data)
+            decompress(title_sarc.get_file(f"Actor/Pack/{actor}.sbactorpack").data)
         )
         del title_sarc
     else:
