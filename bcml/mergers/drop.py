@@ -127,7 +127,7 @@ def merge_drop_file(file: str, drop_table: dict):
         drop_table = ref_drop
     except (FileNotFoundError, AttributeError, RuntimeError):
         pass
-    actor_name_matches = re.search(r"Pack\/(.+)\.sbactorpack", file)
+    actor_name_matches = re.search(r"Actor\/Pack\/(.+)\.sbactorpack", file)
     if actor_name_matches:
         actor_name = actor_name_matches.groups()[0]
     else:
