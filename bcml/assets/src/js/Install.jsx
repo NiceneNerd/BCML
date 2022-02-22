@@ -68,8 +68,8 @@ class InstallModal extends React.Component {
                         Select a mod or mods to install (must be a BNP or
                         graphic pack). You can select a <code>.bnp</code>,{" "}
                         <code>.zip</code>, <code>.rar</code>, or{" "}
-                        <code>.7z</code> file, or the <code>rules.txt</code> of
-                        an unpacked mod.
+                        <code>.7z</code> file or the <code>rules.txt</code> or{" "}
+                        <code>info.json</code> of an unpacked mod.
                     </p>
                     <Button size="sm" onClick={() => this.browse()}>
                         Browse...
