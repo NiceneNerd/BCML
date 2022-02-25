@@ -462,6 +462,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
 NO_CONVERT_EXTS = {
     ".sbfres",
     ".bfres",
+    ".bcamanim",
+    ".sbcamanim",
     ".hkcl",
     ".hkrg",
     ".sesetlist",
