@@ -7,7 +7,7 @@ from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
 from oead import Sarc, SarcWriter, InvalidDataError
 from bcml import util, mergers
 
-HANDLED = {".bdrop", ".bshop"}
+HANDLED = {".bdrop", ".bshop", ".baslist"}
 
 
 def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optional[dict]:
