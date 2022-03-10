@@ -565,7 +565,7 @@ def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> Tuple[bytes, List[str]]:
         elif ext in BYML_EXTS:
             byml = oead.byml.from_binary(util.unyaz_if_needed(file.data))
             data = oead.byml.to_binary(byml, big_endian=to_wiiu)
-            if ext.startswith("s"):
+            if ext.startswith(".s"):
                 data = util.compress(data)
             new_sarc.files[file.name] = data
         elif ext in SARC_EXTS and ext not in NO_CONVERT_EXTS:
