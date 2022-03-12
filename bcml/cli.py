@@ -173,7 +173,7 @@ def run_args():
         # --restore
         backup = list((util.get_storage_dir() / "backups").glob(f"{args.restore}*"))
         if len(backup) <= 0:
-            raise ValueError("The backup does not exists!")
+            raise ValueError(f"No backup named {args.restore} exists!")
 
         backup = backup[0]
         install.restore_backup(backup)
