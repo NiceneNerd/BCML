@@ -519,10 +519,6 @@ def get_python_exe(gui: bool) -> Path:
         else:
             return sys.executable
 
-
-command_args: argparse.Namespace
-
-
 @lru_cache(1)
 def parse_arguments() -> argparse.Namespace:
     global command_args
@@ -532,8 +528,114 @@ def parse_arguments() -> argparse.Namespace:
         help="Runs BCML in portable mode preferring to store the working directory locally.",
         action="store_true",
     )
-    command_args = parser.parse_args()
-    return command_args
+    parser.add_argument(
+        "-d", 
+        "--disable", 
+        metavar="MODDIR", 
+        help="Disable a BCML mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-D",
+        "--disable-all",
+        action="store_true",
+        help="Disable all installed mods",
+    )
+    parser.add_argument(
+        "-e", 
+        "--enable", 
+        metavar="MODNAME", 
+        help="Enable a BCML mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-E", 
+        "--enable-all", 
+        action="store_true", 
+        help="Enable all installed mods",
+    )
+    parser.add_argument(
+        "-b", 
+        "--bnpify", 
+        metavar="MODDIR", 
+        type=Path, 
+        help="Create a bnp mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-ex", 
+        "--export", 
+        metavar="NAME", 
+        type=Path, 
+        help="Export the master modpack", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-S", 
+        "--standalone", 
+        metavar="BNPDIR", 
+        type=Path, 
+        help="Export bnp as standalone", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-u", 
+        "--update", 
+        metavar="NEWBNP", 
+        type=Path, 
+        help="Update a mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-R", 
+        "--remerge", 
+        action="store_true", 
+        help="Perform a remerge",
+    )
+    parser.add_argument(
+        "-i", 
+        "--install", 
+        metavar="MODDIR", 
+        type=Path, 
+        help="Install a mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-p", 
+        "--priority", 
+        metavar="PRIORITY NUMBER", 
+        type=int, 
+        help="Set the priority when installing a mod", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-un", 
+        "--uninstall", 
+        metavar="MODNAME", 
+        help="Uninstall a mod from the bcml data directory", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-U", 
+        "--uninstall-all", 
+        action="store_true", 
+        help="Uninstall a mod",
+    )
+    parser.add_argument(
+        "-B", 
+        "--backup", 
+        metavar="NAME", 
+        help="Create a backup of the current mod list", 
+        nargs="?",
+    )
+    parser.add_argument(
+        "-r", 
+        "--restore", 
+        metavar="BACKUP_NAME", 
+        help="Restore a backup", 
+        nargs="?",
+    )
+    return parser.parse_args()
 
 
 @lru_cache(1)
