@@ -521,7 +521,6 @@ def get_python_exe(gui: bool) -> Path:
 
 @lru_cache(1)
 def parse_arguments() -> argparse.Namespace:
-    global command_args
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--portable",
