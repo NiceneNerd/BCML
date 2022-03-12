@@ -13,7 +13,7 @@ from time import sleep
 
 import webview
 
-from bcml import DEBUG, util, _oneclick
+from bcml import DEBUG, util, _oneclick, install, cli
 import bcml
 from bcml.util import Messager, LOG, SYSTEM
 from bcml._api import Api
@@ -55,9 +55,9 @@ def configure_cef(debug):
     if not cache.exists():
         cache.mkdir(parents=True, exist_ok=True)
 
-
+        
 def main(debug: bool = False):
-    util.parse_arguments()
+    cli.run_args()
     set_start_method("spawn", True)
     global logger  # pylint: disable=invalid-name,global-statement
     logger = None
