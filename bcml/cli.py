@@ -156,7 +156,7 @@ def run_args():
         for mod in util.get_installed_mods(disabled=True):
             name = mod.name.replace(" ", "").lower()
             arg = args.uninstall.replace(" ", "").lower()
-            if name.lower() == arg.lower():
+            if name == arg:
                 install.uninstall_mod(mod=mod)
     
     elif args.uninstall_all:
