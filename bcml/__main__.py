@@ -55,7 +55,6 @@ def configure_cef(debug):
     if not cache.exists():
         cache.mkdir(parents=True, exist_ok=True)
 
-        
 def main(debug: bool = False):
     cli.run_args()
     set_start_method("spawn", True)
