@@ -11,7 +11,7 @@ def run_args():
         for mod in util.get_installed_mods():
             name = mod.name.replace(" ", "").lower()
             arg = args.disable.replace(" ", "").lower()
-            if name.lower() == arg.lower():
+            if name == arg:
                 install.disable_mod(mod=mod)
                 exit(0)
 
