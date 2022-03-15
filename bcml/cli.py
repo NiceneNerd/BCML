@@ -117,7 +117,6 @@ def run_args():
         update_file = args.update;
         for i in util.get_installed_mods(disabled=True):
             name = i.name.replace(" ", "").lower()
-            print(name)
             arg = update_file.name.replace(".bnp", "").replace(" ", "").lower()
             if name == arg:
                 mod = i;
