@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from shutil import rmtree
+from multiprocessing import Pool
 
 from bcml import util, install, dev
 
@@ -114,18 +115,20 @@ def run_args():
     elif args.update:
         # --update
         update_file = args.update;
-        for i in get_installed_mods(disabled=True):
+        for i in util.get_installed_mods(disabled=True):
             name = i.name.replace(" ", "").lower()
-            arg = update_file.name.rsplit(".")[0].replace(" ", "").lower()
+            print(name)
+            arg = update_file.name.replace(".bnp", "").replace(" ", "").lower()
             if name == arg:
                 mod = i;
+                break;
 
         if (mod.path / "options.json").exists():
             options = json.loads((mod.path / "options.json").read_text());
         else:
             options = {};
 
-        shutil.rmtree(mod.path)
+        rmtree(mod.path)
         with Pool(maxtasksperchild=500) as pool:
             new_mod = install.install_mod(
                 Path(update_file),
@@ -160,7 +163,7 @@ def run_args():
                 install.uninstall_mod(mod=mod)
     
     elif args.uninstall_all:
-        for mod in get_installed_mods(disabled=True):
+        for mod in util.get_installed_mods(disabled=True):
             install.uninstall(mod=mod, wait_merge=True)
             install.refresh_merges()
             install.refresh_master_export()
