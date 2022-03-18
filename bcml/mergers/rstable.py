@@ -58,7 +58,7 @@ def calculate_size(
             data, wiiu=be, ext=ext, force=False
         )
         if ext == ".baischedule":
-            size = 100
+            size += 100
         if ext == ".bdmgparam":
             size = 0
         if ext == ".hkrb":
