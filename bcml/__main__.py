@@ -57,7 +57,6 @@ def configure_cef(debug):
 
 
 def main(debug: bool = False):
-    util.parse_arguments()
     set_start_method("spawn", True)
     global logger  # pylint: disable=invalid-name,global-statement
     logger = None
