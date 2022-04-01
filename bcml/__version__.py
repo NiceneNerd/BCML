@@ -1,7 +1,7 @@
 _MAJOR=3
 _MINOR=8
 _PATCH="3"
-@id:vxna.one-dark-nx
+
 VERSION = f"{_MAJOR}.{_MINOR}.{_PATCH}"
 USER_VERSION = f"""{_MAJOR}.{_MINOR}.{_PATCH[0:1]} {
     'alpha' if _MAJOR < 1 else ''
