@@ -46,8 +46,9 @@ class QuestMerger(mergers.Merger):
             }
         )
 
-        for quest in mod_quests:
+        for i, quest in enumerate(mod_quests):
             quest_name = quest["Name"]
+            quest["prev_quest"] = mod_quests[i-1]["Name"] if i > 0 else "--index_zero"
             if quest_name not in stock_names:
                 diffs["add"].append(quest)
             elif quest != stock_quests[stock_names.index(quest_name)]:
@@ -158,7 +159,13 @@ class QuestMerger(mergers.Merger):
         added_names = set()
         for add in diffs["add"]:
             if add["Name"] not in added_names:
-                quests.append(add)
+                quest_index = len(quests)
+                try:
+                    quest_index = 0 if add["prev_quest"] == "--index_zero" else quests.index(add["prev_quest"]) + 1
+                except (KeyError, IndexError):
+                    pass
+                add.pop("prev_quest", None)
+                quests.insert(quest_index, add)
                 added_names.add(add["Name"])
 
         print("Writing new quest pack...")
