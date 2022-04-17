@@ -352,7 +352,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
                 (tmp_dir / "dlc").rename(tmp_dir / "01007EF00011F001")
         else:
             raise FileNotFoundError(
-                "This mod does not appear to have a valid folder structure"
+                f"This mod does not appear to have a valid folder structure. " +
+                f"BCML could not find {mod.name}{'/' if mod.suffix else ''}/{util.get_content_path()} " +
+                f"or {mod.name}{'/' if mod.suffix else ''}/{util.get_dlc_path()}"
             )
 
     if (tmp_dir / "rules.txt").exists():
