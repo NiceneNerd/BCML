@@ -141,7 +141,7 @@ def main(debug: bool = False):
         min_size=(width if width == 750 else 820, 600),
     )
     logger = Messager(api.window)
-    api.window.closing += stop_it
+    api.window.events.closing += stop_it
 
     messager = Messager(api.window)
     with redirect_stderr(sys.stdout):
