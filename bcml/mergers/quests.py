@@ -163,8 +163,10 @@ class QuestMerger(mergers.Merger):
                 try:
                     quest_index = 0 if add["prev_quest"] == "--index_zero" else quests.index(add["prev_quest"]) + 1
                     del add["prev_quest"]
-                except (KeyError, IndexError):
+                except KeyError:
                     pass
+                except IndexError:
+                    del add["prev_quest"]
                 quests.insert(quest_index, add)
                 added_names.add(add["Name"])
 
