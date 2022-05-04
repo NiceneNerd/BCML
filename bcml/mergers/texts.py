@@ -190,7 +190,10 @@ def diff_msyt(msyt: Path, hashes: dict, mod_out: Path, ref_dir: Path):
             ref_text = (ref_dir / filename).read_text("utf-8")
             if "".join(text.split()) != "".join(ref_text.split()):
                 ref_contents = json.loads(ref_text)
-                contents = json.loads(text)
+                try:
+                    contents = json.loads(text)
+                except json.decoder.JSONDecodeError as e:
+                    raise RuntimeError(f"{filename} could not be converted for merging: {e}")
                 diff[filename] = {
                     entry: value
                     for entry, value in contents["entries"].items()
