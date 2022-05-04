@@ -165,7 +165,7 @@ class QuestMerger(mergers.Merger):
                     del add["prev_quest"]
                 except KeyError:
                     pass
-                except IndexError:
+                except ValueError:
                     del add["prev_quest"]
                 quests.insert(quest_index, add)
                 added_names.add(add["Name"])
