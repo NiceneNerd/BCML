@@ -46,8 +46,13 @@ Python 3.9+ is not supported.**
 whatever your prefer.
 
 **Note for other Linux users**: Because of the ways different distros handle Python packaging,
-it often works better to install BCML using a virtual environment ("venv"). To do so, you can
-run something like this:
+it often works better to install BCML in some contained environment. There are a few options for
+this. The easiest would be to use [`pipx`](https://github.com/pypa/pipx). You can install `pipx`
+through pip, and then run `pipx install bcml`. In some cases you might need to also run `pipx
+inject bcml pywebview[qt]`.
+
+Another option for Linux users is using a virtual environment ("venv"). To do so, you can run
+something like this:
 
 ```sh
 python -m venv bcml_env
@@ -65,6 +70,10 @@ Building from source requires, in addition to the general prerequisites:
 
 -   Node.js v14
 
+-   mkdocs and mkdocs-material
+
+    Run `pip install mkdocs mkdocs-material` if not using `bootstrap.sh`
+
 Steps to build from source:
 
 1. Install Python requirements
@@ -81,7 +90,7 @@ Steps to build from source:
 3. Build the docs
 
     1. Open terminal to repo root folder
-    2. Run `mkdocs build -d bcml/assets/help`
+    2. Run `mkdocs build`
 
 4. Install BCML with `python setup.py install` or run without installing with
    `python -m bcml`

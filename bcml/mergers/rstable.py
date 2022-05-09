@@ -57,6 +57,8 @@ def calculate_size(
         size = getattr(calculate_size, "calculator").calculate_file_size_with_ext(
             data, wiiu=be, ext=ext, force=False
         )
+        if ext == ".baischedule":
+            size += 100
         if ext == ".bdmgparam":
             size = 0
         if ext == ".hkrb":

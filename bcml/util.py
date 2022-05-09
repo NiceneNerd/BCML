@@ -519,9 +519,16 @@ def get_python_exe(gui: bool) -> Path:
             return sys.executable
 
 
+@lru_cache(1)
+def get_is_portable_mode() -> bool:
+    return "--portable" in sys.argv
+
+
 @lru_cache(None)
 def get_data_dir() -> Path:
-    if system() == "Windows":
+    if get_is_portable_mode():
+        data_dir = Path(os.getcwd()) / "bcml-data"
+    elif system() == "Windows":
         data_dir = Path(os.path.expandvars("%LOCALAPPDATA%")) / "bcml"
     else:
         data_dir = Path.home() / ".config" / "bcml"
@@ -1023,7 +1030,7 @@ def inject_files_into_actor(actor: str, files: Dict[str, ByteString]):
             title_path = get_game_file("Pack/TitleBG.pack")
         title_sarc = oead.Sarc(title_path.read_bytes())
         actor_sarc = oead.Sarc(
-            decompress(title_sarc.get_file_data(f"Actor/Pack/{actor}.sbactorpack").data)
+            decompress(title_sarc.get_file(f"Actor/Pack/{actor}.sbactorpack").data)
         )
         del title_sarc
     else:
@@ -1444,7 +1451,9 @@ def get_7z_path():
     bundle_path = get_exec_dir() / "helpers" / "7z"
     if not os.access(bundle_path, os.X_OK):
         if not os.access(bundle_path, os.W_OK):
-            raise PermissionError(f"{bundle_path} is not executable and we don't have the permissions to change that")
+            raise PermissionError(
+                f"{bundle_path} is not executable and we don't have the permissions to change that"
+            )
         os.chmod(bundle_path, 0o755)
     if get_settings("force_7z"):
         return str(bundle_path)

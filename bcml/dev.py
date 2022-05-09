@@ -352,7 +352,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
                 (tmp_dir / "dlc").rename(tmp_dir / "01007EF00011F001")
         else:
             raise FileNotFoundError(
-                "This mod does not appear to have a valid folder structure"
+                f"This mod does not appear to have a valid folder structure. " +
+                f"BCML could not find {mod.name}{'/' if mod.suffix else ''}/{util.get_content_path()} " +
+                f"or {mod.name}{'/' if mod.suffix else ''}/{util.get_dlc_path()}"
             )
 
     if (tmp_dir / "rules.txt").exists():
@@ -462,6 +464,8 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
 NO_CONVERT_EXTS = {
     ".sbfres",
     ".bfres",
+    ".bcamanim",
+    ".sbcamanim",
     ".hkcl",
     ".hkrg",
     ".sesetlist",
@@ -473,7 +477,6 @@ NO_CONVERT_EXTS = {
     ".sbreviewtex",
     ".sbitemico",
     ".sstats",
-    ".sblwp",
     ".sbstftex",
     ".sblarc",
     ".bfsar",
@@ -564,7 +567,7 @@ def _convert_sarc(sarc: oead.Sarc, to_wiiu: bool) -> Tuple[bytes, List[str]]:
         elif ext in BYML_EXTS:
             byml = oead.byml.from_binary(util.unyaz_if_needed(file.data))
             data = oead.byml.to_binary(byml, big_endian=to_wiiu)
-            if ext.startswith("s"):
+            if ext.startswith(".s"):
                 data = util.compress(data)
             new_sarc.files[file.name] = data
         elif ext in SARC_EXTS and ext not in NO_CONVERT_EXTS:

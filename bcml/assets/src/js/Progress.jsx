@@ -45,7 +45,7 @@ let messages = [
     "100 more years never hurt anyone",
     "Changing name and joining a construction company",
     "Trapping fairies in cooking pot",
-    "Flushing Hetsu's gift",
+    "Flushing Hestu's gift",
     "Bullet time? What's a bullet?",
     "Pretending to remember Zelda",
     "I can't go any farther",
