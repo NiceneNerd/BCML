@@ -9,7 +9,7 @@ use roead::{
     yaz0::{compress, decompress},
 };
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     fmt::Display,
     path::{Path, PathBuf},
 };
@@ -184,21 +184,24 @@ fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
             orphans.push(entry.clone());
         }
     }
-    diff["del"]
+    let to_del: BTreeSet<usize> = diff["del"]
         .as_array()?
         .iter()
         .filter_map(|b| b.as_uint().ok())
         .filter_map(|dh| stock_hashes.iter().position(|sh| *sh == dh))
-        .for_each(|i| {
-            entries.remove(i);
-        });
+        .collect();
+    to_del.into_iter().rev().for_each(|i| {
+        entries.remove(i);
+    });
     entries.extend(
         diff["add"]
             .as_array()?
             .iter()
             .cloned()
             .chain(orphans.into_iter())
-            .filter(|e| !stock_hashes.contains(&e["HashId"].as_uint().unwrap())),
+            .filter(|e| {
+                !stock_hashes.contains(&e["HashId"].as_uint().expect(&format!("{}", e.to_text())))
+            }),
     );
     entries.sort_by_cached_key(|e| e["HashId"].as_uint().unwrap());
     Ok(())

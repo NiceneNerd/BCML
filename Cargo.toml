@@ -1,6 +1,7 @@
 [package]
 name = "bcml"
-version = "3.8.0-beta1"
+authors = ["Caleb Smith"]
+version = "3.9.0-beta1"
 edition = "2021"
 
 [lib]
