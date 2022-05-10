@@ -81,16 +81,19 @@ class TextsMerger(mergers.Merger):
 
         language_diffs = {}
         for language in set(language_map.values()):
-            print(f"Logging text changes for {language}...")
-            language_diffs[language] = rsext.mergers.texts.diff_language(
-                str(
-                    mod_dir
-                    / util.get_content_path()
-                    / "Pack"
-                    / f"Bootup_{language}.pack"
-                ),
-                str(util.get_game_file(f"Pack/Bootup_{language}.pack")),
-            )
+            try:
+                print(f"Logging text changes for {language}...")
+                language_diffs[language] = rsext.mergers.texts.diff_language(
+                    str(
+                        mod_dir
+                        / util.get_content_path()
+                        / "Pack"
+                        / f"Bootup_{language}.pack"
+                    ),
+                    str(util.get_game_file(f"Pack/Bootup_{language}.pack")),
+                )
+            except FileNotFoundError:
+                util.vprint(f"Skipping language {language}, not in dump")
 
         return {
             save_lang: language_diffs[map_lang]

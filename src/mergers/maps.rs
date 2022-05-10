@@ -200,10 +200,20 @@ fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
             .cloned()
             .chain(orphans.into_iter())
             .filter(|e| {
-                !stock_hashes.contains(&e["HashId"].as_uint().expect(&format!("{}", e.to_text())))
+                !stock_hashes.contains(
+                    &(e["HashId"]
+                        .as_uint()
+                        .or_else(|_| e["HashId"].as_int().map(|i| i as u32))
+                        .unwrap()),
+                )
             }),
     );
-    entries.sort_by_cached_key(|e| e["HashId"].as_uint().unwrap());
+    entries.sort_by_cached_key(|e| {
+        e["HashId"]
+            .as_uint()
+            .or_else(|_| e["HashId"].as_int().map(|i| i as u32))
+            .unwrap()
+    });
     Ok(())
 }
 

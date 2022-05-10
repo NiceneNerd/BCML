@@ -208,3 +208,4 @@ bundle.js
 
 /target
 #Cargo.lock
+/.xwin-cache
