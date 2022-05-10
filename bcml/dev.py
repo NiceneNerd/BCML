@@ -491,7 +491,9 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
     new_sarc = oead.SarcWriter.from_sarc(sarc)
     new_sarc.set_endianness(oead.Endianness.Big if to_wiiu else oead.Endianness.Little)
     for file in sarc.get_files():
-        if "Physics/" in file.name and "Actor/" not in file.name:
+        if file.data[0:2] == b"BY" or file.data[0:2] == b"YB":
+            new_sarc.files[file.name] = oead.byml.to_binary(oead.byml.from_binary(file.data), to_wiiu)
+        elif "Physics/" in file.name and "Actor/" not in file.name:
             ext = file.name[file.name.rindex(".") :]
             if ext in NO_CONVERT_EXTS:
                 if not util.is_file_modded(
