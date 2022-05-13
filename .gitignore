@@ -26,7 +26,7 @@ __pycache__/
 bcml-dist.ps1
 
 # C extensions
-# *.so
+bcml*.so
 
 # Distribution / packaging
 .Python
@@ -199,7 +199,7 @@ test.py
 /test
 tmp.*
 Cargo.lock
-bundle.js
+# bundle.js
 
 
 # Added by cargo

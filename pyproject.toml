@@ -10,7 +10,6 @@ author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"
 readme = { file = "docs/README.md" }
 license = { file = "docs/LICENSE.md" }
-urls = { repository = "https://github.com/NiceneNerd/BCML" }
 dependencies = [
     "numpy==1.19.2; platform_system == 'Windows'",
     "numpy~=1.19.3; platform_system == 'Linux'",
@@ -41,3 +40,7 @@ classifiers = [
 ]
 scripts = { bcml-debug = "bcml.__main__:main_debug" }
 gui-scripts = { bcml = "bcml.__main__:main" }
+
+[project.urls]
+repository = "https://github.com/NiceneNerd/BCML"
+homepage = "https://gamebanana.com/tools/6624"
