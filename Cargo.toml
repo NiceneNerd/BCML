@@ -3,6 +3,7 @@ name = "bcml"
 authors = ["Caleb Smith"]
 version = "3.9.0-beta2"
 edition = "2021"
+readme = "docs/README.md"
 
 [lib]
 name = "bcml"
