@@ -850,7 +850,7 @@ def link_master_mod(output: Path = None):
         reverse=True,
     )
     util.vprint(mod_folders)
-    link_or_copy: Any = os.link if not util.get_settings("no_hardlinks") else copyfile
+    link_or_copy: Any = os.symlink if not util.get_settings("no_hardlinks") else copyfile
     for mod_folder in mod_folders:
         for item in mod_folder.rglob("**/*"):
             rel_path = item.relative_to(mod_folder)
@@ -868,14 +868,7 @@ def link_master_mod(output: Path = None):
             if item.is_dir():
                 (output / rel_path).mkdir(parents=True, exist_ok=True)
             elif item.is_file():
-                try:
-                    link_or_copy(str(item), str(output / rel_path))
-                except OSError:
-                    if link_or_copy is os.link:
-                        link_or_copy = copyfile
-                        link_or_copy(str(item), str(output / rel_path))
-                    else:
-                        raise
+                link_or_copy(str(item), str(output / rel_path))
     if not any(output.iterdir()):
         raise RuntimeError(
             "No files were created in your export directory. This may mean BCML"

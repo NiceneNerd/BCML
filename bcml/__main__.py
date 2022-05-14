@@ -1,3 +1,4 @@
+import ctypes
 import os
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -56,7 +57,22 @@ def configure_cef(debug):
         cache.mkdir(parents=True, exist_ok=True)
 
 
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+
 def main(debug: bool = False):
+    if SYSTEM == "Windows" and not is_admin():
+        args = []
+        if Path(sys.executable).stem == "python":
+            args.append("-m")
+            args.append("bcml")
+        args += sys.argv[1:]
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, ' '.join(args), None, 1)
+        exit(0)
     set_start_method("spawn", True)
     global logger  # pylint: disable=invalid-name,global-statement
     logger = None
