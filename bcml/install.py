@@ -876,7 +876,7 @@ def link_master_mod(output: Path = None):
                         link_or_copy(str(item), str(output / rel_path))
                     else:
                         raise
-    if len(list(output.rglob("*"))) == 0:
+    if len(list(output.glob("*"))) == 0:
         raise RuntimeError(
             "No files were created in your export directory. This may mean BCML"
             " lacked then necessary permissions to write to the folder, or "
