@@ -11,6 +11,5 @@ nav:
     - Licenses:
           - BCML: LICENSE.md
           - 7-Zip: license/7z.md
-          - MSYT: license/msyt.md
           - pywebview: license/pywebview.md
 theme: material

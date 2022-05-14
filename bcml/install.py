@@ -23,6 +23,7 @@ from xml.dom import minidom
 import oead
 
 from bcml import util, mergers, dev, upgrade
+from bcml import bcml as rsext
 from bcml.util import BcmlMod, get_7z_path
 
 
@@ -187,34 +188,38 @@ def find_modded_files(
                 ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
 
-    this_pool = pool or Pool(maxtasksperchild=500)
-    results = this_pool.map(
-        partial(_check_modded, tmp_dir=tmp_dir),
-        {
-            f
-            for f in tmp_dir.rglob("**/*")
-            if f.is_file() and "options" not in f.relative_to(tmp_dir).parts
-        },
-    )
-    for result in results:
-        if result:
-            modded_files.append(result)
-    total = len(modded_files)
-    print(f'Found {total} modified file{"s" if total > 1 else ""}')
+    modded_files = [
+        f if "//" in f else Path(f)
+        for f in rsext.find_modified_files(str(tmp_dir), util.get_settings("wiiu"))
+    ]
+    # this_pool = pool or Pool(maxtasksperchild=500)
+    # results = this_pool.map(
+    #     partial(_check_modded, tmp_dir=tmp_dir),
+    #     {
+    #         f
+    #         for f in tmp_dir.rglob("**/*")
+    #         if f.is_file() and "options" not in f.relative_to(tmp_dir).parts
+    #     },
+    # )
+    # for result in results:
+    #     if result:
+    #         modded_files.append(result)
+    # total = len(modded_files)
+    # print(f'Found {total} modified file{"s" if total > 1 else ""}')
 
-    total = 0
-    sarc_files = {f for f in modded_files if f.suffix in util.SARC_EXTS}
-    if sarc_files:
-        print("Scanning files packed in SARCs...")
-        for files in this_pool.imap_unordered(
-            partial(find_modded_sarc_files, tmp_dir=tmp_dir), sarc_files
-        ):
-            total += len(files)
-            modded_files.extend(files)
-        print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
-    if not pool:
-        this_pool.close()
-        this_pool.join()
+    # total = 0
+    # sarc_files = {f for f in modded_files if f.suffix in util.SARC_EXTS}
+    # if sarc_files:
+    #     print("Scanning files packed in SARCs...")
+    #     for files in this_pool.imap_unordered(
+    #         partial(find_modded_sarc_files, tmp_dir=tmp_dir), sarc_files
+    #     ):
+    #         total += len(files)
+    #         modded_files.extend(files)
+    #     print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
+    # if not pool:
+    #     this_pool.close()
+    #     this_pool.join()
     return modded_files
 
 

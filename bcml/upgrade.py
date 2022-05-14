@@ -13,7 +13,8 @@ from aamp import yaml_util as ayu
 from aamp import ParameterIO, ParameterObject, ParameterList, Writer
 from byml import yaml_util as byu
 from bcml import util, install
-from bcml.mergers.texts import read_msbt
+
+# from bcml.mergers.texts import read_msbt
 from bcml.mergers.rstable import RstbMerger
 from bcml.util import RulesParser
 

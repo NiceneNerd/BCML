@@ -1,0 +1,29 @@
+[package]
+name = "bcml"
+authors = ["Caleb Smith"]
+version = "3.9.0-beta2"
+edition = "2021"
+readme = "docs/README.md"
+
+[lib]
+name = "bcml"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1.0.48"
+botw-utils = "0.3.1"
+cow-utils = "0.1.2"
+dirs2 = "3.0.1"
+glob = "0.3.0"
+indexmap = { version = "1.7.0", features = ["serde", "rayon"] }
+jstr = { git = "https://github.com/NiceneNerd/jstr" }
+lazy_static = "1.4.0"
+msyt = { git = "https://github.com/NiceneNerd/msyt", rev = "12e4d95fb6480f445284f37706db7bfa8351dc06" }
+path-slash = "0.1.4"
+pyo3 = { version = "0.15.0", features = ["extension-module"] }
+rayon = "1.5.1"
+roead = { git = "https://github.com/NiceneNerd/roead", rev = "02b5e5d791aa331ad5e4d598b680cb1607db2cce" }
+rstb = "0.3.2"
+serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "1.0.71"
+thiserror = "1.0.30"
