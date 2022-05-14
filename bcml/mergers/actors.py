@@ -122,8 +122,6 @@ class ActorInfoMerger(mergers.Merger):
         all_diffs: Dict[str, oead.Byml.Hash] = {}
         for diff in diffs:
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
-        util.vprint("All actor info diffs:")
-        util.vprint(oead.byml.to_text(all_diffs))
         return oead.byml.Hash(all_diffs)
 
     @util.timed

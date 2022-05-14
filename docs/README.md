@@ -51,6 +51,8 @@ this. The easiest would be to use [`pipx`](https://github.com/pypa/pipx). You ca
 through pip, and then run `pipx install bcml`. In some cases you might need to also run `pipx
 inject bcml pywebview[qt]`.
 
+**Note for Linux white screen bug**: Try setting the environmental variable: `QTWEBENGINE_DISABLE_SANDBOX=1`.
+
 Another option for Linux users is using a virtual environment ("venv"). To do so, you can run
 something like this:
 

@@ -223,8 +223,6 @@ class GameDataMerger(mergers.Merger):
         glog_path = util.get_master_modpack_dir() / "logs" / "gamedata.log"
 
         modded_entries = self.consolidate_diffs(self.get_all_diffs())
-        util.vprint("All gamedata diffs:")
-        util.vprint(modded_entries)
         if not modded_entries:
             print("No gamedata merging necessary.")
             if glog_path.exists():

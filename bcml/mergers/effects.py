@@ -116,8 +116,6 @@ class StatusEffectMerger(mergers.Merger):
                 except FileNotFoundError:
                     pass
             return
-        util.vprint("All status effect diffs:")
-        util.vprint(diffs)
 
         effects = get_stock_effects()
         util.dict_merge(effects, diffs, overwrite_lists=True)
