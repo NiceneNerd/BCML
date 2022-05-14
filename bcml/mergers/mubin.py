@@ -674,8 +674,6 @@ class MapMerger(mergers.Merger):
             log_path.unlink()
         print("Loading map mods...")
         map_diffs = self.consolidate_diffs(self.get_all_diffs())
-        util.vprint("All map diffs:")
-        util.vprint(map_diffs)
         if not map_diffs:
             print("No map merge necessary")
             return
@@ -828,8 +826,6 @@ class DungeonStaticMerger(mergers.Merger):
         all_diffs = {}
         for diff in diffs:
             all_diffs.update(diff)
-        util.vprint("All shrine entry diffs:")
-        util.vprint(all_diffs)
         return all_diffs
 
     @util.timed

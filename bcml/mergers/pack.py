@@ -173,8 +173,6 @@ class PackMerger(mergers.Merger):
                         all_diffs[modded_sarc] = []
                     if (mod.path / modded_sarc).exists():
                         all_diffs[modded_sarc].append(mod.path / modded_sarc)
-        util.vprint("All SARC diffs:")
-        util.vprint(all_diffs)
         return all_diffs
 
     @util.timed

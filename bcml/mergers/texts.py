@@ -405,14 +405,6 @@ class TextsMerger(mergers.Merger):
                 ):
                     bootup.unlink()
                 return
-            util.vprint(
-                {
-                    lang: {
-                        file: list(entries.keys())
-                        for file, entries in diffs[lang].items()
-                    }
-                }
-            )
 
             print(f"Merging modded texts for {lang}...")
             saved_files = set()
