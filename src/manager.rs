@@ -43,6 +43,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         py.allow_threads(|| -> Result<()> {
             mod_folders
                 .into_iter()
+				.rev()
                 .try_for_each(|folder| -> Result<()> {
                     let mod_files: Vec<(PathBuf, PathBuf)> =
                         glob::glob(&folder.join("**/*").to_string_lossy())
@@ -68,6 +69,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                         .try_for_each(|(item, rel)| -> Result<()> {
                             let out = output.join(&rel);
                             out.parent().map(std::fs::create_dir_all).transpose()?;
+                            // std::fs::hard_link(item, out)?;
                             #[cfg(target_family = "windows")]
                             std::os::windows::fs::symlink_file(item, out)?;
                             #[cfg(target_family = "unix")]
