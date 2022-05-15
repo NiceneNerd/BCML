@@ -16,22 +16,18 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         .map(PathBuf::from)
         .or_else(|| util::settings().export_dir().map(|o| o.to_path_buf()))
     {
-        if output.exists() {
-            if !util::settings().no_cemu {
-                std::fs::remove_dir_all(&output)?;
-            } else {
-                #[allow(unused_must_use)]
-                {
-                    std::fs::remove_dir_all(output.join(util::content()));
-                    std::fs::remove_dir_all(output.join(util::dlc()));
-                }
-            }
+        let merged = util::settings().merged_modpack_dir();
+        #[allow(unused_must_use)]
+        if merged.exists() {
+            std::fs::remove_dir_all(merged.join(util::content()));
+            std::fs::remove_dir_all(merged.join(util::dlc()));
         }
-        std::fs::create_dir_all(&output)?;
-        if !util::settings().no_cemu {
-            std::fs::copy(
+        std::fs::create_dir_all(&merged)?;
+        let rules_path = merged.join("rules.txt");
+        if !util::settings().no_cemu && !rules_path.exists() {
+            std::fs::hard_link(
                 util::settings().master_mod_dir().join("rules.txt"),
-                output.join("rules.txt"),
+                rules_path,
             )?;
         }
         let mod_folders: std::collections::BTreeSet<PathBuf> =
@@ -54,7 +50,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                                 })
                             })
                             .filter(|(item, rel)| {
-                                !(output.join(&rel).exists()
+                                !(merged.join(&rel).exists()
                                     || item.is_dir()
                                     || rel.starts_with("logs")
                                     || rel.starts_with("options")
@@ -67,18 +63,20 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     mod_files
                         .into_par_iter()
                         .try_for_each(|(item, rel)| -> Result<()> {
-                            let out = output.join(&rel);
+                            let out = merged.join(&rel);
                             out.parent().map(std::fs::create_dir_all).transpose()?;
-                            // std::fs::hard_link(item, out)?;
-                            #[cfg(target_family = "windows")]
-                            std::os::windows::fs::symlink_file(item, out)?;
-                            #[cfg(target_family = "unix")]
-                            std::os::unix::fs::symlink(item, out)?;
+                            std::fs::hard_link(item, out)?;
                             Ok(())
                         })?;
                     Ok(())
                 })
         })?;
+        if !output.exists() {
+            #[cfg(target_family = "unix")]
+            std::os::unix::fs::symlink(merged, &output)?;
+            #[cfg(target_family = "windows")]
+            junction::create(&output, merged)?;
+        }
         assert!(
             glob::glob(&output.join("*").to_string_lossy())
                 .unwrap()

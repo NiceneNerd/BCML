@@ -136,6 +136,10 @@ impl Settings {
         self.mods_dir().join("9999_BCML")
     }
 
+    pub fn merged_modpack_dir(&self) -> PathBuf {
+        self.store_dir.join(if self.wiiu { "merged" } else { "merged_nx" })
+    }
+
     #[inline]
     pub fn endian(&self) -> roead::Endian {
         if self.wiiu {
