@@ -24,7 +24,7 @@ import oead
 
 from bcml import util, mergers, dev, upgrade
 from bcml import bcml as rsext
-from bcml.util import BcmlMod, get_7z_path
+from bcml.util import SYSTEM, BcmlMod, get_7z_path
 
 
 def extract_mod_meta(mod: Path) -> Dict[str, Any]:
@@ -333,6 +333,7 @@ def refresher(func: Callable) -> Callable:
     return do_and_refresh
 
 
+@util.timed
 def refresh_master_export():
     print("Exporting merged mod pack...")
     link_master_mod()
@@ -802,96 +803,97 @@ def disable_bcml_gfx():
             newl="\n",
         )
 
-
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
-    if not output:
-        if not util.get_settings(
-            "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
-        ):
-            return
-        output = Path(
-            util.get_settings(
-                "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
-            )
-        )
-    if output.exists():
-        if not util.get_settings("no_cemu"):
-            shutil.rmtree(output, ignore_errors=True)
-        elif util.get_settings("wiiu"):
-            if (output / "content").exists():
-                shutil.rmtree((output / "content"), ignore_errors=True)
-            if (output / "aoc").exists():
-                shutil.rmtree((output / "aoc"), ignore_errors=True)
-        elif not util.get_settings("wiiu"):
-            if (output / "01007EF00011E000").exists():
-                shutil.rmtree((output / "01007EF00011E000"), ignore_errors=True)
-            if (output / "01007EF00011F001").exists():
-                shutil.rmtree((output / "01007EF00011F001"), ignore_errors=True)
-    try:
-        output.mkdir(parents=True, exist_ok=True)
-        if not util.get_settings("no_cemu"):
-            output.mkdir(parents=True, exist_ok=True)
-            shutil.copy(
-                util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
-            )
-    except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
-        raise RuntimeError(
-            "There was a problem creating the master BCML graphic pack. "
-            "It may be a one time fluke, so try remerging and/or restarting BCML. "
-            "This can also happen if BCML and/or Cemu are installed into Program "
-            "Files or any folder which requires administrator (or root) permissions. "
-            "You can try running BCML as administrator or root, but bear in mind this "
-            "is not officially supported. If the problem persists, good luck, because "
-            "it's something wonky about your PC, I guess."
-        ) from err
+    rsext.manager.link_master_mod(output)
+    # if not output:
+    #     if not util.get_settings(
+    #         "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+    #     ):
+    #         return
+    #     output = Path(
+    #         util.get_settings(
+    #             "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+    #         )
+    #     )
+    # if output.exists():
+    #     if not util.get_settings("no_cemu"):
+    #         shutil.rmtree(output, ignore_errors=True)
+    #     elif util.get_settings("wiiu"):
+    #         if (output / "content").exists():
+    #             shutil.rmtree((output / "content"), ignore_errors=True)
+    #         if (output / "aoc").exists():
+    #             shutil.rmtree((output / "aoc"), ignore_errors=True)
+    #     elif not util.get_settings("wiiu"):
+    #         if (output / "01007EF00011E000").exists():
+    #             shutil.rmtree((output / "01007EF00011E000"), ignore_errors=True)
+    #         if (output / "01007EF00011F001").exists():
+    #             shutil.rmtree((output / "01007EF00011F001"), ignore_errors=True)
+    # try:
+    #     output.mkdir(parents=True, exist_ok=True)
+    #     if not util.get_settings("no_cemu"):
+    #         output.mkdir(parents=True, exist_ok=True)
+    #         shutil.copy(
+    #             util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
+    #         )
+    # except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
+    #     raise RuntimeError(
+    #         "There was a problem creating the master BCML graphic pack. "
+    #         "It may be a one time fluke, so try remerging and/or restarting BCML. "
+    #         "This can also happen if BCML and/or Cemu are installed into Program "
+    #         "Files or any folder which requires administrator (or root) permissions. "
+    #         "You can try running BCML as administrator or root, but bear in mind this "
+    #         "is not officially supported. If the problem persists, good luck, because "
+    #         "it's something wonky about your PC, I guess."
+    #     ) from err
 
-    mod_folders: List[Path] = sorted(
-        [
-            item
-            for item in util.get_modpack_dir().glob("*")
-            if item.is_dir() and not (item / ".disabled").exists()
-        ],
-        reverse=True,
-    )
-    util.vprint(mod_folders)
-    link_or_copy: Any = os.link if not util.get_settings("no_hardlinks") else copyfile
-    for mod_folder in mod_folders:
-        for item in mod_folder.rglob("**/*"):
-            rel_path = item.relative_to(mod_folder)
-            exists = (output / rel_path).exists()
-            is_log = str(rel_path).startswith("logs")
-            is_opt = str(rel_path).startswith("options")
-            is_meta = str(rel_path).startswith("meta")
-            is_extra = (
-                len(rel_path.parts) == 1
-                and rel_path.suffix != ".txt"
-                and not item.is_dir()
-            )
-            if exists or is_log or is_extra or is_meta or is_opt:
-                continue
-            if item.is_dir():
-                (output / rel_path).mkdir(parents=True, exist_ok=True)
-            elif item.is_file():
-                try:
-                    link_or_copy(str(item), str(output / rel_path))
-                except OSError:
-                    if link_or_copy is os.link:
-                        link_or_copy = copyfile
-                        link_or_copy(str(item), str(output / rel_path))
-                    else:
-                        raise
-    if len(list(output.glob("*"))) == 0:
-        raise RuntimeError(
-            "No files were created in your export directory. This may mean BCML"
-            " lacked then necessary permissions to write to the folder, or "
-            "the folder is otherwise unusable by Python. (This often happens"
-            " if the target folder is connected to OneDrive, WinFUSE, or "
-            "perhaps network drives._ If possible, try changing your export "
-            "folder or its permissions. If you are a Cemu user and your Cemu "
-            "folder is in your OneDrive, you will probably need to move Cemu "
-            "somewhere else."
-        )
+    # mod_folders: List[Path] = sorted(
+    #     [
+    #         item
+    #         for item in util.get_modpack_dir().glob("*")
+    #         if item.is_dir() and not (item / ".disabled").exists()
+    #     ],
+    #     reverse=True,
+    # )
+    # util.vprint(mod_folders)
+    # same_fs = (
+    #     util.get_modpack_dir().parts[0] == output.parts[0]
+    #     if util.SYSTEM == "Windows"
+    #     else os.stat(util.get_modpack_dir()).st_dev == os.stat(output).st_dev
+    # )
+    # link_or_copy: Any = (
+    #     os.link if not util.get_settings("no_hardlinks") and same_fs else copyfile
+    # )
+    # util.vprint(f"Hardlinks: {link_or_copy == os.link}")
+    # for mod_folder in mod_folders:
+    #     for item in mod_folder.rglob("**/*"):
+    #         rel_path = item.relative_to(mod_folder)
+    #         exists = (output / rel_path).exists()
+    #         is_log = str(rel_path).startswith("logs")
+    #         is_opt = str(rel_path).startswith("options")
+    #         is_meta = str(rel_path).startswith("meta")
+    #         is_extra = (
+    #             len(rel_path.parts) == 1
+    #             and rel_path.suffix != ".txt"
+    #             and not item.is_dir()
+    #         )
+    #         if exists or is_log or is_extra or is_meta or is_opt:
+    #             continue
+    #         if item.is_dir():
+    #             (output / rel_path).mkdir(parents=True, exist_ok=True)
+    #         elif item.is_file():
+    #             link_or_copy(str(item), str(output / rel_path))
+    # if len(list(output.glob("*"))) == 0:
+    #     raise RuntimeError(
+    #         "No files were created in your export directory. This may mean BCML"
+    #         " lacked then necessary permissions to write to the folder, or "
+    #         "the folder is otherwise unusable by Python. (This often happens"
+    #         " if the target folder is connected to OneDrive, WinFUSE, or "
+    #         "perhaps network drives._ If possible, try changing your export "
+    #         "folder or its permissions. If you are a Cemu user and your Cemu "
+    #         "folder is in your OneDrive, you will probably need to move Cemu "
+    #         "somewhere else."
+    #     )
 
 
 def export(output: Path, standalone: bool = False):

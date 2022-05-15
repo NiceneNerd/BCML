@@ -194,8 +194,6 @@ class PackMerger(mergers.Merger):
                 sarcs[sarc_file].insert(0, util.get_game_file(sarc_file))
             except FileNotFoundError:
                 continue
-        util.vprint("All SARC diffs:")
-        util.vprint(sarcs)
         if not sarcs:
             print("No SARC merging necessary")
             return

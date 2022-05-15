@@ -1,3 +1,4 @@
+pub mod manager;
 pub mod settings;
 pub mod util;
 use cow_utils::CowUtils;
@@ -47,6 +48,7 @@ impl From<RustError> for PyErr {
 #[pymodule]
 fn bcml(py: Python, m: &PyModule) -> PyResult<()> {
     mergers::mergers_mod(py, m)?;
+    manager::manager_mod(py, m)?;
     m.add_wrapped(wrap_pyfunction!(find_modified_files))?;
     Ok(())
 }

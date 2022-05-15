@@ -107,7 +107,7 @@ impl Settings {
         } else {
             &self.dlc_dir_nx
         };
-        if dir.to_str().map(|d| d == "").unwrap_or_default() {
+        if dir.to_str().map(|d| d.is_empty()).unwrap_or_default() {
             None
         } else {
             Some(dir)
@@ -117,6 +117,19 @@ impl Settings {
     pub fn mods_dir(&self) -> PathBuf {
         self.store_dir
             .join(if self.wiiu { "mods" } else { "mods_nx" })
+    }
+
+    pub fn export_dir(&self) -> Option<&Path> {
+        let dir = if self.wiiu {
+            self.export_dir.as_path()
+        } else {
+            self.export_dir_nx.as_path()
+        };
+        if dir.to_str().map(|d| d.is_empty()).unwrap_or_default() {
+            None
+        } else {
+            Some(dir)
+        }
     }
 
     pub fn master_mod_dir(&self) -> PathBuf {
