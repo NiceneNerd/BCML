@@ -1,6 +1,7 @@
 use crate::{Result, RustError};
 use jstr::jstr;
 use path_slash::PathExt;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use roead::sarc::Sarc;
 use std::{
     collections::HashMap,
@@ -94,6 +95,30 @@ pub fn get_stock_pack(pack: &str) -> Result<Arc<Sarc<'static>>> {
         drop(stock_packs);
         get_stock_pack(pack)
     }
+}
+
+pub fn merge_map(base: &mut roead::byml::Hash, other: &roead::byml::Hash, extend: bool) {
+    other.iter().for_each(|(k, v)| {
+        if let Some(bv) = base.get_mut(k) {
+            match (bv, v) {
+                (roead::byml::Byml::Hash(bh), roead::byml::Byml::Hash(oh)) => {
+                    merge_map(bh, oh, extend);
+                }
+                (roead::byml::Byml::Array(ba), roead::byml::Byml::Array(oa)) => {
+                    if extend {
+                        ba.extend(oa.iter().cloned());
+                    } else {
+                        base.insert(k.clone(), v.clone());
+                    }
+                }
+                _ => {
+                    base.insert(k.clone(), v.clone());
+                }
+            }
+        } else {
+            base.insert(k.clone(), v.clone());
+        }
+    })
 }
 
 const ROM_PREFIXES: &[&str] = &[

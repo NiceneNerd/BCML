@@ -8,6 +8,7 @@ import oead
 
 from bcml import util, mergers
 from bcml.util import BcmlMod
+from bcml import bcml as rsext
 
 
 def get_stock_actorinfo() -> oead.byml.Hash:
@@ -26,6 +27,7 @@ class ActorInfoMerger(mergers.Merger):
             {},
         )
 
+    @util.timed
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[Path, str]]):
         try:
             actor_file: Path = next(
@@ -39,57 +41,14 @@ class ActorInfoMerger(mergers.Merger):
                 )
             )
         except StopIteration:
-            return {}
-        print("Detecting modified actor info entries...")
-        data = util.decompress(actor_file.read_bytes())
-        try:
-            actorinfo = oead.byml.from_binary(data)
-        except oead.InvalidDataError:
-            data = bytearray(data)
-            data[3] = 2
-            try:
-                actorinfo = oead.byml.from_binary(data)
-            except oead.InvalidDataError as err:
-                raise ValueError(
-                    "This mod contains a corrupt actor info file."
-                ) from err
-        del actor_file
-        stock_actorinfo = get_stock_actorinfo()
-        stock_actors = {actor["name"]: actor for actor in stock_actorinfo["Actors"]}
-        del stock_actorinfo
-        diff = oead.byml.Hash(
-            {
-                **{
-                    str(crc32(actor["name"].encode("utf8"))): actor
-                    for actor in actorinfo["Actors"]
-                    if actor["name"] not in stock_actors
-                },
-                **{
-                    str(crc32(actor["name"].encode("utf8"))): {
-                        key: value
-                        for key, value in actor.items()
-                        if (
-                            key not in stock_actors[actor["name"]]
-                            or value != stock_actors[actor["name"]][key]
-                        )
-                    }
-                    for actor in actorinfo["Actors"]
-                    if actor["name"] in stock_actors
-                    and actor != stock_actors[actor["name"]]
-                },
-            }
-        )
-        del actorinfo
-        del stock_actors
-        return diff
+            return None
+        return rsext.mergers.actorinfo.diff_actorinfo(str(actor_file))
 
     def log_diff(self, mod_dir: Path, diff_material: Union[oead.byml.Hash, list]):
         if isinstance(diff_material, List):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
-            (mod_dir / "logs" / self._log_name).write_text(
-                oead.byml.to_text(diff_material), encoding="utf-8"
-            )
+            (mod_dir / "logs" / self._log_name).write_bytes(diff_material)
 
     def get_mod_diff(self, mod: BcmlMod):
         diffs: Dict[str, oead.Byml.Hash] = {}
@@ -134,58 +93,59 @@ class ActorInfoMerger(mergers.Merger):
         )
         print("Loading modded actor info...")
         modded_actors = self.consolidate_diffs(self.get_all_diffs())
-        if not modded_actors:
-            print("No actor info merging necessary.")
-            if actor_path.exists():
-                actor_path.unlink()
-            return
+        rsext.mergers.actorinfo.merge_actorinfo(oead.byml.to_binary(modded_actors, False))
+        # if not modded_actors:
+        #     print("No actor info merging necessary.")
+        #     if actor_path.exists():
+        #         actor_path.unlink()
+        #     return
 
-        print("Loading unmodded actor info...")
-        actorinfo = get_stock_actorinfo()
-        stock_actors = {
-            crc32(actor["name"].encode("utf8")): actor for actor in actorinfo["Actors"]
-        }
+        # print("Loading unmodded actor info...")
+        # actorinfo = get_stock_actorinfo()
+        # stock_actors = {
+        #     crc32(actor["name"].encode("utf8")): actor for actor in actorinfo["Actors"]
+        # }
 
-        print("Merging changes...")
-        new_hashes = set()
-        for actor_hash, actor_info in modded_actors.items():
-            if isinstance(actor_hash, str):
-                actor_hash = int(actor_hash)
-            if actor_hash in stock_actors:
-                util.dict_merge(
-                    stock_actors[actor_hash], actor_info, overwrite_lists=True
-                )
-            else:
-                actorinfo["Actors"].append(actor_info)
-                new_hashes.add(actor_hash)
+        # print("Merging changes...")
+        # new_hashes = set()
+        # for actor_hash, actor_info in modded_actors.items():
+        #     if isinstance(actor_hash, str):
+        #         actor_hash = int(actor_hash)
+        #     if actor_hash in stock_actors:
+        #         util.dict_merge(
+        #             stock_actors[actor_hash], actor_info, overwrite_lists=True
+        #         )
+        #     else:
+        #         actorinfo["Actors"].append(actor_info)
+        #         new_hashes.add(actor_hash)
 
-        print("Sorting new actor info...")
-        actorinfo["Hashes"] = oead.byml.Array(
-            [
-                oead.S32(x) if x < 2147483648 else oead.U32(x)
-                for x in sorted(new_hashes | set(stock_actors.keys()))
-            ]
-        )
-        try:
-            actorinfo["Actors"] = sorted(
-                actorinfo["Actors"], key=lambda x: crc32(x["name"].encode("utf-8"))
-            )
-        except KeyError as err:
-            if str(err) == "":
-                raise RuntimeError(
-                    "Your actor info mods could not be merged. "
-                    "This usually indicates a corrupt game dump."
-                ) from err
-            else:
-                raise
+        # print("Sorting new actor info...")
+        # actorinfo["Hashes"] = oead.byml.Array(
+        #     [
+        #         oead.S32(x) if x < 2147483648 else oead.U32(x)
+        #         for x in sorted(new_hashes | set(stock_actors.keys()))
+        #     ]
+        # )
+        # try:
+        #     actorinfo["Actors"] = sorted(
+        #         actorinfo["Actors"], key=lambda x: crc32(x["name"].encode("utf-8"))
+        #     )
+        # except KeyError as err:
+        #     if str(err) == "":
+        #         raise RuntimeError(
+        #             "Your actor info mods could not be merged. "
+        #             "This usually indicates a corrupt game dump."
+        #         ) from err
+        #     else:
+        #         raise
 
-        print("Saving new actor info...")
-        actor_path.parent.mkdir(parents=True, exist_ok=True)
-        actor_path.write_bytes(
-            util.compress(
-                oead.byml.to_binary(actorinfo, big_endian=util.get_settings("wiiu"))
-            )
-        )
+        # print("Saving new actor info...")
+        # actor_path.parent.mkdir(parents=True, exist_ok=True)
+        # actor_path.write_bytes(
+        #     util.compress(
+        #         oead.byml.to_binary(actorinfo, big_endian=util.get_settings("wiiu"))
+        #     )
+        # )
         print("Actor info merged successfully")
 
     def get_checkbox_options(self):

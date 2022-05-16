@@ -36,12 +36,11 @@ pub fn packs_mod(py: Python, parent: &PyModule) -> PyResult<()> {
 fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
     let all_files: HashSet<String> = sarcs
         .iter()
-        .map(|s| {
+        .flat_map(|s| {
             s.files()
                 .map(|f| f.name_unchecked().to_owned())
                 .collect::<Vec<String>>()
         })
-        .flatten()
         .collect();
     let files = all_files
         .into_iter()

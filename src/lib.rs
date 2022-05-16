@@ -1,4 +1,6 @@
+#![feature(let_chains)]
 pub mod manager;
+pub mod mergers;
 pub mod settings;
 pub mod util;
 use cow_utils::CowUtils;
@@ -13,7 +15,6 @@ use std::{
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, RustError>;
-pub mod mergers;
 
 #[derive(Debug, Error)]
 pub enum RustError {
