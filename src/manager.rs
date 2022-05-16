@@ -22,7 +22,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             std::fs::remove_dir_all(merged.join(util::content()));
             std::fs::remove_dir_all(merged.join(util::dlc()));
         }
-        std::fs::create_dir_all(&merged)?;
+        std::fs::create_dir_all(&merged).unwrap_or(());
         let rules_path = merged.join("rules.txt");
         if !util::settings().no_cemu && !rules_path.exists() {
             std::fs::hard_link(
@@ -39,7 +39,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         py.allow_threads(|| -> Result<()> {
             mod_folders
                 .into_iter()
-				.rev()
+                .rev()
                 .try_for_each(|folder| -> Result<()> {
                     let mod_files: Vec<(PathBuf, PathBuf)> =
                         glob::glob(&folder.join("**/*").to_string_lossy())
@@ -64,7 +64,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                         .into_par_iter()
                         .try_for_each(|(item, rel)| -> Result<()> {
                             let out = merged.join(&rel);
-                            out.parent().map(std::fs::create_dir_all).transpose()?;
+                            out.parent().map(std::fs::create_dir_all);
                             std::fs::hard_link(item, out)?;
                             Ok(())
                         })?;
@@ -72,10 +72,10 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 })
         })?;
         if !output.exists() {
-            #[cfg(target_family = "unix")]
+            #[cfg(target_os = "linux")]
             std::os::unix::fs::symlink(merged, &output)?;
-            #[cfg(target_family = "windows")]
-            junction::create(&output, merged)?;
+            #[cfg(target_os = "windows")]
+            junction::create(merged, &output)?;
         }
         assert!(
             glob::glob(&output.join("*").to_string_lossy())
