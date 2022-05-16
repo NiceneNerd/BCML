@@ -41,10 +41,6 @@ Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, an
 run `pip install bcml`. **Note that, because of certain dependencies, on Windows
 Python 3.9+ is not supported.**
 
-**Note for Arch users**: BCML is now [on the AUR](https://aur.archlinux.org/packages/bcml-git/)
-(thanks [ibrokemypie](https://github.com/ibrokemypie)), so you can install it with pamac or yay or
-whatever your prefer.
-
 **Note for other Linux users**: Because of the ways different distros handle Python packaging,
 it often works better to install BCML in some contained environment. There are a few options for
 this. The easiest would be to use [`pipx`](https://github.com/pypa/pipx). You can install `pipx`
