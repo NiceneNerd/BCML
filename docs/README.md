@@ -39,7 +39,7 @@ There are two main ways to install BCML.
 
 Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
 run `pip install bcml`. **Note that, because of certain dependencies, on Windows
-Python 3.9+ is not supported.**
+Python 3.9+ is not supported. Python 3.10 is not supported on any platform.**
 
 **Note for other Linux users**: Because of the ways different distros handle Python packaging,
 it often works better to install BCML in some contained environment. There are a few options for
