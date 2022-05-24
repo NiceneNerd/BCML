@@ -59,11 +59,11 @@ pub fn merge_actormap(base: &mut ActorMap, other: &ActorMap) {
                     util::merge_map(bh, oh, false);
                 }
                 _ => {
-                    base.insert(k.clone(), v.clone());
+                    base.insert(*k, v.clone());
                 }
             }
         } else {
-            base.insert(k.clone(), v.clone());
+            base.insert(*k, v.clone());
         }
     })
 }

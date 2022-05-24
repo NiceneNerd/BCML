@@ -1,4 +1,4 @@
-use crate::{util, Result, RustError};
+use crate::{util, Result};
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::path::PathBuf;

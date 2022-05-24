@@ -145,39 +145,34 @@ def _clean_sarcs(tmp_dir: Path, hashes: dict, pool: multiprocessing.pool.Pool):
         file
         for file in tmp_dir.rglob("**/*")
         if file.suffix in CLEAN_EXTS
+        and all(ex not in file.name for ex in SPECIAL)
         and "options" not in file.relative_to(tmp_dir).parts
     }
     if sarc_files:
         print("Creating partial packs...")
         pool.map(partial(_clean_sarc_file, hashes=hashes, tmp_dir=tmp_dir), sarc_files)
 
-    sarc_files = {
+    final_packs = {
         file
         for file in tmp_dir.rglob("**/*")
         if file.suffix in CLEAN_EXTS
+        and all(ex not in file.name for ex in SPECIAL)
         and "options" not in file.relative_to(tmp_dir).parts
     }
-    if sarc_files:
+    if final_packs:
         print("Updating pack log...")
-        final_packs = [file for file in sarc_files if file.suffix in CLEAN_EXTS]
-        if final_packs:
-            (tmp_dir / "logs").mkdir(parents=True, exist_ok=True)
-            (tmp_dir / "logs" / "packs.json").write_text(
-                dumps(
-                    {
-                        util.get_canon_name(file.relative_to(tmp_dir)): str(
-                            file.relative_to(tmp_dir)
-                        )
-                        for file in final_packs
-                    },
-                    indent=2,
-                )
+        (tmp_dir / "logs").mkdir(parents=True, exist_ok=True)
+        (tmp_dir / "logs" / "packs.json").write_text(
+            dumps(
+                {
+                    util.get_canon_name(file.relative_to(tmp_dir)): str(
+                        file.relative_to(tmp_dir)
+                    )
+                    for file in final_packs
+                },
+                indent=2,
             )
-        else:
-            try:
-                (tmp_dir / "logs" / "packs.json").unlink()
-            except FileNotFoundError:
-                pass
+        )
     else:
         try:
             (tmp_dir / "logs" / "packs.json").unlink()
@@ -206,7 +201,7 @@ def _clean_sarc(old_sarc: oead.Sarc, base_sarc: oead.Sarc) -> Optional[oead.Sarc
             if (
                 ext in CLEAN_EXTS
                 and nest_file in old_files
-                and nest_file not in SPECIAL
+                and all(ex not in nest_file for ex in SPECIAL)
             ):
                 nest_old_sarc = oead.Sarc(old_data)
                 nest_base_sarc = oead.Sarc(file_data)

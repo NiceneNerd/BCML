@@ -1,7 +1,6 @@
 use crate::{Result, RustError};
 use jstr::jstr;
 use path_slash::PathExt;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use roead::sarc::Sarc;
 use std::{
     collections::HashMap,

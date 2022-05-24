@@ -14,14 +14,16 @@ use roead::{
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 static SPECIAL: &[&str] = &[
-    "GameData/gamedata.ssarc",
-    "GameData/savedataformat.ssarc",
+    "gamedata",
+    "savedataformat",
     // "Layout/Common.sblarc", We'll try doing this
-    "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
+    "tera_resource.Nin_NX_NVN",
+    "Dungeon",
+    "Bootup_",
+    "AocMainField",
 ];
 
 static EXCLUDE_EXTS: &[&str] = &["sbeventpack"];
@@ -50,14 +52,10 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                 .iter()
                 .rev()
                 .filter_map(|s| {
-                    // println!("let data = s.files().find_map(|f|");
                     let data = s.files().find_map(|f| {
-                        // println!("if f.name_unchecked() == file");
                         if f.name_unchecked() == file {
-                            // println!("Some(f.data().to_vec()");
                             Some(f.data().to_vec())
                         } else {
-                            // println!("None");
                             None
                         }
                     });
@@ -69,12 +67,9 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                     modded = false;
                     sarcs.iter().find_map(|s| {
                         s.files().find_map(|f| {
-                            // println!("if f.name_unchecked() == file");
                             if f.name_unchecked() == file {
-                                // println!("Some(f.data().to_vec()");
                                 Some(f.data().to_vec())
                             } else {
-                                // println!("None");
                                 None
                             }
                         })
@@ -90,7 +85,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                     .and_then(|e| e.to_str())
                     .map(|e| EXCLUDE_EXTS.contains(&e))
                     .unwrap_or_default()
-                && !SPECIAL.contains(&file.as_str())
+                && !SPECIAL.iter().any(|s| file.as_str().contains(s))
             {
                 let nest_sarcs: Vec<Sarc> = sarcs
                     .iter()

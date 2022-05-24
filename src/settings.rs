@@ -69,7 +69,25 @@ impl Default for Settings {
             changelog: true,
             wiiu: true,
             auto_gb: true,
-            ..Default::default()
+            cemu_dir: Default::default(),
+            dark_theme: Default::default(),
+            dlc_dir: Default::default(),
+            dlc_dir_nx: Default::default(),
+            export_dir: Default::default(),
+            export_dir_nx: Default::default(),
+            force_7z: Default::default(),
+            game_dir: Default::default(),
+            game_dir_nx: Default::default(),
+            load_reverse: Default::default(),
+            no_cemu: Default::default(),
+            no_guess: Default::default(),
+            no_hardlinks: Default::default(),
+            nsfw: Default::default(),
+            show_gb: Default::default(),
+            site_meta: Default::default(),
+            strip_gfx: Default::default(),
+            suppress_update: Default::default(),
+            update_dir: Default::default(),
         }
     }
 }
@@ -137,7 +155,8 @@ impl Settings {
     }
 
     pub fn merged_modpack_dir(&self) -> PathBuf {
-        self.store_dir.join(if self.wiiu { "merged" } else { "merged_nx" })
+        self.store_dir
+            .join(if self.wiiu { "merged" } else { "merged_nx" })
     }
 
     #[inline]

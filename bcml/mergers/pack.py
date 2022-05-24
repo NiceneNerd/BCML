@@ -12,10 +12,13 @@ import oead
 from bcml import util, mergers
 
 SPECIAL = {
-    "GameData/gamedata.ssarc",
-    "GameData/savedataformat.ssarc",
+    "gamedata",
+    "savedataformat",
     # "Layout/Common.sblarc", We'll try doing this
-    "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
+    "tera_resource.Nin_NX_NVN",
+    "Dungeon",
+    "Bootup_",
+    "AocMainField"
 }
 
 EXCLUDE_EXTS = {".sbeventpack"}
@@ -119,13 +122,12 @@ class PackMerger(mergers.Merger):
         for file in [
             file
             for file in modded_files
-            if isinstance(file, Path) and file.suffix in util.SARC_EXTS
+            if isinstance(file, Path)
+            and file.suffix in util.SARC_EXTS - EXCLUDE_EXTS
+            and not any(ex in file.name for ex in SPECIAL)
         ]:
             canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-            if canon and not any(
-                ex in file.name
-                for ex in ["Dungeon", "Bootup_", "AocMainField", "beventpack"]
-            ):
+            if canon:
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs
 
@@ -186,7 +188,8 @@ class PackMerger(mergers.Merger):
         for file in [
             file
             for file in util.get_master_modpack_dir().rglob("**/*")
-            if file.suffix in util.SARC_EXTS
+            if file.suffix in util.SARC_EXTS - EXCLUDE_EXTS
+            and not any(ex in file.name for ex in SPECIAL)
         ]:
             file.unlink()
         for sarc_file in sarcs:
