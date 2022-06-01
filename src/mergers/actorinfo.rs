@@ -1,8 +1,11 @@
 use crate::{util, Result, RustError};
 use pyo3::{prelude::*, types::PyBytes};
 use rayon::prelude::*;
-use roead::{byml::{Byml, Hash}, yaz0::{compress, decompress}};
-use std::{sync::Arc, collections::BTreeMap};
+use roead::{
+    byml::{Byml, Hash},
+    yaz0::{compress, decompress},
+};
+use std::{collections::BTreeMap, sync::Arc};
 
 type ActorMap = BTreeMap<u32, Byml>;
 
@@ -87,13 +90,19 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
                         if !stock_actorinfo.contains_key(&hash) {
                             Some((hash.to_string(), actor.clone()))
                         } else if let Some(Byml::Hash(stock_actor)) = stock_actorinfo.get(&hash)
-                            && stock_actor != actor_hash 
+                            && stock_actor != actor_hash
                         {
                             Some((
                                 hash.to_string(),
-                                Byml::Hash(actor_hash.iter().filter_map(|(k, v)| {
-                                    (stock_actor.get(k) != Some(v)).then(|| (k.clone(), v.clone()))
-                                }).collect())
+                                Byml::Hash(
+                                    actor_hash
+                                        .iter()
+                                        .filter_map(|(k, v)| {
+                                            (stock_actor.get(k) != Some(v))
+                                                .then(|| (k.clone(), v.clone()))
+                                        })
+                                        .collect(),
+                                ),
                             ))
                         } else {
                             None
@@ -111,9 +120,16 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
 
 #[pyfunction]
 fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
-    Ok(py.allow_threads(|| -> Result<()> {
+    let merge = || -> Result<()> {
         let modded_actor_root = Byml::from_binary(&modded_actors).unwrap();
-        let modded_actors: ActorMap = modded_actor_root.as_hash().unwrap().into_par_iter().map(|(h, a)| (h.parse::<u32>().unwrap(), a.clone())).collect();
+        let modded_actors: ActorMap = py.allow_threads(|| {
+            modded_actor_root
+                .as_hash()
+                .unwrap()
+                .into_par_iter()
+                .map(|(h, a)| (h.parse::<u32>().unwrap(), a.clone()))
+                .collect()
+        });
         let mut merged_actors = stock_actorinfo()?.clone();
         merge_actormap(&mut merged_actors, &modded_actors);
         let (hashes, actors): (Vec<Byml>, Vec<Byml>) = merged_actors
@@ -149,5 +165,6 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
             compress(merged_actorinfo.to_binary(util::settings().endian())),
         )?;
         Ok(())
-    })?)
+    };
+    Ok(merge()?)
 }

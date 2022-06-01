@@ -93,12 +93,13 @@ class ActorInfoMerger(mergers.Merger):
         )
         print("Loading modded actor info...")
         modded_actors = self.consolidate_diffs(self.get_all_diffs())
+        if not modded_actors:
+            print("No actor info merging necessary.")
+            if actor_path.exists():
+                actor_path.unlink()
+            return
+
         rsext.mergers.actorinfo.merge_actorinfo(oead.byml.to_binary(modded_actors, False))
-        # if not modded_actors:
-        #     print("No actor info merging necessary.")
-        #     if actor_path.exists():
-        #         actor_path.unlink()
-        #     return
 
         # print("Loading unmodded actor info...")
         # actorinfo = get_stock_actorinfo()
