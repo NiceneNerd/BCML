@@ -1,5 +1,5 @@
 use crate::{Result, RustError};
-use jstr::jstr;
+use join_str::jstr;
 use path_slash::PathExt;
 use roead::sarc::Sarc;
 use std::{

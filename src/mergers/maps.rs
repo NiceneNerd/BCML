@@ -1,6 +1,6 @@
 use crate::{settings::Settings, util, Result, RustError};
 use anyhow::Context;
-use jstr::jstr;
+use join_str::jstr;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use roead::{
