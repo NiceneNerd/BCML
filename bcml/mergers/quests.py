@@ -161,7 +161,7 @@ class QuestMerger(mergers.Merger):
             if add["Name"] not in added_names:
                 quest_index = len(quests)
                 try:
-                    quest_index = 0 if add["prev_quest"] == "--index_zero" else list(quests).index(add["prev_quest"]) + 1
+                    quest_index = 0 if add["prev_quest"] == "--index_zero" else [q["Name"] for q in quests].index(add["prev_quest"]) + 1
                     del add["prev_quest"]
                 except KeyError:
                     pass
