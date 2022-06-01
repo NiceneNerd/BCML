@@ -24,12 +24,13 @@ jobs:
     - name: install-cmake
       uses: Symbitic/install-cmake@v0.1.0
     - name: Check
-      run: cargo check --verbose
+      run: cargo +nightly check --verbose
     - uses: messense/maturin-action@v1
       with:
         maturin-version: latest
         command: build
         args: --release
+        rust-toolchain: nightly
   check_win:
     runs-on: windows-latest
     steps:
@@ -43,9 +44,10 @@ jobs:
     - name: install-cmake
       uses: Symbitic/install-cmake@v0.1.0
     - name: Check
-      run: cargo check --verbose
+      run: cargo +nightly check --verbose
     - uses: messense/maturin-action@v1
       with:
         maturin-version: latest
         command: build
         args: --release
+        rust-toolchain: nightly
