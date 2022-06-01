@@ -28,7 +28,6 @@ changes made by each mod into a single modpack that just works.
 -   A legal, unpacked game dump of _The Legend of Zelda: Breath of the Wild_ for Switch
     (version 1.6.0) or Wii U (version 1.5.0)
 -   [The latest x64 Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads#section-2)
--   [The Edge WebView2 runtime](https://go.microsoft.com/fwlink/p/?LinkId=2124703) (optional but recommended)
 -   Cemu (optional)
 
 ## Setup
@@ -37,15 +36,10 @@ There are two main ways to install BCML.
 
 ### PyPI
 
-Install Python 3.7+ (**64 bit version**), making sure to add it to your PATH, and then
-run `pip install bcml`. **Note that, because of certain dependencies, on Windows
-Python 3.9+ is not supported.**
+Install Python 3.7 - 3.9 (**64 bit version**), making sure to add it to your PATH, and then
+run `pip install bcml`.
 
-**Note for Arch users**: BCML is now [on the AUR](https://aur.archlinux.org/packages/bcml-git/)
-(thanks [ibrokemypie](https://github.com/ibrokemypie)), so you can install it with pamac or yay or
-whatever your prefer.
-
-**Note for other Linux users**: Because of the ways different distros handle Python packaging,
+**Note for Linux users**: Because of the ways different distros handle Python packaging,
 it often works better to install BCML in some contained environment. There are a few options for
 this. The easiest would be to use [`pipx`](https://github.com/pypa/pipx). You can install `pipx`
 through pip, and then run `pipx install bcml`. In some cases you might need to also run `pipx
@@ -66,35 +60,47 @@ pip install bcml
 
 Building from source requires, in addition to the general prerequisites:
 
--   Python 3.7+ 64 bit
+-   Python 3.7 - 3.9 64 bit
 
-    *(Note: 3.9+ will not work on Windows until `pythonnet` is updated.)*
+-   Rust 1.60+ (nightly)
 
--   Node.js v14
+-   Node.js v14+
 
 -   mkdocs and mkdocs-material
 
-    Run `pip install mkdocs mkdocs-material` if not using `bootstrap.sh`
+    Run `pip install mkdocs mkdocs-material` in venv if not using `bootstrap.sh`
 
 Steps to build from source:
 
-1. Install Python requirements
+1. Create and activate a Python virtual environment (venv)
+
+    1. Open terminal to repo root folder
+    2. `python -m venv venv`
+    3. Activate the venv (usually `venv/bin/activate` on Linux or `venv\Scripts\activate.ps1` on Windows)
+
+2. Install Python requirements
 
     1. Open terminal to repo root folder
     2. Run `pip install -r requirements.txt`
+    3. Also install Maturin: `pip install maturin`
 
-2. Prepare the webpack bundle
+3. Build Rust extension module
+
+    1. Open terminal to repo root folder
+    2. Run `maturin develop` (or `maturin develop --release` for performance)
+
+4. Prepare the webpack bundle
 
     1. Open terminal to `bcml/assets`
     2. Run `npm install`
     3. Run `npm run build` (or `npm run test` to watch while editing)
 
-3. Build the docs
+5. Build the docs
 
     1. Open terminal to repo root folder
     2. Run `mkdocs build`
 
-4. Install BCML with `python setup.py install` or run without installing with
+6. Create an installable wheel with `maturin build` or run without installing with
    `python -m bcml`
 
 Note that on Linux, you can simply run `bootstrap.sh` to perform these steps
