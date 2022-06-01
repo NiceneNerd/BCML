@@ -5,21 +5,14 @@ on:
         types: [created]
 
 jobs:
-    deploy:
-        runs-on: ubuntu-18.04
+    deploy_linux:
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - name: local-fix
-              run: |
-                # Hack to get setup-python to work on act
-                # (see https://github.com/nektos/act/issues/251)
-                if [ ! -f "/etc/lsb-release" ] ; then
-                  echo "DISTRIB_RELEASE=18.04" > /etc/lsb-release
-                fi
             - name: Set up Python
               uses: actions/setup-python@v2
               with:
-                  python-version: "3.7"
+                  python-version: "3.9"
             - name: Set up Node.js
               uses: actions/setup-node@v1
               env:
@@ -28,6 +21,8 @@ jobs:
                   node-version: "14.x"
             - name: Install Python dependencies
               run: |
+                  python -m venv venv
+                  source venv/bin/activate
                   python -m pip install --upgrade pip wheel setuptools
                   pip install twine mkdocs mkdocs-material
             - name: Generate webpack bundle
@@ -36,13 +31,61 @@ jobs:
                   npm install
                   ./node_modules/.bin/webpack --mode production
             - name: Build docs
-              run: mkdocs build -d ./bcml/assets/help
-            - name: Build Python packages
               run: |
-                python setup.py sdist bdist_wheel
-            - name: Publish to PyPI
-              if: ${{ !env.ACT }}
-              env:
-                  TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-                  TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-              run: twine upload dist/*
+                  source venv/bin/activate
+                  mkdocs build -d ./bcml/assets/help
+            - uses: actions-rs/toolchain@v1
+              name: Install Rust
+              with:
+                profile: minimal
+                toolchain: nightly
+                override: true
+            - uses: messense/maturin-action@v1
+              name: Publish with Maturin
+              with:
+                maturin-version: latest
+                command: publish
+                args: --release -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+    deploy_windows:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Set up Python
+              uses: actions/setup-python@v2
+              with:
+                  python-version: "3.9"
+            - name: Set up Node.js
+              uses: actions/setup-node@v1
+              # env:
+              #     RUNNER_TEMP: /tmp
+              with:
+                  node-version: "14.x"
+            - name: Install Python dependencies
+              run: |
+                  python -m venv venv
+                  venv/Scripts/activate.ps1
+                  python -m pip install --upgrade pip wheel setuptools
+                  pip install twine mkdocs mkdocs-material
+            - name: Generate webpack bundle
+              working-directory: ./bcml/assets
+              run: |
+                  npm install
+                  ./node_modules/.bin/webpack --mode production
+            - name: Build docs
+              run: |
+                  venv/Scripts/activate.ps1
+                  mkdocs build -d ./bcml/assets/help
+            - uses: actions-rs/toolchain@v1
+              name: Install Rust
+              with:
+                profile: minimal
+                toolchain: nightly
+                override: true
+            - name: Install CMake
+              uses: Symbitic/install-cmake@v0.1.0
+            - uses: messense/maturin-action@v1
+              name: Publish with Maturin
+              with:
+                maturin-version: latest
+                command: publish
+                args: --release -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
