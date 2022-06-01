@@ -44,7 +44,7 @@ jobs:
     - name: install-cmake
       uses: Symbitic/install-cmake@v0.1.0
     - name: Check
-      run: cargo +nightly build --release
+      run: cargo +nightly build
     - uses: messense/maturin-action@v1
       with:
         maturin-version: latest
