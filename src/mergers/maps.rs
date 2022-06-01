@@ -5,7 +5,6 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use roead::{
     byml::{Byml, Hash},
-    sarc::Sarc,
     yaz0::{compress, decompress},
 };
 use std::{
@@ -146,27 +145,6 @@ impl MapUnit {
                 )?)?)
             }
         }
-    }
-
-    fn get_mod_base_map(&self, mod_dir: &Path) -> Result<Byml> {
-        let path = mod_dir.join(util::content()).join(self.get_path());
-        if path.exists() {
-            Ok(Byml::from_binary(&decompress(&std::fs::read(&path)?)?)?)
-        } else {
-            let pack = Sarc::read(std::fs::read(
-                mod_dir.join(util::content()).join("Pack/TitleBG.pack"),
-            )?)?;
-            Ok(Byml::from_binary(&decompress(
-                &pack
-                    .get_file_data(&self.get_path())
-                    .ok_or_else(|| RustError::FileMissingFromSarc(self.get_path()))?,
-            )?)?)
-        }
-    }
-
-    fn get_mod_dlc_map(&self, mod_dir: &Path) -> Result<Byml> {
-        let path = mod_dir.join(util::dlc()).join(self.get_path());
-        Ok(Byml::from_binary(&decompress(&std::fs::read(&path)?)?)?)
     }
 }
 

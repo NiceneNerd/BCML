@@ -5,7 +5,7 @@ use roead::sarc::Sarc;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex, RwLockReadGuard},
 };
 
 pub use botw_utils::*;
@@ -16,8 +16,8 @@ lazy_static::lazy_static! {
     static ref STOCK_PACKS: Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>> = Mutex::new(HashMap::new());
 }
 
-pub fn settings() -> MutexGuard<'static, crate::settings::Settings> {
-    crate::settings::SETTINGS.lock().unwrap()
+pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
+    crate::settings::SETTINGS.read().unwrap()
 }
 
 #[inline]

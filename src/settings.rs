@@ -175,9 +175,9 @@ impl Settings {
 }
 
 lazy_static::lazy_static! {
-    pub static ref SETTINGS: std::sync::Arc<std::sync::Mutex<Settings>> = {
+    pub static ref SETTINGS: std::sync::Arc<std::sync::RwLock<Settings>> = {
         let settings_path = Settings::path();
-        std::sync::Arc::new(std::sync::Mutex::new(if settings_path.exists() {
+        std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
             serde_json::from_reader(std::fs::File::open(&settings_path).unwrap()).unwrap()
         } else {
             Settings::default()
