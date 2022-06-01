@@ -1,6 +1,6 @@
 use crate::{
     util::{self, settings},
-    Result,
+    Result, RustError,
 };
 use anyhow::Context;
 use cow_utils::CowUtils;
@@ -125,7 +125,12 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
                 }
                 let sarcs = sarc_paths
                     .iter()
-                    .map(|file| -> Result<Sarc> { Ok(Sarc::read(std::fs::read(&file)?)?) })
+                    .filter_map(|file| -> Option<Result<Sarc>> {
+                        std::fs::read(&file)
+                            .map(|data| Sarc::read(data).ok())
+                            .map_err(RustError::from)
+                            .transpose()
+                    })
                     .collect::<Result<Vec<Sarc>>>()?;
                 let mut merged = merge_sarc(sarcs, settings.endian())?;
                 if out.extension().unwrap().to_str().unwrap().starts_with('s') {
