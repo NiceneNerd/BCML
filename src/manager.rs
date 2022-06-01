@@ -71,6 +71,9 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     Ok(())
                 })
         })?;
+        if output.is_dir() {
+            std::fs::remove_dir_all(&output)?;
+        }
         if !output.exists() {
             #[cfg(target_os = "linux")]
             std::os::unix::fs::symlink(merged, &output)?;
