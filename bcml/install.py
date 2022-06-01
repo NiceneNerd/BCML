@@ -39,6 +39,7 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
                 "-so",
                 "info.json",
             ],
+            encoding="utf-8",
             capture_output=True,
             universal_newlines=True,
             creationflags=util.CREATE_NO_WINDOW,
@@ -53,6 +54,7 @@ def extract_mod_meta(mod: Path) -> Dict[str, Any]:
                 "-so",
                 "info.json",
             ],
+            encoding="utf-8",
             capture_output=True,
             universal_newlines=True,
         )
