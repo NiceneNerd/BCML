@@ -45,7 +45,7 @@ jobs:
               with:
                 maturin-version: latest
                 command: publish
-                args: --release -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
     deploy_windows:
         runs-on: windows-latest
         steps:
@@ -63,29 +63,28 @@ jobs:
             - name: Install Python dependencies
               run: |
                   python -m venv venv
-                  venv/Scripts/activate.ps1
+                  venv\Scripts\activate.ps1
                   python -m pip install --upgrade pip wheel setuptools
                   pip install twine mkdocs mkdocs-material
             - name: Generate webpack bundle
-              working-directory: ./bcml/assets
+              working-directory: .\bcml\assets
               run: |
                   npm install
-                  ./node_modules/.bin/webpack --mode production
+                  npm run build
             - name: Build docs
               run: |
-                  venv/Scripts/activate.ps1
-                  mkdocs build -d ./bcml/assets/help
+                  venv\Scripts\activate.ps1
+                  mkdocs build -d .\bcml\assets\help
             - uses: actions-rs/toolchain@v1
               name: Install Rust
               with:
                 profile: minimal
                 toolchain: nightly
                 override: true
-            - name: Install CMake
-              uses: Symbitic/install-cmake@v0.1.0
             - uses: messense/maturin-action@v1
               name: Publish with Maturin
               with:
                 maturin-version: latest
                 command: publish
-                args: --release -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                rust-toolchain: nightly

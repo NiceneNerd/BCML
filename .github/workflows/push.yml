@@ -41,11 +41,8 @@ jobs:
         toolchain: nightly
         profile: default
         components: rustfmt, rust-src
-#     - name: install-cmake
-#       uses: Symbitic/install-cmake@v0.1.0
-#     - name: Check
-#       run: cargo +nightly build
     - uses: messense/maturin-action@v1
+      name: Build with Maturin
       with:
         maturin-version: latest
         command: build
