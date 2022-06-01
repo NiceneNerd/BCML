@@ -739,7 +739,7 @@ def disable_bcml_gfx():
 
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
-    rsext.manager.link_master_mod(output)
+    rsext.manager.link_master_mod(str(output.absolute()))
     # if not output:
     #     if not util.get_settings(
     #         "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
