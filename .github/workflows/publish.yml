@@ -46,6 +46,7 @@ jobs:
                 maturin-version: latest
                 command: publish
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                rust-toolchain: nightly
     deploy_windows:
         runs-on: windows-latest
         steps:
