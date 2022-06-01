@@ -11,4 +11,6 @@ recursive-include bcml/assets/help *
 recursive-include bcml/assets/icon *
 recursive-include bcml/assets/scripts *.js
 recursive-exclude bcml/assets/src *
+recursive-exclude bcml/assets/node_modules *
 include bcml/assets/scripts/bundle.js
+recursive-exclude bcml/*.pyd

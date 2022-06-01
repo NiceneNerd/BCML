@@ -176,7 +176,7 @@ def _get_nest_file_sizes(
 
 def _get_sizes_in_sarc(
     file: Union[Path, oead.Sarc], guess: bool, is_aoc: bool = False
-) -> {}:
+) -> dict:
     sizes = {}
     if isinstance(file, Path):
         is_aoc = util.get_dlc_path() in file.as_posix()

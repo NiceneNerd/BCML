@@ -1,0 +1,47 @@
+[build-system]
+requires = ["maturin>=0.12,<0.13"]
+build-backend = "maturin"
+
+[project]
+name = "bcml"
+version = "3.9.0-beta6"
+description = "A mod manager for The Legend of Zelda: Breath of the Wild"
+author = "NiceneNerd"
+author_email = "macadamiadaze@gmail.com"
+# readme = { content-type = "text/markdown", file = "docs/README.md" }
+# description-content-type = "text/markdown"
+license = { file = "docs/LICENSE.md" }
+dependencies = [
+    "numpy==1.19.2; platform_system == 'Windows'",
+    "numpy~=1.19.3; platform_system == 'Linux'",
+    "aamp~=1.4.1",
+    "byml~=2.4.2",
+    "botw-utils~=0.2.3",
+    "botw-havok~=0.3.18",
+    "oead~=1.2.4",
+    "pycrosskit~=1.0.4.1",
+    "pythonnet~=3.0.0a2; platform_system == 'Windows'",
+    "pyqtwebengine~=5.15.2; platform_system == 'Linux'",
+    "cefpython3~=66.1; platform_system == 'Windows'",
+    "pywebview~=3.6.3",
+    "PyYAML~=5.4.1",
+    "requests~=2.27.1",
+    "rstb>=1.2.2",
+    "xxhash~=1.4",
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+]
+scripts = { bcml-debug = "bcml.__main__:main_debug" }
+gui-scripts = { bcml = "bcml.__main__:main" }
+
+[project.urls]
+repository = "https://github.com/NiceneNerd/BCML"
+homepage = "https://gamebanana.com/tools/6624"

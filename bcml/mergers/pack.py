@@ -12,10 +12,13 @@ import oead
 from bcml import util, mergers
 
 SPECIAL = {
-    "GameData/gamedata.ssarc",
-    "GameData/savedataformat.ssarc",
+    "gamedata",
+    "savedataformat",
     # "Layout/Common.sblarc", We'll try doing this
-    "Terrain/System/tera_resource.Nin_NX_NVN.release.ssarc",
+    "tera_resource.Nin_NX_NVN",
+    "Dungeon",
+    "Bootup_",
+    "AocMainField"
 }
 
 EXCLUDE_EXTS = {".sbeventpack"}
@@ -98,7 +101,7 @@ def write_sarc(file: str, data: bytes) -> None:
 
 
 class PackMerger(mergers.Merger):
-    """ A merger for modified pack files """
+    """A merger for modified pack files"""
 
     NAME: str = "packs"
 
@@ -119,13 +122,12 @@ class PackMerger(mergers.Merger):
         for file in [
             file
             for file in modded_files
-            if isinstance(file, Path) and file.suffix in util.SARC_EXTS
+            if isinstance(file, Path)
+            and file.suffix in util.SARC_EXTS - EXCLUDE_EXTS
+            and not any(ex in file.name for ex in SPECIAL)
         ]:
             canon = util.get_canon_name(file.relative_to(mod_dir).as_posix())
-            if canon and not any(
-                ex in file.name
-                for ex in ["Dungeon", "Bootup_", "AocMainField", "beventpack"]
-            ):
+            if canon:
                 packs[canon] = file.relative_to(mod_dir).as_posix()
         return packs
 
@@ -186,7 +188,8 @@ class PackMerger(mergers.Merger):
         for file in [
             file
             for file in util.get_master_modpack_dir().rglob("**/*")
-            if file.suffix in util.SARC_EXTS
+            if file.suffix in util.SARC_EXTS - EXCLUDE_EXTS
+            and not any(ex in file.name for ex in SPECIAL)
         ]:
             file.unlink()
         for sarc_file in sarcs:
@@ -198,12 +201,15 @@ class PackMerger(mergers.Merger):
             print("No SARC merging necessary")
             return
         print(f"Merging {len(sarcs)} SARC files...")
-        pool = self._pool or Pool(maxtasksperchild=500)
-        results = pool.starmap(merge_sarcs, sarcs.items())
-        pool.starmap(write_sarc, results)
-        if not self._pool:
-            pool.close()
-            pool.join()
+        from bcml import bcml as rsext
+
+        rsext.mergers.packs.merge_sarcs(sarcs)
+        # pool = self._pool or Pool(maxtasksperchild=500)
+        # results = pool.starmap(merge_sarcs, sarcs.items())
+        # pool.starmap(write_sarc, results)
+        # if not self._pool:
+        #     pool.close()
+        #     pool.join()
         print("Finished merging SARCs")
 
     def get_checkbox_options(self):

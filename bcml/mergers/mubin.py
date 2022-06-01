@@ -15,6 +15,7 @@ from oead.byml import Hash, Array  # pylint: disable=import-error
 import rstb
 import rstb.util
 
+from bcml import bcml as rsext
 from bcml import util, mergers
 
 Map = namedtuple("Map", "section type")
@@ -538,8 +539,9 @@ class MapMerger(mergers.Merger):
             file
             for file in modded_files
             if isinstance(file, Path)
-            and file.suffix == ".smubin"
             and "MainField" in file.parts
+            and file.suffix == ".smubin"
+            and not file.name.startswith("_")
             and "_" in file.name
         ]
         if modded_mubins:
@@ -587,60 +589,79 @@ class MapMerger(mergers.Merger):
         return diffs
 
     def consolidate_diffs(self, diffs: list):
-        a_diffs: Dict[Map, List[Hash]] = {}
+        a_diffs = Hash()
         for mod_diff in diffs:
             for file, diff in mod_diff.items():
-                a_map = Map(*file.split("_"))
-                if a_map not in a_diffs:
-                    a_diffs[a_map] = []
-                a_diffs[a_map].append(diff)
-        c_diffs: Dict[str, dict] = {}
+                # a_map = Map(*file.split("_"))
+                if file not in a_diffs:
+                    a_diffs[file] = Array()
+                a_diffs[file].append(diff)
+        c_diffs = Hash()
         for file, mods in a_diffs.items():
-            c_diffs[file] = {
-                "Objs": {
-                    "add": [],
-                    "mod": {},
-                    "del": list(
-                        set(
-                            [
-                                hash_id.v
-                                for hashes in [mod["Objs"]["del"] for mod in mods]
-                                for hash_id in hashes
-                            ]
-                        )
-                    ),
-                },
-                "Rails": {
-                    "add": [],
-                    "mod": {},
-                    "del": list(
-                        set(
-                            [
-                                hash_id.v
-                                for hashes in [
-                                    mod["Rails"]["del"]
-                                    for mod in mods
-                                    if "del" in mod["Rails"]
+            c_diffs[file] = Hash(
+                {
+                    "Objs": Hash(
+                        {
+                            "add": Array(),
+                            "mod": Hash(),
+                            "del": Array(
+                                [
+                                    oead.U32(h)
+                                    for h in set(
+                                        [
+                                            hash_id.v
+                                            for hashes in [
+                                                mod["Objs"]["del"]
+                                                for mod in mods
+                                                if "Objs" in mod
+                                                and "del" in mod["Objs"]
+                                            ]
+                                            for hash_id in hashes
+                                        ]
+                                    )
                                 ]
-                                for hash_id in hashes
-                            ]
-                        )
+                            ),
+                        }
                     ),
-                },
-            }
-            for mod in mods:
+                    "Rails": Hash(
+                        {
+                            "add": Array(),
+                            "mod": Hash(),
+                            "del": Array(
+                                [
+                                    oead.U32(h)
+                                    for h in set(
+                                        [
+                                            hash_id.v
+                                            for hashes in [
+                                                mod["Rails"]["del"]
+                                                for mod in mods
+                                                if "Rails" in mod
+                                                and "del" in mod["Rails"]
+                                            ]
+                                            for hash_id in hashes
+                                        ]
+                                    )
+                                ]
+                            ),
+                        }
+                    ),
+                }
+            )
+            for mod in [m for m in mods if "Objs" in m and "mod" in m["Objs"]]:
                 for hash_id, actor in mod["Objs"]["mod"].items():
                     c_diffs[file]["Objs"]["mod"][hash_id] = actor
-            for mod in [m for m in mods if "mod" in m["Rails"]]:
+            for mod in [m for m in mods if "Rails" in m and "mod" in m["Rails"]]:
                 for hash_id, actor in mod["Rails"]["mod"].items():
                     c_diffs[file]["Rails"]["mod"][hash_id] = actor
             add_obj_hashes = []
             add_rail_hashes = []
             for mod in reversed(mods):
-                for actor in mod["Objs"]["add"]:
-                    if actor["HashId"] not in add_obj_hashes:
-                        add_obj_hashes.append(actor["HashId"])
-                        c_diffs[file]["Objs"]["add"].append(actor)
+                if "add" in mod["Objs"]:
+                    for actor in mod["Objs"]["add"]:
+                        if actor["HashId"] not in add_obj_hashes:
+                            add_obj_hashes.append(actor["HashId"])
+                            c_diffs[file]["Objs"]["add"].append(actor)
                 if "add" in mod["Rails"]:
                     for actor in mod["Rails"]["add"]:
                         if actor["HashId"] not in add_rail_hashes:
@@ -689,21 +710,21 @@ class MapMerger(mergers.Merger):
             aoc_pack.parent.mkdir(parents=True, exist_ok=True)
             aoc_pack.write_bytes(b"")
 
-        rstb_vals = {}
-        rstb_calc = rstb.SizeCalculator()
+        rstb_vals = rsext.mergers.maps.merge_maps(oead.byml.to_binary(map_diffs, True))
+        # rstb_calc = rstb.SizeCalculator()
         print("Merging modded map units...")
 
-        pool = self._pool or Pool(maxtasksperchild=500)
-        rstb_results = pool.map(
-            partial(merge_map, rstb_calc=rstb_calc),
-            map_diffs.items(),
-        )
-        for result in rstb_results:
-            rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
-            rstb_vals[result["main"][0]] = result["main"][1]
-        if not self._pool:
-            pool.close()
-            pool.join()
+        # pool = self._pool or Pool(maxtasksperchild=500)
+        # rstb_results = pool.map(
+        # partial(merge_map, rstb_calc=rstb_calc),
+        # map_diffs.items(),
+        # )
+        # for result in rstb_results:
+        # rstb_vals[result[util.get_dlc_path()][0]] = result[util.get_dlc_path()][1]
+        # rstb_vals[result["main"][0]] = result["main"][1]
+        # if not self._pool:
+        # pool.close()
+        # pool.join()
 
         stock_static = [m for m in map_diffs if m[1] == "Static"]
         if stock_static:

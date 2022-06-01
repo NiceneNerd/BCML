@@ -23,7 +23,8 @@ from xml.dom import minidom
 import oead
 
 from bcml import util, mergers, dev, upgrade
-from bcml.util import BcmlMod, get_7z_path
+from bcml import bcml as rsext
+from bcml.util import SYSTEM, BcmlMod, get_7z_path
 
 
 def extract_mod_meta(mod: Path) -> Dict[str, Any]:
@@ -189,72 +190,10 @@ def find_modded_files(
                 ex_out.write_bytes(file.data)
         aoc_field.write_bytes(b"")
 
-    this_pool = pool or Pool(maxtasksperchild=500)
-    results = this_pool.map(
-        partial(_check_modded, tmp_dir=tmp_dir),
-        {
-            f
-            for f in tmp_dir.rglob("**/*")
-            if f.is_file() and "options" not in f.relative_to(tmp_dir).parts
-        },
-    )
-    for result in results:
-        if result:
-            modded_files.append(result)
-    total = len(modded_files)
-    print(f'Found {total} modified file{"s" if total > 1 else ""}')
-
-    total = 0
-    sarc_files = {f for f in modded_files if f.suffix in util.SARC_EXTS}
-    if sarc_files:
-        print("Scanning files packed in SARCs...")
-        for files in this_pool.imap_unordered(
-            partial(find_modded_sarc_files, tmp_dir=tmp_dir), sarc_files
-        ):
-            total += len(files)
-            modded_files.extend(files)
-        print(f'Found {total} modified packed file{"s" if total > 1 else ""}')
-    if not pool:
-        this_pool.close()
-        this_pool.join()
-    return modded_files
-
-
-def find_modded_sarc_files(
-    mod_sarc: Union[Path, oead.Sarc], tmp_dir: Path, name: str = "", aoc: bool = False
-) -> List[str]:
-    if isinstance(mod_sarc, Path):
-        if any(mod_sarc.name.startswith(exclude) for exclude in ["Bootup_"]):
-            return []
-        name = str(mod_sarc.relative_to(tmp_dir))
-        aoc = util.get_dlc_path() in mod_sarc.parts or "Aoc" in mod_sarc.parts
-        try:
-            mod_sarc = oead.Sarc(util.unyaz_if_needed(mod_sarc.read_bytes()))
-        except (RuntimeError, ValueError, oead.InvalidDataError):
-            return []
-    modded_files = []
-    for file, contents in [(f.name, bytes(f.data)) for f in mod_sarc.get_files()]:
-        canon = file.replace(".s", ".")
-        if aoc:
-            canon = "Aoc/0010/" + canon
-        contents = util.unyaz_if_needed(contents)
-        nest_path = str(name).replace("\\", "/") + "//" + file
-        if util.is_file_modded(canon, contents, True):
-            modded_files.append(nest_path)
-            util.vprint(f'Found modded file {canon} in {str(name).replace("//", "/")}')
-            if util.is_file_sarc(canon) and ".ssarc" not in file:
-                try:
-                    nest_sarc = oead.Sarc(contents)
-                except ValueError:
-                    continue
-                sub_mod_files = find_modded_sarc_files(
-                    nest_sarc, name=nest_path, tmp_dir=tmp_dir, aoc=aoc
-                )
-                modded_files.extend(sub_mod_files)
-        else:
-            util.vprint(
-                f'Ignored unmodded file {canon} in {str(name).replace("//", "/")}'
-            )
+    modded_files = [
+        f if "//" in f else Path(f)
+        for f in rsext.find_modified_files(str(tmp_dir), util.get_settings("wiiu"))
+    ]
     return modded_files
 
 
@@ -330,6 +269,7 @@ def refresher(func: Callable) -> Callable:
     return do_and_refresh
 
 
+@util.timed
 def refresh_master_export():
     print("Exporting merged mod pack...")
     link_master_mod()
@@ -799,96 +739,97 @@ def disable_bcml_gfx():
             newl="\n",
         )
 
-
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
-    if not output:
-        if not util.get_settings(
-            "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
-        ):
-            return
-        output = Path(
-            util.get_settings(
-                "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
-            )
-        )
-    if output.exists():
-        if not util.get_settings("no_cemu"):
-            shutil.rmtree(output, ignore_errors=True)
-        elif util.get_settings("wiiu"):
-            if (output / "content").exists():
-                shutil.rmtree((output / "content"), ignore_errors=True)
-            if (output / "aoc").exists():
-                shutil.rmtree((output / "aoc"), ignore_errors=True)
-        elif not util.get_settings("wiiu"):
-            if (output / "01007EF00011E000").exists():
-                shutil.rmtree((output / "01007EF00011E000"), ignore_errors=True)
-            if (output / "01007EF00011F001").exists():
-                shutil.rmtree((output / "01007EF00011F001"), ignore_errors=True)
-    try:
-        output.mkdir(parents=True, exist_ok=True)
-        if not util.get_settings("no_cemu"):
-            output.mkdir(parents=True, exist_ok=True)
-            shutil.copy(
-                util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
-            )
-    except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
-        raise RuntimeError(
-            "There was a problem creating the master BCML graphic pack. "
-            "It may be a one time fluke, so try remerging and/or restarting BCML. "
-            "This can also happen if BCML and/or Cemu are installed into Program "
-            "Files or any folder which requires administrator (or root) permissions. "
-            "You can try running BCML as administrator or root, but bear in mind this "
-            "is not officially supported. If the problem persists, good luck, because "
-            "it's something wonky about your PC, I guess."
-        ) from err
+    rsext.manager.link_master_mod(str(output.absolute()))
+    # if not output:
+    #     if not util.get_settings(
+    #         "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+    #     ):
+    #         return
+    #     output = Path(
+    #         util.get_settings(
+    #             "export_dir" if util.get_settings("wiiu") else "export_dir_nx"
+    #         )
+    #     )
+    # if output.exists():
+    #     if not util.get_settings("no_cemu"):
+    #         shutil.rmtree(output, ignore_errors=True)
+    #     elif util.get_settings("wiiu"):
+    #         if (output / "content").exists():
+    #             shutil.rmtree((output / "content"), ignore_errors=True)
+    #         if (output / "aoc").exists():
+    #             shutil.rmtree((output / "aoc"), ignore_errors=True)
+    #     elif not util.get_settings("wiiu"):
+    #         if (output / "01007EF00011E000").exists():
+    #             shutil.rmtree((output / "01007EF00011E000"), ignore_errors=True)
+    #         if (output / "01007EF00011F001").exists():
+    #             shutil.rmtree((output / "01007EF00011F001"), ignore_errors=True)
+    # try:
+    #     output.mkdir(parents=True, exist_ok=True)
+    #     if not util.get_settings("no_cemu"):
+    #         output.mkdir(parents=True, exist_ok=True)
+    #         shutil.copy(
+    #             util.get_master_modpack_dir() / "rules.txt", output / "rules.txt"
+    #         )
+    # except (OSError, PermissionError, FileExistsError, FileNotFoundError) as err:
+    #     raise RuntimeError(
+    #         "There was a problem creating the master BCML graphic pack. "
+    #         "It may be a one time fluke, so try remerging and/or restarting BCML. "
+    #         "This can also happen if BCML and/or Cemu are installed into Program "
+    #         "Files or any folder which requires administrator (or root) permissions. "
+    #         "You can try running BCML as administrator or root, but bear in mind this "
+    #         "is not officially supported. If the problem persists, good luck, because "
+    #         "it's something wonky about your PC, I guess."
+    #     ) from err
 
-    mod_folders: List[Path] = sorted(
-        [
-            item
-            for item in util.get_modpack_dir().glob("*")
-            if item.is_dir() and not (item / ".disabled").exists()
-        ],
-        reverse=True,
-    )
-    util.vprint(mod_folders)
-    link_or_copy: Any = os.link if not util.get_settings("no_hardlinks") else copyfile
-    for mod_folder in mod_folders:
-        for item in mod_folder.rglob("**/*"):
-            rel_path = item.relative_to(mod_folder)
-            exists = (output / rel_path).exists()
-            is_log = str(rel_path).startswith("logs")
-            is_opt = str(rel_path).startswith("options")
-            is_meta = str(rel_path).startswith("meta")
-            is_extra = (
-                len(rel_path.parts) == 1
-                and rel_path.suffix != ".txt"
-                and not item.is_dir()
-            )
-            if exists or is_log or is_extra or is_meta or is_opt:
-                continue
-            if item.is_dir():
-                (output / rel_path).mkdir(parents=True, exist_ok=True)
-            elif item.is_file():
-                try:
-                    link_or_copy(str(item), str(output / rel_path))
-                except OSError:
-                    if link_or_copy is os.link:
-                        link_or_copy = copyfile
-                        link_or_copy(str(item), str(output / rel_path))
-                    else:
-                        raise
-    if len(list(output.glob("*"))) == 0:
-        raise RuntimeError(
-            "No files were created in your export directory. This may mean BCML"
-            " lacked then necessary permissions to write to the folder, or "
-            "the folder is otherwise unusable by Python. (This often happens"
-            " if the target folder is connected to OneDrive, WinFUSE, or "
-            "perhaps network drives._ If possible, try changing your export "
-            "folder or its permissions. If you are a Cemu user and your Cemu "
-            "folder is in your OneDrive, you will probably need to move Cemu "
-            "somewhere else."
-        )
+    # mod_folders: List[Path] = sorted(
+    #     [
+    #         item
+    #         for item in util.get_modpack_dir().glob("*")
+    #         if item.is_dir() and not (item / ".disabled").exists()
+    #     ],
+    #     reverse=True,
+    # )
+    # util.vprint(mod_folders)
+    # same_fs = (
+    #     util.get_modpack_dir().parts[0] == output.parts[0]
+    #     if util.SYSTEM == "Windows"
+    #     else os.stat(util.get_modpack_dir()).st_dev == os.stat(output).st_dev
+    # )
+    # link_or_copy: Any = (
+    #     os.link if not util.get_settings("no_hardlinks") and same_fs else copyfile
+    # )
+    # util.vprint(f"Hardlinks: {link_or_copy == os.link}")
+    # for mod_folder in mod_folders:
+    #     for item in mod_folder.rglob("**/*"):
+    #         rel_path = item.relative_to(mod_folder)
+    #         exists = (output / rel_path).exists()
+    #         is_log = str(rel_path).startswith("logs")
+    #         is_opt = str(rel_path).startswith("options")
+    #         is_meta = str(rel_path).startswith("meta")
+    #         is_extra = (
+    #             len(rel_path.parts) == 1
+    #             and rel_path.suffix != ".txt"
+    #             and not item.is_dir()
+    #         )
+    #         if exists or is_log or is_extra or is_meta or is_opt:
+    #             continue
+    #         if item.is_dir():
+    #             (output / rel_path).mkdir(parents=True, exist_ok=True)
+    #         elif item.is_file():
+    #             link_or_copy(str(item), str(output / rel_path))
+    # if len(list(output.glob("*"))) == 0:
+    #     raise RuntimeError(
+    #         "No files were created in your export directory. This may mean BCML"
+    #         " lacked then necessary permissions to write to the folder, or "
+    #         "the folder is otherwise unusable by Python. (This often happens"
+    #         " if the target folder is connected to OneDrive, WinFUSE, or "
+    #         "perhaps network drives._ If possible, try changing your export "
+    #         "folder or its permissions. If you are a Cemu user and your Cemu "
+    #         "folder is in your OneDrive, you will probably need to move Cemu "
+    #         "somewhere else."
+    #     )
 
 
 def export(output: Path, standalone: bool = False):
