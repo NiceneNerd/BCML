@@ -154,6 +154,22 @@ impl Settings {
         self.mods_dir().join("9999_BCML")
     }
 
+    pub fn master_content_dir(&self) -> PathBuf {
+        self.master_mod_dir().join(if self.wiiu {
+            "content"
+        } else {
+            "01007EF00011E000/romfs"
+        })
+    }
+
+    pub fn master_dlc_dir(&self) -> PathBuf {
+        self.master_mod_dir().join(if self.wiiu {
+            "aoc/0010"
+        } else {
+            "01007EF00011F001/romfs"
+        })
+    }
+
     pub fn merged_modpack_dir(&self) -> PathBuf {
         self.store_dir
             .join(if self.wiiu { "merged" } else { "merged_nx" })

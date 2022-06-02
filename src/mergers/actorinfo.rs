@@ -154,8 +154,7 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
             .collect(),
         );
         let output = util::settings()
-            .master_mod_dir()
-            .join(util::content())
+            .master_content_dir()
             .join("Actor/ActorInfo.product.sbyml");
         if !output.parent().unwrap().exists() {
             std::fs::create_dir_all(output.parent().unwrap())?;
