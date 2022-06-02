@@ -35,6 +35,19 @@ LANGUAGES = [
 ]
 
 
+def swap_region(mod_pack: Path, user_lang: str) -> Path:
+    mod_sarc = oead.Sarc(mod_pack.read_bytes())
+    mod_msg_data = mod_sarc.get_file(0).data
+    new_pack = oead.SarcWriter(
+        endian=oead.Endianness.Big
+        if util.get_settings("wiiu")
+        else oead.Endianness.Little
+    )
+    new_pack.files[f"Message/Msg_{user_lang}.product.ssarc"] = oead.Bytes(mod_msg_data)
+    new_pack_path = mod_pack.with_name(f"Bootup_{user_lang}.pack")
+    new_pack_path.write_bytes(new_pack.write()[1])
+    return new_pack_path
+
 class TextsMerger(mergers.Merger):
     # pylint: disable=abstract-method
     """A merger for game texts"""
@@ -64,11 +77,8 @@ class TextsMerger(mergers.Merger):
         util.vprint(f'Languages: {",".join(languages)}')
 
         language_map = {}
-        save_langs = (
-            LANGUAGES
-            if self._options.get("all_langs", False)
-            else [util.get_settings("lang")]
-        )
+        game_lang = util.get_settings("lang")
+        save_langs = LANGUAGES if self._options.get("all_langs", False) else [game_lang]
         for lang in save_langs:
             if lang in languages:
                 language_map[lang] = lang
@@ -81,19 +91,27 @@ class TextsMerger(mergers.Merger):
 
         language_diffs = {}
         for language in set(language_map.values()):
+            print(f"Logging text changes for {language}...")
+            mod_pack = (
+                mod_dir
+                / util.get_content_path()
+                / "Pack"
+                / f"Bootup_{language}.pack"
+            )
             try:
-                print(f"Logging text changes for {language}...")
-                language_diffs[language] = rsext.mergers.texts.diff_language(
-                    str(
-                        mod_dir
-                        / util.get_content_path()
-                        / "Pack"
-                        / f"Bootup_{language}.pack"
-                    ),
-                    str(util.get_game_file(f"Pack/Bootup_{language}.pack")),
-                )
+                ref_pack = util.get_game_file(f"Pack/Bootup_{language}.pack")
             except FileNotFoundError:
-                util.vprint(f"Skipping language {language}, not in dump")
+                if language[-2:] == game_lang[-2:]:
+                    mod_pack = swap_region(mod_pack, game_lang)
+                    ref_pack = util.get_game_file(f"Pack/Bootup_{game_lang}.pack")
+                else:
+                    util.vprint(f"Skipping language {language}, not in dump")
+                    del language_map[language]
+                    continue
+            language_diffs[language] = rsext.mergers.texts.diff_language(
+                str(mod_pack),
+                str(ref_pack),
+            )
 
         return {
             save_lang: language_diffs[map_lang]
