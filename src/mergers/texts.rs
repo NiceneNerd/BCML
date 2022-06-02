@@ -1,5 +1,6 @@
 use crate::{Result, RustError};
 use indexmap::IndexMap;
+use join_str::jstr;
 use msyt::{model::Entry, Msyt};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -50,8 +51,9 @@ pub fn diff_language(
             .into_par_iter()
             .map(|file| -> Result<Option<(String, Diff)>> {
                 if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
-                    let mod_text = Msyt::from_msbt_bytes(file.data())
-                        .map_err(|e| RustError::MsbtError(e.to_string()))?;
+                    let mod_text = Msyt::from_msbt_bytes(file.data()).map_err(|e| {
+                        RustError::MsbtError(jstr!("Could not parse {&path}: {&e.to_string()}"))
+                    })?;
                     if let Some(stock_text) = stock_message
                         .get_file_data(&path)
                         .and_then(|data| Msyt::from_msbt_bytes(data).ok())
