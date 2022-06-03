@@ -44,16 +44,9 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                 .collect::<Vec<String>>()
         })
         .collect();
-    let should_speak = all_files.contains("EventFlow/Demo017_0.bfevfl");
-    if should_speak {
-        println!("In TitleBG.pack");
-    }
     let files = all_files
         .into_iter()
         .map(|file| {
-            if should_speak {
-                println!("Finding data for {}", &file);
-            }
             let mut modded = true;
             let data = sarcs
                 .iter()
@@ -83,13 +76,9 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                     })
                 })
                 .context("Can't find any SARCs versions for file")?;
-            if should_speak {
-                println!("Found data for {}", &file);
-            }
+
             let file_path = Path::new(&file);
-            if should_speak {
-                println!("Is {} a SARC? Let's find out.", &file);
-            }
+
             if modded
                 && data.len() > 0x40
                 && (&data[..4] == b"SARC" || &data[0x11..0x15] == b"SARC")
@@ -100,14 +89,12 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                     .unwrap_or_default()
                 && !SPECIAL.iter().any(|s| file.as_str().contains(s))
             {
-                if should_speak {
-                    println!("{} is a SARC, sub-merging", &file);
-                }
                 let nest_sarcs: Vec<Sarc> = sarcs
                     .iter()
                     .filter_map(|s| {
-                        s.get_file_data(&file)
-                            .and_then(|d| Sarc::read(d.to_vec()).ok())
+                        s.files()
+                            .find(|f| f.name() == Some(&file))
+                            .and_then(|d| Sarc::read(d.data().to_vec()).ok())
                     })
                     .collect();
                 let mut merged = merge_sarc(nest_sarcs, endian)?;
@@ -118,21 +105,13 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                 {
                     merged = compress(&merged);
                 }
-                if should_speak {
-                    println!("Sub-merged {}", &file);
-                }
+
                 Ok((file, merged))
             } else {
-                if should_speak {
-                    println!("{} is not a SARC", &file);
-                }
                 Ok((file, data.to_vec()))
             }
         })
         .collect::<Result<Vec<(String, Vec<u8>)>>>()?;
-    if should_speak {
-        println!("Finished merging TitleBG.pack");
-    }
     Ok(SarcWriter::from_files(endian, files).to_binary())
 }
 
