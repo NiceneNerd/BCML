@@ -121,15 +121,14 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
 #[pyfunction]
 fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
     let merge = || -> Result<()> {
-        let modded_actor_root = Byml::from_binary(&modded_actors).unwrap();
-        let modded_actors: ActorMap = py.allow_threads(|| {
-            modded_actor_root
-                .as_hash()
-                .unwrap()
+        let modded_actor_root = Byml::from_binary(&modded_actors)?;
+        let modded_actors: ActorMap = py.allow_threads(|| -> Result<ActorMap> {
+            Ok(modded_actor_root
+                .as_hash()?
                 .into_par_iter()
                 .map(|(h, a)| (h.parse::<u32>().unwrap(), a.clone()))
-                .collect()
-        });
+                .collect())
+        })?;
         let mut merged_actors = stock_actorinfo()?.clone();
         merge_actormap(&mut merged_actors, &modded_actors);
         let (hashes, actors): (Vec<Byml>, Vec<Byml>) = merged_actors

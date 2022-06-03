@@ -99,54 +99,8 @@ class ActorInfoMerger(mergers.Merger):
                 actor_path.unlink()
             return
 
-        rsext.mergers.actorinfo.merge_actorinfo(oead.byml.to_binary(modded_actors, False))
-
-        # print("Loading unmodded actor info...")
-        # actorinfo = get_stock_actorinfo()
-        # stock_actors = {
-        #     crc32(actor["name"].encode("utf8")): actor for actor in actorinfo["Actors"]
-        # }
-
-        # print("Merging changes...")
-        # new_hashes = set()
-        # for actor_hash, actor_info in modded_actors.items():
-        #     if isinstance(actor_hash, str):
-        #         actor_hash = int(actor_hash)
-        #     if actor_hash in stock_actors:
-        #         util.dict_merge(
-        #             stock_actors[actor_hash], actor_info, overwrite_lists=True
-        #         )
-        #     else:
-        #         actorinfo["Actors"].append(actor_info)
-        #         new_hashes.add(actor_hash)
-
-        # print("Sorting new actor info...")
-        # actorinfo["Hashes"] = oead.byml.Array(
-        #     [
-        #         oead.S32(x) if x < 2147483648 else oead.U32(x)
-        #         for x in sorted(new_hashes | set(stock_actors.keys()))
-        #     ]
-        # )
-        # try:
-        #     actorinfo["Actors"] = sorted(
-        #         actorinfo["Actors"], key=lambda x: crc32(x["name"].encode("utf-8"))
-        #     )
-        # except KeyError as err:
-        #     if str(err) == "":
-        #         raise RuntimeError(
-        #             "Your actor info mods could not be merged. "
-        #             "This usually indicates a corrupt game dump."
-        #         ) from err
-        #     else:
-        #         raise
-
-        # print("Saving new actor info...")
-        # actor_path.parent.mkdir(parents=True, exist_ok=True)
-        # actor_path.write_bytes(
-        #     util.compress(
-        #         oead.byml.to_binary(actorinfo, big_endian=util.get_settings("wiiu"))
-        #     )
-        # )
+        bin_data = oead.byml.to_binary(modded_actors, False)
+        rsext.mergers.actorinfo.merge_actorinfo(bin_data)
         print("Actor info merged successfully")
 
     def get_checkbox_options(self):
