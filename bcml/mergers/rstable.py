@@ -144,15 +144,15 @@ def _get_nest_file_sizes(
         prefix = "" if not dlc else "Aoc/0010/"
         vals = {}
         for file, subs in contents.items():
+            ext = file[file.rindex(".") :]
+            if ext in EXCLUDE_EXTS:
+                continue
             if not subs:
-                if file[file.rindex(".") :] in EXCLUDE_EXTS:
-                    continue
+                if dlc and ext == ".sbfres" and "Dungeon" in file:
+                    vals[canon] += 1000
                 canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
             else:
-                ext = file[file.rindex(".") :]
-                if ext in EXCLUDE_EXTS:
-                    continue
                 data = util.unyaz_if_needed(sarc.get_file(file).data)
                 canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, data, guess)
@@ -197,6 +197,8 @@ def _get_sizes_in_sarc(
             and canon not in EXCLUDE_NAMES
         ):
             sizes[canon] = calculate_size(canon, data, guess=guess)
+            if is_aoc and ext == ".bfres" and "Dungeon" in nest_file:
+                sizes[canon] += 1000
             if ext in util.SARC_EXTS - SARC_EXCLUDES:
                 try:
                     nest_sarc = oead.Sarc(data)
