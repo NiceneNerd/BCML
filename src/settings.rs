@@ -1,4 +1,5 @@
 use crate::Result;
+use cow_utils::CowUtils;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -194,7 +195,8 @@ lazy_static::lazy_static! {
     pub static ref SETTINGS: std::sync::Arc<std::sync::RwLock<Settings>> = {
         let settings_path = Settings::path();
         std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
-            serde_json::from_reader(std::fs::File::open(&settings_path).unwrap()).unwrap()
+            let text = std::fs::read_to_string(&settings_path).unwrap();
+            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap()
         } else {
             Settings::default()
         }))
