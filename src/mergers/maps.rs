@@ -1,5 +1,5 @@
-use crate::{settings::Settings, util, Result, RustError};
-use anyhow::Context;
+use crate::{settings::Settings, util};
+use anyhow::{Context, Result};
 use join_str::jstr;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -56,7 +56,7 @@ impl Display for MapUnit {
 }
 
 impl TryFrom<&Path> for MapUnit {
-    type Error = RustError;
+    type Error = anyhow::Error;
     fn try_from(value: &Path) -> Result<Self> {
         let mut split = value.file_stem().unwrap().to_str().unwrap().split('_');
         Ok(MapUnit {
@@ -124,7 +124,7 @@ impl MapUnit {
                 Ok(Byml::from_binary(&decompress(
                     &pack
                         .get_file_data(&self.get_path())
-                        .ok_or_else(|| RustError::FileMissingFromSarc(self.get_path()))?,
+                        .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
                 )?)?)
             }
         }
@@ -141,7 +141,7 @@ impl MapUnit {
                 Ok(Byml::from_binary(&decompress(
                     &pack
                         .get_file_data(&self.get_path())
-                        .ok_or_else(|| RustError::FileMissingFromSarc(self.get_path()))?,
+                        .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
                 )?)?)
             }
         }

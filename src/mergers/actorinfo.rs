@@ -1,16 +1,16 @@
-use crate::{util, Result, RustError};
+use crate::{util, Result};
 use pyo3::{prelude::*, types::PyBytes};
 use rayon::prelude::*;
 use roead::{
     byml::{Byml, Hash},
     yaz0::{compress, decompress},
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, panic::catch_unwind, sync::Arc};
 
 type ActorMap = BTreeMap<u32, Byml>;
 
 lazy_static::lazy_static! {
-    static ref STOCK_ACTORINFO: Arc<Result<ActorMap>> = {
+    static ref STOCK_ACTORINFO: Result<Arc<ActorMap>> = {
         let load = || -> Result<ActorMap> {
             if let Byml::Hash(hash) = Byml::from_binary(&decompress(std::fs::read(
                 util::get_game_file("Actor/ActorInfo.product.sbyml")?,
@@ -29,12 +29,10 @@ lazy_static::lazy_static! {
                     })
                     .collect())
             } else {
-                Err(RustError::BymlError(roead::byml::BymlError::TypeError))
+                anyhow::bail!("Stock actor info is not a hash???")
             }
         };
-        Arc::new(
-            load()
-        )
+        load().map(Arc::new)
     };
 }
 
@@ -46,12 +44,9 @@ pub fn actorinfo_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-fn stock_actorinfo() -> Result<&'static ActorMap> {
-    if let Ok(hash) = STOCK_ACTORINFO.as_ref().as_ref() {
-        Ok(hash)
-    } else {
-        Err(RustError::BymlError(roead::byml::BymlError::TypeError))
-    }
+fn stock_actorinfo() -> Result<Arc<ActorMap>> {
+    catch_unwind(|| STOCK_ACTORINFO.as_ref().unwrap().clone())
+        .map_err(|e| anyhow::format_err!("{:?}", e))
 }
 
 pub fn merge_actormap(base: &mut ActorMap, other: &ActorMap) {
@@ -112,7 +107,7 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
                 .collect();
             Ok(Byml::Hash(diff).to_text().as_bytes().to_vec())
         } else {
-            Err(RustError::BymlError(roead::byml::BymlError::TypeError))
+            anyhow::bail!("Modded actor info is not a hash???")
         }
     })?;
     Ok(PyBytes::new(py, &diff).into())
@@ -129,7 +124,7 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
                 .map(|(h, a)| (h.parse::<u32>().unwrap(), a.clone()))
                 .collect())
         })?;
-        let mut merged_actors = stock_actorinfo()?.clone();
+        let mut merged_actors = stock_actorinfo()?.as_ref().clone();
         merge_actormap(&mut merged_actors, &modded_actors);
         let (hashes, actors): (Vec<Byml>, Vec<Byml>) = merged_actors
             .into_iter()

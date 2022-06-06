@@ -3,48 +3,16 @@ pub mod manager;
 pub mod mergers;
 pub mod settings;
 pub mod util;
+pub use anyhow::Result;
 use cow_utils::CowUtils;
 use path_slash::{PathBufExt, PathExt};
-use pyo3::{exceptions::PyException, prelude::*};
+use pyo3::prelude::*;
 use rayon::prelude::*;
 use roead::sarc::Sarc;
 use std::{
     borrow::Cow,
     path::{Path, PathBuf},
 };
-use thiserror::Error;
-
-pub type Result<T> = std::result::Result<T, RustError>;
-
-#[derive(Debug, Error)]
-pub enum RustError {
-    #[error("File not found: {0}")]
-    FileNotFoundError(String),
-    #[error(transparent)]
-    BymlError(#[from] roead::byml::BymlError),
-    #[error(transparent)]
-    AampError(#[from] roead::aamp::AampError),
-    #[error(transparent)]
-    SarcError(#[from] roead::sarc::SarcError),
-    #[error(transparent)]
-    Yaz0Error(#[from] roead::yaz0::Yaz0Error),
-    #[error(transparent)]
-    IoError(#[from] std::io::Error),
-    #[error("SARC missing expected file: {0}")]
-    FileMissingFromSarc(String),
-    #[error("Error handling MSBT file: {0}")]
-    MsbtError(String),
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
-}
-
-impl From<RustError> for PyErr {
-    fn from(err: RustError) -> Self {
-        PyException::new_err(err.to_string())
-    }
-}
 
 #[pymodule]
 fn bcml(py: Python, m: &PyModule) -> PyResult<()> {

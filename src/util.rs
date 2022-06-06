@@ -1,6 +1,5 @@
-use crate::{Result, RustError};
+use anyhow::Result;
 use join_str::jstr;
-use path_slash::PathExt;
 use roead::sarc::Sarc;
 use std::{
     collections::HashMap,
@@ -68,7 +67,10 @@ pub fn get_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
         if result.exists() {
             Ok(result)
         } else {
-            Err(RustError::FileNotFoundError(file.to_slash_lossy()))
+            anyhow::bail!(
+                "Stock game file does not exist at {}",
+                result.to_str().unwrap()
+            )
         }
     }
 }
@@ -78,7 +80,7 @@ pub fn get_aoc_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
     if result.as_ref().map(|d| d.exists()).unwrap_or_default() {
         Ok(result.unwrap())
     } else {
-        Err(RustError::FileNotFoundError(file.as_ref().to_slash_lossy()))
+        anyhow::bail!("Stock DLC game file does not exist at {:?}", result)
     }
 }
 

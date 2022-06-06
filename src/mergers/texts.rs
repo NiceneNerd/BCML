@@ -1,4 +1,4 @@
-use crate::{Result, RustError};
+use anyhow::{Context, Result};
 use indexmap::IndexMap;
 use join_str::jstr;
 use msyt::{model::Entry, Msyt};
@@ -38,12 +38,12 @@ pub fn diff_language(
         let mod_message = Sarc::read(decompress(
             mod_bootup
                 .get_file_data(&message_path)
-                .ok_or_else(|| RustError::FileMissingFromSarc(message_path.clone()))?,
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
         )?)?;
         let stock_message = Sarc::read(decompress(
             stock_bootup
                 .get_file_data(&message_path)
-                .ok_or_else(|| RustError::FileMissingFromSarc(message_path.clone()))?,
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
         )?)?;
         let diffs = mod_message
             .files()
@@ -51,9 +51,7 @@ pub fn diff_language(
             .into_par_iter()
             .map(|file| -> Result<Option<(String, Diff)>> {
                 if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
-                    let mod_text = Msyt::from_msbt_bytes(file.data()).map_err(|e| {
-                        RustError::MsbtError(jstr!("Could not parse {&path}: {&e.to_string()}"))
-                    })?;
+                    let mod_text = Msyt::from_msbt_bytes(file.data())?;
                     if let Some(stock_text) = stock_message
                         .get_file_data(&path)
                         .and_then(|data| Msyt::from_msbt_bytes(data).ok())
@@ -88,12 +86,7 @@ pub fn diff_language(
     let diff_text = serde_json::to_string(&diff).unwrap();
     let json = PyModule::import(py, "json")?;
     #[allow(deprecated)]
-    let dict = json.call("loads", (&diff_text,), None).map_err(|e| {
-        RustError::MsbtError(format!(
-            "Could not serialize text diff to Python dict: {:?}",
-            e
-        ))
-    })?;
+    let dict = json.call_method1("loads", (&diff_text,))?;
     Ok(Py::from(dict))
 }
 
@@ -105,7 +98,8 @@ pub fn merge_language(
     dest_bootup_path: String,
     be: bool,
 ) -> PyResult<()> {
-    let diffs: IndexMap<String, Diff> = serde_json::from_str(&diffs).map_err(RustError::from)?;
+    let diffs: IndexMap<String, Diff> =
+        serde_json::from_str(&diffs).map_err(anyhow::Error::from)?;
     let endian = if be {
         msyt::Endianness::Big
     } else {
@@ -122,7 +116,7 @@ pub fn merge_language(
         let stock_message = Sarc::read(decompress(
             stock_bootup
                 .get_file_data(&message_path)
-                .ok_or_else(|| RustError::FileMissingFromSarc(message_path.clone()))?,
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
         )?)?;
         let mut new_message = SarcWriter::from(&stock_message);
         let merged_files = diffs
@@ -130,15 +124,9 @@ pub fn merge_language(
             .map(|(file, diff)| -> Result<(String, Vec<u8>)> {
                 let file = file.replace("msyt", "msbt");
                 if let Some(stock_file) = stock_message.get_file_data(&file) {
-                    let mut stock_text = Msyt::from_msbt_bytes(stock_file)
-                        .map_err(|e| RustError::MsbtError(e.to_string()))?;
+                    let mut stock_text = Msyt::from_msbt_bytes(stock_file)?;
                     stock_text.entries.extend(diff.into_iter());
-                    Ok((
-                        file,
-                        stock_text
-                            .into_msbt_bytes(endian)
-                            .map_err(|e| RustError::MsbtError(e.to_string()))?,
-                    ))
+                    Ok((file, stock_text.into_msbt_bytes(endian)?))
                 } else {
                     let text = Msyt {
                         msbt: msyt::model::MsbtInfo {
@@ -150,11 +138,7 @@ pub fn merge_language(
                         },
                         entries: diff,
                     };
-                    Ok((
-                        file,
-                        text.into_msbt_bytes(endian)
-                            .map_err(|e| RustError::MsbtError(e.to_string()))?,
-                    ))
+                    Ok((file, text.into_msbt_bytes(endian)?))
                 }
             })
             .collect::<Result<Vec<(String, Vec<u8>)>>>()?;

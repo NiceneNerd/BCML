@@ -1,8 +1,5 @@
-use crate::{
-    util::{self, settings},
-    Result, RustError,
-};
-use anyhow::Context;
+use crate::util::{self, settings};
+use anyhow::{Context, Result};
 use cow_utils::CowUtils;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -132,7 +129,7 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
                     .filter_map(|file| -> Option<Result<Sarc>> {
                         std::fs::read(&file)
                             .map(|data| Sarc::read(data).ok())
-                            .map_err(RustError::from)
+                            .map_err(anyhow::Error::from)
                             .transpose()
                     })
                     .collect::<Result<Vec<Sarc>>>()?;

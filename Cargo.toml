@@ -20,7 +20,7 @@ join_str = "0.1.0"
 lazy_static = "1.4.0"
 msyt = { git = "https://github.com/NiceneNerd/msyt", rev = "12e4d95fb6480f445284f37706db7bfa8351dc06" }
 path-slash = "0.1.4"
-pyo3 = { version = "0.15.0", features = ["extension-module"] }
+pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
 rayon = "1.5.1"
 roead = "0.10.1"
 rstb = "0.3.2"
