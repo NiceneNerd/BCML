@@ -92,7 +92,7 @@ class Settings extends React.Component {
     componentDidMount = async () => {
         const settings = await pywebview.api.get_settings();
         const languages = await pywebview.api.get_user_langs({
-            dir: settings.game_dir || settings.game_dir_nx
+            dir: settings.wiiu ? settings.game_dir : settings.game_dir_nx
         });
         this.setState({ ...settings, languages }, () =>
             this.setState({ loaded: true })
