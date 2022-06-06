@@ -130,7 +130,7 @@ class Settings extends React.Component {
                 prevState.game_dir_nx != this.state.game_dir_nx
             ) {
                 const languages = await pywebview.api.get_user_langs({
-                    dir: this.state.game_dir || this.state.game_dir_nx
+                    dir: this.state.wiiu ? this.state.game_dir : this.state.game_dir_nx
                 });
                 this.setState({
                     languages
