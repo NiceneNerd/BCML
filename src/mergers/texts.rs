@@ -47,11 +47,17 @@ pub fn diff_language(
         )?)?;
         let diffs = mod_message
             .files()
+            .filter(|file| {
+                file.name()
+                    .map(|name| name.ends_with("msbt"))
+                    .unwrap_or(false)
+            })
             .collect::<Vec<_>>()
             .into_par_iter()
             .map(|file| -> Result<Option<(String, Diff)>> {
                 if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
-                    let mod_text = Msyt::from_msbt_bytes(file.data())?;
+                    let mod_text = Msyt::from_msbt_bytes(file.data())
+                        .with_context(|| jstr!("Invalid MSBT file: {&path}"))?;
                     if let Some(stock_text) = stock_message
                         .get_file_data(&path)
                         .and_then(|data| Msyt::from_msbt_bytes(data).ok())
