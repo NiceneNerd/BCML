@@ -14,9 +14,9 @@ basic guidance on using BCML, stick around here.
 
 Here's how BCML works:
 
--   You [install mods](install.md) into BCML. Use the GameBanana tab or click the
+-   You [install mods](install.md) into BCML. Use one-click button on GameBanana or click the
     floating action button on the Mods tab to open the install dialog and go from there.
-    (You can also drag-and-drop mods from your OS file browser.)
+    (You can also drag-and-drop mods from your OS file browser, up to 50 MB.)
 -   Use the sort handles if you need to edit load order. Use the Remerge button liberally
     when anything goes wrong.
 -   If you're a Cemu user, all installed mods should take effect next time you run the

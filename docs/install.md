@@ -1,9 +1,8 @@
 # Installing Mods
 
-There are basically two ways to install mods into BCML: the GameBanana tab or adding a manual
-download. To use the GameBanana tab, just switch to the tab, find a mod you want, and click Install.
-You can also view the mod first, and you may be presented with a dropdown offering alternative or
-additional mod files you can install.
+There are basically two ways to install mods into BCML: GameBanana one-click or adding a manual
+download. To use GameBanana one-click, go to GameBanana in your browser, find a mod you want, and 
+click the BCML 1-Click Install button.
 
 To install manually, click the floating action button on the Mods tab of the main BCML window.
 (Though you can also drag-and-drop files onto the BCML window or double-click the mod in Windows).

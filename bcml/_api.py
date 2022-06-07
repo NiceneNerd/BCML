@@ -22,7 +22,6 @@ import requests
 import webview
 
 from bcml import DEBUG, install, dev, mergers, upgrade, util
-from bcml.gamebanana import GameBananaDb
 from bcml.util import BcmlMod, LOG, SYSTEM, get_7z_path
 from bcml.__version__ import USER_VERSION, VERSION
 
@@ -58,7 +57,6 @@ class Api:
     # pylint: disable=unused-argument,no-self-use,too-many-public-methods
     window: webview.Window
     host: str
-    gb_api: GameBananaDb
     tmp_files: List[Path]
 
     def __init__(self, host: str):
@@ -97,6 +95,8 @@ class Api:
             return self.window.create_file_dialog(webview.FOLDER_DIALOG)[0]
 
     def dir_exists(self, params):
+        if not params["folder"]:
+            return False
         path = Path(params["folder"])
         real_folder = path.exists() and path.is_dir() and params["folder"] != ""
         if not real_folder:
@@ -182,10 +182,6 @@ class Api:
         print("Saving settings, BCML will reload momentarily...")
         if util.get_settings("wiiu") != params["settings"]["wiiu"]:
             util.clear_all_caches()
-            if hasattr(self, "gb_api"):
-                self.gb_api.reset_update_time(params["settings"]["wiiu"])
-                del self.gb_api
-                self.gb_api = GameBananaDb()
         util.get_settings.settings = params["settings"]
         util.save_settings()
 
@@ -861,79 +857,6 @@ class Api:
 
     def is_wiiu(self):
         return util.get_settings("wiiu")
-
-    @win_or_lose
-    def init_gb(self):
-        self.gb_api = GameBananaDb()
-        if util.get_settings("auto_gb"):
-            self.gb_api.update_db()
-
-    @win_or_lose
-    def update_gb(self):
-        self.gb_api.update_db()
-
-    def get_gb_pages(self, category: str = None, search: str = None) -> int:
-        mods = self.gb_api.mods
-        if search:
-            mods = self.gb_api.search(search)
-            mods = mods[0] + mods[1]
-        return ceil(
-            len(
-                mods if not category else [m for m in mods if m["category"] == category]
-            )
-            / 24
-        )
-
-    def get_gb_mods(
-        self, page: int, sort: str = "new", category: str = None, search: str = None
-    ):
-        mods = self.gb_api.mods
-        key = {
-            "new": itemgetter("updated"),
-            "old": itemgetter("updated"),
-            "down": itemgetter("downloads"),
-            "abc": itemgetter("name"),
-            "likes": itemgetter("likes"),
-        }.get(sort)
-        if not search:
-            mods = sorted(
-                mods
-                if not category
-                else [m for m in mods if m["category"] == category],
-                key=key,
-                reverse=sort not in {"old", "abc"},
-            )
-        else:
-            title_matches, desc_matches = self.gb_api.search(search)
-            exacts = [
-                title_matches.pop(i)
-                for i in range(len(title_matches) - 1)
-                if title_matches[i]["name"].lower() == search.lower()
-            ]
-            mods = (
-                exacts
-                + sorted(
-                    title_matches
-                    if not category
-                    else [m for m in title_matches if m["category"] == category],
-                    key=key,
-                    reverse=sort not in {"old", "abc"},
-                )
-                + sorted(
-                    desc_matches
-                    if not category
-                    else [m for m in desc_matches if m["category"] == category],
-                    key=key,
-                    reverse=sort not in {"old", "abc"},
-                )
-            )
-        last = min(page * 24, len(mods))
-        return mods[(page - 1) * 24 : last]
-
-    @win_or_lose
-    def update_gb_mod(self, mod_id: str):
-        self.gb_api.update_mod(str(mod_id))
-        return self.gb_api.get_mod_by_id(str(mod_id))
 
     @win_or_lose
     def install_gb_mod(self, file: dict):

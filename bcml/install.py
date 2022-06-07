@@ -98,8 +98,7 @@ def open_mod(path: Path) -> Path:
     if not tmpdir.exists():
         raise Exception(
             "No files were extracted. This may be because of an invalid or corrupted "
-            "download. If using the GameBanana tab, you may need to try again later, as"
-            " the problem could be caused by server errors."
+            "download."
         )
 
     rulesdir = tmpdir
@@ -738,6 +737,7 @@ def disable_bcml_gfx():
             addindent="    ",
             newl="\n",
         )
+
 
 def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()

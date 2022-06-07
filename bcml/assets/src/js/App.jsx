@@ -13,7 +13,6 @@ import AboutDialog from "./About.jsx";
 import BackupModal from "./Backup.jsx";
 import DevTools from "./DevTools.jsx";
 import ErrorDialog from "./Error.jsx";
-import GameBanana from "./GameBanana.jsx";
 import ModContext from "./Context.jsx";
 import Mods from "./Mods.jsx";
 import ProfileModal from "./Profile.jsx";
@@ -23,7 +22,7 @@ import ReactMarkdown from "react-markdown";
 import SelectsDialog from "./Selects.jsx";
 import Settings from "./Settings.jsx";
 
-const TABS = ["mod-list", "gamebanana", "dev-tools", "settings"];
+const TABS = ["mod-list", "dev-tools", "settings"];
 
 class App extends React.Component {
     constructor() {
@@ -472,17 +471,6 @@ class App extends React.Component {
                                 onLaunch={this.launchGame}
                             />
                         </Tab>
-                        {this.state.settings.show_gb && (
-                            <Tab eventKey="gamebanana" title="GameBanana">
-                                <GameBanana
-                                    onError={this.showError}
-                                    onProgress={this.setProgress}
-                                    onDone={() =>
-                                        this.setState({ showProgress: false })
-                                    }
-                                />
-                            </Tab>
-                        )}
                         <Tab eventKey="dev-tools" title="Dev Tools">
                             <DevTools
                                 onError={this.showError}

@@ -77,9 +77,7 @@ You can tell this folder is set correctly if it contains `Pack/AocMainField.pack
 
 #### No files were extracted.
 
-This usually means the mod download is corrupt. This is especially common when if you
-download using the GameBanana tab while GameBanana is experiencing server issues (which
-is unfortunately common).
+This usually means the mod download is corrupt.
 
 #### FileNotFoundError: No `rules.txt` or `info.json` was found in mod
 
