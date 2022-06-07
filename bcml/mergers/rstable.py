@@ -148,10 +148,10 @@ def _get_nest_file_sizes(
             if ext in EXCLUDE_EXTS:
                 continue
             if not subs:
-                if dlc and ext == ".sbfres" and "Dungeon" in file:
-                    vals[canon] += 1000
                 canon = prefix + file.replace(".s", ".")
                 vals[canon] = calculate_size(canon, sarc.get_file(file).data, guess)
+                if dlc and ext == ".sbfres" and "Dungeon" in file:
+                    vals[canon] += 1000
             else:
                 data = util.unyaz_if_needed(sarc.get_file(file).data)
                 canon = prefix + file.replace(".s", ".")
