@@ -45,6 +45,12 @@ code {
     color: #00c853;
 }
 
+blockquote {
+    border-left: 4px solid $bg-lighter;
+    color: scale-color($color: $bg-lighter, $lightness: 25%);
+    padding-left: 1rem;
+}
+
 .overflow-y {
     overflow-y: auto;
 }
