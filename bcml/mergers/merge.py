@@ -199,6 +199,7 @@ class DeepMerger(mergers.Merger):
             if isinstance(m, str)
             and m[m.rindex(".") :] in (util.AAMP_EXTS - HANDLED)
             and "Dummy" not in m
+            and "CDungeon" not in m
         }
         if not aamps:
             return None
