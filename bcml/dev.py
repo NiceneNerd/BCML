@@ -531,7 +531,7 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                     hk.to_switch()
                 hk.serialize()
                 new_sarc.files[file.name] = hk.to_bytes()
-        else if file.data[0:2] in {b"BY", b"YB"}:
+        elif file.data[0:2] in {b"BY", b"YB"}:
             by = oead.byml.from_binary(file.data)
             new_sarc.files[file.name] = oead.byml.to_binary(by, big_endian=to_wiiu)
     actor_pack.write_bytes(util.compress(new_sarc.write()[1]))
