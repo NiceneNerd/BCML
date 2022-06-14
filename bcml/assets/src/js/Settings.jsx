@@ -445,7 +445,7 @@ class Settings extends React.Component {
                                 placeholder="Optional"
                             />
                         </Form.Group>
-                        {!window.navigator.platform.includes("inux") && (
+                        {!window.navigator.userAgent.includes("inux") && (
                             <>
                                 <h5>Create BCML Shortcuts</h5>
                                 <Button
