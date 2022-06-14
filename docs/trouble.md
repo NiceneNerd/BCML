@@ -73,6 +73,16 @@ For Switch, this will be the `romfs` folder under the supported DLC title ID, e.
 
 You can tell this folder is set correctly if it contains `Pack/AocMainField.pack`.
 
+#### Why are there no language options to choose from?
+
+BCML populates the language options when you enter the correct Base Game folder. If
+you have no language options, check to make sure your game folder is set correctly
+and the entry line has a green checkmark.
+
+If you still have no language options, click inside the Base Game entry line, press 
+Ctrl+A to select the entire line, then press Ctrl+X and Ctrl+V to delete/re-enter the
+line and force another check for the languages.
+
 ### Installing Mods
 
 #### No files were extracted.
