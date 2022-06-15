@@ -86,7 +86,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 .context("Failed to symlink output folder")?;
             #[cfg(target_os = "windows")]
             {
-                if let Ok(_) = junction::create(merged, &output)
+                if let Ok(_) = junction::create(&merged, &output)
                     .context("Failed to create output directory junction")
                 {
                     ()
