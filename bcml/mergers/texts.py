@@ -48,6 +48,7 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     new_pack_path.write_bytes(new_pack.write()[1])
     return new_pack_path
 
+
 class TextsMerger(mergers.Merger):
     # pylint: disable=abstract-method
     """A merger for game texts"""
@@ -93,10 +94,7 @@ class TextsMerger(mergers.Merger):
         for language in set(language_map.values()):
             print(f"Logging text changes for {language}...")
             mod_pack = (
-                mod_dir
-                / util.get_content_path()
-                / "Pack"
-                / f"Bootup_{language}.pack"
+                mod_dir / util.get_content_path() / "Pack" / f"Bootup_{language}.pack"
             )
             try:
                 ref_pack = util.get_game_file(f"Pack/Bootup_{language}.pack")
@@ -106,8 +104,16 @@ class TextsMerger(mergers.Merger):
                     ref_pack = util.get_game_file(f"Pack/Bootup_{game_lang}.pack")
                 else:
                     util.vprint(f"Skipping language {language}, not in dump")
-                    del language_map[language]
+                    for k, v in language_map.items():
+                        if v == language:
+                            del language_map[k]
+                    if language in language_map:
+                        del language_map[language]
                     continue
+            if not language_map:
+                raise RuntimeError(
+                    "Mod does not contain any languages supported by your game dump."
+                )
             language_diffs[language] = rsext.mergers.texts.diff_language(
                 str(mod_pack),
                 str(ref_pack),
