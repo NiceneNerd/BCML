@@ -22,7 +22,7 @@ msyt = { git = "https://github.com/NiceneNerd/msyt", rev = "12e4d95fb6480f445284
 path-slash = "0.1.4"
 pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
 rayon = "1.5.1"
-roead = "0.10.1"
+roead = "0.10.3"
 rstb = "0.3.2"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.71"
