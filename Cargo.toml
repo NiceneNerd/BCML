@@ -30,3 +30,4 @@ thiserror = "1.0.30"
 
 [target.'cfg(windows)'.dependencies]
 junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd793645acf2702de283f78e8f6e0043ea5" }
+dircpy = "0.3.10"

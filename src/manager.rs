@@ -85,8 +85,15 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             std::os::unix::fs::symlink(merged, &output)
                 .context("Failed to symlink output folder")?;
             #[cfg(target_os = "windows")]
-            junction::create(merged, &output)
-                .context("Failed to create output directory junction")?;
+            {
+                if let Ok(_) = junction::create(merged, &output)
+                    .context("Failed to create output directory junction")
+                {
+                    ()
+                } else {
+                    dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;
+                }
+            }
         }
         if glob::glob(&output.join("*").to_string_lossy())
             .unwrap()
