@@ -81,7 +81,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         }
         if !output.exists() {
             std::fs::create_dir_all(output.parent().unwrap())?;
-            if (util::settings().no_hardlinks) {
+            if util::settings().no_hardlinks {
                 dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;
             }
             else {
@@ -90,7 +90,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     .context("Failed to symlink output folder")?;
                 #[cfg(target_os = "windows")]
                 junction::create(merged, &output)
-                    .context("Failed to create output directory junction");
+                    .context("Failed to create output directory junction")?;
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())
