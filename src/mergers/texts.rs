@@ -25,6 +25,7 @@ pub fn diff_language(
     py: Python,
     mod_bootup_path: String,
     stock_bootup_path: String,
+    only_new_keys: bool,
 ) -> PyResult<PyObject> {
     let diff = py.allow_threads(|| -> Result<IndexMap<String, Diff>> {
         let language = &Path::new(&mod_bootup_path)
@@ -69,8 +70,13 @@ pub fn diff_language(
                                 .entries
                                 .iter()
                                 .filter(|(e, t)| {
-                                    !stock_text.entries.contains_key(*e)
-                                        || *t != stock_text.entries.get(*e).unwrap()
+                                    if only_new_keys {
+                                        !stock_text.entries.contains_key(*e)
+                                    }
+                                    else {
+                                        !stock_text.entries.contains_key(*e)
+                                            || *t != stock_text.entries.get(*e).unwrap()
+                                    }
                                 })
                                 .map(|(e, t)| (e.to_owned(), t.clone()))
                                 .collect();

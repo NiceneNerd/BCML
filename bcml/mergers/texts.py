@@ -49,6 +49,24 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
+def map_languages(mod_langs: list, user_langs: list) -> dict:
+    lang_map: dict = {}
+    for user_lang in user_langs:
+        if user_lang in mod_langs:
+            lang_map[user_lang] = user_lang # match same locale/language
+        else:
+            for mod_lang in mod_langs:
+                if user_lang[2:4] == mod_lang[2:4]:
+                    lang_map[user_lang] = mod_lang # map same language from different locale
+                    break
+            for mod_lang in mod_langs:
+                if user_lang[0:2] == mod_lang[0:2]:
+                    lang_map[user_lang] = mod_lang # map whatever language from same locale
+                    break
+            lang_map[user_lang] = mod_langs[0] # map *something*
+    return lang_map
+
+
 class TextsMerger(mergers.Merger):
     # pylint: disable=abstract-method
     """A merger for game texts"""
@@ -77,46 +95,23 @@ class TextsMerger(mergers.Merger):
             return None
         util.vprint(f'Languages: {",".join(languages)}')
 
-        language_map = {}
         game_lang = util.get_settings("lang")
         save_langs = LANGUAGES if self._options.get("all_langs", False) else [game_lang]
-        for lang in save_langs:
-            if lang in languages:
-                language_map[lang] = lang
-            elif lang[2:4] in [l[2:4] for l in languages]:
-                language_map[lang] = [l for l in languages if l[2:4] == lang[2:4]][0]
-            else:
-                language_map[lang] = [l for l in LANGUAGES if l in languages][0]
-        util.vprint(f"Language map:")
+        language_map = map_languages(languages, save_langs)
+        util.vprint("Language map:")
         util.vprint(language_map)
 
         language_diffs = {}
-        for language in set(language_map.values()):
-            print(f"Logging text changes for {language}...")
+        for user_lang, mod_lang in language_map.items():
+            print(f"Logging text changes for {user_lang}...")
             mod_pack = (
-                mod_dir / util.get_content_path() / "Pack" / f"Bootup_{language}.pack"
+                mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
             )
-            try:
-                ref_pack = util.get_game_file(f"Pack/Bootup_{language}.pack")
-            except FileNotFoundError:
-                if language[-2:] == game_lang[-2:]:
-                    mod_pack = swap_region(mod_pack, game_lang)
-                    ref_pack = util.get_game_file(f"Pack/Bootup_{game_lang}.pack")
-                else:
-                    util.vprint(f"Skipping language {language}, not in dump")
-                    for k, v in language_map.items():
-                        if v == language:
-                            del language_map[k]
-                    if language in language_map:
-                        del language_map[language]
-                    continue
-            if not language_map:
-                raise RuntimeError(
-                    "Mod does not contain any languages supported by your game dump."
-                )
-            language_diffs[language] = rsext.mergers.texts.diff_language(
+            ref_pack = util.get_game_file(f"Pack/Bootup_{user_lang}.pack")
+            language_diffs[user_lang] = rsext.mergers.texts.diff_language(
                 str(mod_pack),
                 str(ref_pack),
+                not user_lang[2:4] == mod_lang[2:4]
             )
 
         return {
