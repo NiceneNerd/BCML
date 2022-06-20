@@ -107,6 +107,8 @@ class TextsMerger(mergers.Merger):
             mod_pack = (
                 mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
             )
+            if not user_lang == mod_lang:
+                mod_pack = swap_region(mod_pack, user_lang)
             ref_pack = util.get_game_file(f"Pack/Bootup_{user_lang}.pack")
             language_diffs[user_lang] = rsext.mergers.texts.diff_language(
                 str(mod_pack),
