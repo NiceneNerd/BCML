@@ -19,12 +19,11 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         .or_else(|| util::settings().export_dir().map(|o| o.to_path_buf()))
     {
         let merged = util::settings().merged_modpack_dir();
-        #[allow(unused_must_use)]
         if merged.exists() {
-            std::fs::remove_dir_all(merged.join(util::content()));
-            std::fs::remove_dir_all(merged.join(util::dlc()));
+            std::fs::remove_dir_all(merged.join(util::content()))?;
+            std::fs::remove_dir_all(merged.join(util::dlc()))?;
         }
-        std::fs::create_dir_all(&merged).unwrap_or(());
+        std::fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
         let rules_path = merged.join("rules.txt");
         if !util::settings().no_cemu && !rules_path.exists() {
             std::fs::hard_link(
@@ -75,7 +74,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     })?;
                 Ok(())
             })
-    })?;
+        })?;
         if output.is_dir() {
             std::fs::remove_dir_all(&output).context("Failed to clear out output folder")?;
         }
@@ -83,8 +82,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             std::fs::create_dir_all(output.parent().unwrap())?;
             if util::settings().no_hardlinks {
                 dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;
-            }
-            else {
+            } else {
                 #[cfg(target_os = "linux")]
                 std::os::unix::fs::symlink(merged, &output)
                     .context("Failed to symlink output folder")?;
