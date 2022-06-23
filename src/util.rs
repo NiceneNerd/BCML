@@ -16,7 +16,11 @@ lazy_static::lazy_static! {
 }
 
 pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
-    crate::settings::SETTINGS.read().unwrap()
+    if crate::settings::Settings::tmp_path().exists() {
+        crate::settings::TMP_SETTINGS.read().unwrap()
+    } else {
+        crate::settings::SETTINGS.read().unwrap()
+    }
 }
 
 #[inline]

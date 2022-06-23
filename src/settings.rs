@@ -27,7 +27,7 @@ impl std::fmt::Display for Language {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Hash, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Settings {
     pub cemu_dir: PathBuf,
     pub game_dir: PathBuf,
@@ -59,12 +59,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            store_dir: if cfg!(windows) {
-                dirs2::data_local_dir().unwrap()
-            } else {
-                dirs2::config_dir().unwrap()
-            }
-            .join("bcml"),
+            store_dir: DATA_DIR.clone(),
             lang: Language::USen,
             last_version: env!("CARGO_PKG_VERSION").to_owned(),
             changelog: true,
@@ -95,13 +90,11 @@ impl Default for Settings {
 
 impl Settings {
     pub fn path() -> PathBuf {
-        if cfg!(windows) {
-            dirs2::data_local_dir().unwrap()
-        } else {
-            dirs2::config_dir().unwrap()
-        }
-        .join("bcml")
-        .join("settings.json")
+        DATA_DIR.join("settings.json")
+    }
+
+    pub fn tmp_path() -> PathBuf {
+        DATA_DIR.join("tmp_settings.json")
     }
 
     pub fn base_game_dir(&self) -> &Path {
@@ -196,9 +189,28 @@ lazy_static::lazy_static! {
         let settings_path = Settings::path();
         std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
             let text = std::fs::read_to_string(&settings_path).unwrap();
-            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap()
+            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
         } else {
             Settings::default()
         }))
+    };
+
+    pub static ref TMP_SETTINGS: std::sync::Arc<std::sync::RwLock<Settings>> = {
+        let settings_path = Settings::tmp_path();
+        std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
+            let text = std::fs::read_to_string(&settings_path).unwrap();
+            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
+        } else {
+            Settings::default()
+        }))
+    };
+
+    pub static ref DATA_DIR: PathBuf = {
+        if cfg!(windows) {
+            dirs2::data_local_dir().unwrap()
+        } else {
+            dirs2::config_dir().unwrap()
+        }
+        .join("bcml")
     };
 }
