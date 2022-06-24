@@ -3,7 +3,7 @@ use anyhow::Context;
 use join_str::jstr;
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 pub fn manager_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     let manager_module = PyModule::new(py, "manager")?;
@@ -20,8 +20,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
     {
         let merged = util::settings().merged_modpack_dir();
         if merged.exists() {
-            std::fs::remove_dir_all(merged.join(util::content())).unwrap_or_default();
-            std::fs::remove_dir_all(merged.join(util::dlc())).unwrap_or_default();
+            std::fs::remove_dir_all(&merged).context("Failed to clear internal merged folder")?;
         }
         std::fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
         let rules_path = merged.join("rules.txt");
@@ -32,52 +31,64 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             )
             .context("Failed to hard link rules.txt")?;
         }
-        let mod_folders: std::collections::BTreeSet<PathBuf> =
+        let mut mod_folders: std::collections::BTreeSet<PathBuf> =
             glob::glob(&util::settings().mods_dir().join("*").to_string_lossy())
                 .unwrap()
                 .filter_map(|p| p.ok())
                 .filter(|p| p.is_dir() && !p.join(".disabled").exists())
                 .collect();
-        py.allow_threads(|| -> Result<()> {
-        mod_folders
-            .into_iter()
-            .rev()
-            .try_for_each(|folder| -> Result<()> {
-                let mod_files: Vec<(PathBuf, PathBuf)> =
-                    glob::glob(&folder.join("**/*").to_string_lossy())
-                        .unwrap()
-                        .filter_map(|p| {
-                            p.ok().map(|p| {
-                                (p.clone(), p.strip_prefix(&folder).unwrap().to_owned())
-                            })
-                        })
-                        .filter(|(item, rel)| {
-                            !(merged.join(&rel).exists()
-                                || item.is_dir()
-                                || rel.starts_with("logs")
-                                || rel.starts_with("options")
-                                || rel.starts_with("meta")
-                                || (rel.ancestors().count() == 1
-                                    && rel.extension().and_then(|e| e.to_str())
-                                        != Some("txt")
-                                    && !item.is_dir()))
-                        })
-                        .collect();
-                mod_files
-                    .into_par_iter()
-                    .try_for_each(|(item, rel)| -> Result<()> {
-                        let out = merged.join(&rel);
-                        out.parent()
-                            .map(std::fs::create_dir_all)
-                            .transpose()
-                            .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
-                            .unwrap();
-                        std::fs::hard_link(item, &out)
-                            .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))?;
-                        Ok(())
-                    })?;
-                Ok(())
+        let option_folders = mod_folders
+            .iter()
+            .flat_map(|mod_dir| {
+                glob::glob(&mod_dir.join("options/*").to_string_lossy())
+                    .unwrap()
+                    .filter_map(|p| p.ok())
+                    .filter(|p| p.is_dir())
+                    .collect::<BTreeSet<PathBuf>>()
             })
+            .collect::<BTreeSet<PathBuf>>();
+        mod_folders.extend(option_folders.into_iter());
+        py.allow_threads(|| -> Result<()> {
+            mod_folders
+                .into_iter()
+                .rev()
+                .try_for_each(|folder| -> Result<()> {
+                    let mod_files: Vec<(PathBuf, PathBuf)> =
+                        glob::glob(&folder.join("**/*").to_string_lossy())
+                            .unwrap()
+                            .filter_map(|p| {
+                                p.ok().map(|p| {
+                                    (p.clone(), p.strip_prefix(&folder).unwrap().to_owned())
+                                })
+                            })
+                            .filter(|(item, rel)| {
+                                !(merged.join(&rel).exists()
+                                    || item.is_dir()
+                                    || item.extension().and_then(|e| e.to_str()) == Some("json")
+                                    || rel.starts_with("logs")
+                                    || rel.starts_with("options")
+                                    || rel.starts_with("meta")
+                                    || (rel.ancestors().count() == 1
+                                        && rel.extension().and_then(|e| e.to_str())
+                                            != Some("txt")
+                                        && !item.is_dir()))
+                            })
+                            .collect();
+                    mod_files
+                        .into_par_iter()
+                        .try_for_each(|(item, rel)| -> Result<()> {
+                            let out = merged.join(&rel);
+                            out.parent()
+                                .map(std::fs::create_dir_all)
+                                .transpose()
+                                .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
+                                .unwrap();
+                            std::fs::hard_link(item, &out)
+                                .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))?;
+                            Ok(())
+                        })?;
+                    Ok(())
+                })
         })?;
         if output.is_dir() {
             println!("Clearing output folder at {}", output.display());
