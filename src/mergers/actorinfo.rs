@@ -1,4 +1,5 @@
 use crate::{util, Result};
+use once_cell::sync::Lazy;
 use pyo3::{prelude::*, types::PyBytes};
 use rayon::prelude::*;
 use roead::{
@@ -9,32 +10,29 @@ use std::{collections::BTreeMap, panic::catch_unwind, sync::Arc};
 
 type ActorMap = BTreeMap<u32, Byml>;
 
-lazy_static::lazy_static! {
-    static ref STOCK_ACTORINFO: Result<Arc<ActorMap>> = {
-        let load = || -> Result<ActorMap> {
-            if let Byml::Hash(hash) = Byml::from_binary(&decompress(std::fs::read(
-                util::get_game_file("Actor/ActorInfo.product.sbyml")?,
-            )?)?)? {
-                Ok(hash["Actors"]
-                    .as_array()?
-                    .iter()
-                    .map(|actor| {
-                        (
-                            roead::aamp::hash_name(
-                                actor.as_hash().unwrap()["name"]
-                                    .as_string()
-                                    .unwrap()),
-                            actor.clone(),
-                        )
-                    })
-                    .collect())
-            } else {
-                anyhow::bail!("Stock actor info is not a hash???")
-            }
-        };
-        load().map(Arc::new)
+static STOCK_ACTORINFO: Lazy<Result<Arc<ActorMap>>> = Lazy::new(|| {
+    let load = || -> Result<ActorMap> {
+        if let Byml::Hash(hash) = Byml::from_binary(&decompress(std::fs::read(
+            util::get_game_file("Actor/ActorInfo.product.sbyml")?,
+        )?)?)? {
+            Ok(hash["Actors"]
+                .as_array()?
+                .iter()
+                .map(|actor| {
+                    (
+                        roead::aamp::hash_name(
+                            actor.as_hash().unwrap()["name"].as_string().unwrap(),
+                        ),
+                        actor.clone(),
+                    )
+                })
+                .collect())
+        } else {
+            anyhow::bail!("Stock actor info is not a hash???")
+        }
     };
-}
+    load().map(Arc::new)
+});
 
 pub fn actorinfo_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     let actorinfo_module = PyModule::new(py, "actorinfo")?;

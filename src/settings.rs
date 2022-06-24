@@ -1,7 +1,11 @@
 use crate::Result;
 use cow_utils::CowUtils;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, RwLock},
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
 pub enum Language {
@@ -184,33 +188,31 @@ impl Settings {
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref SETTINGS: std::sync::Arc<std::sync::RwLock<Settings>> = {
-        let settings_path = Settings::path();
-        std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
-            let text = std::fs::read_to_string(&settings_path).unwrap();
-            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
-        } else {
-            Settings::default()
-        }))
-    };
+pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
+    let settings_path = Settings::path();
+    Arc::new(RwLock::new(if settings_path.exists() {
+        let text = std::fs::read_to_string(&settings_path).unwrap();
+        serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
+    } else {
+        Settings::default()
+    }))
+});
 
-    pub static ref TMP_SETTINGS: std::sync::Arc<std::sync::RwLock<Settings>> = {
-        let settings_path = Settings::tmp_path();
-        std::sync::Arc::new(std::sync::RwLock::new(if settings_path.exists() {
-            let text = std::fs::read_to_string(&settings_path).unwrap();
-            serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
-        } else {
-            Settings::default()
-        }))
-    };
+pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
+    let settings_path = Settings::tmp_path();
+    Arc::new(RwLock::new(if settings_path.exists() {
+        let text = std::fs::read_to_string(&settings_path).unwrap();
+        serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
+    } else {
+        Settings::default()
+    }))
+});
 
-    pub static ref DATA_DIR: PathBuf = {
-        if cfg!(windows) {
-            dirs2::data_local_dir().unwrap()
-        } else {
-            dirs2::config_dir().unwrap()
-        }
-        .join("bcml")
-    };
-}
+pub static DATA_DIR: Lazy<PathBuf> = Lazy::new(|| {
+    if cfg!(windows) {
+        dirs2::data_local_dir().unwrap()
+    } else {
+        dirs2::config_dir().unwrap()
+    }
+    .join("bcml")
+});

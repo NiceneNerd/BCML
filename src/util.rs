@@ -1,5 +1,6 @@
 use anyhow::Result;
 use join_str::jstr;
+use once_cell::sync::Lazy;
 use roead::sarc::Sarc;
 use std::{
     collections::HashMap,
@@ -9,11 +10,12 @@ use std::{
 
 pub use botw_utils::*;
 
-lazy_static::lazy_static! {
-    pub static ref HASH_TABLE_WIIU: hashes::StockHashTable = hashes::StockHashTable::new(&hashes::Platform::WiiU);
-    pub static ref HASH_TABLE_SWITCH: hashes::StockHashTable = hashes::StockHashTable::new(&hashes::Platform::Switch);
-    static ref STOCK_PACKS: Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>> = Mutex::new(HashMap::new());
-}
+pub static HASH_TABLE_WIIU: Lazy<hashes::StockHashTable> =
+    Lazy::new(|| hashes::StockHashTable::new(&hashes::Platform::WiiU));
+pub static HASH_TABLE_SWITCH: Lazy<hashes::StockHashTable> =
+    Lazy::new(|| hashes::StockHashTable::new(&hashes::Platform::Switch));
+static STOCK_PACKS: Lazy<Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
     if crate::settings::Settings::tmp_path().exists() {
