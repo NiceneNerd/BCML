@@ -209,7 +209,9 @@ pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
 });
 
 pub static DATA_DIR: Lazy<PathBuf> = Lazy::new(|| {
-    if cfg!(windows) {
+    if std::env::args().any(|f| &f == "--portable") {
+        std::env::current_dir().unwrap().join("bcml-data")
+    } else if cfg!(windows) {
         dirs2::data_local_dir().unwrap()
     } else {
         dirs2::config_dir().unwrap()
