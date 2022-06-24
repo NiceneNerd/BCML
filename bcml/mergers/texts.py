@@ -8,7 +8,7 @@ from functools import partial, lru_cache
 from pathlib import Path
 from platform import system
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from typing import List, Union, ByteString
+from typing import List, Union, Set, ByteString
 
 import oead
 import xxhash
@@ -49,7 +49,7 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
-def map_languages(mod_langs: set, user_langs: list) -> dict:
+def map_languages(mod_langs: Set[str], user_langs: Union[set, list]) -> dict:
     lang_map: dict = {}
     for user_lang in user_langs:
         if user_lang in mod_langs:
@@ -96,7 +96,7 @@ class TextsMerger(mergers.Merger):
         util.vprint(f'Languages: {",".join(languages)}')
 
         game_lang = util.get_settings("lang")
-        save_langs = LANGUAGES if self._options.get("all_langs", False) else [game_lang]
+        save_langs = util.get_user_languages() if self._options.get("all_langs", False) else [game_lang]
         language_map = map_languages(languages, save_langs)
         util.vprint("Language map:")
         util.vprint(language_map)
