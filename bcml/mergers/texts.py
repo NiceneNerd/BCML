@@ -49,7 +49,7 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
-def map_languages(mod_langs: list, user_langs: list) -> dict:
+def map_languages(mod_langs: set, user_langs: list) -> dict:
     lang_map: dict = {}
     for user_lang in user_langs:
         if user_lang in mod_langs:
@@ -63,7 +63,7 @@ def map_languages(mod_langs: list, user_langs: list) -> dict:
                 if user_lang[0:2] == mod_lang[0:2]:
                     lang_map[user_lang] = mod_lang # map whatever language from same locale
                     break
-            lang_map[user_lang] = mod_langs[0] # map *something*
+            lang_map[user_lang] = next(iter(mod_langs)) # map *something*
     return lang_map
 
 
@@ -113,12 +113,12 @@ class TextsMerger(mergers.Merger):
             language_diffs[user_lang] = rsext.mergers.texts.diff_language(
                 str(mod_pack),
                 str(ref_pack),
-                not user_lang[2:4] == mod_lang[2:4]
+                user_lang[2:4] != mod_lang[2:4]
             )
 
         return {
-            save_lang: language_diffs[map_lang]
-            for save_lang, map_lang in language_map.items()
+            save_lang: language_diffs[save_lang]
+            for save_lang in language_map.keys()
         }
 
     def log_diff(self, mod_dir: Path, diff_material):

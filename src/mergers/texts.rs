@@ -72,15 +72,18 @@ pub fn diff_language(
                                 .filter(|(e, t)| {
                                     if only_new_keys {
                                         !stock_text.entries.contains_key(*e)
-                                    }
-                                    else {
+                                    } else {
                                         !stock_text.entries.contains_key(*e)
                                             || *t != stock_text.entries.get(*e).unwrap()
                                     }
                                 })
                                 .map(|(e, t)| (e.to_owned(), t.clone()))
                                 .collect();
-                            Ok(Some((path.replace("msbt", "msyt"), diffs)))
+                            if diffs.is_empty() {
+                                Ok(None)
+                            } else {
+                                Ok(Some((path.replace("msbt", "msyt"), diffs)))
+                            }
                         }
                     } else {
                         Ok(Some((path.replace("msbt", "msyt"), mod_text.entries)))
