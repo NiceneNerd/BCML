@@ -20,8 +20,8 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
     {
         let merged = util::settings().merged_modpack_dir();
         if merged.exists() {
-            std::fs::remove_dir_all(merged.join(util::content()))?;
-            std::fs::remove_dir_all(merged.join(util::dlc()))?;
+            std::fs::remove_dir_all(merged.join(util::content())).unwrap_or_default();
+            std::fs::remove_dir_all(merged.join(util::dlc())).unwrap_or_default();
         }
         std::fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
         let rules_path = merged.join("rules.txt");
@@ -67,7 +67,11 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     .into_par_iter()
                     .try_for_each(|(item, rel)| -> Result<()> {
                         let out = merged.join(&rel);
-                        out.parent().map(std::fs::create_dir_all);
+                        out.parent()
+                            .map(std::fs::create_dir_all)
+                            .transpose()
+                            .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
+                            .unwrap();
                         std::fs::hard_link(item, &out)
                             .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))?;
                         Ok(())
@@ -76,10 +80,12 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             })
         })?;
         if output.is_dir() {
+            println!("Clearing output folder at {}", output.display());
             std::fs::remove_dir_all(&output).context("Failed to clear out output folder")?;
         }
         if !output.exists() {
-            std::fs::create_dir_all(output.parent().unwrap())?;
+            std::fs::create_dir_all(output.parent().unwrap())
+                .context("Failed to prepare parent of output directory")?;
             if util::settings().no_hardlinks {
                 dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;
             } else {
