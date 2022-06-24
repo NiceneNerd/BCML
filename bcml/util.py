@@ -894,6 +894,14 @@ def get_master_modpack_dir() -> Path:
     return master
 
 
+@lru_cache(1)
+def get_merged_modpack_dir() -> Path:
+    if get_settings("wiiu"):
+        return get_storage_dir() / "merged"
+    else:
+        return get_storage_dir() / "merged_nx"
+
+
 @lru_cache(2)
 def get_hash_table(wiiu: bool = True) -> Dict[str, List[int]]:
     return json.loads(

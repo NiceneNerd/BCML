@@ -481,7 +481,7 @@ class Api:
             run(["xdg-open", path], check=False)
 
     def explore_master(self, params=None):
-        path = util.get_master_modpack_dir()
+        path = util.get_merged_modpack_dir()
         if SYSTEM == "Windows":
             os.startfile(path)
         elif SYSTEM == "Darwin":
