@@ -33,5 +33,5 @@ junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd79364
 roead = "0.10.3"
 mslnk = "0.1.8"
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(not(windows))'.dependencies]
 roead = "0.10.4"
