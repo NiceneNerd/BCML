@@ -30,7 +30,7 @@ thiserror = "1.0.30"
 
 [target.'cfg(windows)'.dependencies]
 junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd793645acf2702de283f78e8f6e0043ea5" }
-roead = "0.10.3"
+roead = "<0.10.4"
 mslnk = "0.1.8"
 
 [target.'cfg(not(windows))'.dependencies]
