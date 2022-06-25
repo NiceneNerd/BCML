@@ -66,7 +66,7 @@ class Api:
     def get_ver(self, params=None):
         updated = util.get_settings("last_version") < VERSION
         res = {
-            "version": USER_VERSION,
+            "version": VERSION,
             "update": (
                 util.get_latest_bcml() > VERSION
                 and not util.get_settings("suppress_update")

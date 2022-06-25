@@ -34,6 +34,8 @@ jobs:
               run: |
                   source venv/bin/activate
                   mkdocs build -d ./bcml/assets/help
+            - name: Patch roead version
+              run: sed -i 's/0.10.3/0.10.4/g' Cargo.toml
             - uses: actions-rs/toolchain@v1
               name: Install Rust
               with:
