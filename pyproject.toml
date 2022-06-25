@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "bcml"
-version = "3.9.11"
+version = "3.9.12"
 description = "A mod manager for The Legend of Zelda: Breath of the Wild"
 author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"

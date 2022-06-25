@@ -24,7 +24,7 @@ jobs:
     - name: install-cmake
       uses: Symbitic/install-cmake@v0.1.0
     - name: Patch roead version
-      run: sed -i 's/0.10.3/0.10.4/g' Cargo.toml
+      run: sed -i 's/<0.10.4/0.10.4/g' Cargo.toml
     - name: Check
       run: cargo +nightly check --verbose
     - uses: messense/maturin-action@v1
