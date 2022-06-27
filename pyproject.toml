@@ -8,8 +8,6 @@ version = "3.9.13"
 description = "A mod manager for The Legend of Zelda: Breath of the Wild"
 author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"
-# readme = { content-type = "text/markdown", file = "docs/README.md" }
-# description-content-type = "text/markdown"
 license = { file = "docs/LICENSE.md" }
 dependencies = [
     "numpy==1.19.2; platform_system == 'Windows'",
@@ -19,6 +17,7 @@ dependencies = [
     "botw-utils~=0.2.3",
     "botw-havok~=0.3.18",
     "oead~=1.2.4",
+    "packaging~=21.3",
     "pycrosskit~=1.0.4.1",
     "pythonnet~=3.0.0a2; platform_system == 'Windows'",
     "pyqtwebengine~=5.15.2; platform_system == 'Linux'",
