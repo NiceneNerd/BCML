@@ -16,7 +16,7 @@ from shutil import copytree, rmtree, copyfile
 from tempfile import NamedTemporaryFile, mkdtemp
 from time import sleep
 from threading import Thread
-from typing import List
+from typing import List, Optional
 from xml.dom import minidom
 
 import requests
@@ -140,20 +140,35 @@ class Api:
             cemu = Path(params["folder"])
             set_path = cemu / "settings.xml"
             settings: minidom = util.parse_cemu_settings(set_path)
-            game_dir: Path
-            for entry in settings.getElementsByTagName("GameCache")[
-                0
-            ].getElementsByTagName("Entry"):
-                entry: minidom.Element
-                path = entry.getElementsByTagName("path")[0].childNodes[0].data
-                if "U-King" in path:
-                    game_dir = Path(path).parent.parent / "content"
-                    break
+            game_dir: Optional[Path] = None
+            mlc_path: Path
+            try:
+                for entry in settings.getElementsByTagName("GameCache")[
+                    0
+                ].getElementsByTagName("Entry"):
+                    entry: minidom.Element
+                    path: str = entry.getElementsByTagName("path")[0].childNodes[0].data
+                    if "U-King" in path:
+                        if SYSTEM == "Linux" and path[1:3] == ":\\":
+                            path = path[2:].replace("\\", "/")
+                        game_dir = Path(path).parent.parent / "content"
+                        break
+            except IndexError:
+                pass
+            try:
+                mlc_str: str = settings.getElementsByTagName("mlc_path")[0].childNodes[0].data
+                if SYSTEM == "Linux" and mlc_str[1:3] == ":\\":
+                    mlc_path = Path(mlc_str[2:].replace("\\", "/"))
+                else:
+                    mlc_path = Path(mlc_str)
+            except IndexError:
+                mlc_path = cemu / "mlc01"
+                if not mlc_path.exists():
+                    return {}
             if not game_dir:
-                return {}
-            mlc_path = Path(
-                settings.getElementsByTagName("mlc_path")[0].childNodes[0].data
-            )
+                game_dir = util.guess_game_dir(mlc_path)
+                if not game_dir:
+                    return {}
             update_dir = util.guess_update_dir(mlc_path, game_dir)
             dlc_dir = util.guess_aoc_dir(mlc_path, game_dir)
             return {

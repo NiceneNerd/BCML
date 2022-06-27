@@ -687,6 +687,19 @@ def set_site_meta(site_meta: str):
     save_settings()
 
 
+def guess_game_dir(mlc_dir: Path) -> Optional[Path]:
+    ids = {
+        ("00050000", "101C9400"),
+        ("00050000", "101C9500"),
+        ("00050000", "101C9300"),
+    }
+    for (id1, id2) in ids:
+        target = mlc_dir / "usr" / "title" / id1 / id2 / "content"
+        if target.exists():
+            return target
+    return None
+
+
 @lru_cache(None)
 def get_title_id(game_dir: Path = None) -> Tuple[str, str]:
     title_id = "00050000101C9400"
