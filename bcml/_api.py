@@ -9,6 +9,7 @@ from math import ceil
 from multiprocessing import Pool
 from operator import itemgetter
 from pathlib import Path
+from packaging.version import Version
 from platform import system
 from subprocess import run, PIPE, Popen
 from shutil import copytree, rmtree, copyfile
@@ -64,11 +65,11 @@ class Api:
         self.tmp_files = []
 
     def get_ver(self, params=None):
-        updated = util.get_settings("last_version") < VERSION
+        updated = Version(util.get_settings("last_version")) < Version(VERSION)
         res = {
             "version": VERSION,
             "update": (
-                util.get_latest_bcml() > VERSION
+                Version(util.get_latest_bcml()) > Version(VERSION)
                 and not util.get_settings("suppress_update")
             ),
             "showChangelog": updated and util.get_settings("changelog"),

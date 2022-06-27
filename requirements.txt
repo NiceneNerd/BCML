@@ -5,6 +5,7 @@ byml~=2.4.2
 botw-utils~=0.2.3
 botw-havok~=0.3.18
 oead~=1.2.0
+packaging~=21.3
 pycrosskit~=1.0.4.1
 pythonnet~=2.5.2; platform_system == 'Windows' and python_version < "3.9"
 pythonnet~=3.0.0a2; platform_system == 'Windows' and python_version >= "3.9"
