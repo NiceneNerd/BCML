@@ -27,77 +27,80 @@ pub fn diff_language(
     stock_bootup_path: String,
     only_new_keys: bool,
 ) -> PyResult<PyObject> {
-    let diff = py.allow_threads(|| -> Result<IndexMap<String, Diff>> {
-        let language = &Path::new(&mod_bootup_path)
-            .file_stem()
-            .unwrap()
-            .to_str()
-            .unwrap()[7..];
-        let mod_bootup = Sarc::read(std::fs::read(&mod_bootup_path)?)?;
-        let stock_bootup = Sarc::read(std::fs::read(&stock_bootup_path)?)?;
-        let message_path = format!("Message/Msg_{}.product.ssarc", &language);
-        let mod_message = Sarc::read(decompress(
-            mod_bootup
-                .get_file_data(&message_path)
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
-        )?)?;
-        let stock_message = Sarc::read(decompress(
-            stock_bootup
-                .get_file_data(&message_path)
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
-        )?)?;
-        let diffs = mod_message
-            .files()
-            .filter(|file| {
-                file.name()
-                    .map(|name| name.ends_with("msbt"))
-                    .unwrap_or(false)
-            })
-            .collect::<Vec<_>>()
-            .into_par_iter()
-            .map(|file| -> Result<Option<(String, Diff)>> {
-                if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
-                    let mod_text = Msyt::from_msbt_bytes(file.data())
-                        .with_context(|| jstr!("Invalid MSBT file: {&path}"))?;
-                    if let Some(stock_text) = stock_message
-                        .get_file_data(&path)
-                        .and_then(|data| Msyt::from_msbt_bytes(data).ok())
-                    {
-                        if mod_text == stock_text {
-                            Ok(None)
-                        } else {
-                            let diffs: Diff = mod_text
-                                .entries
-                                .iter()
-                                .filter(|(e, t)| {
-                                    if only_new_keys {
-                                        !stock_text.entries.contains_key(*e)
-                                    } else {
-                                        !stock_text.entries.contains_key(*e)
-                                            || *t != stock_text.entries.get(*e).unwrap()
-                                    }
-                                })
-                                .map(|(e, t)| (e.to_owned(), t.clone()))
-                                .collect();
-                            if diffs.is_empty() {
+    let diff =
+        py.allow_threads(|| -> Result<IndexMap<String, Diff>> {
+            let language = &Path::new(&mod_bootup_path)
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()[7..];
+            let mod_bootup = Sarc::read(std::fs::read(&mod_bootup_path)?)?;
+            let stock_bootup = Sarc::read(std::fs::read(&stock_bootup_path)?)?;
+            let message_path = format!("Message/Msg_{}.product.ssarc", &language);
+            let mod_message = Sarc::read(
+                decompress(mod_bootup.get_file_data(&message_path).with_context(|| {
+                    jstr!("{&message_path} missing from Bootup_{language}.pack")
+                })?)?
+                .to_vec(),
+            )?;
+            let stock_message = Sarc::read(
+                decompress(stock_bootup.get_file_data(&message_path).with_context(|| {
+                    jstr!("{&message_path} missing from Bootup_{language}.pack")
+                })?)?
+                .to_vec(),
+            )?;
+            let diffs = mod_message
+                .files()
+                .filter(|file| {
+                    file.name()
+                        .map(|name| name.ends_with("msbt"))
+                        .unwrap_or(false)
+                })
+                .collect::<Vec<_>>()
+                .into_par_iter()
+                .map(|file| -> Result<Option<(String, Diff)>> {
+                    if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
+                        let mod_text = Msyt::from_msbt_bytes(file.data())
+                            .with_context(|| jstr!("Invalid MSBT file: {&path}"))?;
+                        if let Some(stock_text) = stock_message
+                            .get_file_data(&path)
+                            .and_then(|data| Msyt::from_msbt_bytes(data).ok())
+                        {
+                            if mod_text == stock_text {
                                 Ok(None)
                             } else {
-                                Ok(Some((path.replace("msbt", "msyt"), diffs)))
+                                let diffs: Diff = mod_text
+                                    .entries
+                                    .iter()
+                                    .filter(|(e, t)| {
+                                        if only_new_keys {
+                                            !stock_text.entries.contains_key(*e)
+                                        } else {
+                                            !stock_text.entries.contains_key(*e)
+                                                || *t != stock_text.entries.get(*e).unwrap()
+                                        }
+                                    })
+                                    .map(|(e, t)| (e.to_owned(), t.clone()))
+                                    .collect();
+                                if diffs.is_empty() {
+                                    Ok(None)
+                                } else {
+                                    Ok(Some((path.replace("msbt", "msyt"), diffs)))
+                                }
                             }
+                        } else {
+                            Ok(Some((path.replace("msbt", "msyt"), mod_text.entries)))
                         }
                     } else {
-                        Ok(Some((path.replace("msbt", "msyt"), mod_text.entries)))
+                        Ok(None)
                     }
-                } else {
-                    Ok(None)
-                }
-            })
-            .collect::<Result<Vec<Option<(String, Diff)>>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
-        Ok(diffs)
-    })?;
+                })
+                .collect::<Result<Vec<Option<(String, Diff)>>>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+            Ok(diffs)
+        })?;
     let diff_text = serde_json::to_string(&diff).unwrap();
     let json = PyModule::import(py, "json")?;
     #[allow(deprecated)]
@@ -128,11 +131,13 @@ pub fn merge_language(
             .unwrap()[7..];
         let stock_bootup = Sarc::read(std::fs::read(&stock_bootup_path)?)?;
         let message_path = format!("Message/Msg_{}.product.ssarc", &language);
-        let stock_message = Sarc::read(decompress(
-            stock_bootup
-                .get_file_data(&message_path)
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
-        )?)?;
+        let stock_message =
+            Sarc::read(
+                decompress(stock_bootup.get_file_data(&message_path).with_context(|| {
+                    jstr!("{&message_path} missing from Bootup_{language}.pack")
+                })?)?
+                .to_vec(),
+            )?;
         let mut new_message = SarcWriter::from(&stock_message);
         let merged_files = diffs
             .into_par_iter()
@@ -163,7 +168,7 @@ pub fn merge_language(
         } else {
             roead::Endian::Little
         });
-        new_bootup.add_file(&message_path, compress(new_message.to_binary()));
+        new_bootup.add_file(&message_path, compress(new_message.to_binary()).as_slice());
         std::fs::create_dir_all(&dest_bootup_path[..dest_bootup_path.len() - 17])?;
         std::fs::write(&dest_bootup_path, new_bootup.to_binary())?;
         Ok(())

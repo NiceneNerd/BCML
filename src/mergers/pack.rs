@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use roead::{
     sarc::{Sarc, SarcWriter},
     yaz0::compress,
-    Endian,
+    Bytes, Endian,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -32,7 +32,7 @@ pub fn packs_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
+fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
     let all_files: HashSet<String> = sarcs
         .iter()
         .flat_map(|s| {
@@ -56,7 +56,6 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                             None
                         }
                     });
-                    // println!("data");
                     data
                 })
                 .find(|d| util::is_file_modded(&file.cow_replace(".s", "."), d))
@@ -103,7 +102,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                     merged = compress(&merged);
                 }
 
-                Ok((file, merged))
+                Ok((file, merged.as_slice().into()))
             } else {
                 Ok((file, data.to_vec()))
             }
