@@ -36,7 +36,8 @@ import xxhash  # pylint: disable=wrong-import-order
 from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webview import Window  # pylint: disable=wrong-import-order
 
-from bcml import pickles, DEBUG  # pylint: disable=unused-import
+from bcml import bcml as rsext
+from bcml import pickles, DEBUG # pylint: disable=unused-import
 from bcml.__version__ import VERSION
 
 
@@ -1237,16 +1238,18 @@ def create_bcml_graphicpack_if_needed():
 
 
 def create_shortcuts(desktop: bool, start_menu: bool):
-    from pycrosskit.shortcuts import Shortcut
-
-    Shortcut(
-        "BCML",
-        shutil.which("bcml"),
-        "BOTW Cross-Platform Mod Loader",
-        str(get_exec_dir() / "data" / "bcml.ico"),
-        desktop,
-        start_menu,
-    )
+    if desktop:
+        rsext.manager.create_shortcut(
+            str(get_python_exe(True)),
+            str(get_exec_dir() / "data" / "bcml.ico"),
+            str(Path(r"~\Desktop\BCML.lnk").expanduser())
+        )
+    if start_menu:
+        rsext.manager.create_shortcut(
+            str(get_python_exe(True)),
+            str(get_exec_dir() / "data" / "bcml.ico"),
+            str(Path(r"~\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\BCML.lnk").expanduser())
+        )
 
 
 def download_webview2():

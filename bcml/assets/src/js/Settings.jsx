@@ -168,7 +168,9 @@ class Settings extends React.Component {
 
     makeShortcut = async desktop => {
         try {
+            this.props.onProgress("Creating shortcut...");
             await pywebview.api.make_shortcut({ desktop });
+            this.props.onDone();
         } catch (error) {
             this.props.onError(error);
         }
