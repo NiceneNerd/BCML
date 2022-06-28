@@ -1,6 +1,6 @@
 _MAJOR=3
 _MINOR=9
-_PATCH="13-post1"
+_PATCH="14"
 
 VERSION = f"{_MAJOR}.{_MINOR}.{_PATCH}"
 USER_VERSION = f"""{_MAJOR}.{_MINOR}.{_PATCH[0:1]} {
