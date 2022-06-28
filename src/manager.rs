@@ -5,7 +5,7 @@ use join_str::jstr;
 use mslnk::ShellLink;
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::{collections::BTreeSet, path::PathBuf};
+use std::path::PathBuf;
 
 pub fn manager_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     let manager_module = PyModule::new(py, "manager")?;
@@ -50,23 +50,26 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             )
             .context("Failed to hard link rules.txt")?;
         }
-        let mut mod_folders: std::collections::BTreeSet<PathBuf> =
+        let mod_folders: Vec<PathBuf> =
             glob::glob(&util::settings().mods_dir().join("*").to_string_lossy())
                 .unwrap()
                 .filter_map(|p| p.ok())
                 .filter(|p| p.is_dir() && !p.join(".disabled").exists())
+                .collect::<std::collections::BTreeSet<PathBuf>>()
+                .into_iter()
+                .flat_map(|p| {
+                    let glob_str = p.join("options/*").display().to_string();
+                    [p].into_iter()
+                        .chain(
+                            glob::glob(&glob_str)
+                                .unwrap()
+                                .filter_map(|p| p.ok())
+                                .filter(|p| p.is_dir()),
+                        )
+                        .collect::<Vec<PathBuf>>()
+                })
                 .collect();
-        let option_folders = mod_folders
-            .iter()
-            .flat_map(|mod_dir| {
-                glob::glob(&mod_dir.join("options/*").to_string_lossy())
-                    .unwrap()
-                    .filter_map(|p| p.ok())
-                    .filter(|p| p.is_dir())
-                    .collect::<BTreeSet<PathBuf>>()
-            })
-            .collect::<BTreeSet<PathBuf>>();
-        mod_folders.extend(option_folders.into_iter());
+        dbg!(&mod_folders);
         py.allow_threads(|| -> Result<()> {
             mod_folders
                 .into_iter()
