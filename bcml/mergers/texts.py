@@ -181,35 +181,36 @@ class TextsMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         # pylint: disable=unsupported-assignment-operation
-        langs = (
+        user_langs = (
             {util.get_settings("lang")}
             if not self._options["all_langs"]
             else util.get_user_languages()
         )
-        for lang in langs:
-            print("Loading text mods...")
-            diffs = self.consolidate_diffs(self.get_all_diffs())
-            if not diffs or lang not in diffs:
-                print("No text merge necessary")
-                for bootup in util.get_master_modpack_dir().rglob(
-                    "**/Bootup_????.pack"
-                ):
-                    bootup.unlink()
-                return
-
-            print(f"Merging modded texts for {lang}...")
+        print("Loading text mods...")
+        diffs = self.consolidate_diffs(self.get_all_diffs())
+        if not diffs:
+            print("No text merge necessary")
+            for bootup in util.get_master_modpack_dir().rglob(
+                "**/Bootup_????.pack"
+            ):
+                bootup.unlink()
+            return
+        
+        lang_map = map_languages(set(diffs.keys()), user_langs)
+        for user_lang, mod_lang in lang_map.items():
+            print(f"Merging modded texts for {mod_lang} into {user_lang}...")
             rsext.mergers.texts.merge_language(
-                json.dumps(diffs[lang]),
-                str(util.get_game_file(f"Pack/Bootup_{lang}.pack")),
+                json.dumps(diffs[mod_lang]),
+                str(util.get_game_file(f"Pack/Bootup_{user_lang}.pack")),
                 str(
                     util.get_master_modpack_dir()
                     / util.get_content_path()
                     / "Pack"
-                    / f"Bootup_{lang}.pack"
+                    / f"Bootup_{user_lang}.pack"
                 ),
                 util.get_settings("wiiu"),
             )
-            print(f"{lang} texts merged successfully")
+            print(f"{user_lang} texts merged successfully")
 
     def get_checkbox_options(self) -> List[tuple]:
         return [
