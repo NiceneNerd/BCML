@@ -49,7 +49,7 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
-def map_languages(mod_langs: Set[str], user_langs: Union[set, list]) -> dict:
+def map_languages(mod_langs: Set[str], user_langs: Set[str]) -> dict:
     lang_map: dict = {}
     for user_lang in user_langs:
         if user_lang in mod_langs:
@@ -95,8 +95,11 @@ class TextsMerger(mergers.Merger):
             return None
         util.vprint(f'Languages: {",".join(languages)}')
 
-        game_lang = util.get_settings("lang")
-        save_langs = util.get_user_languages() if self._options.get("all_langs", False) else [game_lang]
+        save_langs = (
+            {util.get_settings("lang")}
+            if not self._options["all_langs"]
+            else util.get_user_languages()
+        )
         language_map = map_languages(languages, save_langs)
         util.vprint("Language map:")
         util.vprint(language_map)
