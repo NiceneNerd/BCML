@@ -558,7 +558,6 @@ class Settings extends React.Component {
                                 placement={"left"}>
                                 <Form.Check
                                     type="checkbox"
-                                    disabled={this.state.no_cemu}
                                     label="Disable hard links for master mod"
                                     checked={this.state.no_hardlinks}
                                     onChange={this.handleChange}

@@ -49,21 +49,25 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
-def map_languages(mod_langs: Set[str], user_langs: Union[set, list]) -> dict:
+def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
     lang_map: dict = {}
-    for user_lang in user_langs:
-        if user_lang in mod_langs:
-            lang_map[user_lang] = user_lang # match same locale/language
+    for src_lang in src_langs:
+        if src_lang in dest_langs:
+            lang_map[src_lang] = src_lang # match same locale/language
         else:
-            for mod_lang in mod_langs:
-                if user_lang[2:4] == mod_lang[2:4]:
-                    lang_map[user_lang] = mod_lang # map same language from different locale
+            for dest_lang in dest_langs:
+                if src_lang[2:4] == dest_lang[2:4]:
+                    lang_map[src_lang] = dest_lang # map same language from different locale
                     break
-            for mod_lang in mod_langs:
-                if user_lang[0:2] == mod_lang[0:2]:
-                    lang_map[user_lang] = mod_lang # map whatever language from same locale
+            if src_lang in lang_map:
+                continue
+            for dest_lang in dest_langs:
+                if src_lang[0:2] == dest_lang[0:2]:
+                    lang_map[src_lang] = dest_lang # map whatever language from same locale
                     break
-            lang_map[user_lang] = next(iter(mod_langs)) # map *something*
+            if src_lang in lang_map:
+                continue
+            lang_map[src_lang] = next(iter(dest_langs)) # map *something*
     return lang_map
 
 
@@ -82,7 +86,7 @@ class TextsMerger(mergers.Merger):
 
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         print("Checking for modified languages...")
-        languages = {
+        mod_langs = {
             util.get_file_language(file)
             for file in modded_files
             if (
@@ -91,13 +95,12 @@ class TextsMerger(mergers.Merger):
                 and "Graphic" not in file.name
             )
         }
-        if not languages:
+        if not mod_langs:
             return None
-        util.vprint(f'Languages: {",".join(languages)}')
+        util.vprint(f'Languages: {",".join(mod_langs)}')
 
-        game_lang = util.get_settings("lang")
-        save_langs = util.get_user_languages() if self._options.get("all_langs", False) else [game_lang]
-        language_map = map_languages(languages, save_langs)
+        # find a user lang for each mod lang
+        language_map = map_languages(mod_langs, util.get_user_languages())
         util.vprint("Language map:")
         util.vprint(language_map)
 
@@ -116,10 +119,7 @@ class TextsMerger(mergers.Merger):
                 user_lang[2:4] != mod_lang[2:4]
             )
 
-        return {
-            save_lang: language_diffs[save_lang]
-            for save_lang in language_map.keys()
-        }
+        return language_diffs
 
     def log_diff(self, mod_dir: Path, diff_material):
         if isinstance(diff_material, List):
@@ -181,35 +181,37 @@ class TextsMerger(mergers.Merger):
     @util.timed
     def perform_merge(self):
         # pylint: disable=unsupported-assignment-operation
-        langs = (
+        user_langs = (
             {util.get_settings("lang")}
             if not self._options["all_langs"]
             else util.get_user_languages()
         )
-        for lang in langs:
-            print("Loading text mods...")
-            diffs = self.consolidate_diffs(self.get_all_diffs())
-            if not diffs or lang not in diffs:
-                print("No text merge necessary")
-                for bootup in util.get_master_modpack_dir().rglob(
-                    "**/Bootup_????.pack"
-                ):
-                    bootup.unlink()
-                return
-
-            print(f"Merging modded texts for {lang}...")
+        print("Loading text mods...")
+        diffs = self.consolidate_diffs(self.get_all_diffs())
+        if not diffs:
+            print("No text merge necessary")
+            for bootup in util.get_master_modpack_dir().rglob(
+                "**/Bootup_????.pack"
+            ):
+                bootup.unlink()
+            return
+        
+        # find a mod lang for each user lang
+        lang_map = map_languages(user_langs, set(diffs.keys()))
+        for user_lang, mod_lang in lang_map.items():
+            print(f"Merging modded texts for {mod_lang} into {user_lang}...")
             rsext.mergers.texts.merge_language(
-                json.dumps(diffs[lang]),
-                str(util.get_game_file(f"Pack/Bootup_{lang}.pack")),
+                json.dumps(diffs[mod_lang]),
+                str(util.get_game_file(f"Pack/Bootup_{user_lang}.pack")),
                 str(
                     util.get_master_modpack_dir()
                     / util.get_content_path()
                     / "Pack"
-                    / f"Bootup_{lang}.pack"
+                    / f"Bootup_{user_lang}.pack"
                 ),
                 util.get_settings("wiiu"),
             )
-            print(f"{lang} texts merged successfully")
+            print(f"{user_lang} texts merged successfully")
 
     def get_checkbox_options(self) -> List[tuple]:
         return [
