@@ -375,6 +375,9 @@ class Settings extends React.Component {
                                     <Tooltip>
                                         The game language you play with. This will be
                                         prioritized when attempting to merge text mods.
+                                        You must correctly fill out the base game and
+                                        update path settings, above, before this dropdown
+                                        populates.
                                     </Tooltip>
                                 }>
                                 <Form.Control
