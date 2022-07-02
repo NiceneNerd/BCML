@@ -62,8 +62,8 @@ def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
             if src_lang in lang_map:
                 continue
             for dest_lang in dest_langs:
-                if src_lang[0:2] == dest_lang[0:2]:
-                    lang_map[src_lang] = dest_lang # map whatever language from same locale
+                if dest_lang[2:4] == "en":
+                    lang_map[src_lang] = dest_lang # map to english, as most users know english
                     break
             if src_lang in lang_map:
                 continue
