@@ -1,10 +1,15 @@
 use crate::{util, Result};
 use anyhow::Context;
+use fs_err as fs;
 use join_str::jstr;
 #[cfg(windows)]
 use mslnk::ShellLink;
 use pyo3::prelude::*;
 use rayon::prelude::*;
+#[cfg(windows)]
+use remove_dir_all::remove_dir_all;
+#[cfg(not(windows))]
+use std::fs::remove_dir_all;
 use std::path::PathBuf;
 
 pub fn manager_mod(py: Python, parent: &PyModule) -> PyResult<()> {
@@ -24,7 +29,7 @@ fn create_shortcut(_py: Python, py_path: String, ico_path: String, dest: String)
         link.set_arguments(Some("-m bcml".into()));
         link.set_name(Some("BCML".into()));
         link.set_icon_location(Some(ico_path));
-        std::fs::create_dir_all(std::path::Path::new(&dest).parent().unwrap())?;
+        fs::create_dir_all(std::path::Path::new(&dest).parent().unwrap())?;
         link.create_lnk(&dest)?;
         Ok(())
     };
@@ -39,12 +44,12 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
     {
         let merged = util::settings().merged_modpack_dir();
         if merged.exists() {
-            std::fs::remove_dir_all(&merged).context("Failed to clear internal merged folder")?;
+            remove_dir_all(&merged).context("Failed to clear internal merged folder")?;
         }
-        std::fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
+        fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
         let rules_path = merged.join("rules.txt");
         if !util::settings().no_cemu && !rules_path.exists() {
-            std::fs::hard_link(
+            fs::hard_link(
                 util::settings().master_mod_dir().join("rules.txt"),
                 rules_path,
             )
@@ -101,11 +106,11 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                         .try_for_each(|(item, rel)| -> Result<()> {
                             let out = merged.join(&rel);
                             out.parent()
-                                .map(std::fs::create_dir_all)
+                                .map(fs::create_dir_all)
                                 .transpose()
                                 .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
                                 .unwrap();
-                            std::fs::hard_link(item, &out)
+                            fs::hard_link(item, &out)
                                 .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))?;
                             Ok(())
                         })?;
@@ -114,10 +119,10 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         })?;
         if output.is_dir() {
             println!("Clearing output folder at {}", output.display());
-            std::fs::remove_dir_all(&output).context("Failed to clear out output folder")?;
+            remove_dir_all(&output).context("Failed to clear out output folder")?;
         }
         if !output.exists() {
-            std::fs::create_dir_all(output.parent().unwrap())
+            fs::create_dir_all(output.parent().unwrap())
                 .context("Failed to prepare parent of output directory")?;
             if util::settings().no_hardlinks {
                 dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;

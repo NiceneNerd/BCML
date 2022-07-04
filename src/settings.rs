@@ -1,5 +1,6 @@
 use crate::Result;
 use cow_utils::CowUtils;
+use fs_err as fs;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -183,7 +184,7 @@ impl Settings {
     }
 
     pub fn save(&self) -> Result<()> {
-        serde_json::to_writer_pretty(std::fs::File::create(&Self::path())?, &self)?;
+        serde_json::to_writer_pretty(fs::File::create(&Self::path())?, &self)?;
         Ok(())
     }
 }
@@ -191,7 +192,7 @@ impl Settings {
 pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::path();
     Arc::new(RwLock::new(if settings_path.exists() {
-        let text = std::fs::read_to_string(&settings_path).unwrap();
+        let text = fs::read_to_string(&settings_path).unwrap();
         serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
     } else {
         Settings::default()
@@ -201,7 +202,7 @@ pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
 pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::tmp_path();
     Arc::new(RwLock::new(if settings_path.exists() {
-        let text = std::fs::read_to_string(&settings_path).unwrap();
+        let text = fs::read_to_string(&settings_path).unwrap();
         serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
     } else {
         Settings::default()

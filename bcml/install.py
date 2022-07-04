@@ -743,15 +743,18 @@ def link_master_mod(output: Path = None):
     util.create_bcml_graphicpack_if_needed()
     try:
         rsext.manager.link_master_mod(str(output) if output else None)
-    except OSError as err:
-        raise RuntimeError(
-            "BCML failed to create the link to the merged mod. This is "
-            "probably because Cemu is on an external USB, eSATA, or "
-            "network drive. You can fix this in one of two ways:\n"
-            "- Make sure Cemu is on an internal drive\n"
-            "- Turn on the 'no hard links' option in BCML's settings "
-            "(but be aware that mod merging will take much longer)"
-        ) from err
+    except (OSError, RuntimeError) as err:
+        if err is OSError or (err is RuntimeError and "junction" in str(err)):
+            raise RuntimeError(
+                "BCML failed to create the link to the merged mod. This is "
+                "probably because Cemu is on an external USB, eSATA, or "
+                "network drive. You can fix this in one of two ways:\n"
+                "- Make sure Cemu is on an internal drive\n"
+                "- Turn on the 'no hard links' option in BCML's settings "
+                "(but be aware that mod merging will take much longer)"
+            ) from err
+        else:
+            raise
 
 
 def export(output: Path, standalone: bool = False):

@@ -1,6 +1,7 @@
 use crate::util::{self, settings};
 use anyhow::{Context, Result};
 use cow_utils::CowUtils;
+use fs_err as fs;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use roead::{
@@ -121,12 +122,12 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
             .try_for_each(|(path, sarc_paths)| -> Result<()> {
                 let out = settings.master_mod_dir().join(&path);
                 if out.exists() {
-                    std::fs::remove_file(&out)?;
+                    fs::remove_file(&out)?;
                 }
                 let sarcs = sarc_paths
                     .iter()
                     .filter_map(|file| -> Option<Result<Sarc>> {
-                        std::fs::read(&file)
+                        fs::read(&file)
                             .map(|data| Sarc::read(data).ok())
                             .map_err(anyhow::Error::from)
                             .transpose()
@@ -136,8 +137,8 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
                 if out.extension().unwrap().to_str().unwrap().starts_with('s') {
                     merged = compress(merged);
                 }
-                std::fs::create_dir_all(&out.parent().unwrap())?;
-                std::fs::write(out, merged)?;
+                fs::create_dir_all(&out.parent().unwrap())?;
+                fs::write(out, merged)?;
                 Ok(())
             })?;
         Ok(())

@@ -1,4 +1,5 @@
 use crate::{util, Result};
+use fs_err as fs;
 use once_cell::sync::Lazy;
 use pyo3::{prelude::*, types::PyBytes};
 use rayon::prelude::*;
@@ -12,9 +13,9 @@ type ActorMap = BTreeMap<u32, Byml>;
 
 static STOCK_ACTORINFO: Lazy<Result<Arc<ActorMap>>> = Lazy::new(|| {
     let load = || -> Result<ActorMap> {
-        if let Byml::Hash(hash) = Byml::from_binary(&decompress(std::fs::read(
-            util::get_game_file("Actor/ActorInfo.product.sbyml")?,
-        )?)?)? {
+        if let Byml::Hash(hash) = Byml::from_binary(&decompress(fs::read(util::get_game_file(
+            "Actor/ActorInfo.product.sbyml",
+        )?)?)?)? {
             Ok(hash["Actors"]
                 .as_array()?
                 .iter()
@@ -68,7 +69,7 @@ pub fn merge_actormap(base: &mut ActorMap, other: &ActorMap) {
 fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
     let diff = py.allow_threads(|| -> Result<Vec<u8>> {
         if let Byml::Hash(mod_actorinfo) =
-            Byml::from_binary(&decompress(&std::fs::read(&actorinfo_path)?)?)?
+            Byml::from_binary(&decompress(&fs::read(&actorinfo_path)?)?)?
         {
             let stock_actorinfo = stock_actorinfo()?;
             let diff: Hash = mod_actorinfo
@@ -149,9 +150,9 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
             .master_content_dir()
             .join("Actor/ActorInfo.product.sbyml");
         if !output.parent().unwrap().exists() {
-            std::fs::create_dir_all(output.parent().unwrap())?;
+            fs::create_dir_all(output.parent().unwrap())?;
         }
-        std::fs::write(
+        fs::write(
             output,
             compress(merged_actorinfo.to_binary(util::settings().endian())),
         )?;

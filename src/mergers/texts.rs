@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use fs_err as fs;
 use indexmap::IndexMap;
 use join_str::jstr;
 use msyt::{model::Entry, Msyt};
@@ -34,8 +35,8 @@ pub fn diff_language(
                 .unwrap()
                 .to_str()
                 .unwrap()[7..];
-            let mod_bootup = Sarc::read(std::fs::read(&mod_bootup_path)?)?;
-            let stock_bootup = Sarc::read(std::fs::read(&stock_bootup_path)?)?;
+            let mod_bootup = Sarc::read(fs::read(&mod_bootup_path)?)?;
+            let stock_bootup = Sarc::read(fs::read(&stock_bootup_path)?)?;
             let message_path = format!("Message/Msg_{}.product.ssarc", &language);
             let mod_message = Sarc::read(
                 decompress(mod_bootup.get_file_data(&message_path).with_context(|| {
@@ -129,7 +130,7 @@ pub fn merge_language(
             .unwrap()
             .to_str()
             .unwrap()[7..];
-        let stock_bootup = Sarc::read(std::fs::read(&stock_bootup_path)?)?;
+        let stock_bootup = Sarc::read(fs::read(&stock_bootup_path)?)?;
         let message_path = format!("Message/Msg_{}.product.ssarc", &language);
         let stock_message =
             Sarc::read(
@@ -169,8 +170,8 @@ pub fn merge_language(
             roead::Endian::Little
         });
         new_bootup.add_file(&message_path, compress(new_message.to_binary()).as_slice());
-        std::fs::create_dir_all(&dest_bootup_path[..dest_bootup_path.len() - 17])?;
-        std::fs::write(&dest_bootup_path, new_bootup.to_binary())?;
+        fs::create_dir_all(&dest_bootup_path[..dest_bootup_path.len() - 17])?;
+        fs::write(&dest_bootup_path, new_bootup.to_binary())?;
         Ok(())
     })?;
     Ok(())

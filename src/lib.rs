@@ -5,6 +5,7 @@ pub mod settings;
 pub mod util;
 pub use anyhow::Result;
 use cow_utils::CowUtils;
+use fs_err as fs;
 use path_slash::{PathBufExt, PathExt};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -39,7 +40,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
                     && (f.starts_with(&content) || f.starts_with(&dlc))
                     && util::get_canon_name(f.strip_prefix(&mod_dir).unwrap())
                         .and_then(|canon| {
-                            std::fs::read(f)
+                            fs::read(f)
                                 .ok()
                                 .map(|data| util::is_file_modded(&canon, &data))
                         })
@@ -52,14 +53,14 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
         Ok(files
             .par_iter()
             .filter(|f| {
-                std::fs::metadata(f).unwrap().len() > 4
+                fs::metadata(f).unwrap().len() > 4
                     && f.extension()
                         .and_then(|ext| ext.to_str())
                         .map(|ext| botw_utils::extensions::SARC_EXTS.contains(&ext))
                         .unwrap_or(false)
             })
             .map(|file| -> Result<Vec<String>> {
-                let sarc = Sarc::read(std::fs::read(file)?)?;
+                let sarc = Sarc::read(fs::read(file)?)?;
                 find_modded_sarc_files(
                     &sarc,
                     file.starts_with(&dlc),

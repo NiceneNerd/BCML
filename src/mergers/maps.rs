@@ -1,5 +1,6 @@
 use crate::{settings::Settings, util};
 use anyhow::{Context, Result};
+use fs_err as fs;
 use join_str::jstr;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -117,7 +118,7 @@ impl MapUnit {
         match self.kind {
             MapUnitType::Dynamic => {
                 let path = self.get_base_path();
-                Ok(Byml::from_binary(&decompress(&std::fs::read(&path)?)?)?)
+                Ok(Byml::from_binary(&decompress(&fs::read(&path)?)?)?)
             }
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("TitleBG")?;
@@ -134,7 +135,7 @@ impl MapUnit {
         match self.kind {
             MapUnitType::Dynamic => {
                 let path = self.get_aoc_path();
-                Ok(Byml::from_binary(&decompress(&std::fs::read(&path)?)?)?)
+                Ok(Byml::from_binary(&decompress(&fs::read(&path)?)?)?)
             }
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("AocMainField")?;
@@ -227,9 +228,9 @@ fn merge_map(map_unit: MapUnit, diff: &Hash, settings: &Settings) -> Result<(Str
         })
         .join(map_unit.get_path());
     if !out.parent().unwrap().exists() {
-        std::fs::create_dir_all(out.parent().unwrap())?;
+        fs::create_dir_all(out.parent().unwrap())?;
     }
-    std::fs::write(out, compress(data))?;
+    fs::write(out, compress(data))?;
     Ok((
         if settings.dlc_dir().is_some() {
             map_unit.get_aoc_resource_path()
