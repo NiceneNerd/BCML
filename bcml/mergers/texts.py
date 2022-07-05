@@ -105,7 +105,7 @@ class TextsMerger(mergers.Merger):
         util.vprint(language_map)
 
         language_diffs = {}
-        for user_lang, mod_lang in language_map.items():
+        for mod_lang, user_lang in language_map.items():
             print(f"Logging text changes for {user_lang}...")
             mod_pack = (
                 mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
