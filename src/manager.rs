@@ -122,7 +122,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             #[cfg(target_os = "linux")]
             remove_dir_all(&output).context("Failed to clear out output folder")?;
             #[cfg(target_os = "windows")]
-            if !junction::exists(output) {
+            if !junction::exists(output).unwrap() {
                 remove_dir_all(&output).context("Failed to clear out output folder")?;
             }
         }
