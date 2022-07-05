@@ -119,7 +119,12 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         })?;
         if output.is_dir() {
             println!("Clearing output folder at {}", output.display());
+            #[cfg(target_os = "linux")]
             remove_dir_all(&output).context("Failed to clear out output folder")?;
+            #[cfg(target_os = "windows")]
+            if !junction::exists(&output).unwrap() {
+                remove_dir_all(&output).context("Failed to clear out output folder")?;
+            }
         }
         if !output.exists() {
             fs::create_dir_all(output.parent().unwrap())
