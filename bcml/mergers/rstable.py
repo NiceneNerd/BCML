@@ -74,7 +74,7 @@ def calculate_size(
         if size == 0 and guess:
             if ext in util.AAMP_EXTS:
                 size = guess_aamp_size(data, be, ext)
-            elif ext in {".bfres", ".sbfres"} and len(data) < 5_000_000:
+            elif ext in {".bfres", ".sbfres"}:
                 size = guess_bfres_size(
                     data,
                     be,
