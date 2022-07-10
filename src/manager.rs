@@ -123,7 +123,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             remove_dir_all(&output).context("Failed to clear out output folder")?;
             #[cfg(target_os = "windows")]
             match junction::exists(&output) {
-                Ok(b) => if !b { std::fs::remove_dir(&output).context("Failed to clear out output folder")? },
+                Ok(b) => if b { std::fs::remove_dir(&output).context("Failed to clear out output folder")? },
                 Err(_e) => remove_dir_all(&output).context("Failed to clear out output folder")?,
             }
         }
@@ -137,8 +137,16 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 std::os::unix::fs::symlink(merged, &output)
                     .context("Failed to symlink output folder")?;
                 #[cfg(target_os = "windows")]
-                junction::create(merged, &output)
-                    .context("Failed to create output directory junction")?;
+                let arg_list = format!(
+                    "Start-Process -FilePath cmd -ArgumentList '/c,mklink,/d,\"{}\",\"{}\"' -Verb RunAs",
+                    &output.to_str().unwrap(),
+                    &merged.to_str().unwrap()
+                );
+                std::process::Command::new("powershell")
+                    .arg(arg_list)
+                    .status()
+                    .expect("Failed to spawn mklink process");
+                return Ok(());
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())
