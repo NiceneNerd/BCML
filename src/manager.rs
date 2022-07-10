@@ -137,16 +137,18 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 std::os::unix::fs::symlink(merged, &output)
                     .context("Failed to symlink output folder")?;
                 #[cfg(target_os = "windows")]
-                let arg_list = format!(
-                    "Start-Process -FilePath cmd -ArgumentList '/c,mklink,/d,\"{}\",\"{}\"' -Verb RunAs",
-                    &output.to_str().unwrap(),
-                    &merged.to_str().unwrap()
-                );
-                std::process::Command::new("powershell")
-                    .arg(arg_list)
-                    .status()
-                    .expect("Failed to spawn mklink process");
-                return Ok(());
+                {
+                    let arg_list = format!(
+                        "Start-Process -FilePath cmd -ArgumentList '/c,mklink,/d,\"{}\",\"{}\"' -Verb RunAs",
+                        &output.to_str().unwrap(),
+                        &merged.to_str().unwrap()
+                    );
+                    std::process::Command::new("powershell")
+                        .arg(arg_list)
+                        .status()
+                        .expect("Failed to spawn mklink process");
+                    return Ok(());
+                }
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())
