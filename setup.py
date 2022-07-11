@@ -9,7 +9,7 @@ with open("docs/README.md", "r") as readme:
 
 setup(
     name="bcml",
-    version="3.9.17",
+    version="3.9.18",
     author="NiceneNerd",
     author_email="macadamiadaze@gmail.com",
     description="A mod manager for The Legend of Zelda: Breath of the Wild",
