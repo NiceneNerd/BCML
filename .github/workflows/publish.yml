@@ -45,7 +45,7 @@ jobs:
             - uses: messense/maturin-action@v1
               name: Publish with Maturin
               with:
-                maturin-version: latest
+                maturin-version: v0.12.20
                 command: publish
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
                 rust-toolchain: nightly
@@ -87,7 +87,7 @@ jobs:
             - uses: messense/maturin-action@v1
               name: Publish with Maturin
               with:
-                maturin-version: latest
+                maturin-version: v0.12.20
                 command: publish
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
                 rust-toolchain: nightly
