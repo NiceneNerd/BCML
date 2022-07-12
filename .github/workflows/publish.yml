@@ -47,7 +47,7 @@ jobs:
               with:
                 maturin-version: v0.12.20
                 command: publish
-                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
                 rust-toolchain: nightly
     deploy_windows:
         runs-on: windows-latest
@@ -89,5 +89,5 @@ jobs:
               with:
                 maturin-version: v0.12.20
                 command: publish
-                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
                 rust-toolchain: nightly
