@@ -44,7 +44,7 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
         else oead.Endianness.Little
     )
     new_pack.files[f"Message/Msg_{user_lang}.product.ssarc"] = oead.Bytes(mod_msg_data)
-    new_pack_path = mod_pack.with_name(f"Bootup_{user_lang}.pack")
+    new_pack_path = mod_pack.with_name(f"Bootup_{user_lang}.temppack")
     new_pack_path.write_bytes(new_pack.write()[1])
     return new_pack_path
 
@@ -106,7 +106,7 @@ class TextsMerger(mergers.Merger):
 
         language_diffs = {}
         for mod_lang, user_lang in language_map.items():
-            print(f"Logging text changes for {user_lang}...")
+            print(f"Logging text changes for {mod_lang}...")
             mod_pack = (
                 mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
             )
@@ -118,6 +118,8 @@ class TextsMerger(mergers.Merger):
                 str(ref_pack),
                 user_lang[2:4] != mod_lang[2:4]
             )
+            if not user_lang == mod_lang:
+                mod_pack.unlink()
 
         return language_diffs
 
