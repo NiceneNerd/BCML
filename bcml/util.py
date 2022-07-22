@@ -615,7 +615,7 @@ def get_settings(name: str = "") -> Any:
                 for k, v in DEFAULT_SETTINGS.items():
                     if k not in settings:
                         settings[k] = v
-                if settings["store_dir"] == "":
+                if settings["store_dir"] == "" or not settings["store_dir"]:
                     settings["store_dir"] = str(get_data_dir())
                 if settings["cemu_dir"] and not settings["no_cemu"]:
                     settings["export_dir"] = str(
