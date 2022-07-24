@@ -1,4 +1,5 @@
 use crate::{util, Result};
+use anyhow::Context;
 use fs_err as fs;
 use once_cell::sync::Lazy;
 use pyo3::{prelude::*, types::PyBytes};
@@ -7,7 +8,7 @@ use roead::{
     byml::{Byml, Hash},
     yaz0::{compress, decompress},
 };
-use std::{collections::BTreeMap, panic::catch_unwind, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 type ActorMap = BTreeMap<u32, Byml>;
 
@@ -16,18 +17,17 @@ static STOCK_ACTORINFO: Lazy<Result<Arc<ActorMap>>> = Lazy::new(|| {
         if let Byml::Hash(hash) = Byml::from_binary(&decompress(fs::read(util::get_game_file(
             "Actor/ActorInfo.product.sbyml",
         )?)?)?)? {
-            Ok(hash["Actors"]
+            hash.get("Actors")
+                .ok_or(anyhow::anyhow!("Stock actor info missing Actors list."))?
                 .as_array()?
                 .iter()
-                .map(|actor| {
-                    (
-                        roead::aamp::hash_name(
-                            actor.as_hash().unwrap()["name"].as_string().unwrap(),
-                        ),
+                .map(|actor| -> Result<(u32, Byml)> {
+                    Ok((
+                        roead::aamp::hash_name(actor.as_hash().unwrap()["name"].as_string()?),
                         actor.clone(),
-                    )
+                    ))
                 })
-                .collect())
+                .collect::<Result<ActorMap>>()
         } else {
             anyhow::bail!("Stock actor info is not a hash???")
         }
@@ -44,8 +44,11 @@ pub fn actorinfo_mod(py: Python, parent: &PyModule) -> PyResult<()> {
 }
 
 fn stock_actorinfo() -> Result<Arc<ActorMap>> {
-    catch_unwind(|| STOCK_ACTORINFO.as_ref().unwrap().clone())
+    Ok(STOCK_ACTORINFO
+        .as_ref()
         .map_err(|e| anyhow::format_err!("{:?}", e))
+        .context("Failed to parse stock actor info.")?
+        .clone())
 }
 
 pub fn merge_actormap(base: &mut ActorMap, other: &ActorMap) {
