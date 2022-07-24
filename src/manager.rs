@@ -166,7 +166,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 // then we should remove it.
                 if exists && is_link {
                     fs::remove_file(&output)
-                        .or_else(|_| fs::remove_dir_all(&output))
+                        .or_else(|_| fs::remove_dir(&output))
                         .context("Failed to remove output folder link")?;
                 }
                 if !exists {
@@ -194,6 +194,12 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     .context("Failed to copy output DLC folder")?;
                 if needs_rules {
                     fs::copy(&rules_path, output.join("rules.txt"))?;
+                    // For Waikuteru's, and other mods that contain Cemu code patches
+                    let (merged_patches, out_patches) = (merged.join("patches"), output.join("patches"));
+                    if merged_patches.exists() {
+                        dircpy::copy_dir(&merged_patches, &out_patches)
+                            .context("Failed to copy output patches folder")?;
+                    }
                 }
             }
         }

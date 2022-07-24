@@ -63,21 +63,19 @@ pub fn get_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
     if aoc {
         get_aoc_game_file(file)
     } else {
-        let mut result;
-        if settings().wiiu {
-            result = settings().update_dir.join(file);
-            if result.exists() {
-                return Ok(result);
-            }
-        }
-        result = settings().base_game_dir().join(file);
+        let mut result = settings().main_game_dir().join(file);
         if result.exists() {
             Ok(result)
         } else {
-            anyhow::bail!(
-                "Stock game file does not exist at {}",
-                result.to_str().unwrap()
-            )
+            result = settings().base_game_dir().join(file);
+            if result.exists() {
+                Ok(result)
+            } else {
+                anyhow::bail!(
+                    "Stock game file does not exist at {}",
+                    result.to_str().unwrap()
+                )
+            }
         }
     }
 }
