@@ -36,6 +36,16 @@ fn create_shortcut(_py: Python, py_path: String, ico_path: String, dest: String)
     Ok(make()?)
 }
 
+static RULES_TXT: &str = r#"[Definition]
+titleIds = 00050000101C9300,00050000101C9400,00050000101C9500
+name = BCML
+path = The Legend of Zelda: Breath of the Wild/Mods/BCML
+description = Complete pack of mods merged using BCML
+version = 7
+default = true
+fsPriority = 9999
+"#;
+
 #[pyfunction]
 fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
     if let Some(output) = output
@@ -49,11 +59,10 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
         let rules_path = merged.join("rules.txt");
         if !util::settings().no_cemu && !rules_path.exists() {
-            fs::hard_link(
-                util::settings().master_mod_dir().join("rules.txt"),
-                rules_path,
-            )
-            .context("Failed to hard link rules.txt")?;
+            // Since for some incomprehensible reason hard-linking this from
+            // the master folder randomly doesn't work, we'll just write it
+            // straight to the merged folder.
+            fs::write(&rules_path, RULES_TXT).context("Failed to write rules.txt")?;
         }
         let mod_folders: Vec<PathBuf> =
             glob::glob(&util::settings().mods_dir().join("*").to_string_lossy())
@@ -64,7 +73,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 .into_iter()
                 .flat_map(|p| {
                     let glob_str = p.join("options/*").display().to_string();
-                    [p].into_iter()
+                    std::iter::once(p)
                         .chain(
                             glob::glob(&glob_str)
                                 .unwrap()
@@ -117,22 +126,23 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     Ok(())
                 })
         })?;
-        if output.is_dir() {
-            println!("Clearing output folder at {}", output.display());
-            #[cfg(target_os = "linux")]
-            remove_dir_all(&output).context("Failed to clear out output folder")?;
-            #[cfg(target_os = "windows")]
-            match junction::exists(&output) {
-                Ok(b) => if b { std::fs::remove_dir(&output).context("Failed to clear out output folder")? },
-                Err(_e) => remove_dir_all(&output).context("Failed to clear out output folder")?,
-            }
-        }
-        if !output.exists() {
-            fs::create_dir_all(output.parent().unwrap())
-                .context("Failed to prepare parent of output directory")?;
-            if util::settings().no_hardlinks {
-                dircpy::copy_dir(merged, &output).context("Failed to copy output folder")?;
-            } else {
+        let exists = output.exists();
+        let is_link = output.is_symlink() || !output.is_dir();
+        let should_be_link = !util::settings().no_hardlinks;
+        // Only if the output folder exists and is a symlink and is supposed to
+        // be a symlink, we're done. If it is a real folder, or it is a link
+        // when it should be a real folder, or it doesn't exist, we must proceed
+        // to set up the output folder.
+        if !(exists && is_link && should_be_link) {
+            println!("Preparing output folder at {}", output.display());
+            if should_be_link {
+                if !is_link && exists {
+                    // If `no_hard_links` is not enabled, then this existing folder
+                    // is probably leftover from someone upgrading or changing
+                    // their hard link setting, in which case we should remove the
+                    // output folder entirely to make way for the new link.
+                    remove_dir_all(&output).context("Failed to clear output folder")?;
+                }
                 #[cfg(target_os = "linux")]
                 std::os::unix::fs::symlink(merged, &output)
                     .context("Failed to symlink output folder")?;
@@ -149,6 +159,30 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                         .expect("Failed to spawn mklink process");
                     return Ok(());
                 }
+            } else {
+                // If `no_hard_links` is enabled, then we can save some trouble by
+                // only clearing actual mod content instead of the whole output
+                // folder. Among other benefits, this lets us keep mods for other
+                // games when the output folder is `/atmosphere/contents` and
+                // reduces the risk of accidentally deleting whatever else when
+                // people set their output folders badly.
+                if !exists {
+                    fs::create_dir_all(&output).context("Failed to create output folder")?;
+                }
+                let (content, dlc) = (util::content(), util::dlc());
+                let (merged_content, out_content) = (merged.join(content), output.join(content));
+                let (merged_dlc, out_dlc) = (merged.join(dlc), output.join(dlc));
+                if out_content.exists() {
+                    remove_dir_all(&out_content)
+                        .context("Failed to clear output content folder")?;
+                }
+                dircpy::copy_dir(&merged_content, &out_content)
+                    .context("Failed to copy output content folder")?;
+                if out_dlc.exists() {
+                    remove_dir_all(&out_dlc).context("Failed to clear output DLC folder")?;
+                }
+                dircpy::copy_dir(&merged_dlc, &out_dlc)
+                    .context("Failed to copy output DLC folder")?;
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())

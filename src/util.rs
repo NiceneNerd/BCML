@@ -17,6 +17,7 @@ pub static HASH_TABLE_SWITCH: Lazy<hashes::StockHashTable> =
 static STOCK_PACKS: Lazy<Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
+#[inline(always)]
 pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
     if crate::settings::Settings::tmp_path().exists() {
         crate::settings::TMP_SETTINGS.read().unwrap()

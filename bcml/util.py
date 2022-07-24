@@ -37,7 +37,7 @@ from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webview import Window  # pylint: disable=wrong-import-order
 
 from bcml import bcml as rsext
-from bcml import pickles, DEBUG # pylint: disable=unused-import
+from bcml import pickles, DEBUG  # pylint: disable=unused-import
 from bcml.__version__ import VERSION
 
 
@@ -827,7 +827,17 @@ class TempModContext(TempSettingsContext):
 
     def __init__(self, path: Path = None):
         self._tmpdir = path or Path(mkdtemp())
-        super().__init__({"store_dir": str(self._tmpdir)})
+        no_hardlinks: bool
+        if SYSTEM == "Windows":
+            no_hardlinks = get_storage_dir().drive != self._tmpdir.drive
+        else:
+            no_hardlinks = get_storage_dir().stat().st_dev != self._tmpdir.stat().st_dev
+        super().__init__(
+            {
+                "store_dir": str(self._tmpdir),
+                "no_hardlinks": no_hardlinks
+            }
+        )
 
     def __exit__(self, exctype, excinst, exctb):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
@@ -1242,13 +1252,17 @@ def create_shortcuts(desktop: bool, start_menu: bool):
         rsext.manager.create_shortcut(
             str(get_python_exe(True)),
             str(get_exec_dir() / "data" / "bcml.ico"),
-            str(Path(r"~\Desktop\BCML.lnk").expanduser())
+            str(Path(r"~\Desktop\BCML.lnk").expanduser()),
         )
     if start_menu:
         rsext.manager.create_shortcut(
             str(get_python_exe(True)),
             str(get_exec_dir() / "data" / "bcml.ico"),
-            str(Path(r"~\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\BCML.lnk").expanduser())
+            str(
+                Path(
+                    r"~\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\BCML.lnk"
+                ).expanduser()
+            ),
         )
 
 
