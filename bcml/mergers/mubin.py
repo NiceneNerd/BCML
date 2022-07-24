@@ -443,19 +443,24 @@ def get_dungeonstatic_diff(mod_pos: Array) -> dict:
             )
         )["StartPos"]
 
-    base_dungeons = [str(dungeon["Map"]) for dungeon in base_pos]
+    base_names = [
+        f"{str(spawn_point['Map'])}___{str(spawn_point['PosName'])}"
+        for spawn_point in base_pos
+    ]
     diffs = {}
-    for dungeon in mod_pos:
-        if str(dungeon["Map"]) not in base_dungeons:
-            diffs[dungeon["Map"]] = dungeon
+    for mod_spawn in mod_pos:
+        spawn_name = f"{str(mod_spawn['Map'])}___{str(mod_spawn['PosName'])}"
+        if spawn_name not in base_names:
+            diffs[spawn_name] = mod_spawn
         else:
-            base_dungeon = base_pos[base_dungeons.index(str(dungeon["Map"]))]
-            if dungeon["Rotate"] != base_dungeon["Rotate"]:
-                diffs[dungeon["Map"]] = {"Rotate": dungeon["Rotate"]}
-            if dungeon["Translate"] != base_dungeon["Translate"]:
-                if dungeon["Map"] not in diffs:
-                    diffs[dungeon["Map"]] = {}
-                diffs[dungeon["Map"]]["Translate"] = dungeon["Translate"]
+            base_spawn = base_pos[base_names.index(spawn_name)]
+            diff = {}
+            if mod_spawn["Rotate"] != base_spawn["Rotate"]:
+                diff["Rotate"] = mod_spawn["Rotate"]
+            if mod_spawn["Translate"] != base_spawn["Translate"]:
+                diff["Translate"] = mod_spawn["Translate"]
+            if diff:
+                diffs[spawn_name] = diff
 
     return diffs
 
@@ -482,13 +487,18 @@ def merge_dungeonstatic(diffs: dict = None):
             )
         )
 
-    base_dungeons = [str(dungeon["Map"]) for dungeon in new_static["StartPos"]]
-    for dungeon, diff in diffs.items():
-        if dungeon not in base_dungeons:
+    base_names = [
+        f"{str(spawn_point['Map'])}___{str(spawn_point['PosName'])}"
+        for spawn_point in new_static["StartPos"]
+    ]
+    for spawn_name, diff in diffs.items():
+        if "___" not in spawn_name:
+            spawn_name = f"{spawn_name}___Entrance_1"
+        if spawn_name not in base_names:
             new_static["StartPos"].append(diff)
         else:
             for key, value in diff.items():
-                new_static["StartPos"][base_dungeons.index(dungeon)][key] = value
+                new_static["StartPos"][base_names.index(spawn_name)][key] = value
 
     data = util.compress(
         oead.byml.to_binary(new_static, big_endian=util.get_settings("wiiu"))
