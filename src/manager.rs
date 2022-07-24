@@ -52,20 +52,22 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         .map(PathBuf::from)
         .or_else(|| util::settings().export_dir().map(|o| o.to_path_buf()))
     {
-        let merged = util::settings().merged_modpack_dir();
+        let settings = util::settings();
+        let merged = settings.merged_modpack_dir();
         if merged.exists() {
             remove_dir_all(&merged).context("Failed to clear internal merged folder")?;
         }
         fs::create_dir_all(&merged).context("Failed to create internal merged folder")?;
+        let needs_rules = !settings.no_cemu && settings.wiiu;
         let rules_path = merged.join("rules.txt");
-        if !util::settings().no_cemu && !rules_path.exists() {
+        if needs_rules && !rules_path.exists() {
             // Since for some incomprehensible reason hard-linking this from
             // the master folder randomly doesn't work, we'll just write it
             // straight to the merged folder.
             fs::write(&rules_path, RULES_TXT).context("Failed to write rules.txt")?;
         }
         let mod_folders: Vec<PathBuf> =
-            glob::glob(&util::settings().mods_dir().join("*").to_string_lossy())
+            glob::glob(&settings.mods_dir().join("*").to_string_lossy())
                 .unwrap()
                 .filter_map(|p| p.ok())
                 .filter(|p| p.is_dir() && !p.join(".disabled").exists())
@@ -128,7 +130,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
         })?;
         let exists = output.exists();
         let is_link = output.is_symlink() || !output.is_dir();
-        let should_be_link = !util::settings().no_hardlinks;
+        let should_be_link = !settings.no_hardlinks;
         // Only if the output folder exists and is a symlink and is supposed to
         // be a symlink, we're done. If it is a real folder, or it is a link
         // when it should be a real folder, or it doesn't exist, we must proceed
@@ -160,15 +162,22 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     return Ok(());
                 }
             } else {
+                // If there is already a linked folder (e.g. after settings change),
+                // then we should remove it.
+                if exists && is_link {
+                    fs::remove_file(&output)
+                        .or_else(|_| fs::remove_dir_all(&output))
+                        .context("Failed to remove output folder link")?;
+                }
+                if !exists {
+                    fs::create_dir_all(&output).context("Failed to create output folder")?;
+                }
                 // If `no_hard_links` is enabled, then we can save some trouble by
                 // only clearing actual mod content instead of the whole output
                 // folder. Among other benefits, this lets us keep mods for other
                 // games when the output folder is `/atmosphere/contents` and
                 // reduces the risk of accidentally deleting whatever else when
                 // people set their output folders badly.
-                if !exists {
-                    fs::create_dir_all(&output).context("Failed to create output folder")?;
-                }
                 let (content, dlc) = (util::content(), util::dlc());
                 let (merged_content, out_content) = (merged.join(content), output.join(content));
                 let (merged_dlc, out_dlc) = (merged.join(dlc), output.join(dlc));
@@ -183,6 +192,9 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 }
                 dircpy::copy_dir(&merged_dlc, &out_dlc)
                     .context("Failed to copy output DLC folder")?;
+                if needs_rules {
+                    fs::copy(&rules_path, output.join("rules.txt"))?;
+                }
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())

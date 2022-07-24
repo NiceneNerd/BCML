@@ -552,16 +552,17 @@ class Settings extends React.Component {
                             <OverlayTrigger
                                 overlay={
                                     <Tooltip>
-                                        By default, BCML uses hard links to connect
-                                        installed mods to a single Cemu graphic pack.
-                                        Use this option to disable this if it doesn't
-                                        work and just copy the files instead.
+                                        By default, BCML uses directory junctions or
+                                        symlinks to connect installed mods to their
+                                        merged destination. Use this option to disable
+                                        this if it doesn't work and just copy the
+                                        files instead.
                                     </Tooltip>
                                 }
                                 placement={"left"}>
                                 <Form.Check
                                     type="checkbox"
-                                    label="Disable hard links for master mod"
+                                    label="Disable links for master mod"
                                     checked={this.state.no_hardlinks}
                                     onChange={this.handleChange}
                                 />
