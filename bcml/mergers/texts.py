@@ -51,27 +51,29 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
 
 def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
     lang_map: dict = {}
-    for src_lang in src_langs:
-        if src_lang in dest_langs:
-            lang_map[src_lang] = src_lang  # match same locale/language
+    for dest_lang in dest_langs:
+        if dest_lang in src_langs:
+            lang_map[dest_lang] = dest_lang  # match same locale/language
         else:
-            for dest_lang in dest_langs:
+            for src_lang in src_langs:
                 if src_lang[2:4] == dest_lang[2:4]:
                     lang_map[
-                        src_lang
-                    ] = dest_lang  # map same language from different locale
+                        dest_lang
+                    ] = src_lang  # map same language from different locale
                     break
-            if src_lang in lang_map:
+            if dest_lang in lang_map:
                 continue
-            for dest_lang in dest_langs:
-                if dest_lang[2:4] == "en":
+            for src_lang in sorted(
+                src_langs, key=lambda lang: lang[0:2] != dest_lang[0:2]
+            ):
+                if src_lang[2:4] == "en":
                     lang_map[
-                        src_lang
-                    ] = dest_lang  # map to english, as most users know english
+                        dest_lang
+                    ] = src_lang  # map to english, as most users know english
                     break
-            if src_lang in lang_map:
+            if dest_lang in lang_map:
                 continue
-            lang_map[src_lang] = next(iter(dest_langs))  # map *something*
+            lang_map[dest_lang] = next(iter(src_langs))  # map *something*
     return lang_map
 
 
@@ -114,8 +116,8 @@ class TextsMerger(mergers.Merger):
         util.vprint(language_map)
 
         language_diffs = {}
-        for mod_lang, user_lang in language_map.items():
-            print(f"Logging text changes for {mod_lang}...")
+        for user_lang, mod_lang in language_map.items():
+            print(f"Logging text changes for {user_lang}...")
             mod_pack = (
                 mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
             )
