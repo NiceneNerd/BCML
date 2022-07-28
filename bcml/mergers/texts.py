@@ -53,21 +53,25 @@ def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
     lang_map: dict = {}
     for src_lang in src_langs:
         if src_lang in dest_langs:
-            lang_map[src_lang] = src_lang # match same locale/language
+            lang_map[src_lang] = src_lang  # match same locale/language
         else:
             for dest_lang in dest_langs:
                 if src_lang[2:4] == dest_lang[2:4]:
-                    lang_map[src_lang] = dest_lang # map same language from different locale
+                    lang_map[
+                        src_lang
+                    ] = dest_lang  # map same language from different locale
                     break
             if src_lang in lang_map:
                 continue
             for dest_lang in dest_langs:
                 if dest_lang[2:4] == "en":
-                    lang_map[src_lang] = dest_lang # map to english, as most users know english
+                    lang_map[
+                        src_lang
+                    ] = dest_lang  # map to english, as most users know english
                     break
             if src_lang in lang_map:
                 continue
-            lang_map[src_lang] = next(iter(dest_langs)) # map *something*
+            lang_map[src_lang] = next(iter(dest_langs))  # map *something*
     return lang_map
 
 
@@ -100,7 +104,12 @@ class TextsMerger(mergers.Merger):
         util.vprint(f'Languages: {",".join(mod_langs)}')
 
         # find a user lang for each mod lang
-        language_map = map_languages(mod_langs, util.get_user_languages())
+        language_map = map_languages(
+            mod_langs,
+            util.get_user_languages()
+            if self._options["all_langs"]
+            else [util.get_settings("lang")],
+        )
         util.vprint("Language map:")
         util.vprint(language_map)
 
@@ -113,10 +122,8 @@ class TextsMerger(mergers.Merger):
             if not user_lang == mod_lang:
                 mod_pack = swap_region(mod_pack, user_lang)
             ref_pack = util.get_game_file(f"Pack/Bootup_{user_lang}.pack")
-            language_diffs[mod_lang] = rsext.mergers.texts.diff_language(
-                str(mod_pack),
-                str(ref_pack),
-                user_lang[2:4] != mod_lang[2:4]
+            language_diffs[user_lang] = rsext.mergers.texts.diff_language(
+                str(mod_pack), str(ref_pack), user_lang[2:4] != mod_lang[2:4]
             )
             if not user_lang == mod_lang:
                 mod_pack.unlink()
@@ -192,12 +199,10 @@ class TextsMerger(mergers.Merger):
         diffs = self.consolidate_diffs(self.get_all_diffs())
         if not diffs:
             print("No text merge necessary")
-            for bootup in util.get_master_modpack_dir().rglob(
-                "**/Bootup_????.pack"
-            ):
+            for bootup in util.get_master_modpack_dir().rglob("**/Bootup_????.pack"):
                 bootup.unlink()
             return
-        
+
         # find a mod lang for each user lang
         lang_map = map_languages(user_langs, set(diffs.keys()))
         for user_lang, mod_lang in lang_map.items():
