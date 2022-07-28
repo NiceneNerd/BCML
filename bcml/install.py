@@ -779,6 +779,9 @@ def export(output: Path, standalone: bool = False):
             if not standalone
             else mods[0].description
         )
+        while not rules_path.exists():
+            print("Waiting for Python and Windows to figure themselves out...")
+            continue
         rules_path.write_text(
             "[Definition]\n"
             "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
@@ -786,7 +789,7 @@ def export(output: Path, standalone: bool = False):
             f"path = The Legend of Zelda: Breath of the Wild/Mods/{name}\n"
             f"description = {desc}\n"
             "version = 4\n",
-            encoding="utf-8",
+            encoding="utf-8"
         )
     if output.suffix == ".bnp" or output.name.endswith(".bnp.7z"):
         print("Exporting BNP...")
