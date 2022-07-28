@@ -104,6 +104,7 @@ def main(debug: bool = False):
                 util.download_webview2()
     else:
         gui = "qt"
+        os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
 
     now = datetime.now()
     if (
