@@ -49,17 +49,29 @@ def swap_region(mod_pack: Path, user_lang: str) -> Path:
     return new_pack_path
 
 
-def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
+def map_languages(dest_langs: Set[str], src_langs: Set[str]) -> dict:
+    """
+    Function to map languages from one set to another
+
+    Parameter: dest_langs: Set[str] - The languages to be mapped to
+    - For diffing: the languages our mod has packs for, to diff with
+    - For merging: the languages the user has, that we want to merge into
+
+    Parameter: src_langs: Set[str] - The languages that will serve as the source
+    - For diffing: the languages our dumps have packs for, to diff against
+    - For merging: the languages our mod has logs for, to merge with
+
+    Returns: Dict[str, str] - A dict where the keys are from dest_lang,
+        and the values are the languages most closely mapped to them
+    """
     lang_map: dict = {}
     for dest_lang in dest_langs:
         if dest_lang in src_langs:
-            lang_map[dest_lang] = dest_lang  # match same locale/language
+            lang_map[dest_lang] = dest_lang
         else:
             for src_lang in src_langs:
                 if src_lang[2:4] == dest_lang[2:4]:
-                    lang_map[
-                        dest_lang
-                    ] = src_lang  # map same language from different locale
+                    lang_map[dest_lang] = src_lang
                     break
             if dest_lang in lang_map:
                 continue
@@ -67,13 +79,11 @@ def map_languages(src_langs: Set[str], dest_langs: Set[str]) -> dict:
                 src_langs, key=lambda lang: lang[0:2] != dest_lang[0:2]
             ):
                 if src_lang[2:4] == "en":
-                    lang_map[
-                        dest_lang
-                    ] = src_lang  # map to english, as most users know english
+                    lang_map[dest_lang] = src_lang
                     break
             if dest_lang in lang_map:
                 continue
-            lang_map[dest_lang] = next(iter(src_langs))  # map *something*
+            lang_map[dest_lang] = next(iter(src_langs))
     return lang_map
 
 
@@ -106,17 +116,12 @@ class TextsMerger(mergers.Merger):
         util.vprint(f'Languages: {",".join(mod_langs)}')
 
         # find a user lang for each mod lang
-        language_map = map_languages(
-            mod_langs,
-            util.get_user_languages()
-            if self._options["all_langs"]
-            else [util.get_settings("lang")],
-        )
+        language_map = map_languages(mod_langs, util.get_user_languages())
         util.vprint("Language map:")
         util.vprint(language_map)
 
         language_diffs = {}
-        for user_lang, mod_lang in language_map.items():
+        for mod_lang, user_lang in language_map.items():
             print(f"Logging text changes for {user_lang}...")
             mod_pack = (
                 mod_dir / util.get_content_path() / "Pack" / f"Bootup_{mod_lang}.pack"
