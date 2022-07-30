@@ -3,17 +3,32 @@ name: Check and Maturin
 on:
   push:
     branches: [ master ]
-    paths: 'src/**'
   pull_request:
     branches: [ master ]
-    paths: 'src/**'
 
 env:
   CARGO_TERM_COLOR: always
   ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
 
 jobs:
+  rust_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      rust_src_changed: ${{ steps.filter.outputs.rust_src }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            rust_src:
+              - 'src/**'
+              - 'bootstrap.sh'
+              - 'Cargo.toml'
+              - 'pyproject.toml'
   check_linux:
+    needs: rust_changes
+    if: ${{ needs.rust_changes.outputs.rust_src_changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -36,6 +51,8 @@ jobs:
         args: --release
         rust-toolchain: nightly
   check_win:
+    needs: rust_changes
+    if: ${{ needs.rust_changes.outputs.rust_src_changed == 'true' }}
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
