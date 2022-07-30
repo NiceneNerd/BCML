@@ -3,8 +3,10 @@ name: Check and Maturin
 on:
   push:
     branches: [ master ]
+    paths: 'src/**'
   pull_request:
     branches: [ master ]
+    paths: 'src/**'
 
 env:
   CARGO_TERM_COLOR: always
