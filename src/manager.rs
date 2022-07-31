@@ -185,17 +185,24 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     remove_dir_all(&out_content)
                         .context("Failed to clear output content folder")?;
                 }
-                dircpy::copy_dir(&merged_content, &out_content)
-                    .context("Failed to copy output content folder")?;
+                if merged_content.exists() {
+                    dircpy::copy_dir(&merged_content, &out_content)
+                        .context("Failed to copy output content folder")?;
+                }
                 if out_dlc.exists() {
                     remove_dir_all(&out_dlc).context("Failed to clear output DLC folder")?;
                 }
-                dircpy::copy_dir(&merged_dlc, &out_dlc)
-                    .context("Failed to copy output DLC folder")?;
+                if merged_dlc.exists() {
+                    dircpy::copy_dir(&merged_dlc, &out_dlc)
+                        .context("Failed to copy output DLC folder")?;
+                }
                 if needs_rules {
                     fs::copy(&rules_path, output.join("rules.txt"))?;
                     // For Waikuteru's, and other mods that contain Cemu code patches
                     let (merged_patches, out_patches) = (merged.join("patches"), output.join("patches"));
+                    if out_patches.exists() {
+                        remove_dir_all(&out_patches).context("Failed to clear output patches folder")?;
+                    }
                     if merged_patches.exists() {
                         dircpy::copy_dir(&merged_patches, &out_patches)
                             .context("Failed to copy output patches folder")?;
