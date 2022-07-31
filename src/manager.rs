@@ -200,6 +200,9 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                     fs::copy(&rules_path, output.join("rules.txt"))?;
                     // For Waikuteru's, and other mods that contain Cemu code patches
                     let (merged_patches, out_patches) = (merged.join("patches"), output.join("patches"));
+                    if out_patches.exists() {
+                        remove_dir_all(&out_patches).context("Failed to clear output patches folder")?;
+                    }
                     if merged_patches.exists() {
                         dircpy::copy_dir(&merged_patches, &out_patches)
                             .context("Failed to copy output patches folder")?;
