@@ -1,11 +1,12 @@
 use anyhow::Result;
 use join_str::jstr;
 use once_cell::sync::Lazy;
+use parking_lot::{Mutex, RwLockReadGuard};
 use roead::sarc::Sarc;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, RwLockReadGuard},
+    sync::Arc,
 };
 
 pub use botw_utils::*;
@@ -20,9 +21,9 @@ static STOCK_PACKS: Lazy<Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>>> =
 #[inline(always)]
 pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
     if crate::settings::Settings::tmp_path().exists() {
-        crate::settings::TMP_SETTINGS.read().unwrap()
+        crate::settings::TMP_SETTINGS.read()
     } else {
-        crate::settings::SETTINGS.read().unwrap()
+        crate::settings::SETTINGS.read()
     }
 }
 
@@ -92,7 +93,7 @@ pub fn get_aoc_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
 pub fn get_stock_pack(pack: &str) -> Result<Arc<Sarc<'static>>> {
     let pack_path = get_aoc_game_file(&jstr!("Pack/{pack}.pack"))
         .or_else(|_| get_game_file(&jstr!("Pack/{pack}.pack")))?;
-    let mut stock_packs = STOCK_PACKS.lock().unwrap();
+    let mut stock_packs = STOCK_PACKS.lock();
     if let Some(pack) = stock_packs.get(&pack_path) {
         Ok(pack.clone())
     } else {

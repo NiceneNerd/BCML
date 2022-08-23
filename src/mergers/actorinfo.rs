@@ -18,7 +18,7 @@ static STOCK_ACTORINFO: Lazy<Result<Arc<ActorMap>>> = Lazy::new(|| {
             "Actor/ActorInfo.product.sbyml",
         )?)?)?)? {
             hash.get("Actors")
-                .ok_or(anyhow::anyhow!("Stock actor info missing Actors list."))?
+                .ok_or_else(|| anyhow::anyhow!("Stock actor info missing Actors list."))?
                 .as_array()?
                 .iter()
                 .map(|actor| -> Result<(u32, Byml)> {
