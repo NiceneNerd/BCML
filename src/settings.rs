@@ -193,8 +193,10 @@ pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::path();
     Arc::new(RwLock::new(if settings_path.exists() {
         let text = fs::read_to_string(&settings_path).unwrap();
-        serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
+        serde_json::from_str(&text.cow_replace(": null", ": \"\""))
+            .expect("Failed to read settings file")
     } else {
+        println!("WARNING: Settings file does not exist, loading default settings...");
         Settings::default()
     }))
 });
@@ -203,8 +205,10 @@ pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::tmp_path();
     Arc::new(RwLock::new(if settings_path.exists() {
         let text = fs::read_to_string(&settings_path).unwrap();
-        serde_json::from_str(&text.cow_replace(": null", ": \"\"")).unwrap_or_default()
+        serde_json::from_str(&text.cow_replace(": null", ": \"\""))
+            .expect("Failed to read temp settings file")
     } else {
+        println!("WARNING: Temp settings file does not exist, loading default settings...");
         Settings::default()
     }))
 });
