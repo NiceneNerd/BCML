@@ -98,7 +98,7 @@ pub fn get_stock_pack(pack: &str) -> Result<Arc<Sarc<'static>>> {
         Ok(pack.clone())
     } else {
         let data = fs_err::read(&pack_path)?;
-        stock_packs.insert(pack_path, Arc::new(Sarc::read(data)?));
+        stock_packs.insert(pack_path, Arc::new(Sarc::new(data)?));
         drop(stock_packs);
         get_stock_pack(pack)
     }

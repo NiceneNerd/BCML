@@ -124,7 +124,10 @@ impl MapUnit {
                 let pack = util::get_stock_pack("TitleBG")?;
                 Ok(Byml::from_binary(&decompress(
                     &pack
-                        .get_file_data(&self.get_path())
+                        .get_data(&self.get_path())
+                        .with_context(|| {
+                            jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
+                        })?
                         .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
                 )?)?)
             }
@@ -141,7 +144,10 @@ impl MapUnit {
                 let pack = util::get_stock_pack("AocMainField")?;
                 Ok(Byml::from_binary(&decompress(
                     &pack
-                        .get_file_data(&self.get_path())
+                        .get_data(&self.get_path())
+                        .with_context(|| {
+                            jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
+                        })?
                         .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
                 )?)?)
             }
@@ -152,7 +158,7 @@ impl MapUnit {
 fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
     let stock_hashes: Vec<u32> = entries
         .iter()
-        .map(|e| e["HashId"].as_uint().unwrap())
+        .map(|e| e["HashId"].as_u32().unwrap())
         .collect();
     let mut orphans: Vec<Byml> = vec![];
     for (hash, entry) in diff["mod"].as_hash()? {
@@ -166,7 +172,7 @@ fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
     let to_del: BTreeSet<usize> = diff["del"]
         .as_array()?
         .iter()
-        .filter_map(|b| b.as_uint().ok())
+        .filter_map(|b| b.as_u32().ok())
         .filter_map(|dh| stock_hashes.iter().position(|sh| *sh == dh))
         .collect();
     to_del.into_iter().rev().for_each(|i| {
@@ -181,16 +187,16 @@ fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
             .filter(|e| {
                 !stock_hashes.contains(
                     &(e["HashId"]
-                        .as_uint()
-                        .or_else(|_| e["HashId"].as_int().map(|i| i as u32))
+                        .as_u32()
+                        .or_else(|_| e["HashId"].as_i32().map(|i| i as u32))
                         .unwrap()),
                 )
             }),
     );
     entries.sort_by_cached_key(|e| {
         e["HashId"]
-            .as_uint()
-            .or_else(|_| e["HashId"].as_int().map(|i| i as u32))
+            .as_u32()
+            .or_else(|_| e["HashId"].as_i32().map(|i| i as u32))
             .unwrap()
     });
     Ok(())

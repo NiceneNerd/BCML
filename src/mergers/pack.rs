@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use roead::{
     sarc::{Sarc, SarcWriter},
     yaz0::compress,
-    Bytes, Endian,
+    Endian,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -33,12 +33,12 @@ pub fn packs_mod(py: Python, parent: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
+fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
     let all_files: HashSet<String> = sarcs
         .iter()
         .flat_map(|s| {
             s.files()
-                .map(|f| f.name_unchecked().to_owned())
+                .map(|f| f.unwrap_name().to_owned())
                 .collect::<Vec<String>>()
         })
         .collect();
@@ -51,7 +51,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
                 .rev()
                 .filter_map(|s| {
                     let data = s.files().find_map(|f| {
-                        if f.name_unchecked() == file {
+                        if f.unwrap_name() == file {
                             Some(f.data().to_vec())
                         } else {
                             None
@@ -64,7 +64,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
                     modded = false;
                     sarcs.iter().find_map(|s| {
                         s.files().find_map(|f| {
-                            if f.name_unchecked() == file {
+                            if f.unwrap_name() == file {
                                 Some(f.data().to_vec())
                             } else {
                                 None
@@ -91,7 +91,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
                     .filter_map(|s| {
                         s.files()
                             .find(|f| f.name() == Some(&file))
-                            .and_then(|d| Sarc::read(d.data().to_vec()).ok())
+                            .and_then(|d| Sarc::new(d.data().to_vec()).ok())
                     })
                     .collect();
                 let mut merged = merge_sarc(nest_sarcs, endian)?;
@@ -109,7 +109,9 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Bytes> {
             }
         })
         .collect::<Result<Vec<(String, Vec<u8>)>>>()?;
-    Ok(SarcWriter::from_files(endian, files).to_binary())
+    Ok(SarcWriter::new(endian)
+        .with_files(files.into_iter())
+        .to_binary())
 }
 
 #[pyfunction]
@@ -128,7 +130,7 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
                     .iter()
                     .filter_map(|file| -> Option<Result<Sarc>> {
                         fs::read(&file)
-                            .map(|data| Sarc::read(data).ok())
+                            .map(|data| Sarc::new(data).ok())
                             .map_err(anyhow::Error::from)
                             .transpose()
                     })

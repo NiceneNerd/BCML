@@ -80,17 +80,17 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
                 .ok_or_else(|| anyhow::format_err!("Modded actor info missing Actors data"))?
                 .as_array()?
                 .par_iter()
-                .filter_map(|actor| {
+                .filter_map(|actor| -> Option<(smartstring::alias::String, Byml)> {
                     actor.as_hash().ok().and_then(|actor_hash| {
                         let name = actor_hash.get("name")?.as_string().ok()?;
                         let hash = roead::aamp::hash_name(name);
                         if !stock_actorinfo.contains_key(&hash) {
-                            Some((hash.to_string(), actor.clone()))
+                            Some((hash.to_string().into(), actor.clone()))
                         } else if let Some(Byml::Hash(stock_actor)) = stock_actorinfo.get(&hash)
                             && stock_actor != actor_hash
                         {
                             Some((
-                                hash.to_string(),
+                                hash.to_string().into(),
                                 Byml::Hash(
                                     actor_hash
                                         .iter()
@@ -107,7 +107,7 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
                     })
                 })
                 .collect();
-            Ok(Byml::Hash(diff).to_text().as_bytes().to_vec())
+            Ok(Byml::Hash(diff).to_text().unwrap().as_bytes().to_vec())
         } else {
             anyhow::bail!("Modded actor info is not a hash???")
         }
@@ -133,9 +133,9 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
             .map(|(hash, actor)| {
                 (
                     if hash < 2147483648 {
-                        Byml::Int(hash as i32)
+                        Byml::I32(hash as i32)
                     } else {
-                        Byml::UInt(hash)
+                        Byml::U32(hash)
                     },
                     actor,
                 )
@@ -143,8 +143,8 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
             .unzip();
         let merged_actorinfo = Byml::Hash(
             [
-                ("Actors".to_owned(), Byml::Array(actors)),
-                ("Hashes".to_owned(), Byml::Array(hashes)),
+                ("Actors".into(), Byml::Array(actors)),
+                ("Hashes".into(), Byml::Array(hashes)),
             ]
             .into_iter()
             .collect(),

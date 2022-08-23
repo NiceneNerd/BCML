@@ -59,7 +59,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
                         .unwrap_or(false)
             })
             .map(|file| -> Result<Vec<String>> {
-                let sarc = Sarc::read(fs::read(file)?)?;
+                let sarc = Sarc::new(fs::read(file)?)?;
                 find_modded_sarc_files(
                     &sarc,
                     file.starts_with(&dlc),
@@ -85,7 +85,7 @@ fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Resul
         .files()
         .filter(|f| f.name().is_some())
         .filter(|file| {
-            let (f, d) = (file.name_unchecked(), file.data());
+            let (f, d) = (file.unwrap_name(), file.data());
             let mut canon = f.cow_replace(".s", ".");
             if aoc {
                 canon = Cow::Owned(["Aoc/0010", &canon].join(""));
@@ -93,13 +93,13 @@ fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Resul
             util::is_file_modded(&canon, d)
         })
         .map(|file| -> Result<Vec<String>> {
-            let (f, d) = (file.name_unchecked(), file.data());
+            let (f, d) = (file.unwrap_name(), file.data());
             let mut modded_files: Vec<String> = vec![[path, f].join("//")];
             if !f.ends_with("ssarc")
                 && d.len() > 0x40
                 && (&d[..4] == b"SARC" || &d[0x11..0x15] == b"SARC")
             {
-                let sarc = Sarc::read(d)?;
+                let sarc = Sarc::new(d)?;
                 modded_files.extend(find_modded_sarc_files(
                     &sarc,
                     aoc,

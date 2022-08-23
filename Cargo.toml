@@ -25,10 +25,11 @@ path-slash = "0.1.4"
 parking_lot = "0.12.1"
 pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
 rayon = "1.5.1"
-roead = "0.11.0"
+roead = { features = ["yaml"], version = "0.16.0"}
 rstb = "0.3.2"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.71"
+smartstring = "1.0.1"
 thiserror = "1.0.30"
 
 [target.'cfg(windows)'.dependencies]
