@@ -1,4 +1,3 @@
-#![feature(let_chains)]
 pub mod manager;
 pub mod mergers;
 pub mod settings;
