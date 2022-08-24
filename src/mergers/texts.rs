@@ -36,33 +36,23 @@ pub fn diff_language(
             .unwrap()[7..];
         let mod_bootup = Sarc::new(fs::read(&mod_bootup_path)?)?;
         let stock_bootup = Sarc::new(fs::read(&stock_bootup_path)?)?;
-        let message_path = format!("Message/Msg_{}.product.ssarc", &language);
-        let mod_message = Sarc::new(
-            decompress(
-                mod_bootup
-                    .get_data(&message_path)
-                    .with_context(|| {
-                        jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                    })?
-                    .with_context(|| {
-                        jstr!("{&message_path} missing from Bootup_{language}.pack")
-                    })?,
-            )?
-            .to_vec(),
-        )?;
-        let stock_message = Sarc::new(
-            decompress(
-                stock_bootup
-                    .get_data(&message_path)
-                    .with_context(|| {
-                        jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                    })?
-                    .with_context(|| {
-                        jstr!("{&message_path} missing from Bootup_{language}.pack")
-                    })?,
-            )?
-            .to_vec(),
-        )?;
+        let message_path = jstr!("Message/Msg_{&language}.product.ssarc");
+        let mod_message = Sarc::new(decompress(
+            mod_bootup
+                .get_data(&message_path)
+                .with_context(|| {
+                    jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
+                })?
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+        )?)?;
+        let stock_message = Sarc::new(decompress(
+            stock_bootup
+                .get_data(&message_path)
+                .with_context(|| {
+                    jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
+                })?
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+        )?)?;
         let diffs = mod_message
             .files()
             .filter(|file| {
@@ -146,19 +136,14 @@ pub fn merge_language(
             .unwrap()[7..];
         let stock_bootup = Sarc::new(fs::read(&stock_bootup_path)?)?;
         let message_path = format!("Message/Msg_{}.product.ssarc", &language);
-        let stock_message = Sarc::new(
-            decompress(
-                stock_bootup
-                    .get_data(&message_path)
-                    .with_context(|| {
-                        jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                    })?
-                    .with_context(|| {
-                        jstr!("{&message_path} missing from Bootup_{language}.pack")
-                    })?,
-            )?
-            .to_vec(),
-        )?;
+        let stock_message = Sarc::new(decompress(
+            stock_bootup
+                .get_data(&message_path)
+                .with_context(|| {
+                    jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
+                })?
+                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+        )?)?;
         let mut new_message = SarcWriter::from(&stock_message);
         let merged_files = diffs
             .into_par_iter()

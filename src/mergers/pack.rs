@@ -1,4 +1,4 @@
-use crate::util::{self, settings};
+use crate::util::{self, settings, HashMap, HashSet};
 use anyhow::{Context, Result};
 use cow_utils::CowUtils;
 use fs_err as fs;
@@ -9,10 +9,7 @@ use roead::{
     yaz0::compress,
     Endian,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 static SPECIAL: &[&str] = &[
     "gamedata",
@@ -105,7 +102,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
 
                 Ok((file, merged.as_slice().into()))
             } else {
-                Ok((file, data.to_vec()))
+                Ok((file, data))
             }
         })
         .collect::<Result<Vec<(String, Vec<u8>)>>>()?;

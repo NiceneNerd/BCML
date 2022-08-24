@@ -1,4 +1,7 @@
-use crate::{settings::Settings, util};
+use crate::{
+    settings::Settings,
+    util::{self, HashMap},
+};
 use anyhow::{Context, Result};
 use fs_err as fs;
 use join_str::jstr;
@@ -9,7 +12,7 @@ use roead::{
     yaz0::{compress, decompress},
 };
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::BTreeSet,
     fmt::Display,
     path::{Path, PathBuf},
 };

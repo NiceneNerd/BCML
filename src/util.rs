@@ -3,8 +3,8 @@ use join_str::jstr;
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLockReadGuard};
 use roead::sarc::Sarc;
+pub use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -16,7 +16,7 @@ pub static HASH_TABLE_WIIU: Lazy<hashes::StockHashTable> =
 pub static HASH_TABLE_SWITCH: Lazy<hashes::StockHashTable> =
     Lazy::new(|| hashes::StockHashTable::new(&hashes::Platform::Switch));
 static STOCK_PACKS: Lazy<Mutex<HashMap<PathBuf, Arc<Sarc<'static>>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+    Lazy::new(|| Mutex::new(HashMap::default()));
 
 #[inline(always)]
 pub fn settings() -> RwLockReadGuard<'static, crate::settings::Settings> {
