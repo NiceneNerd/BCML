@@ -10,28 +10,28 @@ name = "bcml"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.62"
 botw-utils = "0.3.1"
 cow-utils = "0.1.2"
-dircpy = "0.3.10"
+dircpy = "0.3.12"
 dirs2 = "3.0.1"
-fs-err = "2.7.0"
+fs-err = "2.8.1"
 glob = "0.3.0"
-indexmap = { version = "1.7.0", features = ["serde", "rayon"] }
+indexmap = { version = "1.9.1", features = ["serde", "rayon"] }
 join_str = "0.1.0"
 msyt = { git = "https://github.com/NiceneNerd/msyt", rev = "12e4d95fb6480f445284f37706db7bfa8351dc06" }
-once_cell = "1.12.0"
+once_cell = "1.13.1"
 path-slash = "0.1.4"
 parking_lot = "0.12.1"
 pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
-rayon = "1.5.1"
+rayon = "1.5.3"
 roead = { features = ["yaml"], version = "0.16.0"}
 rustc-hash = "1.1.0"
 rstb = "0.3.2"
-serde = { version = "1.0.130", features = ["derive"] }
-serde_json = "1.0.71"
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.85"
 smartstring = "1.0.1"
-thiserror = "1.0.30"
+thiserror = "1.0.32"
 
 [target.'cfg(windows)'.dependencies]
 junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd793645acf2702de283f78e8f6e0043ea5" }
