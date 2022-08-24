@@ -283,7 +283,7 @@ class ASListMerger(mergers.Merger):
                     None,
                 ),
             )
-        this_pool = self._pool or Pool()
+        this_pool = self._pool or util.start_pool()
         results = this_pool.starmap(
             partial(get_aamp_diffs, tmp_dir=mod_dir), list(consolidated.items())
         )
@@ -366,7 +366,7 @@ class ASListMerger(mergers.Merger):
         if not diffs:
             print("No AS list merge needed")
             return
-        pool = self._pool or Pool()
+        pool = self._pool or util.start_pool()
         pool.starmap(merge_aamp_files, diffs.items())
         if not self._pool:
             pool.close()

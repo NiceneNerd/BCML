@@ -4,6 +4,7 @@
 import functools
 import gc
 import json
+import multiprocessing
 import os
 import re
 import shutil
@@ -475,13 +476,17 @@ def clear_all_caches():
         wrap.cache_clear()
 
 
+def start_pool():
+    return multiprocessing.Pool(processes=min(63, os.cpu_count()), maxtasksperchild=500)
+
+
 def sanity_check():
     ver = python_version_tuple()
     if int(ver[0]) < 3 or (int(ver[0]) >= 3 and int(ver[1]) < 7):
         raise RuntimeError(
             f"BCML requires Python 3.7 or higher, but you have {ver[0]}.{ver[1]}"
         )
-    is_64bits = sys.maxsize > 2 ** 32
+    is_64bits = sys.maxsize > 2**32
     if not is_64bits:
         raise RuntimeError(
             "BCML requires 64 bit Python, but you appear to be running 32 bit."
@@ -832,12 +837,7 @@ class TempModContext(TempSettingsContext):
             no_hardlinks = get_storage_dir().drive != self._tmpdir.drive
         else:
             no_hardlinks = get_storage_dir().stat().st_dev != self._tmpdir.stat().st_dev
-        super().__init__(
-            {
-                "store_dir": str(self._tmpdir),
-                "no_hardlinks": no_hardlinks
-            }
-        )
+        super().__init__({"store_dir": str(self._tmpdir), "no_hardlinks": no_hardlinks})
 
     def __exit__(self, exctype, excinst, exctb):
         shutil.rmtree(self._tmpdir, ignore_errors=True)

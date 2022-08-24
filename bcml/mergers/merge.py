@@ -220,7 +220,7 @@ class DeepMerger(mergers.Merger):
                     None,
                 ),
             )
-        this_pool = self._pool or Pool(maxtasksperchild=500)
+        this_pool = self._pool or util.start_pool()
         results = this_pool.starmap(
             partial(get_aamp_diffs, tmp_dir=mod_dir), list(consolidated.items())
         )
@@ -305,7 +305,7 @@ class DeepMerger(mergers.Merger):
         if not diffs:
             print("No deep merge needed")
             return
-        pool = self._pool or Pool(maxtasksperchild=500)
+        pool = self._pool or util.start_pool()
         pool.starmap(merge_aamp_files, diffs.items())
         if not self._pool:
             pool.close()

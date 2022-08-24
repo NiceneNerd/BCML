@@ -340,7 +340,7 @@ class ShopMerger(mergers.Merger):
                     None,
                 ),
             )
-        this_pool = self._pool or Pool(maxtasksperchild=500)
+        this_pool = self._pool or util.start_pool()
         results = this_pool.starmap(
             partial(get_shop_diffs, tmp_dir=mod_dir), list(consolidated.items())
         )
@@ -427,7 +427,7 @@ class ShopMerger(mergers.Merger):
         shop_merge_log = util.get_master_modpack_dir() / "logs" / "shop.log"
 
         print("Performing shop merge...")
-        pool = self._pool or Pool(maxtasksperchild=500)
+        pool = self._pool or util.start_pool()
         pool.starmap(merge_shop_files, diffs.items())
 
         if not self._pool:

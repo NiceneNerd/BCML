@@ -204,7 +204,7 @@ class PackMerger(mergers.Merger):
         from bcml import bcml as rsext
 
         rsext.mergers.packs.merge_sarcs(sarcs)
-        # pool = self._pool or Pool(maxtasksperchild=500)
+        # pool = self._pool or util.start_pool()
         # results = pool.starmap(merge_sarcs, sarcs.items())
         # pool.starmap(write_sarc, results)
         # if not self._pool:

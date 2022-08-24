@@ -275,7 +275,7 @@ def generate_modded_map_log(
     new_hashes: bool = False,
 ) -> Hash:
     modded_maps = consolidate_map_files(modded_mubins)
-    this_pool = pool or Pool(maxtasksperchild=500)
+    this_pool = pool or util.start_pool()
     diffs = oead.byml.Hash(
         {
             map_unit: oead.byml.from_text(diff)
@@ -724,7 +724,7 @@ class MapMerger(mergers.Merger):
         # rstb_calc = rstb.SizeCalculator()
         print("Merging modded map units...")
 
-        # pool = self._pool or Pool(maxtasksperchild=500)
+        # pool = self._pool or util.start_pool()
         # rstb_results = pool.map(
         # partial(merge_map, rstb_calc=rstb_calc),
         # map_diffs.items(),

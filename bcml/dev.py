@@ -373,7 +373,7 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
 
     _package_code(tmp_dir, meta)
 
-    with Pool(maxtasksperchild=500) as pool:
+    with util.start_pool() as pool:
         yml_files = set(tmp_dir.glob("**/*.yml"))
         if yml_files:
             print("Compiling YAML documents...")
@@ -766,7 +766,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
             data = util.compress(data)
         file.write_bytes(data)
 
-    with Pool(maxtasksperchild=500) as pool:
+    with util.start_pool() as pool:
         errs = pool.map(
             partial(_convert_actorpack, to_wiiu=to_wiiu),
             {f for f in all_files if f.suffix == ".sbactorpack"},

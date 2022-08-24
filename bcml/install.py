@@ -209,7 +209,7 @@ def generate_logs(
         options["disable"] = []
     util.vprint(options)
 
-    this_pool = pool or Pool(maxtasksperchild=500)
+    this_pool = pool or util.start_pool()
     print("Scanning for modified files...")
     modded_files = find_modded_files(tmp_dir, pool=pool)
     if not (
@@ -360,7 +360,7 @@ def install_mod(
                 if merger.is_mod_logged(BcmlMod(tmp_dir)):
                     (tmp_dir / "logs" / merger.log_name).unlink()
         else:
-            this_pool = pool or Pool(maxtasksperchild=500)
+            this_pool = pool or util.start_pool()
             dev._pack_sarcs(
                 tmp_dir, util.get_hash_table(util.get_settings("wiiu")), this_pool
             )
@@ -594,7 +594,7 @@ def refresh_merges():
     print("Cleansing old merges...")
     shutil.rmtree(util.get_master_modpack_dir(), True)
     print("Refreshing merged mods...")
-    with Pool(maxtasksperchild=500) as pool:
+    with util.start_pool() as pool:
         for merger in mergers.sort_mergers(
             [merger_class() for merger_class in mergers.get_mergers()]
         ):
