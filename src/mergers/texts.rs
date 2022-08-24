@@ -60,8 +60,7 @@ pub fn diff_language(
                     .map(|name| name.ends_with("msbt"))
                     .unwrap_or(false)
             })
-            .collect::<Vec<_>>()
-            .into_par_iter()
+            .par_bridge()
             .map(|file| -> Result<Option<(String, Diff)>> {
                 if let Some(path) = file.name().map(std::borrow::ToOwned::to_owned) {
                     let mod_text = Msyt::from_msbt_bytes(file.data())

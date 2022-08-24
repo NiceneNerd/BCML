@@ -32,8 +32,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
         glob::glob(mod_dir.join("**/*").to_str().unwrap())
             .unwrap()
             .filter_map(std::result::Result::ok)
-            .collect::<Vec<_>>()
-            .into_par_iter()
+            .par_bridge()
             .filter(|f| {
                 f.is_file()
                     && (f.starts_with(&content) || f.starts_with(&dlc))
