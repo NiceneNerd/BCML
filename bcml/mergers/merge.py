@@ -191,6 +191,12 @@ class DeepMerger(mergers.Merger):
             options={},
         )
 
+    def read_diff(_self, log_path: Path) -> ParameterIO:
+        try:
+            return ParameterIO.from_binary(log_path.read_bytes())
+        except:
+            return ParameterIO.from_text(log_path.read_text("utf-8"))
+
     def generate_diff(self, mod_dir: Path, modded_files: List[Union[str, Path]]):
         print("Detecting general changes to AAMP files...")
         aamps = {
@@ -239,24 +245,26 @@ class DeepMerger(mergers.Merger):
         if isinstance(diff_material, list):
             diff_material = self.generate_diff(mod_dir, diff_material)
         if diff_material:
-            (mod_dir / "logs" / self._log_name).write_bytes(diff_material.to_binary())
+            try:
+                (mod_dir / "logs" / self._log_name).write_bytes(diff_material.to_binary())
+            except ValueError as err:
+                if "representable" in str(err):
+                    (mod_dir / "logs" / self._log_name).write_text(diff_material.to_text(), "utf-8")
+                else:
+                    raise
         del diff_material
 
     def get_mod_diff(self, mod: util.BcmlMod):
         diff = None
         if self.is_mod_logged(mod):
-            diff = ParameterIO.from_binary(
-                (mod.path / "logs" / self._log_name).read_bytes()
-            )
+            diff = self.read_diff(mod.path / "logs" / self._log_name)
         for opt in {d for d in (mod.path / "options").glob("*") if d.is_dir()}:
             if (opt / "logs" / self._log_name).exists():
                 if not diff:
                     diff = ParameterIO()
                 merge_plists(
                     diff,
-                    ParameterIO.from_binary(
-                        (opt / "logs" / self._log_name).read_bytes()
-                    ),
+                    self.read_diff(opt / "logs" / self._log_name),
                     True,
                 )
         return diff
