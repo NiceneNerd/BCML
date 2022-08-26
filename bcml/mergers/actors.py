@@ -79,8 +79,14 @@ class ActorInfoMerger(mergers.Merger):
 
     def consolidate_diffs(self, diffs: list):
         all_diffs: Dict[str, oead.Byml.Hash] = {}
+        inst_sizes = {}
         for diff in diffs:
+            for actor_hash, inst_size in [(h, a["instSize"].v) for h, a in diff.items() if "instSize" in a]:
+                if inst_size > inst_sizes.get(actor_hash, 0):
+                    inst_sizes[actor_hash] = inst_size
             util.dict_merge(all_diffs, diff, overwrite_lists=True)
+        for actor_hash, inst_size in inst_sizes.items():
+            all_diffs[actor_hash]["instSize"] = oead.S32(inst_size)
         return oead.byml.Hash(all_diffs)
 
     @util.timed
