@@ -25,7 +25,7 @@ path-slash = "0.1.4"
 parking_lot = "0.12.1"
 pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
 rayon = "1.5.3"
-roead = { features = ["yaml"], version = "0.16.0"}
+roead = { features = ["yaml"], version = "0.16.1"}
 rustc-hash = "1.1.0"
 rstb = "0.3.2"
 serde = { version = "1.0.144", features = ["derive"] }
