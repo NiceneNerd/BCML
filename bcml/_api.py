@@ -103,7 +103,7 @@ class Api:
         if not real_folder:
             return False
         if params["type"] == "cemu_dir":
-            return len(list(path.glob("?emu*.exe"))) > 0
+            return ( len(list(path.glob("?emu*.exe"))) > 0 or len(list(path.glob("?emu"))) > 0 )
         if "game_dir" in params["type"]:
             return (path / "Pack" / "Dungeon000.pack").exists()
         if params["type"] == "update_dir":
@@ -523,8 +523,8 @@ class Api:
             iter(
                 {
                     f
-                    for f in util.get_cemu_dir().glob("*.exe")
-                    if "cemu" in f.name.lower()
+                    for f in util.get_cemu_dir().glob("*")
+                    if ( "cemu" == f.name.lower() ) or ( "cemu" in f.name.lower() and "exe" == f.suffix.lower() )
                 }
             )
         )
@@ -534,7 +534,7 @@ class Api:
         except AssertionError:
             raise FileNotFoundError("Your BOTW executable could not be found")
         cemu_args: List[str]
-        if SYSTEM == "Windows":
+        if (SYSTEM == "Windows") or ( "cemu" == cemu.name.lower() ):
             cemu_args = [str(cemu)]
             if params["run_game"]:
                 cemu_args.extend(("-g", str(uking)))

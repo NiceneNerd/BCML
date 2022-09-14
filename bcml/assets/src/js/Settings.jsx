@@ -193,7 +193,7 @@ class Settings extends React.Component {
                                 value={this.state.cemu_dir}
                                 disabled={!this.state.wiiu || this.state.no_cemu}
                                 onChange={this.handleChange}
-                                placeholder='Tip: folder should contain "Cemu.exe"'
+                                placeholder='Tip: folder should contain the Cemu binary/exe'
                                 isValid={
                                     this.state.cemu_dir != "" || this.state.no_cemu
                                 }
@@ -204,7 +204,7 @@ class Settings extends React.Component {
                                                 (Optional) The directory where Cemu is
                                                 installed. Note that this <em>must</em>{" "}
                                                 be the folder that directly contains
-                                                "Cemu.exe" and "settings.xml"
+                                                the Cemu binary/exe and "settings.xml"
                                             </>
                                         ) : (
                                             "Not applicable for Switch mode"
