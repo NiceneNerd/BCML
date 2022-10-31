@@ -7,6 +7,7 @@ from fnmatch import fnmatch
 from functools import partial
 from json import dumps, loads
 from multiprocessing import Pool
+from os import environ
 from pathlib import Path
 from platform import system
 from tempfile import TemporaryDirectory
@@ -15,7 +16,6 @@ from zlib import crc32
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
-from botw_havok import Havok
 
 from bcml import util, install
 from bcml.util import BYML_EXTS, SARC_EXTS, TempSettingsContext
@@ -347,9 +347,9 @@ def create_bnp_mod(mod: Path, output: Path, meta: dict, options: Optional[dict] 
                 (tmp_dir / "dlc").rename(tmp_dir / "01007EF00011F001")
         else:
             raise FileNotFoundError(
-                f"This mod does not appear to have a valid folder structure. " +
-                f"BCML could not find {mod.name}{'/' if mod.suffix else ''}/{util.get_content_path()} " +
-                f"or {mod.name}{'/' if mod.suffix else ''}/{util.get_dlc_path()}"
+                f"This mod does not appear to have a valid folder structure. "
+                + f"BCML could not find {mod.name}{'/' if mod.suffix else ''}/{util.get_content_path()} "
+                + f"or {mod.name}{'/' if mod.suffix else ''}/{util.get_dlc_path()}"
             )
 
     if (tmp_dir / "rules.txt").exists():
@@ -461,12 +461,8 @@ NO_CONVERT_EXTS = {
     ".bfres",
     ".bcamanim",
     ".sbcamanim",
-    ".hkcl",
-    ".hkrg",
     ".sesetlist",
     ".sbfarc",
-    ".shknm2",
-    ".shktmrb",
     ".bfstm",
     ".bars",
     ".sbreviewtex",
@@ -521,16 +517,31 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
             else:
                 if file.data[0:4] == b"AAMP":
                     continue
-                try:
-                    hk = Havok.from_bytes(bytes(file.data))
-                except:  # pylint: disable=bare-except
-                    return f"Could not parse Havok file {file.name}"
-                if to_wiiu:
-                    hk.to_wiiu()
+
+                hkx_c = util.get_hkconvert_path()
+                temp = f"{environ('TEMP')}/hk_convert"
+                Path(temp).mkdir(parents=True, exist_ok=True)
+                hk_file = Path(f"{temp}/{file.name}")
+
+                if hk_file.suffix.startswith(".s"):
+                    unyazed_hkx = util.unyaz_if_needed(hk_file.read_bytes())
+                    hk_file.write_bytes(unyazed_hkx)
                 else:
-                    hk.to_switch()
-                hk.serialize()
-                new_sarc.files[file.name] = hk.to_bytes()
+                    hk_file.write_bytes(file.data)
+
+                subprocess.run(f'"{hkx_c}" json2hkx "{hk_file}"')
+                hk_file.unlink()
+
+                subprocess.run(
+                    f"\"{hkx_c}\" hkx2json{'' if to_wiiu else ' --nx'} \"{hk_file}.json\""
+                )
+                new_sarc.files[file.name] = (
+                    oead.yaz0.compress(hk_file.read_bytes())
+                    if hk_file.suffix.startswith(".s")
+                    else hk_file.read_bytes()
+                )
+
+                shutil.rmtree(temp)
         elif file.data[0:2] in {b"BY", b"YB"}:
             by = oead.byml.from_binary(file.data)
             new_sarc.files[file.name] = oead.byml.to_binary(by, big_endian=to_wiiu)
@@ -609,7 +620,9 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
 
     special_files = {"ActorInfo.product.sbyml"}
     all_files = {
-        f for f in mod.rglob("*.*") if f.is_file() and f not in (mod / "options").rglob("*.*")
+        f
+        for f in mod.rglob("*.*")
+        if f.is_file() and f not in (mod / "options").rglob("*.*")
     }
 
     for file in all_files:
@@ -728,7 +741,7 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
                         if not to_wiiu
                         else (actor["instSize"].v / ratio)
                     )
-                    * 1.1 # safety buffer, since we're dealing with averages
+                    * 1.1  # safety buffer, since we're dealing with averages
                 )
             )
         actorinfo_log.write_text(oead.byml.to_text(actorinfo))
@@ -811,10 +824,12 @@ def convert_mod(mod: Path, to_wiiu: bool, warn_only: bool = False) -> list:
         for folder in {d for d in (mod / "options").glob("*") if d.is_dir()}:
             option_warnings = convert_mod(folder, to_wiiu=to_wiiu, warn_only=warn_only)
             handle_warning(option_warnings)
-    
+
     if (mod / "info.json").exists():
         meta = loads((mod / "info.json").read_text("utf-8"))
         meta["platform"] = "wiiu" if to_wiiu else "switch"
-        (mod / "info.json").write_text(dumps(meta, indent=2, ensure_ascii=False), "utf-8")
+        (mod / "info.json").write_text(
+            dumps(meta, indent=2, ensure_ascii=False), "utf-8"
+        )
 
     return warnings
