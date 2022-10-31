@@ -521,20 +521,22 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                     continue
 
                 hkx_c = util.get_hkconvert_path()
-                temp = f"{environ('TEMP')}/hk_convert"
-                Path(temp).mkdir(parents=True, exist_ok=True)
-                hk_file = Path(f"{temp}/{file.name}")
+                temp = f"{environ['TEMP']}/hk_convert"
 
+                hk_file = Path(f"{temp}/{file.name}")
+                hk_file.parent.mkdir(parents=True, exist_ok=True)
                 hk_file.write_bytes(file.data)
-                subprocess.run(f'"{hkx_c}" json2hkx "{hk_file}"')
+
+                subprocess.run(f'"{hkx_c}" hkx2json "{hk_file}" "{hk_file}.json"')
                 hk_file.unlink()
 
                 subprocess.run(
-                    f"\"{hkx_c}\" hkx2json{'' if to_wiiu else ' --nx'} \"{hk_file}.json\""
+                    f'"{hkx_c}" json2hkx{"" if to_wiiu else " --nx"} "{hk_file}.json" "{hk_file}"'
                 )
                 new_sarc.files[file.name] = hk_file.read_bytes()
+                Path(f"{hk_file}.json").unlink()
+                hk_file.unlink()
 
-                shutil.rmtree(temp)
         elif file.data[0:2] in {b"BY", b"YB"}:
             by = oead.byml.from_binary(file.data)
             new_sarc.files[file.name] = oead.byml.to_binary(by, big_endian=to_wiiu)
