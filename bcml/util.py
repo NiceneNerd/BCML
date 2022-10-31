@@ -1501,8 +1501,8 @@ def get_7z_path():
 @lru_cache(1)
 def get_hkconvert_path():
     if system() == "Windows":
-        return str(get_exec_dir() / "helpers" / "HKConvert.exe")
-    bundle_path = get_exec_dir() / "helpers" / "HKConvert"
+        return str(get_exec_dir() / "helpers" / "HKXConvert.exe")
+    bundle_path = get_exec_dir() / "helpers" / "HKXConvert"
     if not os.access(bundle_path, os.X_OK):
         if not os.access(bundle_path, os.W_OK):
             raise PermissionError(
