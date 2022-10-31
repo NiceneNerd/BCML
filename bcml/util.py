@@ -1498,5 +1498,19 @@ def get_7z_path():
     return shutil.which("7z") or str(bundle_path)
 
 
+@lru_cache(1)
+def get_hkconvert_path():
+    if system() == "Windows":
+        return str(get_exec_dir() / "helpers" / "HKConvert.exe")
+    bundle_path = get_exec_dir() / "helpers" / "HKConvert"
+    if not os.access(bundle_path, os.X_OK):
+        if not os.access(bundle_path, os.W_OK):
+            raise PermissionError(
+                f"{bundle_path} is not executable and we don't have the permissions to change that"
+            )
+        os.chmod(bundle_path, 0o755)
+    return str(bundle_path)
+
+
 LOG = get_data_dir() / "bcml.log"
 SYSTEM = system()
