@@ -463,6 +463,8 @@ NO_CONVERT_EXTS = {
     ".sbcamanim",
     ".sesetlist",
     ".sbfarc",
+    ".shknm2",
+    ".shktmrb",
     ".bfstm",
     ".bars",
     ".sbreviewtex",
@@ -523,23 +525,14 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                 Path(temp).mkdir(parents=True, exist_ok=True)
                 hk_file = Path(f"{temp}/{file.name}")
 
-                if hk_file.suffix.startswith(".s"):
-                    unyazed_hkx = util.unyaz_if_needed(hk_file.read_bytes())
-                    hk_file.write_bytes(unyazed_hkx)
-                else:
-                    hk_file.write_bytes(file.data)
-
+                hk_file.write_bytes(file.data)
                 subprocess.run(f'"{hkx_c}" json2hkx "{hk_file}"')
                 hk_file.unlink()
 
                 subprocess.run(
                     f"\"{hkx_c}\" hkx2json{'' if to_wiiu else ' --nx'} \"{hk_file}.json\""
                 )
-                new_sarc.files[file.name] = (
-                    oead.yaz0.compress(hk_file.read_bytes())
-                    if hk_file.suffix.startswith(".s")
-                    else hk_file.read_bytes()
-                )
+                new_sarc.files[file.name] = hk_file.read_bytes()
 
                 shutil.rmtree(temp)
         elif file.data[0:2] in {b"BY", b"YB"}:
