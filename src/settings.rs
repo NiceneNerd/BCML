@@ -137,14 +137,18 @@ impl Settings {
             .join(if self.wiiu { "mods" } else { "mods_nx" })
     }
 
-    pub fn export_dir(&self) -> Option<&Path> {
+    pub fn export_dir(&self) -> Option<PathBuf> {
         let dir = if self.wiiu {
-            self.export_dir.as_path()
+            self.export_dir.clone()
         } else {
-            self.export_dir_nx.as_path()
+            self.export_dir_nx.clone()
         };
         if dir.to_str().map(|d| d.is_empty()).unwrap_or_default() {
-            None
+            if self.wiiu && !self.no_cemu {
+                Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
+            } else {
+                None
+            }
         } else {
             Some(dir)
         }

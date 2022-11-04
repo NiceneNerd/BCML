@@ -46,11 +46,31 @@ default = true
 fsPriority = 9999
 "#;
 
+#[cfg(windows)]
+#[inline]
+fn win_symlink(target: &Path, link: &Path) -> Result<()> {
+    match junction::create(target, link) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            let arg_list = format!(
+                "Start-Process -FilePath cmd -ArgumentList '/c,mklink,/d,\"{}\",\"{}\"' -Verb RunAs",
+                link.to_str().unwrap(),
+                target.to_str().unwrap()
+            );
+            std::process::Command::new("powershell")
+                .arg(arg_list)
+                .status()
+                .expect("Failed to spawn mklink process");
+            Ok(())
+        }
+    }
+}
+
 #[pyfunction]
 fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
     if let Some(output) = output
         .map(PathBuf::from)
-        .or_else(|| util::settings().export_dir().map(|o| o.to_path_buf()))
+        .or_else(|| util::settings().export_dir())
     {
         let settings = util::settings();
         let merged = settings.merged_modpack_dir();
@@ -121,15 +141,32 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                                 .transpose()
                                 .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
                                 .unwrap();
-                            fs::hard_link(item, &out)
-                                .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))?;
+                            fs::hard_link(&item, &out)
+                                .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))
+                                .or_else(|_| {
+                                    eprintln!("Failed to hard link {} to {}", rel.display(), out.display());
+                                    fs::copy(item, &out)
+                                        .with_context(|| jstr!("Failed to copy {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))
+                                        .map(|_| ())
+                                })?;
                             Ok(())
                         })?;
                     Ok(())
                 })
         })?;
         let exists = output.exists();
-        let is_link = output.is_symlink() || !output.is_dir();
+        let is_link = {
+            #[cfg(windows)]
+            {
+                junction::exists(&output).unwrap_or(false)
+                    || output.is_symlink()
+                    || !output.is_dir()
+            }
+            #[cfg(unix)]
+            {
+                output.is_symlink() || !output.is_dir()
+            }
+        };
         let should_be_link = !settings.no_hardlinks;
         // Only if the output folder exists and is a symlink and is supposed to
         // be a symlink, we're done. If it is a real folder, or it is a link
@@ -149,22 +186,17 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 std::os::unix::fs::symlink(merged, &output)
                     .context("Failed to symlink output folder")?;
                 #[cfg(target_os = "windows")]
-                {
-                    let arg_list = format!(
-                        "Start-Process -FilePath cmd -ArgumentList '/c,mklink,/d,\"{}\",\"{}\"' -Verb RunAs",
-                        &output.to_str().unwrap(),
-                        &merged.to_str().unwrap()
-                    );
-                    std::process::Command::new("powershell")
-                        .arg(arg_list)
-                        .status()
-                        .expect("Failed to spawn mklink process");
-                    return Ok(());
-                }
+                win_symlink(&merged, &output).context("Failed to link output folder")?;
             } else {
                 // If there is already a linked folder (e.g. after settings change),
                 // then we should remove it.
                 if exists && is_link {
+                    #[cfg(windows)]
+                    junction::delete(&output)
+                        .or_else(|_| fs::remove_file(&output))
+                        .or_else(|_| fs::remove_dir(&output))
+                        .context("Failed to remove output folder link")?;
+                    #[cfg(unix)]
                     fs::remove_file(&output)
                         .or_else(|_| fs::remove_dir(&output))
                         .context("Failed to remove output folder link")?;
@@ -199,9 +231,11 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                 if needs_rules {
                     fs::copy(&rules_path, output.join("rules.txt"))?;
                     // For Waikuteru's, and other mods that contain Cemu code patches
-                    let (merged_patches, out_patches) = (merged.join("patches"), output.join("patches"));
+                    let (merged_patches, out_patches) =
+                        (merged.join("patches"), output.join("patches"));
                     if out_patches.exists() {
-                        remove_dir_all(&out_patches).context("Failed to clear output patches folder")?;
+                        remove_dir_all(&out_patches)
+                            .context("Failed to clear output patches folder")?;
                     }
                     if merged_patches.exists() {
                         dircpy::copy_dir(&merged_patches, &out_patches)
@@ -215,6 +249,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
             .filter_map(|p| p.ok())
             .count()
             == 0
+            && std::fs::read_dir(settings.mods_dir()).unwrap().count() > 1
         {
             return Err(anyhow::anyhow!("Output folder is empty").into());
         }
