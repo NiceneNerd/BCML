@@ -48,7 +48,7 @@ fsPriority = 9999
 
 #[cfg(windows)]
 #[inline]
-fn win_symlink(target: &Path, link: &Path) -> Result<()> {
+fn win_symlink(target: &std::path::Path, link: &std::path::Path) -> Result<()> {
     match junction::create(target, link) {
         Ok(()) => Ok(()),
         Err(_) => {
