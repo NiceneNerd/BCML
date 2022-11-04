@@ -126,7 +126,7 @@ impl MapUnit {
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("TitleBG")?;
                 Ok(Byml::from_binary(&decompress(
-                    &pack
+                    pack
                         .get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
@@ -146,7 +146,7 @@ impl MapUnit {
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("AocMainField")?;
                 Ok(Byml::from_binary(&decompress(
-                    &pack
+                    pack
                         .get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")

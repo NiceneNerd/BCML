@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 pub mod manager;
 pub mod mergers;
 pub mod settings;
@@ -23,7 +24,7 @@ fn bcml(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<String>> {
+fn find_modified_files(py: Python, mod_dir: String) -> PyResult<Vec<String>> {
     println!("Finding modified files...");
     let mod_dir = Path::new(&mod_dir);
     let content = mod_dir.join(util::content());
@@ -36,7 +37,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
             .filter(|f| {
                 f.is_file()
                     && (f.starts_with(&content) || f.starts_with(&dlc))
-                    && util::get_canon_name(f.strip_prefix(&mod_dir).unwrap())
+                    && util::get_canon_name(f.strip_prefix(mod_dir).unwrap())
                         .and_then(|canon| {
                             fs::read(f)
                                 .ok()
@@ -62,8 +63,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
                 find_modded_sarc_files(
                     &sarc,
                     file.starts_with(&dlc),
-                    be,
-                    &file.strip_prefix(&mod_dir).unwrap().to_slash_lossy(),
+                    &file.strip_prefix(mod_dir).unwrap().to_slash_lossy(),
                 )
             })
             .collect::<Result<Vec<_>>>()?
@@ -79,7 +79,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
         .collect())
 }
 
-fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Result<Vec<String>> {
+fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, path: &str) -> Result<Vec<String>> {
     Ok(sarc
         .files()
         .filter(|f| f.name().is_some())
@@ -102,7 +102,6 @@ fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Resul
                 modded_files.extend(find_modded_sarc_files(
                     &sarc,
                     aoc,
-                    be,
                     modded_files.first().as_ref().unwrap(),
                 )?);
             }

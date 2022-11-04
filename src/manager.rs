@@ -100,7 +100,7 @@ fn link_master_mod(py: Python, output: Option<String>) -> PyResult<()> {
                                 })
                             })
                             .filter(|(item, rel)| {
-                                !(merged.join(&rel).exists()
+                                !(merged.join(rel).exists()
                                     || item.is_dir()
                                     || item.extension().and_then(|e| e.to_str()) == Some("json")
                                     || rel.starts_with("logs")

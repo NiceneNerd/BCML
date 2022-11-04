@@ -191,7 +191,7 @@ def find_modded_files(
 
     modded_files = [
         f if "//" in f else Path(f)
-        for f in rsext.find_modified_files(str(tmp_dir), util.get_settings("wiiu"))
+        for f in rsext.find_modified_files(str(tmp_dir))
     ]
     return modded_files
 
