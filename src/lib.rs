@@ -20,6 +20,14 @@ fn bcml(py: Python, m: &PyModule) -> PyResult<()> {
     mergers::mergers_mod(py, m)?;
     manager::manager_mod(py, m)?;
     m.add_wrapped(wrap_pyfunction!(find_modified_files))?;
+    m.add_wrapped(wrap_pyfunction!(reload_settings))?;
+    Ok(())
+}
+
+#[pyfunction]
+fn reload_settings() -> PyResult<()> {
+    println!("Reloading settings");
+    settings::SETTINGS.write().reload()?;
     Ok(())
 }
 

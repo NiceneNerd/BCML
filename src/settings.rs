@@ -188,6 +188,18 @@ impl Settings {
         }
     }
 
+    pub fn reload(&mut self) -> Result<()> {
+        *self = if Self::path().exists() {
+            let text = fs::read_to_string(&Self::path()).unwrap();
+            serde_json::from_str(&text.cow_replace(": null", ": \"\""))
+                .expect("Failed to read settings file")
+        } else {
+            println!("WARNING: Settings file does not exist, loading default settings...");
+            Settings::default()
+        };
+        Ok(())
+    }
+
     pub fn save(&self) -> Result<()> {
         serde_json::to_writer_pretty(fs::File::create(&Self::path())?, &self)?;
         Ok(())

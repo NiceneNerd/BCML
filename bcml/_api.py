@@ -200,6 +200,8 @@ class Api:
             util.clear_all_caches()
         util.get_settings.settings = params["settings"]
         util.save_settings()
+        from bcml.bcml import reload_settings
+        reload_settings()
 
     def old_settings(self):
         old = util.get_data_dir() / "settings.ini"
