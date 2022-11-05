@@ -37,3 +37,7 @@ thiserror = "1.0.32"
 junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd793645acf2702de283f78e8f6e0043ea5" }
 mslnk = "0.1.8"
 remove_dir_all = "0.7.0"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
