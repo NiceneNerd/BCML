@@ -78,16 +78,17 @@ jobs:
               run: |
                   venv\Scripts\activate.ps1
                   mkdocs build -d .\bcml\assets\help
-            - uses: actions-rs/toolchain@v1
-              name: Install Rust
-              with:
-                profile: minimal
-                toolchain: nightly
-                override: true
+#             - uses: actions-rs/toolchain@v1
+#               name: Install Rust
+#               with:
+#                 profile: minimal
+#                 toolchain: nightly
+#                 override: true
             - uses: messense/maturin-action@v1
               name: Publish with Maturin
               with:
                 maturin-version: v0.12.20
+                env: PATH=/Library/Frameworks/Python.framework/Versions/Current/bin:$PATH
                 command: publish
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
                 rust-toolchain: nightly
