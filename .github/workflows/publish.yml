@@ -53,15 +53,18 @@ jobs:
         runs-on: windows-2019
         steps:
             - uses: actions/checkout@v2
-            - name: Set up Python
+            - name: Set up Python 3.9
               uses: actions/setup-python@v2
               with:
                   python-version: "3.9"
-            - name: Append Python PATH
-              uses: myci-actions/append-to-path-windows@2
+            - name: Set up Python 3.7
+              uses: actions/setup-python@v2
               with:
-                  path: /Library/Frameworks/Python.framework/Versions/Current/bin
-                  env-var: PATH
+                  python-version: "3.7"
+            - name: Set up Python 3.8
+              uses: actions/setup-python@v2
+              with:
+                  python-version: "3.8"
             - name: Set up Node.js
               uses: actions/setup-node@v1
               # env:
