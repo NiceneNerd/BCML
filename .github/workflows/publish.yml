@@ -95,4 +95,4 @@ jobs:
             - name: Publish with Maturin
               run: |
                   venv\Scripts\activate.ps1
-                  maturin publish --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
+                  maturin publish -f --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
