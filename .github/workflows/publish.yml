@@ -73,7 +73,7 @@ jobs:
                   python -m venv venv
                   venv\Scripts\activate.ps1
                   python -m pip install --upgrade pip wheel setuptools
-                  pip install twine mkdocs mkdocs-material
+                  pip install twine mkdocs mkdocs-material maturin
             - name: Generate webpack bundle
               working-directory: .\bcml\assets
               run: |
@@ -83,16 +83,13 @@ jobs:
               run: |
                   venv\Scripts\activate.ps1
                   mkdocs build -d .\bcml\assets\help
-#             - uses: actions-rs/toolchain@v1
-#               name: Install Rust
-#               with:
-#                 profile: minimal
-#                 toolchain: nightly
-#                 override: true
-            - uses: messense/maturin-action@v1
-              name: Publish with Maturin
+            - uses: actions-rs/toolchain@v1
+              name: Install Rust
               with:
-                maturin-version: v0.12.20
-                command: publish
-                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
-                rust-toolchain: nightly
+                profile: minimal
+                toolchain: nightly
+                override: true
+            - name: Publish with Maturin
+              run: |
+                  venv\Scripts\activate.ps1
+                  maturin publish --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
