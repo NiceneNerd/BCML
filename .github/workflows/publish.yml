@@ -50,7 +50,7 @@ jobs:
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
                 rust-toolchain: nightly
     deploy_windows:
-        runs-on: windows-latest
+        runs-on: windows-2019
         steps:
             - uses: actions/checkout@v2
             - name: Set up Python
