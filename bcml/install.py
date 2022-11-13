@@ -769,9 +769,6 @@ def export(output: Path, standalone: bool = False):
                 " a fluke, so consider restarting BCML and trying again."
             ) from err
     link_master_mod(tmp_dir)
-    print("Adding rules.txt...")
-    while not (tmp_dir / "content").exists():
-        print("Waiting for Python and Windows to figure themselves out...")
     if output.suffix == ".bnp" or output.name.endswith(".bnp.7z"):
         print("Exporting BNP...")
         dev.create_bnp_mod(
