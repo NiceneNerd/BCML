@@ -56,6 +56,27 @@ source bcml_env/bin/activate # will activate the venv
 pip install bcml
 ```
 
+**Full Linux Example with CEMU**
+
+`sudo pacman -S python39` Adjust for you distribution, arch defaults to a newer python
+
+```mkdir -p ~/.local/share/cemu/graphicPacks/BreathOfTheWild_BCML
+python3.9 -m venv /.local/bcml_env
+source ~/.local/bcml_env/bin/activate
+python3.9 -m pip install bcml
+~/.local/bcml_env/bin/bcml
+```
+
+to launch BCML in the future
+
+`source ~/.local/bcml_env/bin/activate; ~/.local/bcml_env/bin/bcml`
+
+- In BCML, check 'without cemu' and set export path to '~/.local/share/cemu/graphicPacks/BreathOfTheWild_BCML'
+- install your mods
+- execute `curl https://pastebin.com/raw/igCLK2tz -o ~/.local/share/cemu/graphicPacks/BreathOfTheWild_BCML/rules.txt`
+
+* If your mods still don't load, verify that ~/.local/share/cemu/graphicPacks/BreathOfTheWild_BCML/rules.txt exist and try 'disable links for master mod' in BCML settings
+
 ### Building from Source
 
 Building from source requires, in addition to the general prerequisites:
