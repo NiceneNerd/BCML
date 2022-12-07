@@ -22,7 +22,7 @@ from xml.dom import minidom
 import requests
 import webview
 
-from bcml import DEBUG, install, dev, mergers, upgrade, util
+from bcml import DEBUG, install, dev, locks, mergers, upgrade, util
 from bcml.util import BcmlMod, LOG, SYSTEM, get_7z_path
 from bcml.__version__ import USER_VERSION, VERSION
 
@@ -343,17 +343,19 @@ class Api:
 
     def get_current_profile(self):
         profile = util.get_modpack_dir() / ".profile"
-        if not (util.get_modpack_dir() / ".profile").exists():
-            profile.write_text("Default")
-            return "Default"
-        return profile.read_text("utf-8")
+        with locks.mod_dir:
+            if not (util.get_modpack_dir() / ".profile").exists():
+                profile.write_text("Default")
+                return "Default"
+            return profile.read_text("utf-8")
 
     @win_or_lose
     @install.refresher
     def set_profile(self, params):
         mod_dir = util.get_modpack_dir()
-        rmtree(mod_dir)
-        copytree(params["profile"], mod_dir)
+        with locks.mod_dir:
+            rmtree(mod_dir)
+            copytree(params["profile"], mod_dir)
 
     @win_or_lose
     def delete_profile(self, params):
