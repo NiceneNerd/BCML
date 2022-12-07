@@ -5,6 +5,8 @@ from pathlib import Path
 from platform import system
 from subprocess import run
 from tempfile import mkdtemp
+import traceback
+import json
 
 import requests
 import webview
@@ -84,7 +86,14 @@ def process_arg(arg: str = None):
             requests.ConnectionError,
             requests.RequestException,
         ) as err:
-            print(err)
+            print('Failure while downloading mod' , url, ':', err)
+            error = json.dumps({
+                "short": str(err),
+                "error_text": traceback.format_exc(-5)
+            })
+            webview.windows[0].evaluate_js(
+                f'setTimeout(() => window.errorOneClick("{path.resolve().as_posix()}", {error}), 500)'
+            )
             return
     webview.windows[0].evaluate_js(
         f'setTimeout(() => window.oneClick("{path.resolve().as_posix()}"), 500)'
