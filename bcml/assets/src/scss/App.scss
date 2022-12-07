@@ -559,6 +559,14 @@ Fade {
 }
 
 #install-queue {
+    .wait-mod {
+        margin-right: 0.25rem;
+        margin-bottom: 0.4rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
     .rem-mod {
         cursor: pointer;
         font-size: 0;

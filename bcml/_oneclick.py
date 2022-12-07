@@ -69,6 +69,9 @@ def process_arg(arg: str = None):
             ):
                 pass
         path = Path(mkdtemp()) / f"{filename}.bnp"
+        webview.windows[0].evaluate_js(
+            f'setTimeout(() => window.prepareOneClick("{path.resolve().as_posix()}"), 500)'
+        )
         try:
             res: requests.Response = requests.get(url)
             with path.open("wb") as tmp_file:
@@ -97,18 +100,21 @@ def register_handlers():
 
 def _linux_create_handler():
     schema_file = (
-        Path.home() / ".local" / "share" / "applications" / "bcml-schema.desktop"
+        Path.home() / ".local" / "share" / "applications" / "bcml.desktop"
     )
     if schema_file.exists():
         return
+    import textwrap
     desktop = f"""
     [Desktop Entry]
     Type=Application
-    Name=BCML Schema Handler
+    Name=BCML
+    Comment=Starts the BOTW Cross-Platform Mod Loader
     Exec={sys.executable} -m bcml %u
     StartupNotify=false
-    MimeType=x-schema-handler/bcml;
+    MimeType=x-scheme-handler/bcml;
     """
+    desktop = textwrap.dedent(desktop)
     try:
         schema_file.parent.mkdir(parents=True, exist_ok=True)
         schema_file.write_text(desktop)
