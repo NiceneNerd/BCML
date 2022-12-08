@@ -21,6 +21,7 @@ class Settings extends React.Component {
             no_guess: false,
             lang: "",
             no_cemu: false,
+            update_cemu_account: false,
             wiiu: true,
             no_hardlinks: false,
             force_7z: false,
@@ -506,6 +507,25 @@ class Settings extends React.Component {
                                     disabled={!this.state.wiiu}
                                     label="Use BCML without a Cemu installation"
                                     checked={this.state.no_cemu}
+                                    onChange={this.handleChange}
+                                />
+                            </OverlayTrigger>
+                        </Form.Group>
+                        <Form.Group controlId="update_cemu_account">
+                            <OverlayTrigger
+                                overlay={
+                                    <Tooltip>
+                                        When switching profiles, BCML will also change the active account
+                                        in Cemu to that of the account with a matching Mii name, if any.
+                                        If multiple Cemu accounts with a matching Mii name exist, BCML will
+                                        take the first encountered.
+                                    </Tooltip>
+                                }
+                                placement={"left"}>
+                                <Form.Check
+                                    type="checkbox"
+                                    label="Update Cemu account when switching profiles"
+                                    checked={this.state.update_cemu_account}
                                     onChange={this.handleChange}
                                 />
                             </OverlayTrigger>

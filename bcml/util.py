@@ -30,6 +30,7 @@ from tempfile import mkdtemp
 from time import time_ns
 from typing import Union, List, Dict, ByteString, Tuple, Any, Optional, IO
 from xml.dom import minidom
+from xml.etree import ElementTree
 
 import oead
 import requests
@@ -657,12 +658,112 @@ def set_cemu_dir(path: Path):
 def parse_cemu_settings(path: Path = None):
     path = path or get_cemu_dir() / "settings.xml"
     if not path.exists():
-        raise FileNotFoundError("The Cemu settings file could not be found.")
+        raise FileNotFoundError(f"The Cemu settings file could not be found: '{path}'")
     setread = ""
     with path.open("r", encoding="utf-8") as setfile:
         for line in setfile:
             setread += line.strip()
     return minidom.parseString(setread)
+
+
+def parse_cemu_settings_tree(path: Path = None):
+    path = path or get_cemu_dir() / "settings.xml"
+    if not path.exists():
+        raise FileNotFoundError(f"The Cemu settings file could not be found: '{path}'")
+    return ElementTree.parse(path)
+
+
+class CemuAccountNotFoundError(Exception):
+    pass
+
+
+def get_cemu_accounts() -> List[Dict[str, str]]:
+    if get_settings("no_cemu"):
+        raise Exception("Cemu integration is disabled")
+
+    cemu_account_folder = get_cemu_mlc_path() / "usr" / "save" / "system" / "act"
+
+    if not cemu_account_folder.exists():
+        raise FileNotFoundError(
+            f"Cemu account folder could not be found ('{cemu_account_folder}')"
+        )
+
+    cemu_accounts = []
+
+    for entry in os.listdir(cemu_account_folder):
+        if Path(cemu_account_folder / entry).is_dir():
+            account_file = Path(cemu_account_folder / entry / "account.dat")
+            account_data = account_file.read_text("utf-8")
+
+            config = ConfigParser()
+            config.read_string("[DEFAULT]" + account_data)
+
+            account = dict(config.items(config.default_section))
+            account["miiname_decoded"] = (
+                bytes.fromhex(account["miiname"]).decode("utf-8").replace("\x00", "")
+            )
+
+            cemu_accounts.append(account)
+
+    return cemu_accounts
+
+
+def get_cemu_account_by_mii_name(mii_name: str, case_sensitive=True) -> Dict[str, str]:
+    cemu_accounts = get_cemu_accounts()
+    for account in cemu_accounts:
+        a, b = account["miiname_decoded"], mii_name
+        if not case_sensitive:
+            a, b = a.casefold(), b.casefold()
+        if a == b:
+            return account
+    raise CemuAccountNotFoundError(f"No Cemu account found with miiname '{mii_name}'")
+
+
+def get_cemu_mlc_path() -> Path:
+    configured_mlc_path = parse_cemu_settings_tree().findtext(".//mlc_path")
+    mlc_path = configured_mlc_path or get_cemu_dir() / "mlc01"
+    return Path(mlc_path)
+
+
+def set_active_cemu_account(persistent_id: str):
+    """Update the active account in Cemu
+
+    persistent_id
+      The hex-encoded numeric ID of the account. E.g. 80000001
+    """
+
+    if get_settings("no_cemu"):
+        raise Exception("Cemu integration is disabled")
+
+    cemu_accounts = get_cemu_accounts()
+    if not any(account["persistentid"] == persistent_id for account in cemu_accounts):
+        raise CemuAccountNotFoundError(
+            f"No Cemu account found with PersistentId '{persistent_id}'"
+        )
+
+    cemu_settings: minidom.Document = parse_cemu_settings()
+
+    account_element: minidom.Element = cemu_settings.getElementsByTagName("Account")[0]
+    pid_element: minidom.Element = account_element.getElementsByTagName("PersistentId")[
+        0
+    ]
+    pid_text_node: minidom.Text = pid_element.firstChild
+
+    # the id value within the Cemu settings file is stored as a decoded hexidecimal number
+    # e.g. 80000001 -> 2147483649
+    persistent_id_decoded = int(persistent_id, base=16)
+
+    pid_text_node.replaceWholeText(persistent_id_decoded)
+
+    cemu_settings_file = get_cemu_dir() / "settings.xml"
+    cemu_settings_file.write_text(cemu_settings.toprettyxml(indent="    ", newl="\n"))
+
+
+def set_active_cemu_account_by_mii_name(mii_name: str, case_sensitive=True):
+    if get_settings("no_cemu"):
+        raise Exception("Cemu integration is disabled")
+    desired_cemu_account = get_cemu_account_by_mii_name(mii_name, case_sensitive)
+    set_active_cemu_account(desired_cemu_account["persistentid"])
 
 
 def get_game_dir() -> Path:

@@ -23,7 +23,7 @@ import requests
 import webview
 
 from bcml import DEBUG, install, dev, locks, mergers, upgrade, util
-from bcml.util import BcmlMod, LOG, SYSTEM, get_7z_path
+from bcml.util import BcmlMod, LOG, SYSTEM, CemuAccountNotFoundError, get_7z_path
 from bcml.__version__ import USER_VERSION, VERSION
 
 
@@ -356,6 +356,14 @@ class Api:
         with locks.mod_dir:
             rmtree(mod_dir)
             copytree(params["profile"], mod_dir)
+
+        # update Cemu account to match
+        if not util.get_settings("no_cemu") and util.get_settings("update_cemu_account"):
+            profile_name = Path(params["profile"]).name
+            try:
+                util.set_active_cemu_account_by_mii_name(profile_name, case_sensitive=False)
+            except CemuAccountNotFoundError:
+                pass
 
     @win_or_lose
     def delete_profile(self, params):
