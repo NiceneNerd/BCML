@@ -357,14 +357,6 @@ class Api:
             rmtree(mod_dir)
             copytree(params["profile"], mod_dir)
 
-        # update Cemu account to match
-        if not util.get_settings("no_cemu") and util.get_settings("update_cemu_account"):
-            profile_name = Path(params["profile"]).name
-            try:
-                util.set_active_cemu_account_by_mii_name(profile_name, case_sensitive=False)
-            except CemuAccountNotFoundError:
-                pass
-
     @win_or_lose
     def delete_profile(self, params):
         rmtree(params["profile"])
@@ -559,6 +551,13 @@ class Api:
                         "Z:\\" + str(uking).replace("/", "\\"),
                     )
                 )
+        if util.get_settings("update_cemu_account"):
+            active_profile = self.get_current_profile()
+            try:
+                cemu_account = util.get_cemu_account_by_mii_name(active_profile, case_sensitive=False)
+                cemu_args.extend(("--account", cemu_account["persistentid"]))
+            except CemuAccountNotFoundError:
+                pass
         Popen(cemu_args, cwd=str(util.get_cemu_dir()))
 
     @win_or_lose

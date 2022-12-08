@@ -725,47 +725,6 @@ def get_cemu_mlc_path() -> Path:
     return Path(mlc_path)
 
 
-def set_active_cemu_account(persistent_id: str):
-    """Update the active account in Cemu
-
-    persistent_id
-      The hex-encoded numeric ID of the account. E.g. 80000001
-    """
-
-    if get_settings("no_cemu"):
-        raise Exception("Cemu integration is disabled")
-
-    cemu_accounts = get_cemu_accounts()
-    if not any(account["persistentid"] == persistent_id for account in cemu_accounts):
-        raise CemuAccountNotFoundError(
-            f"No Cemu account found with PersistentId '{persistent_id}'"
-        )
-
-    cemu_settings: minidom.Document = parse_cemu_settings()
-
-    account_element: minidom.Element = cemu_settings.getElementsByTagName("Account")[0]
-    pid_element: minidom.Element = account_element.getElementsByTagName("PersistentId")[
-        0
-    ]
-    pid_text_node: minidom.Text = pid_element.firstChild
-
-    # the id value within the Cemu settings file is stored as a decoded hexidecimal number
-    # e.g. 80000001 -> 2147483649
-    persistent_id_decoded = int(persistent_id, base=16)
-
-    pid_text_node.replaceWholeText(persistent_id_decoded)
-
-    cemu_settings_file = get_cemu_dir() / "settings.xml"
-    cemu_settings_file.write_text(cemu_settings.toprettyxml(indent="    ", newl="\n"))
-
-
-def set_active_cemu_account_by_mii_name(mii_name: str, case_sensitive=True):
-    if get_settings("no_cemu"):
-        raise Exception("Cemu integration is disabled")
-    desired_cemu_account = get_cemu_account_by_mii_name(mii_name, case_sensitive)
-    set_active_cemu_account(desired_cemu_account["persistentid"])
-
-
 def get_game_dir() -> Path:
     game_dir = str(
         get_settings("game_dir")
