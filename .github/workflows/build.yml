@@ -1,4 +1,4 @@
-name: Check and Maturin
+name: Build
 
 on:
   push:
@@ -11,27 +11,52 @@ env:
   ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
 
 jobs:
-  rust_changes:
+  check_changes:
+    name: Check changes
     runs-on: ubuntu-latest
     outputs:
-      rust_src_changed: ${{ steps.filter.outputs.rust_src }}
+      npm_assets_changed: ${{ steps.get_changes.outputs.npm_assets }}
+      rust_src_changed: ${{ steps.get_changes.outputs.rust_src }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: dorny/paths-filter@v2
-        id: filter
+        id: get_changes
         with:
           filters: |
+            npm_assets:
+              - 'bcml/assets/**'
             rust_src:
               - 'src/**'
               - 'bootstrap.sh'
               - 'Cargo.toml'
               - 'pyproject.toml'
-  check_linux:
-    needs: rust_changes
-    if: ${{ needs.rust_changes.outputs.rust_src_changed == 'true' }}
+
+  npm_build:
+    name: npm build
+    needs: check_changes
+    if: ${{ needs.check_changes.outputs.npm_assets_changed == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 15.x, 16.x, 17.x, 18.x]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+        working-directory: bcml/assets
+      - run: npm run build
+        working-directory: bcml/assets
+
+  maturin_build_linux:
+    name: Maturin (Linux)
+    needs: check_changes
+    if: ${{ needs.check_changes.outputs.rust_src_changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -50,12 +75,14 @@ jobs:
         command: build
         args: --release
         rust-toolchain: nightly
-  check_win:
-    needs: rust_changes
-    if: ${{ needs.rust_changes.outputs.rust_src_changed == 'true' }}
+
+  maturin_build_win:
+    name: Maturin (Windows)
+    needs: check_changes
+    if: ${{ needs.check_changes.outputs.rust_src_changed == 'true' }}
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
