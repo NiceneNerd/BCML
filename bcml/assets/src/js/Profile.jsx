@@ -8,7 +8,7 @@ class ProfileModal extends React.Component {
 
         this.state = {
             profiles: [],
-            currentProfile: "Default",
+            currentProfile: null,
             profileName: ""
         };
     }
@@ -38,11 +38,11 @@ class ProfileModal extends React.Component {
                 </Modal.Header>
                 <Modal.Body>
                     <div className="h5">
-                        <strong>Current Profile:</strong> {this.state.currentProfile}
+                        <strong>Current Profile:</strong> {this.state.currentProfile?.name || <i>None</i>}
                     </div>
                     <InputGroup className="mb-3">
                         <FormControl
-                            placeholder="Name new profile"
+                            placeholder="New profile name"
                             value={this.state.profileName}
                             onChange={e =>
                                 this.setState({ profileName: e.currentTarget.value })
@@ -53,7 +53,7 @@ class ProfileModal extends React.Component {
                                 variant="primary"
                                 disabled={!this.state.profileName}
                                 onClick={() =>
-                                    this.props.onSave(this.state.profileName, "save")
+                                    this.props.onSave({ name: this.state.profileName }, "save")
                                 }>
                                 Save
                             </Button>

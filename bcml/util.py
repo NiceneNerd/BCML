@@ -37,7 +37,7 @@ import xxhash  # pylint: disable=wrong-import-order
 from oead.aamp import ParameterIO, ParameterList  # pylint:disable=import-error
 from webview import Window  # pylint: disable=wrong-import-order
 
-from bcml import bcml as rsext
+from bcml import bcml as rsext, locks
 from bcml import pickles, DEBUG  # pylint: disable=unused-import
 from bcml.__version__ import VERSION
 
@@ -850,6 +850,93 @@ def get_modpack_dir() -> Path:
 
 def get_profiles_dir() -> Path:
     return get_storage_dir() / ("profiles" if get_settings("wiiu") else "profiles_nx")
+
+
+class ProfileNotFoundError(Exception):
+    pass
+
+
+def get_profiles() -> List[Dict[str, str]]:
+    profiles = []
+    profiles_dir = get_profiles_dir().glob("*")
+    for entry in profiles_dir:
+        if not entry.is_dir():
+            continue
+        profile = parse_profile_file(entry / ".profile")
+        profile["path"] = str(entry)
+        profiles.append(profile)
+    return profiles
+
+
+def get_profile(profile_name: str) -> Dict[str, str]:
+    profiles_dir = get_profiles_dir().glob("*")
+    for entry in profiles_dir:
+        if not entry.is_dir():
+            continue
+        profile = parse_profile_file(entry / ".profile")
+        if profile["name"] == profile_name:
+            profile["path"] = str(entry)
+            return profile
+    raise ProfileNotFoundError(f"No profile found with name: '{profile_name}'")
+
+
+def get_profile_path(profile_name: str) -> Path:
+    profiles_dir = get_profiles_dir().glob("*")
+    for entry in profiles_dir:
+        if not entry.is_dir():
+            continue
+        profile = parse_profile_file(entry / ".profile")
+        if profile["name"] == profile_name:
+            return str(entry)
+    raise ProfileNotFoundError(f"No profile found with name: '{profile_name}'")
+
+
+def get_current_profile() -> Union[Dict[str, str], None]:
+    current_profile_file = get_modpack_dir() / ".profile"
+    if not current_profile_file.exists():
+        return None
+    profile = parse_profile_file(current_profile_file)
+    try:
+        profile["path"] = get_profile_path(profile["name"])
+    except ProfileNotFoundError:
+        profile["path"] = None
+    return profile
+
+
+def parse_profile_file(profile_file: Path) -> Dict[str, str]:
+    if not profile_file.exists():
+        raise FileNotFoundError(f"Profile file not found: '{profile_file}'")
+    profile_data = profile_file.read_text("utf-8").split("\t")
+    return {"name": profile_data[0]}
+
+
+def set_profile(profile_name: str) -> None:
+    profile_path = get_profile_path(profile_name)
+    mod_dir = get_modpack_dir()
+    with locks.mod_dir:
+        shutil.rmtree(mod_dir)
+        shutil.copytree(profile_path, mod_dir)
+
+
+def delete_profile(profile_name: str) -> None:
+    profile_path = get_profile_path(profile_name)
+    shutil.rmtree(profile_path)
+    current_profile = get_current_profile()
+    if current_profile and current_profile["name"] == profile_name:
+        with locks.mod_dir:
+            os.remove(get_modpack_dir() / ".profile")
+
+
+def save_profile(profile_name: str) -> None:
+    profile_data = [profile_name]
+    mod_dir = get_modpack_dir()
+    profile_file = mod_dir / ".profile"
+    profile_file.write_text("\t".join(profile_data))
+    profile_dir = get_profiles_dir() / get_safe_pathname(profile_name)
+    if profile_dir.exists():
+        shutil.rmtree(profile_dir)
+    with locks.mod_dir:
+        shutil.copytree(mod_dir, profile_dir)
 
 
 @lru_cache(None)

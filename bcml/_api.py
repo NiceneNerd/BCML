@@ -16,7 +16,7 @@ from shutil import copytree, rmtree, copyfile
 from tempfile import NamedTemporaryFile, mkdtemp
 from time import sleep
 from threading import Thread
-from typing import List, Optional
+from typing import Dict, List, Optional
 from xml.dom import minidom
 
 import requests
@@ -335,43 +335,27 @@ class Api:
             for b in [(b.stem.split("---"), str(b)) for b in install.get_backups()]
         ]
 
-    def get_profiles(self):
-        return [
-            {"name": (d / ".profile").read_text("utf-8"), "path": str(d)}
-            for d in {d for d in util.get_profiles_dir().glob("*") if d.is_dir()}
-        ]
+    def get_profiles(self) -> List[Dict[str, str]]:
+        return util.get_profiles()
 
-    def get_current_profile(self):
-        profile = util.get_modpack_dir() / ".profile"
-        with locks.mod_dir:
-            if not (util.get_modpack_dir() / ".profile").exists():
-                profile.write_text("Default")
-                return "Default"
-            return profile.read_text("utf-8")
+    def get_current_profile(self) -> Dict[str, str]:
+        return util.get_current_profile()
 
     @win_or_lose
     @install.refresher
-    def set_profile(self, params):
-        mod_dir = util.get_modpack_dir()
-        with locks.mod_dir:
-            rmtree(mod_dir)
-            copytree(params["profile"], mod_dir)
+    def set_profile(self, params) -> None:
+        profile_name = str(params["profile"]["name"]).strip()
+        util.set_profile(profile_name)
 
     @win_or_lose
-    def delete_profile(self, params):
-        rmtree(params["profile"])
+    def delete_profile(self, params) -> None:
+        profile_name = str(params["profile"]["name"]).strip()
+        util.delete_profile(profile_name)
 
     @win_or_lose
-    def save_profile(self, params):
-        mod_dir = util.get_modpack_dir()
-        profile = mod_dir / ".profile"
-        profile.write_text(params["profile"])
-        profile_dir = util.get_profiles_dir() / util.get_safe_pathname(
-            params["profile"]
-        )
-        if profile_dir.exists():
-            rmtree(profile_dir)
-        copytree(mod_dir, profile_dir)
+    def save_profile(self, params) -> None:
+        profile_name = str(params["profile"]["name"]).strip().replace("\t", "")
+        util.save_profile(profile_name)
 
     def check_mod_options(self, params):
         metas = {
