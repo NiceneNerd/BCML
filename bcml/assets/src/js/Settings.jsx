@@ -427,7 +427,11 @@ class Settings extends React.Component {
                                 overlay={
                                     <Tooltip>
                                         (Optional) Where to automatically export the
-                                        final merged mod pack.
+                                        final merged mod pack.<br />
+                                        <br />
+                                        WARNING: The contents of this folder will be
+                                        deleted. Do not set this to a folder whose
+                                        contents you wish to retain.
                                     </Tooltip>
                                 }
                                 placeholder="Optional"
