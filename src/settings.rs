@@ -138,19 +138,14 @@ impl Settings {
     }
 
     pub fn export_dir(&self) -> Option<PathBuf> {
-        let dir = if self.wiiu {
-            self.export_dir.clone()
-        } else {
-            self.export_dir_nx.clone()
-        };
-        if dir.to_str().map(|d| d.is_empty()).unwrap_or_default() {
-            if self.wiiu && !self.no_cemu {
-                Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
+        if self.wiiu {
+            if self.no_cemu {
+                Some(self.export_dir.clone())
             } else {
-                None
+                Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
             }
         } else {
-            Some(dir)
+            Some(self.export_dir_nx.clone())
         }
     }
 
