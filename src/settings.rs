@@ -140,12 +140,12 @@ impl Settings {
     pub fn export_dir(&self) -> Option<PathBuf> {
         if self.wiiu {
             if self.no_cemu {
-                self.export_dir.clone()
+                Some(self.export_dir.clone())
             } else {
                 Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
             }
         } else {
-            self.export_dir_nx.clone()
+            Some(self.export_dir_nx.clone())
         }
     }
 
