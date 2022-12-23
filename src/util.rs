@@ -72,10 +72,7 @@ pub fn get_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
             if result.exists() {
                 Ok(result)
             } else {
-                anyhow::bail!(
-                    "Stock game file does not exist at {}",
-                    result.to_str().unwrap()
-                )
+                anyhow::bail!("Stock game file does not exist at {}", result.display())
             }
         }
     }
@@ -84,7 +81,7 @@ pub fn get_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
 pub fn get_aoc_game_file<P: AsRef<Path>>(file: P) -> Result<PathBuf> {
     let result = settings().dlc_dir().map(|d| d.join(file.as_ref()));
     if result.as_ref().map(|d| d.exists()).unwrap_or_default() {
-        Ok(result.unwrap())
+        Ok(unsafe { result.unwrap_unchecked() })
     } else {
         anyhow::bail!("Stock DLC game file does not exist at {:?}", result)
     }

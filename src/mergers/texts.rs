@@ -31,9 +31,9 @@ pub fn diff_language(
     let diff = py.allow_threads(|| -> Result<IndexMap<String, Diff>> {
         let language = &Path::new(&mod_bootup_path)
             .file_stem()
-            .unwrap()
+            .expect("Okay, how does this path have no name?")
             .to_str()
-            .unwrap()[7..];
+            .expect("And this should definitely work, too")[7..];
         let mod_bootup = Sarc::new(fs::read(&mod_bootup_path)?)?;
         let stock_bootup = Sarc::new(fs::read(&stock_bootup_path)?)?;
         let message_path = jstr!("Message/Msg_{&language}.product.ssarc");
@@ -67,7 +67,8 @@ pub fn diff_language(
                         .with_context(|| jstr!("Invalid MSBT file: {&path}"))?;
                     if let Some(stock_text) = stock_message
                         .get_data(&path)
-                        .unwrap()
+                        .ok()
+                        .flatten()
                         .and_then(|data| Msyt::from_msbt_bytes(data).ok())
                     {
                         if mod_text == stock_text {
@@ -80,8 +81,7 @@ pub fn diff_language(
                                     if only_new_keys {
                                         !stock_text.entries.contains_key(*e)
                                     } else {
-                                        !stock_text.entries.contains_key(*e)
-                                            || *t != stock_text.entries.get(*e).unwrap()
+                                        stock_text.entries.get(*e) != Some(t)
                                     }
                                 })
                                 .map(|(e, t)| (e.to_owned(), t.clone()))
@@ -105,7 +105,8 @@ pub fn diff_language(
             .collect();
         Ok(diffs)
     })?;
-    let diff_text = serde_json::to_string(&diff).unwrap();
+    let diff_text =
+        serde_json::to_string(&diff).expect("It's whack if this diff doesn't serialize");
     let json = PyModule::import(py, "json")?;
     #[allow(deprecated)]
     let dict = json.call_method1("loads", (&diff_text,))?;
@@ -130,9 +131,9 @@ pub fn merge_language(
     py.allow_threads(|| -> Result<()> {
         let language = &Path::new(&stock_bootup_path)
             .file_stem()
-            .unwrap()
+            .expect("Okay, how does this path have no name?")
             .to_str()
-            .unwrap()[7..];
+            .expect("And this should definitely work, too")[7..];
         let stock_bootup = Sarc::new(fs::read(&stock_bootup_path)?)?;
         let message_path = format!("Message/Msg_{}.product.ssarc", &language);
         let stock_message = Sarc::new(decompress(

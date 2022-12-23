@@ -93,7 +93,7 @@ impl<'py, 'set> ModLinker<'py, 'set> {
         }
         let mod_folders: Vec<PathBuf> =
             glob::glob(&settings.mods_dir().join("*").to_string_lossy())
-                .unwrap()
+                .expect("Bad glob?!?!?")
                 .filter_map(|p| p.ok())
                 .filter(|p| p.is_dir() && !p.join(".disabled").exists())
                 .collect::<std::collections::BTreeSet<PathBuf>>()
@@ -103,7 +103,7 @@ impl<'py, 'set> ModLinker<'py, 'set> {
                     std::iter::once(p)
                         .chain(
                             glob::glob(&glob_str)
-                                .unwrap()
+                                .expect("Bad glob?!?!?")
                                 .filter_map(|p| p.ok())
                                 .filter(|p| p.is_dir()),
                         )
@@ -118,10 +118,10 @@ impl<'py, 'set> ModLinker<'py, 'set> {
                 .try_for_each(|folder| -> Result<()> {
                     let mod_files: Vec<(PathBuf, PathBuf)> =
                         glob::glob(&folder.join("**/*").to_string_lossy())
-                            .unwrap()
+                            .expect("Bad glob?!?!?!")
                             .filter_map(|p| {
                                 p.ok().map(|p| {
-                                    (p.clone(), p.strip_prefix(&folder).unwrap().to_owned())
+                                    (p.clone(), unsafe {p.strip_prefix(&folder).unwrap_unchecked()}.to_owned())
                                 })
                             })
                             .filter(|(item, rel)| {
@@ -145,7 +145,7 @@ impl<'py, 'set> ModLinker<'py, 'set> {
                                 .map(fs::create_dir_all)
                                 .transpose()
                                 .with_context(|| jstr!("Failed to create parent folder for file {rel.to_str().unwrap()}"))?
-                                .unwrap();
+                                .expect("Whoa, why is there no parent folder?");
                             fs::hard_link(&item, &out)
                                 .with_context(|| jstr!("Failed to hard link {rel.to_str().unwrap()} to {out.to_str().unwrap()}"))
                                 .or_else(|_| {
@@ -302,11 +302,11 @@ impl<'py, 'set> ModLinker<'py, 'set> {
             }
         }
         if glob::glob(&output.join("*").to_string_lossy())
-            .unwrap()
+            .expect("Bad glob?!?!?!")
             .filter_map(|p| p.ok())
             .count()
             == 0
-            && std::fs::read_dir(settings.mods_dir()).unwrap().count() > 1
+            && std::fs::read_dir(settings.mods_dir())?.count() > 1
         {
             Err(anyhow::anyhow!("Output folder is empty"))
         } else {

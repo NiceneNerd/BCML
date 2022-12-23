@@ -62,11 +62,16 @@ impl Display for MapUnit {
 impl TryFrom<&Path> for MapUnit {
     type Error = anyhow::Error;
     fn try_from(value: &Path) -> Result<Self> {
-        let mut split = value.file_stem().unwrap().to_str().unwrap().split('_');
+        let mut split = value
+            .file_stem()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+            .split('_');
         Ok(MapUnit {
             unit: split.next().context("Not a map unitt")?.into(),
             kind: split.next().context("Not a map unitt")?.into(),
-            aocfield: value.to_str().unwrap().contains("AocField"),
+            aocfield: value.to_str().unwrap_or_default().contains("AocField"),
         })
     }
 }
@@ -96,7 +101,10 @@ impl MapUnit {
     }
 
     fn get_aoc_path(&self) -> PathBuf {
-        util::settings().dlc_dir().unwrap().join(self.get_path())
+        util::settings()
+            .dlc_dir()
+            .expect("There's no DLC folder")
+            .join(self.get_path())
     }
 
     fn get_resource_path(&self) -> String {
@@ -126,8 +134,7 @@ impl MapUnit {
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("TitleBG")?;
                 Ok(Byml::from_binary(&decompress(
-                    pack
-                        .get_data(&self.get_path())
+                    pack.get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
                         })?
@@ -146,8 +153,7 @@ impl MapUnit {
             MapUnitType::Static => {
                 let pack = util::get_stock_pack("AocMainField")?;
                 Ok(Byml::from_binary(&decompress(
-                    pack
-                        .get_data(&self.get_path())
+                    pack.get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
                         })?
@@ -161,11 +167,11 @@ impl MapUnit {
 fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
     let stock_hashes: Vec<u32> = entries
         .iter()
-        .map(|e| e["HashId"].as_u32().unwrap())
-        .collect();
+        .map(|e| Ok(e["HashId"].as_u32()?))
+        .collect::<Result<_>>()?;
     let mut orphans: Vec<Byml> = vec![];
     for (hash, entry) in diff["mod"].as_hash()? {
-        let hash = hash.parse::<u32>().unwrap();
+        let hash = hash.parse::<u32>()?;
         if let Some(idx) = stock_hashes.iter().position(|h| *h == hash) {
             entries[idx] = entry.clone();
         } else {
@@ -188,19 +194,18 @@ fn merge_entries(diff: &Hash, entries: &mut Vec<Byml>) -> Result<()> {
             .cloned()
             .chain(orphans.into_iter())
             .filter(|e| {
-                !stock_hashes.contains(
-                    &(e["HashId"]
-                        .as_u32()
-                        .or_else(|_| e["HashId"].as_i32().map(|i| i as u32))
-                        .unwrap()),
-                )
+                e["HashId"]
+                    .as_u32()
+                    .or_else(|_| e["HashId"].as_i32().map(|i| i as u32))
+                    .map(|h| !stock_hashes.contains(&h))
+                    .unwrap_or(false)
             }),
     );
     entries.sort_by_cached_key(|e| {
         e["HashId"]
             .as_u32()
             .or_else(|_| e["HashId"].as_i32().map(|i| i as u32))
-            .unwrap()
+            .unwrap_or(0)
     });
     Ok(())
 }
@@ -218,16 +223,18 @@ fn merge_map(map_unit: MapUnit, diff: &Hash, settings: &Settings) -> Result<(Str
         merge_entries(diff["Rails"].as_hash()?, rails)?;
     }
     let data = new_map.to_binary(settings.endian());
-    let size = rstb::calc::calc_from_size_and_name(
-        data.len(),
-        "dummy.mubin",
-        if settings.wiiu {
-            rstb::Endian::Big
-        } else {
-            rstb::Endian::Little
-        },
-    )
-    .unwrap();
+    let size = unsafe {
+        rstb::calc::calc_from_size_and_name(
+            data.len(),
+            "dummy.mubin",
+            if settings.wiiu {
+                rstb::Endian::Big
+            } else {
+                rstb::Endian::Little
+            },
+        )
+        .unwrap_unchecked()
+    };
     let out = settings
         .master_mod_dir()
         .join(if util::settings().dlc_dir().is_some() {
@@ -236,8 +243,8 @@ fn merge_map(map_unit: MapUnit, diff: &Hash, settings: &Settings) -> Result<(Str
             util::content()
         })
         .join(map_unit.get_path());
-    if !out.parent().unwrap().exists() {
-        fs::create_dir_all(out.parent().unwrap())?;
+    if !out.parent().expect("Folder has no parent?!?").exists() {
+        fs::create_dir_all(out.parent().expect("Folder has no parent?!?"))?;
     }
     fs::write(out, compress(data))?;
     Ok((
@@ -252,7 +259,7 @@ fn merge_map(map_unit: MapUnit, diff: &Hash, settings: &Settings) -> Result<(Str
 
 #[pyfunction]
 pub fn merge_maps(py: Python, diff_bytes: Vec<u8>) -> PyResult<PyObject> {
-    let diffs = Byml::from_binary(&diff_bytes).unwrap();
+    let diffs = Byml::from_binary(&diff_bytes).map_err(anyhow::Error::from)?;
     let rstb_values: HashMap<String, u32> = if let Byml::Hash(diffs) = diffs {
         py.allow_threads(|| -> Result<HashMap<String, u32>> {
             let settings = util::settings().clone();
