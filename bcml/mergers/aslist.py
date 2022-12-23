@@ -1,7 +1,7 @@
 from functools import reduce, partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List, ByteString, Optional, Dict, Any
+from typing import Union, List, Set, ByteString, Optional, Dict, Any
 
 from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
 from oead import Sarc, SarcWriter, InvalidDataError, FixedSafeString64
@@ -137,12 +137,12 @@ def merge_plists(
     file_table: bool = False,
 ):
     def merge_addres(plist: ParameterList, other_plist: ParameterList):
-        bfres: List[str] = []
+        bfres: Set[str] = set()
         for _, pobj in plist.objects.items():
-            bfres.append(str(pobj.params["Anim"].v))
+            bfres.add(str(pobj.params["Anim"].v))
         for _, other_pobj in other_plist.objects.items():
-            bfres.append(str(other_pobj.params["Anim"].v))
-        for i, v in enumerate(list(dict.fromkeys(bfres))):
+            bfres.add(str(other_pobj.params["Anim"].v))
+        for i, v in enumerate(bfres):
             key = f"AddRes_{i}"
             if not key in plist.objects:
                 plist.objects[key] = ParameterObject()
