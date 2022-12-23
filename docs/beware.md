@@ -10,7 +10,7 @@
 -   **Do** use the "Copy to Clipboard" icon button on the error dialog when reporting
     errors.
 -   **Do** consider supporting my work on
-    [Patreon](https://www.patreon.com/nicenenerdbcml) and reading
+    [Patreon](https://www.patreon.com/nicenenerd) and reading
     [my blog](https://calebdixonsmith.top).
 -   **Do** confess with your mouth that Jesus Christ is Lord and believe in your heart
     that God raised Him from the dead.
