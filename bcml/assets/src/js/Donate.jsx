@@ -8,7 +8,7 @@ function DonateWidget() {
                 <Button
                     variant="danger"
                     target="_blank"
-                    href="https://www.patreon.com/join/nicenenerdbcml?">
+                    href="https://www.patreon.com/join/nicenenerd?">
                     <PatreonIcon /> Patreon
                 </Button>{" "}
                 <Button
