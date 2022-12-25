@@ -55,7 +55,7 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
                     f"Failed to read nested file:\n{path}//{file}"
                 ) from err
             except (ValueError, RuntimeError, InvalidDataError) as err:
-                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
+                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}") from err
             diffs.update({full_path: get_aamp_diff(pio, ref_pio)})
     return diffs
 
@@ -106,12 +106,10 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
         for _, pobj in asdef.objects.items():
             defs[str(pobj.params["Name"].v)] = str(pobj.params["Filename"].v)
         for _, ref_pobj in ref_asdef.objects.items():
+            key = str(ref_pobj.params["Name"].v)
             try:
-                if (
-                    defs[str(ref_pobj.params["Name"].v)]
-                    == str(ref_pobj.params["Filename"].v)
-                ):
-                    defs.pop(str(ref_pobj.params["Name"].v))
+                if defs[key] == str(ref_pobj.params["Filename"].v):
+                    defs.pop(key)
             except (ValueError, KeyError):
                 continue
         for i, (k, v) in enumerate(defs.items()):
@@ -149,16 +147,21 @@ def merge_plists(
             plist.objects[key].params["Anim"] = Parameter(FixedSafeString64(v))
 
     def merge_asdefine(plist: ParameterList, other_plist: ParameterList):
+        listing: Dict[str, int] = {}
         defs: Dict[str, str] = {}
-        for _, pobj in plist.objects.items():
-            defs[str(pobj.params["Name"].v)] = pobj.params["Filename"].v
+        for i, (_, pobj) in enumerate(plist.objects.items()):
+            listing[str(pobj.params["Name"].v)] = i
         for _, other_pobj in other_plist.objects.items():
             defs[str(other_pobj.params["Name"].v)] = other_pobj.params["Filename"].v
-        for i, (k, v) in enumerate(defs.items()):
-            key = f"ASDefine_{i}"
-            if not key in plist.objects:
+        new_idx = len(listing)
+        for k, v in defs.items():
+            if k in listing:
+                key = f"ASDefine_{listing[k]}"
+            else:
+                key = f"ASDefine_{new_idx}"
                 plist.objects[key] = ParameterObject()
-            plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
+                plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
+                new_idx += 1
             plist.objects[key].params["Filename"] = Parameter(v)
 
     def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
@@ -189,13 +192,14 @@ def merge_plists(
 
 
 def merge_aamp_files(file: str, tree: dict):
-    try:
-        base_file = util.get_game_file(file)
-    except FileNotFoundError:
-        util.vprint(f"Skipping {file}, not found in dump")
-        return
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
+    else:
+        try:
+            base_file = util.get_game_file(file)
+        except FileNotFoundError:
+            util.vprint(f"Skipping {file}, not found in dump")
+            return
     try:
         sarc = Sarc(util.unyaz_if_needed(base_file.read_bytes()))
     except (ValueError, InvalidDataError, RuntimeError):
