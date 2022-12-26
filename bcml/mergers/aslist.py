@@ -250,7 +250,7 @@ def merge_plists(
     file_table: bool = False,
 ):
     def merge_addres(plist: ParameterList, other_plist: ParameterList):
-        bfres: Dict[str, Any] = set()
+        bfres: Dict[str, Any] = {}
         for _, pobj in plist.objects.items():
             bfres[str(pobj.params["Anim"].v)] = None
         for _, other_pobj in other_plist.objects.items():
@@ -267,7 +267,7 @@ def merge_plists(
         for i, (_, pobj) in enumerate(plist.objects.items()):
             listing[str(pobj.params["Name"].v)] = i
         for _, other_pobj in other_plist.objects.items():
-            defs[str(other_pobj.params["Name"].v)] = other_pobj.params["Filename"].v
+            defs[str(other_pobj.params["Name"].v)] = str(other_pobj.params["Filename"].v)
         new_idx = len(listing)
         for k, v in defs.items():
             if k in listing:
@@ -277,7 +277,7 @@ def merge_plists(
                 plist.objects[key] = ParameterObject()
                 plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
                 new_idx += 1
-            plist.objects[key].params["Filename"] = Parameter(v)
+            plist.objects[key].params["Filename"] = Parameter(FixedSafeString64(v))
     
     def merge_cfdefines(plist: ParameterList, other_plist: ParameterList):
         cfdef_diff = cfdefs_to_dict(other_plist)
