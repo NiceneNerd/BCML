@@ -250,12 +250,12 @@ def merge_plists(
     file_table: bool = False,
 ):
     def merge_addres(plist: ParameterList, other_plist: ParameterList):
-        bfres: Set[str] = set()
+        bfres: Dict[str, Any] = set()
         for _, pobj in plist.objects.items():
-            bfres.add(str(pobj.params["Anim"].v))
+            bfres[str(pobj.params["Anim"].v)] = None
         for _, other_pobj in other_plist.objects.items():
-            bfres.add(str(other_pobj.params["Anim"].v))
-        for i, v in enumerate(bfres):
+            bfres[str(other_pobj.params["Anim"].v)] = None
+        for i, (v, _) in enumerate(bfres):
             key = f"AddRes_{i}"
             if not key in plist.objects:
                 plist.objects[key] = ParameterObject()
