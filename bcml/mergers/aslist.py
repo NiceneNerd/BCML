@@ -11,15 +11,13 @@ HANDLES = {".baslist"}
 
 
 class CFDefine:
-    name: str = ""
-    excepts: List[str] = []
-    posts: Dict[str, Dict[str, float]] = {}
-
     def __init__(self, cfdef: ParameterList) -> None:
         self.name = str(cfdef.objects["CFPre"].params["Name"].v)
+        self.excepts: List[str] = []
+        self.posts: Dict[str, Dict[str, float]] = {}
         if "CFExcepts" in cfdef.objects:
             for _, except_val in cfdef.objects["CFExcepts"].params.items():
-                self.excepts.append(except_val)
+                self.excepts.append(str(except_val.v))
         if "CFPosts" in cfdef.lists:
             for _, cfpost in cfdef.lists["CFPosts"].objects.items():
                 post_val: Dict[str, float] = {
@@ -59,6 +57,7 @@ class CFDefine:
                 for param_name, param in post_params.items():
                     cfpost.params[param_name] = Parameter(param)
                 cfposts.objects[f"CFPost_{i}"] = cfpost
+            plist.lists["CFPosts"] = cfposts
         return plist
 
     def diff_against(self, other) -> None:
@@ -85,7 +84,10 @@ class CFDefine:
         """Updates self from other/merges other into self"""
         if not self.name == other.name:
             raise ValueError(f"CFDefine {self.name} was updated from {other.name}")
-        self.excepts = list(dict.fromkeys(self.excepts).update(dict.fromkeys(other.excepts)))
+        tmp = dict.fromkeys(self.excepts)
+        tmp.update(dict.fromkeys(other.excepts))
+        self.excepts = tmp.keys()
+        del tmp
         for post_name, post_params in other.posts.items():
             if post_name not in self.posts:
                 self.posts[post_name] = post_params
@@ -257,7 +259,7 @@ def merge_plists(
             bfres[str(pobj.params["Anim"].v)] = None
         for _, other_pobj in other_plist.objects.items():
             bfres[str(other_pobj.params["Anim"].v)] = None
-        for i, (v, _) in enumerate(bfres):
+        for i, v in enumerate(bfres.keys()):
             key = f"AddRes_{i}"
             if not key in plist.objects:
                 plist.objects[key] = ParameterObject()
