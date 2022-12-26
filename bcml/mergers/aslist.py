@@ -10,6 +10,95 @@ from bcml import util, mergers
 HANDLES = {".baslist"}
 
 
+class CFDefine:
+    name: str = ""
+    excepts: List[str] = []
+    posts: Dict[str, Dict[str, float]] = {}
+
+    def __init__(self, cfdef: ParameterList) -> None:
+        self.name = str(cfdef.objects["CFPre"].params["Name"].v)
+        if "CFExcepts" in cfdef.objects:
+            for _, except_val in cfdef.objects["CFExcepts"].params.items():
+                self.excepts.append(except_val)
+        if "CFPosts" in cfdef.lists:
+            for _, cfpost in cfdef.lists["CFPosts"].objects.items():
+                post_val: Dict[str, float] = {
+                    "Frame": cfpost.params["Frame"].v,
+                    "StartFrameRate": cfpost.params["StartFrameRate"].v
+                }
+                self.posts[str(cfpost.params["Name"].v)] = post_val
+
+    def __eq__(self, __o: object) -> bool:
+        if self is __o:
+            return True
+        if (
+            not isinstance(__o, CFDefine) or
+            not self.name == __o.name or
+            not set(self.excepts) == set(__o.excepts) or
+            not self.posts == __o.posts
+        ):
+            return False
+        return True
+
+    def to_plist(self) -> ParameterList:
+        """Converts the CFDefine to an oead.aamp.ParameterList, for writing"""
+        plist = ParameterList()
+        cfpre = ParameterObject()
+        cfpre.params["Name"] = Parameter(FixedSafeString32(self.name))
+        plist.objects["CFPre"] = cfpre
+        if self.excepts:
+            cfexcepts = ParameterObject()
+            for i, cfexcept in enumerate(self.excepts):
+                cfexcepts.params[f"Name_{i}"] = Parameter(FixedSafeString32(cfexcept))
+            plist.objects["CFExcepts"] = cfexcepts
+        if self.posts:
+            cfposts = ParameterList()
+            for i, (post_name, post_params) in enumerate(self.posts.items()):
+                cfpost = ParameterObject()
+                cfpost.params["Name"] = Parameter(FixedSafeString32(post_name))
+                for param_name, param in post_params.items():
+                    cfpost.params[param_name] = Parameter(param)
+                cfposts.objects[f"CFPost_{i}"] = cfpost
+        return plist
+
+    def diff_against(self, other) -> None:
+        """Diffs self against other, removing any properties that self shares with other"""
+        if self == other:
+            self.excepts.clear()
+            self.posts.clear()
+        if not self.name == other.name:
+            raise ValueError(f"CFDefine {self.name} was diffed against {other.name}")
+        self.excepts = [item for item in self.excepts if item not in other.excepts]
+        new_posts = {}
+        for post_name, post_params in self.posts.items():
+            if post_name not in other.posts:
+                new_posts[post_name] = post_params
+                continue
+            for param_name, param_val in post_params.items():
+                if not other.posts[post_name][param_name] == param_val:
+                    if not post_name in new_posts:
+                        new_posts[post_name] = {}
+                    new_posts[post_name][param_name] == param_val
+        self.posts = new_posts
+
+    def update_from(self, other) -> None:
+        """Updates self from other/merges other into self"""
+        if not self.name == other.name:
+            raise ValueError(f"CFDefine {self.name} was updated from {other.name}")
+        self.excepts = list(dict.fromkeys(self.excepts).update(dict.fromkeys(other.excepts)))
+        for post_name, post_params in other.posts.items():
+            if post_name not in self.posts:
+                self.posts[post_name] = post_params
+                continue
+            self.posts[post_name].update(post_params)
+
+    def is_empty(self) -> bool:
+        """Checks if the CFDefine has any data. To be used after diffing"""
+        if self.excepts or self.posts:
+            return False
+        return True
+
+
 def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optional[dict]:
     try:
         ref_sarc = Sarc(util.unyaz_if_needed(util.get_game_file(file).read_bytes()))
@@ -60,73 +149,19 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
     return diffs
 
 
-def cfdefs_to_dict(
-    cfdefs_plist: ParameterList
-) -> Dict[str, Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]]:
-    d: Dict[str, Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]] = {}
+def cfdefs_to_dict(cfdefs_plist: ParameterList) -> Dict[str, CFDefine]:
+    d: Dict[str, CFDefine] = {}
     for _, plist in cfdefs_plist.lists.items():
-        cfdef = cfdef_to_dict(plist)
-        d[str(plist.objects["CFPre"].params["Name"].v)] = cfdef
+        cfdef = CFDefine(plist)
+        d[cfdef.name] = cfdef
     return d
 
 
-def cfdef_to_dict(
-    cfdef_plist: ParameterList
-) -> Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]:
-    cfdef: Dict[str, Union[List[str], Dict[str, Dict[str, float]]]] = {}
-    if "CFExcepts" in cfdef_plist.objects:
-        l = []
-        for _, param in cfdef_plist.objects["CFExcepts"].items():
-            l.append(str(param.v))
-        cfdef["CFExcepts"] = l
-    if "CFPosts" in cfdef_plist.lists:
-        cfposts = {}
-        for _, pobj in cfdef_plist.lists["CFPosts"].items():
-            cfpost = {
-                "Frame": pobj.params["Frame"].v,
-                "StartFrameRate": pobj.params["StartFrameRate"].v
-            }
-            cfposts[str(pobj.params["Name"].v)] = cfpost
-        cfdef["CFPosts"] = cfposts
-    return cfdef
-
-
-def dict_to_cfdefs(
-    d: Dict[str, Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]]
-) -> ParameterList:
+def dict_to_cfdefs(d: Dict[str, CFDefine]) -> ParameterList:
     cfdefs = ParameterList()
-    for idx, (cfdef_name, cfdef_dict) in enumerate(d.items()):
-        cfdef = dict_to_cfdef(cfdef_name, cfdef_dict)
-        cfdefs.lists[f"CFDefine_{idx}"] = cfdef
+    for i, (_, cfdef) in enumerate(d.items()):
+        cfdefs.lists[f"CFDefine_{i}"] = cfdef.to_plist()
     return cfdefs
-
-
-def dict_to_cfdef(
-    cfpre_name: str,
-    cfdef_dict: Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]
-) -> ParameterList:
-    cfdef = ParameterList()
-    cfpre = ParameterObject()
-    cfpre.params["Name"] = Parameter(FixedSafeString32(cfpre_name))
-    cfdef.objects["CFPre"] = cfpre
-    for _, val in cfdef_dict.items():
-        if isinstance(val, list):
-            cfexcepts = ParameterObject()
-            for i, except_name in enumerate(val):
-                cfexcepts.params[f"Name_{i}"] = Parameter(
-                    FixedSafeString32(except_name)
-                )
-            cfdef.objects["CFExcepts"] = cfexcepts
-            continue
-        cfposts = ParameterList()
-        for i, (post_name, post) in enumerate(val.items()):
-            cfpost = ParameterObject()
-            cfpost.params["Name"] = Parameter(FixedSafeString32(post_name))
-            for prop_name, prop_val in post.items():
-                cfpost.params[prop_name] = Parameter(prop_val)
-            cfposts.objects[f"CFPost_{i}"] = cfpost
-        cfdef.lists["CFPosts"] = cfposts
-    return cfdef
 
 
 def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
@@ -189,49 +224,16 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
         return diff
     
     def diff_cfdefines(cfdefs: ParameterList, ref_cfdefs: ParameterList) -> ParameterList:
-        def diff_cfdefine(
-            cfdef: Dict[str, Union[List[str], Dict[str, Dict[str, float]]]],
-            ref_cfdef: Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]
-        ) -> Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]:
-            d: Dict[str, Union[List[str], Dict[str, Dict[str, float]]]] = {}
-            for key, val in cfdef.items():
-                if key not in ref_cfdef:
-                    d[key] = val
-                    continue
-                if isinstance(val, list):
-                    d[key] = val - ref_cfdef[key]
-                    continue
-                tmp = {}
-                for name, prop in d[key].items():
-                    if name not in ref_cfdef[key]:
-                        tmp = prop
-                        continue
-                    tmp2 = {}
-                    for param, param_val in prop.items():
-                        if (
-                            param not in ref_cfdef[key][name] or
-                            not param_val == ref_cfdef[key][name][param]
-                        ):
-                            tmp2[param] = param_val
-                    if tmp2:
-                        tmp[name] = tmp2
-                if tmp:
-                    d[key] = tmp
-            return d
-
-        diffs: Dict[str, Dict[str, Union[List[str], Dict[str, Dict[str, float]]]]] = {}
+        diffs: Dict[str, CFDefine] = {}
         defs = cfdefs_to_dict(cfdefs)
         ref_defs = cfdefs_to_dict(ref_cfdefs)
         for name, cfdef in defs.items():
-            tmp = {}
             if name in ref_defs:
-                tmp2 = diff_cfdefine(cfdef, ref_defs[name])
-                if tmp2:
-                    tmp = tmp2
-            else:
-                tmp = cfdef
-            if tmp:
-                diffs[name] = tmp
+                ref_def = ref_defs[name]
+                if not cfdef == ref_def:
+                    cfdef.diff_against(ref_def)
+                    if not cfdef.is_empty():
+                        diffs[name] = cfdef
         return dict_to_cfdefs(diffs)
 
     def diff_pobj(pobj: ParameterObject, ref_pobj: ParameterObject) -> ParameterObject:
@@ -285,59 +287,16 @@ def merge_plists(
         for i, (_, cfdef) in enumerate(plist.lists.items()):
             listing[str(cfdef.objects["CFPre"].params["Name"].v)] = i
         new_idx = len(listing)
-        for cfpre, def_dict in cfdef_diff.items():
-            if not cfpre in listing:
-                key = f"CFDefine_{new_idx}"
-                plist.lists[key] = dict_to_cfdef(cfpre, def_dict)
-                new_idx += 1
+        for cfdef_name, cfdef in cfdef_diff.items():
+            if cfdef_name in listing:
+                def_key = f"CFDefine_{listing[cfdef_name]}"
+                vanilla_cfdef = CFDefine(plist.lists[def_key])
+                vanilla_cfdef.update_from(cfdef)
+                plist.lists[def_key] = vanilla_cfdef.to_plist()
                 continue
-            key = f"CFDefine_{listing[cfpre]}"
-            for _, def_vals in def_dict.items():
-                if isinstance(def_vals, list):
-                    except_idx = 0
-                    if "CFExcepts" in plist.lists[key].objects:
-                        cfexcepts = plist.lists[key].objects["CFExcepts"]
-                        except_idx = len(cfexcepts.params)
-                        # old log compatibility
-                        vanilla_excepts = []
-                        for _, cfexcept in cfexcepts.params.items():
-                            vanilla_excepts.append(str(cfexcept.v))
-                        def_vals = def_vals - vanilla_excepts
-                        # end old log compatibility
-                    else:
-                        cfexcepts = ParameterObject()
-                        plist.lists[key].objects["CFExcepts"] = cfexcepts
-                    for i, cfexcept in enumerate(def_vals):
-                        except_key = f"Name_{except_idx + i}"
-                        cfexcepts.params[except_key] = Parameter(
-                            FixedSafeString32(cfexcept)
-                        )
-                    continue
-                post_idx = 0
-                if "CFPosts" in plist.lists[key].lists:
-                    cfposts = plist.lists[key].lists["CFPosts"]
-                    post_idx = len(cfposts.objects)
-                else:
-                    cfposts = ParameterList()
-                    plist.lists[key].lists["CFPosts"] = cfposts
-                posts_listing: Dict[str, int] = {}
-                for i, (_, cfpost) in enumerate(cfposts.objects.items()):
-                    posts_listing[str(cfpost.params["Name"].v)] = i
-                for post_name, post in def_vals.items():
-                    if not post_name in posts_listing:
-                        key = f"CFPost_{post_idx}"
-                        cfposts.objects[key] = ParameterObject()
-                        cfposts.objects[key].params["Name"] = Parameter(
-                            FixedSafeString32(post_name)
-                        )
-                        for post_key, post_val in post.items():
-                            cfposts.objects[key].params[post_key] = Parameter(post_val)
-                        post_idx += 1
-                        continue
-                    cfpost = cfposts.objects[f"CFPost_{posts_listing[post_name]}"]
-                    for post_key, post_val in post.items():
-                        cfpost.params[post_key] = Parameter(post_val)
-
+            def_key = f"CFDefine_{new_idx}"
+            plist.lists[def_key] = cfdef.to_plist()
+            new_idx += 1
 
     def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
         for param, value in other_pobj.params.items():
