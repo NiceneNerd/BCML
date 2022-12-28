@@ -23,7 +23,7 @@ static STOCK_ACTORINFO: Lazy<Result<Arc<ActorMap>>> = Lazy::new(|| {
                 .iter()
                 .map(|actor| -> Result<(u32, Byml)> {
                     Ok((
-                        roead::aamp::hash_name(actor.as_hash().unwrap()["name"].as_string()?),
+                        roead::aamp::hash_name(actor.as_hash()?["name"].as_string()?),
                         actor.clone(),
                     ))
                 })
@@ -107,7 +107,7 @@ fn diff_actorinfo(py: Python, actorinfo_path: String) -> PyResult<PyObject> {
                     })
                 })
                 .collect();
-            Ok(Byml::Hash(diff).to_text().unwrap().as_bytes().to_vec())
+            Ok(Byml::Hash(diff).to_text()?.as_bytes().to_vec())
         } else {
             anyhow::bail!("Modded actor info is not a hash???")
         }
@@ -120,11 +120,11 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
     let merge = || -> Result<()> {
         let modded_actor_root = Byml::from_binary(&modded_actors)?;
         let modded_actors: ActorMap = py.allow_threads(|| -> Result<ActorMap> {
-            Ok(modded_actor_root
+            modded_actor_root
                 .as_hash()?
                 .into_par_iter()
-                .map(|(h, a)| (h.parse::<u32>().unwrap(), a.clone()))
-                .collect())
+                .map(|(h, a)| Ok((h.parse::<u32>()?, a.clone())))
+                .collect()
         })?;
         let mut merged_actors = stock_actorinfo()?.as_ref().clone();
         merge_actormap(&mut merged_actors, &modded_actors);
@@ -152,8 +152,8 @@ fn merge_actorinfo(py: Python, modded_actors: Vec<u8>) -> PyResult<()> {
         let output = util::settings()
             .master_content_dir()
             .join("Actor/ActorInfo.product.sbyml");
-        if !output.parent().unwrap().exists() {
-            fs::create_dir_all(output.parent().unwrap())?;
+        if !output.parent().expect("No parent folder?!?!?").exists() {
+            fs::create_dir_all(output.parent().expect("No parent folder?!?!?"))?;
         }
         fs::write(
             output,

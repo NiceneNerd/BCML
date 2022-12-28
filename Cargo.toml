@@ -1,7 +1,7 @@
 [package]
 name = "bcml"
 authors = ["Caleb Smith"]
-version = "3.9.26"
+version = "3.10.1"
 edition = "2021"
 readme = "docs/README.md"
 
@@ -25,7 +25,7 @@ path-slash = "0.1.4"
 parking_lot = "0.12.1"
 pyo3 = { version = "0.16.5", features = ["extension-module", "anyhow"] }
 rayon = "1.5.3"
-roead = { features = ["yaml"], version = "0.16.1"}
+roead = { features = ["yaml"], version = "0.18.2"}
 rustc-hash = "1.1.0"
 rstb = "0.3.2"
 serde = { version = "1.0.144", features = ["derive"] }
@@ -37,3 +37,7 @@ thiserror = "1.0.32"
 junction = { git = "https://github.com/NiceneNerd/junction", rev = "84e0dbd793645acf2702de283f78e8f6e0043ea5" }
 mslnk = "0.1.8"
 remove_dir_all = "0.7.0"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1

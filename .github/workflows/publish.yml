@@ -50,13 +50,21 @@ jobs:
                 args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
                 rust-toolchain: nightly
     deploy_windows:
-        runs-on: windows-latest
+        runs-on: windows-2019
         steps:
             - uses: actions/checkout@v2
-            - name: Set up Python
+            - name: Set up Python 3.9
               uses: actions/setup-python@v2
               with:
                   python-version: "3.9"
+            - name: Set up Python 3.7
+              uses: actions/setup-python@v2
+              with:
+                  python-version: "3.7"
+            - name: Set up Python 3.8
+              uses: actions/setup-python@v2
+              with:
+                  python-version: "3.8"
             - name: Set up Node.js
               uses: actions/setup-node@v1
               # env:
@@ -68,7 +76,7 @@ jobs:
                   python -m venv venv
                   venv\Scripts\activate.ps1
                   python -m pip install --upgrade pip wheel setuptools
-                  pip install twine mkdocs mkdocs-material
+                  pip install twine mkdocs mkdocs-material maturin
             - name: Generate webpack bundle
               working-directory: .\bcml\assets
               run: |
@@ -84,10 +92,7 @@ jobs:
                 profile: minimal
                 toolchain: nightly
                 override: true
-            - uses: messense/maturin-action@v1
-              name: Publish with Maturin
-              with:
-                maturin-version: v0.12.20
-                command: publish
-                args: --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing
-                rust-toolchain: nightly
+            - name: Publish with Maturin
+              run: |
+                  venv\Scripts\activate.ps1
+                  maturin publish -f --no-sdist -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --skip-existing

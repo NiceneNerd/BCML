@@ -1,13 +1,104 @@
 from functools import reduce, partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Union, List, ByteString, Optional, Dict, Any
+from typing import Union, List, Set, ByteString, Optional, Dict, Any
 
 from oead.aamp import ParameterIO, ParameterList, ParameterObject, Parameter
-from oead import Sarc, SarcWriter, InvalidDataError, FixedSafeString64
+from oead import Sarc, SarcWriter, InvalidDataError, FixedSafeString64, FixedSafeString32
 from bcml import util, mergers
 
 HANDLES = {".baslist"}
+
+
+class CFDefine:
+    def __init__(self, cfdef: ParameterList) -> None:
+        self.name = str(cfdef.objects["CFPre"].params["Name"].v)
+        self.excepts: List[str] = []
+        self.posts: Dict[str, Dict[str, float]] = {}
+        if "CFExcepts" in cfdef.objects:
+            for _, except_val in cfdef.objects["CFExcepts"].params.items():
+                self.excepts.append(str(except_val.v))
+        if "CFPosts" in cfdef.lists:
+            for _, cfpost in cfdef.lists["CFPosts"].objects.items():
+                post_val: Dict[str, float] = {
+                    "Frame": cfpost.params["Frame"].v,
+                    "StartFrameRate": cfpost.params["StartFrameRate"].v
+                }
+                self.posts[str(cfpost.params["Name"].v)] = post_val
+
+    def __eq__(self, __o: object) -> bool:
+        if self is __o:
+            return True
+        if (
+            not isinstance(__o, CFDefine) or
+            not self.name == __o.name or
+            not set(self.excepts) == set(__o.excepts) or
+            not self.posts == __o.posts
+        ):
+            return False
+        return True
+
+    def to_plist(self) -> ParameterList:
+        """Converts the CFDefine to an oead.aamp.ParameterList, for writing"""
+        plist = ParameterList()
+        cfpre = ParameterObject()
+        cfpre.params["Name"] = Parameter(FixedSafeString32(self.name))
+        plist.objects["CFPre"] = cfpre
+        if self.excepts:
+            cfexcepts = ParameterObject()
+            for i, cfexcept in enumerate(self.excepts):
+                cfexcepts.params[f"Name_{i}"] = Parameter(FixedSafeString32(cfexcept))
+            plist.objects["CFExcepts"] = cfexcepts
+        if self.posts:
+            cfposts = ParameterList()
+            for i, (post_name, post_params) in enumerate(self.posts.items()):
+                cfpost = ParameterObject()
+                cfpost.params["Name"] = Parameter(FixedSafeString32(post_name))
+                for param_name, param in post_params.items():
+                    cfpost.params[param_name] = Parameter(param)
+                cfposts.objects[f"CFPost_{i}"] = cfpost
+            plist.lists["CFPosts"] = cfposts
+        return plist
+
+    def diff_against(self, other) -> None:
+        """Diffs self against other, removing any properties that self shares with other"""
+        if self == other:
+            self.excepts.clear()
+            self.posts.clear()
+        if not self.name == other.name:
+            raise ValueError(f"CFDefine {self.name} was diffed against {other.name}")
+        self.excepts = [item for item in self.excepts if item not in other.excepts]
+        new_posts = {}
+        for post_name, post_params in self.posts.items():
+            if post_name not in other.posts:
+                new_posts[post_name] = post_params
+                continue
+            for param_name, param_val in post_params.items():
+                if not other.posts[post_name][param_name] == param_val:
+                    if not post_name in new_posts:
+                        new_posts[post_name] = {}
+                    new_posts[post_name][param_name] == param_val
+        self.posts = new_posts
+
+    def update_from(self, other) -> None:
+        """Updates self from other/merges other into self"""
+        if not self.name == other.name:
+            raise ValueError(f"CFDefine {self.name} was updated from {other.name}")
+        tmp = dict.fromkeys(self.excepts)
+        tmp.update(dict.fromkeys(other.excepts))
+        self.excepts = tmp.keys()
+        del tmp
+        for post_name, post_params in other.posts.items():
+            if post_name not in self.posts:
+                self.posts[post_name] = post_params
+                continue
+            self.posts[post_name].update(post_params)
+
+    def is_empty(self) -> bool:
+        """Checks if the CFDefine has any data. To be used after diffing"""
+        if self.excepts or self.posts:
+            return False
+        return True
 
 
 def get_aamp_diffs(file: str, tree: Union[dict, list], tmp_dir: Path) -> Optional[dict]:
@@ -55,9 +146,24 @@ def _get_diffs_from_sarc(sarc: Sarc, ref_sarc: Sarc, edits: dict, path: str) -> 
                     f"Failed to read nested file:\n{path}//{file}"
                 ) from err
             except (ValueError, RuntimeError, InvalidDataError) as err:
-                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}")
+                raise ValueError(f"Failed to parse AAMP file:\n{path}//{file}") from err
             diffs.update({full_path: get_aamp_diff(pio, ref_pio)})
     return diffs
+
+
+def cfdefs_to_dict(cfdefs_plist: ParameterList) -> Dict[str, CFDefine]:
+    d: Dict[str, CFDefine] = {}
+    for _, plist in cfdefs_plist.lists.items():
+        cfdef = CFDefine(plist)
+        d[cfdef.name] = cfdef
+    return d
+
+
+def dict_to_cfdefs(d: Dict[str, CFDefine]) -> ParameterList:
+    cfdefs = ParameterList()
+    for i, (_, cfdef) in enumerate(d.items()):
+        cfdefs.lists[f"CFDefine_{i}"] = cfdef.to_plist()
+    return cfdefs
 
 
 def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
@@ -72,7 +178,7 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
             elif key.hash == 3752287078:  # "ASDefines"
                 diff.lists[key] = diff_asdefine(sublist, ref_plist.lists[key])
             elif key.hash == 3305786543:  # "CFDefines"
-                diff.lists[key] = sublist
+                diff.lists[key] = diff_cfdefines(sublist, ref_plist.lists[key])
             elif key not in ref_plist.lists:
                 diff.lists[key] = sublist
             elif ref_plist.lists[key] != sublist:
@@ -106,12 +212,10 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
         for _, pobj in asdef.objects.items():
             defs[str(pobj.params["Name"].v)] = str(pobj.params["Filename"].v)
         for _, ref_pobj in ref_asdef.objects.items():
+            key = str(ref_pobj.params["Name"].v)
             try:
-                if (
-                    defs[str(ref_pobj.params["Name"].v)]
-                    == str(ref_pobj.params["Filename"].v)
-                ):
-                    defs.pop(str(ref_pobj.params["Name"].v))
+                if defs[key] == str(ref_pobj.params["Filename"].v):
+                    defs.pop(key)
             except (ValueError, KeyError):
                 continue
         for i, (k, v) in enumerate(defs.items()):
@@ -120,6 +224,19 @@ def get_aamp_diff(pio: ParameterIO, ref_pio: ParameterIO) -> ParameterList:
             diff.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
             diff.objects[key].params["Filename"] = Parameter(FixedSafeString64(v))
         return diff
+    
+    def diff_cfdefines(cfdefs: ParameterList, ref_cfdefs: ParameterList) -> ParameterList:
+        diffs: Dict[str, CFDefine] = {}
+        defs = cfdefs_to_dict(cfdefs)
+        ref_defs = cfdefs_to_dict(ref_cfdefs)
+        for name, cfdef in defs.items():
+            if name in ref_defs:
+                ref_def = ref_defs[name]
+                if not cfdef == ref_def:
+                    cfdef.diff_against(ref_def)
+                    if not cfdef.is_empty():
+                        diffs[name] = cfdef
+        return dict_to_cfdefs(diffs)
 
     def diff_pobj(pobj: ParameterObject, ref_pobj: ParameterObject) -> ParameterObject:
         diff = ParameterObject()
@@ -137,29 +254,51 @@ def merge_plists(
     file_table: bool = False,
 ):
     def merge_addres(plist: ParameterList, other_plist: ParameterList):
-        bfres: List[str] = []
+        bfres: Dict[str, Any] = {}
         for _, pobj in plist.objects.items():
-            bfres.append(str(pobj.params["Anim"].v))
+            bfres[str(pobj.params["Anim"].v)] = None
         for _, other_pobj in other_plist.objects.items():
-            bfres.append(str(other_pobj.params["Anim"].v))
-        for i, v in enumerate(list(dict.fromkeys(bfres))):
+            bfres[str(other_pobj.params["Anim"].v)] = None
+        for i, v in enumerate(bfres.keys()):
             key = f"AddRes_{i}"
             if not key in plist.objects:
                 plist.objects[key] = ParameterObject()
             plist.objects[key].params["Anim"] = Parameter(FixedSafeString64(v))
 
     def merge_asdefine(plist: ParameterList, other_plist: ParameterList):
+        listing: Dict[str, int] = {}
         defs: Dict[str, str] = {}
-        for _, pobj in plist.objects.items():
-            defs[str(pobj.params["Name"].v)] = pobj.params["Filename"].v
+        for i, (_, pobj) in enumerate(plist.objects.items()):
+            listing[str(pobj.params["Name"].v)] = i
         for _, other_pobj in other_plist.objects.items():
-            defs[str(other_pobj.params["Name"].v)] = other_pobj.params["Filename"].v
-        for i, (k, v) in enumerate(defs.items()):
-            key = f"ASDefine_{i}"
-            if not key in plist.objects:
+            defs[str(other_pobj.params["Name"].v)] = str(other_pobj.params["Filename"].v)
+        new_idx = len(listing)
+        for k, v in defs.items():
+            if k in listing:
+                key = f"ASDefine_{listing[k]}"
+            else:
+                key = f"ASDefine_{new_idx}"
                 plist.objects[key] = ParameterObject()
-            plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
-            plist.objects[key].params["Filename"] = Parameter(v)
+                plist.objects[key].params["Name"] = Parameter(FixedSafeString64(k))
+                new_idx += 1
+            plist.objects[key].params["Filename"] = Parameter(FixedSafeString64(v))
+    
+    def merge_cfdefines(plist: ParameterList, other_plist: ParameterList):
+        cfdef_diff = cfdefs_to_dict(other_plist)
+        listing: Dict[str, int] = {}
+        for i, (_, cfdef) in enumerate(plist.lists.items()):
+            listing[str(cfdef.objects["CFPre"].params["Name"].v)] = i
+        new_idx = len(listing)
+        for cfdef_name, cfdef in cfdef_diff.items():
+            if cfdef_name in listing:
+                def_key = f"CFDefine_{listing[cfdef_name]}"
+                vanilla_cfdef = CFDefine(plist.lists[def_key])
+                vanilla_cfdef.update_from(cfdef)
+                plist.lists[def_key] = vanilla_cfdef.to_plist()
+                continue
+            def_key = f"CFDefine_{new_idx}"
+            plist.lists[def_key] = cfdef.to_plist()
+            new_idx += 1
 
     def merge_pobj(pobj: ParameterObject, other_pobj: ParameterObject):
         for param, value in other_pobj.params.items():
@@ -170,6 +309,8 @@ def merge_plists(
             merge_addres(plist.lists[key], sublist)
         elif key.hash == 3752287078:  # "ASDefines"
             merge_asdefine(plist.lists[key], sublist)
+        elif key.hash == 3305786543:  # "CFDefines"
+            merge_cfdefines(plist.lists[key], sublist)
         elif key in plist.lists:
             merge_plists(plist.lists[key], sublist)
         else:
@@ -189,13 +330,14 @@ def merge_plists(
 
 
 def merge_aamp_files(file: str, tree: dict):
-    try:
-        base_file = util.get_game_file(file)
-    except FileNotFoundError:
-        util.vprint(f"Skipping {file}, not found in dump")
-        return
     if (util.get_master_modpack_dir() / file).exists():
         base_file = util.get_master_modpack_dir() / file
+    else:
+        try:
+            base_file = util.get_game_file(file)
+        except FileNotFoundError:
+            util.vprint(f"Skipping {file}, not found in dump")
+            return
     try:
         sarc = Sarc(util.unyaz_if_needed(base_file.read_bytes()))
     except (ValueError, InvalidDataError, RuntimeError):

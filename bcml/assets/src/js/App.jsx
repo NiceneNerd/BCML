@@ -269,16 +269,14 @@ class App extends React.Component {
         let progressTitle;
         let action;
         if (operation == "save") {
-            progressTitle = "Saving Profile";
+            progressTitle = `Saving Profile: ${profile.name}`;
             action = pywebview.api.save_profile;
         } else if (operation == "load") {
-            progressTitle = `Loading ${profile.name}`;
+            progressTitle = `Loading Profile: ${profile.name}`;
             action = pywebview.api.set_profile;
-            profile = profile.path;
         } else {
-            progressTitle = `Deleting ${profile.name}`;
+            progressTitle = `Deleting Profile: ${profile.name}`;
             action = pywebview.api.delete_profile;
-            profile = profile.path;
         }
         const task = () =>
             this.setState(

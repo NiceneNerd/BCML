@@ -9,8 +9,9 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
 pub enum Language {
+    #[default]
     USen,
     EUen,
     USfr,
@@ -35,37 +36,77 @@ impl std::fmt::Display for Language {
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Settings {
-    pub cemu_dir: PathBuf,
-    pub game_dir: PathBuf,
-    pub game_dir_nx: PathBuf,
-    pub update_dir: PathBuf,
-    pub dlc_dir: PathBuf,
-    pub dlc_dir_nx: PathBuf,
+    #[serde(default = "default_store_dir")]
     pub store_dir: PathBuf,
-    pub export_dir: PathBuf,
-    pub export_dir_nx: PathBuf,
-    pub load_reverse: bool,
-    pub site_meta: PathBuf,
-    pub dark_theme: bool,
-    pub no_guess: bool,
+    #[serde(default)]
     pub lang: Language,
-    pub no_cemu: bool,
-    pub wiiu: bool,
-    pub no_hardlinks: bool,
-    pub force_7z: bool,
-    pub suppress_update: bool,
-    pub nsfw: bool,
+    #[serde(default = "last_version")]
     pub last_version: String,
+    #[serde(default = "fn_true")]
     pub changelog: bool,
-    pub strip_gfx: bool,
+    #[serde(default = "fn_true")]
+    pub wiiu: bool,
+    #[serde(default = "fn_true")]
     pub auto_gb: bool,
+    #[serde(default)]
+    pub cemu_dir: PathBuf,
+    #[serde(default)]
+    pub game_dir: PathBuf,
+    #[serde(default)]
+    pub game_dir_nx: PathBuf,
+    #[serde(default)]
+    pub update_dir: PathBuf,
+    #[serde(default)]
+    pub dlc_dir: PathBuf,
+    #[serde(default)]
+    pub dlc_dir_nx: PathBuf,
+    #[serde(default)]
+    pub export_dir: PathBuf,
+    #[serde(default)]
+    pub export_dir_nx: PathBuf,
+    #[serde(default)]
+    pub load_reverse: bool,
+    #[serde(default)]
+    pub site_meta: PathBuf,
+    #[serde(default)]
+    pub dark_theme: bool,
+    #[serde(default)]
+    pub no_guess: bool,
+    #[serde(default)]
+    pub no_cemu: bool,
+    #[serde(default)]
+    pub no_hardlinks: bool,
+    #[serde(default)]
+    pub force_7z: bool,
+    #[serde(default)]
+    pub suppress_update: bool,
+    #[serde(default)]
+    pub nsfw: bool,
+    #[serde(default)]
+    pub strip_gfx: bool,
+    #[serde(default)]
     pub show_gb: bool,
+}
+
+#[inline]
+fn default_store_dir() -> PathBuf {
+    DATA_DIR.clone()
+}
+
+#[inline]
+fn last_version() -> String {
+    env!("CARGO_PKG_VERSION").to_owned()
+}
+
+#[inline(always)]
+fn fn_true() -> bool {
+    true
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            store_dir: DATA_DIR.clone(),
+            store_dir: default_store_dir(),
             lang: Language::USen,
             last_version: env!("CARGO_PKG_VERSION").to_owned(),
             changelog: true,
@@ -137,16 +178,15 @@ impl Settings {
             .join(if self.wiiu { "mods" } else { "mods_nx" })
     }
 
-    pub fn export_dir(&self) -> Option<&Path> {
-        let dir = if self.wiiu {
-            self.export_dir.as_path()
+    pub fn export_dir(&self) -> Option<PathBuf> {
+        if self.wiiu {
+            if self.no_cemu {
+                Some(self.export_dir.clone())
+            } else {
+                Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
+            }
         } else {
-            self.export_dir_nx.as_path()
-        };
-        if dir.to_str().map(|d| d.is_empty()).unwrap_or_default() {
-            None
-        } else {
-            Some(dir)
+            Some(self.export_dir_nx.clone())
         }
     }
 
@@ -184,6 +224,18 @@ impl Settings {
         }
     }
 
+    pub fn reload(&mut self) -> Result<()> {
+        *self = if Self::path().exists() {
+            let text = fs::read_to_string(&Self::path()).unwrap();
+            serde_json::from_str(&text.cow_replace(": null", ": \"\""))
+                .expect("Failed to read settings file")
+        } else {
+            println!("WARNING: Settings file does not exist, loading default settings...");
+            Settings::default()
+        };
+        Ok(())
+    }
+
     pub fn save(&self) -> Result<()> {
         serde_json::to_writer_pretty(fs::File::create(&Self::path())?, &self)?;
         Ok(())
@@ -193,7 +245,7 @@ impl Settings {
 pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::path();
     Arc::new(RwLock::new(if settings_path.exists() {
-        let text = fs::read_to_string(&settings_path).unwrap();
+        let text = fs::read_to_string(&settings_path).expect("Couldn't read settings, that's bad");
         serde_json::from_str(&text.cow_replace(": null", ": \"\""))
             .expect("Failed to read settings file")
     } else {
@@ -205,7 +257,7 @@ pub static SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
 pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
     let settings_path = Settings::tmp_path();
     Arc::new(RwLock::new(if settings_path.exists() {
-        let text = fs::read_to_string(&settings_path).unwrap();
+        let text = fs::read_to_string(&settings_path).expect("Chouldn't read settings, that's bad");
         serde_json::from_str(&text.cow_replace(": null", ": \"\""))
             .expect("Failed to read temp settings file")
     } else {
@@ -216,11 +268,13 @@ pub static TMP_SETTINGS: Lazy<Arc<RwLock<Settings>>> = Lazy::new(|| {
 
 pub static DATA_DIR: Lazy<PathBuf> = Lazy::new(|| {
     if std::env::args().any(|f| &f == "--portable") {
-        std::env::current_dir().unwrap().join("bcml-data")
+        std::env::current_dir()
+            .expect("Big problems if no cwd")
+            .join("bcml-data")
     } else if cfg!(windows) {
-        dirs2::data_local_dir().unwrap()
+        dirs2::data_local_dir().expect("Big problems if no local data dir")
     } else {
-        dirs2::config_dir().unwrap()
+        dirs2::config_dir().expect("Big problems if no config dir")
     }
     .join("bcml")
 });

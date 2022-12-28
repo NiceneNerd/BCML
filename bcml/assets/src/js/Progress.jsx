@@ -62,7 +62,7 @@ let messages = [
     "BCML tip: Back up your mods when making substantial changes",
     'BCML tip: The backup/restore feature can be used for mod "profiles"',
     "Shameless plug: I blog at <a href='https://calebdixonsmith.top' target='_blank'>Theology Without Warranty</a>",
-    "<a href='https://www.patreon.com/nicenenerdbcml' target='_blank'>Support BCML on Patreon</a> so my wife will let me keep doing this",
+    "<a href='https://www.patreon.com/nicenenerd' target='_blank'>Support BCML on Patreon</a> so my wife will let me keep doing this",
     "While Link fights Ganon, <a href='https://www.tiktok.com/@nicenenerd?lang=en' target='_blank'>I fight bad theology on TikTok</a>",
     "Downloading RAM so Link goes fast",
     "Feeding Koroks",

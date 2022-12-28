@@ -191,7 +191,7 @@ def find_modded_files(
 
     modded_files = [
         f if "//" in f else Path(f)
-        for f in rsext.find_modified_files(str(tmp_dir), util.get_settings("wiiu"))
+        for f in rsext.find_modified_files(str(tmp_dir))
     ]
     return modded_files
 
@@ -769,28 +769,6 @@ def export(output: Path, standalone: bool = False):
                 " a fluke, so consider restarting BCML and trying again."
             ) from err
     link_master_mod(tmp_dir)
-    print("Adding rules.txt...")
-    rules_path = tmp_dir / "rules.txt"
-    mods = util.get_installed_mods()
-    if util.get_settings("wiiu"):
-        name = "Exported BCML mod" if not standalone else mods[0].name
-        desc = (
-            f'Exported merge of {", ".join([mod.name for mod in mods])}'
-            if not standalone
-            else mods[0].description
-        )
-        while not rules_path.exists():
-            print("Waiting for Python and Windows to figure themselves out...")
-            continue
-        rules_path.write_text(
-            "[Definition]\n"
-            "titleIds = 00050000101C9300,00050000101C9400,00050000101C9500\n"
-            f"name = {name}\n"
-            f"path = The Legend of Zelda: Breath of the Wild/Mods/{name}\n"
-            f"description = {desc}\n"
-            "version = 4\n",
-            encoding="utf-8"
-        )
     if output.suffix == ".bnp" or output.name.endswith(".bnp.7z"):
         print("Exporting BNP...")
         dev.create_bnp_mod(

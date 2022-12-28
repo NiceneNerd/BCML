@@ -94,7 +94,7 @@ fn merge_sarc(sarcs: Vec<Sarc>, endian: Endian) -> Result<Vec<u8>> {
                 let mut merged = merge_sarc(nest_sarcs, endian)?;
                 if file_path
                     .extension()
-                    .map(|e| e.to_str().unwrap().starts_with('s'))
+                    .map(|e| e.to_str().unwrap_or_default().starts_with('s'))
                     .unwrap_or_default()
                 {
                     merged = compress(&merged);
@@ -119,24 +119,30 @@ pub fn merge_sarcs(py: Python, diffs: HashMap<PathBuf, Vec<PathBuf>>) -> PyResul
             .par_iter()
             .filter(|f| f.0.file_name() != Some(std::ffi::OsStr::new("AocMainField.pack")))
             .try_for_each(|(path, sarc_paths)| -> Result<()> {
-                let out = settings.master_mod_dir().join(&path);
+                let out = settings.master_mod_dir().join(path);
                 if out.exists() {
                     fs::remove_file(&out)?;
                 }
                 let sarcs = sarc_paths
                     .iter()
                     .filter_map(|file| -> Option<Result<Sarc>> {
-                        fs::read(&file)
+                        fs::read(file)
                             .map(|data| Sarc::new(data).ok())
                             .map_err(anyhow::Error::from)
                             .transpose()
                     })
                     .collect::<Result<Vec<Sarc>>>()?;
                 let mut merged = merge_sarc(sarcs, settings.endian())?;
-                if out.extension().unwrap().to_str().unwrap().starts_with('s') {
+                if out
+                    .extension()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or_default()
+                    .starts_with('s')
+                {
                     merged = compress(merged);
                 }
-                fs::create_dir_all(&out.parent().unwrap())?;
+                fs::create_dir_all(out.parent().expect("No parent folder??!?"))?;
                 fs::write(out, merged)?;
                 Ok(())
             })?;

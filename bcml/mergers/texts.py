@@ -69,18 +69,14 @@ def map_languages(dest_langs: Set[str], src_langs: Set[str]) -> dict:
         if dest_lang in src_langs:
             lang_map[dest_lang] = dest_lang
         else:
-            for src_lang in src_langs:
-                if src_lang[2:4] == dest_lang[2:4]:
-                    lang_map[dest_lang] = src_lang
-                    break
+            for src_lang in [l for l in src_langs if l[2:4] == dest_lang[2:4]]:
+                lang_map[dest_lang] = src_lang
+                break
             if dest_lang in lang_map:
                 continue
-            for src_lang in sorted(
-                src_langs, key=lambda lang: lang[0:2] != dest_lang[0:2]
-            ):
-                if src_lang[2:4] == "en":
-                    lang_map[dest_lang] = src_lang
-                    break
+            for src_lang in [l for l in src_langs if l[2:4] == "en"]:
+                lang_map[dest_lang] = src_lang
+                break
             if dest_lang in lang_map:
                 continue
             lang_map[dest_lang] = next(iter(src_langs))

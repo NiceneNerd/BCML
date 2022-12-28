@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+#![deny(clippy::unwrap_used)]
 pub mod manager;
 pub mod mergers;
 pub mod settings;
@@ -19,24 +21,32 @@ fn bcml(py: Python, m: &PyModule) -> PyResult<()> {
     mergers::mergers_mod(py, m)?;
     manager::manager_mod(py, m)?;
     m.add_wrapped(wrap_pyfunction!(find_modified_files))?;
+    m.add_wrapped(wrap_pyfunction!(reload_settings))?;
     Ok(())
 }
 
 #[pyfunction]
-fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<String>> {
+fn reload_settings() -> PyResult<()> {
+    println!("Reloading settings");
+    settings::SETTINGS.write().reload()?;
+    Ok(())
+}
+
+#[pyfunction]
+fn find_modified_files(py: Python, mod_dir: String) -> PyResult<Vec<String>> {
     println!("Finding modified files...");
     let mod_dir = Path::new(&mod_dir);
     let content = mod_dir.join(util::content());
     let dlc = mod_dir.join(util::dlc());
     let files: Vec<PathBuf> = py.allow_threads(|| {
-        glob::glob(mod_dir.join("**/*").to_str().unwrap())
-            .unwrap()
+        glob::glob(&mod_dir.join("**/*").to_string_lossy())
+            .expect("Bad glob?!?!?!")
             .filter_map(std::result::Result::ok)
             .par_bridge()
             .filter(|f| {
                 f.is_file()
                     && (f.starts_with(&content) || f.starts_with(&dlc))
-                    && util::get_canon_name(f.strip_prefix(&mod_dir).unwrap())
+                    && util::get_canon_name(unsafe { f.strip_prefix(mod_dir).unwrap_unchecked() })
                         .and_then(|canon| {
                             fs::read(f)
                                 .ok()
@@ -51,7 +61,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
         Ok(files
             .par_iter()
             .filter(|f| {
-                fs::metadata(f).unwrap().len() > 4
+                fs::metadata(f).expect("No file metadata!?!?!?!").len() > 4
                     && f.extension()
                         .and_then(|ext| ext.to_str())
                         .map(|ext| botw_utils::extensions::SARC_EXTS.contains(&ext))
@@ -62,8 +72,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
                 find_modded_sarc_files(
                     &sarc,
                     file.starts_with(&dlc),
-                    be,
-                    &file.strip_prefix(&mod_dir).unwrap().to_slash_lossy(),
+                    &unsafe { file.strip_prefix(mod_dir).unwrap_unchecked() }.to_slash_lossy(),
                 )
             })
             .collect::<Result<Vec<_>>>()?
@@ -79,7 +88,7 @@ fn find_modified_files(py: Python, mod_dir: String, be: bool) -> PyResult<Vec<St
         .collect())
 }
 
-fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Result<Vec<String>> {
+fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, path: &str) -> Result<Vec<String>> {
     Ok(sarc
         .files()
         .filter(|f| f.name().is_some())
@@ -102,8 +111,10 @@ fn find_modded_sarc_files(sarc: &Sarc, aoc: bool, be: bool, path: &str) -> Resul
                 modded_files.extend(find_modded_sarc_files(
                     &sarc,
                     aoc,
-                    be,
-                    modded_files.first().as_ref().unwrap(),
+                    modded_files
+                        .first()
+                        .as_ref()
+                        .expect("What a strange filename"),
                 )?);
             }
             Ok(modded_files)
