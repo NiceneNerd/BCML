@@ -465,6 +465,7 @@ NO_CONVERT_EXTS = {
     ".sbfarc",
     ".shknm2",
     ".shktmrb",
+    ".shkcs",
     ".bfstm",
     ".bars",
     ".sbreviewtex",
@@ -486,15 +487,13 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
     for file in sarc.get_files():
         if "Physics/" in file.name and "Actor/" not in file.name:
             ext = file.name[file.name.rindex(".") :]
+            actor_name = file.name[file.name.rindex("/") : file.name.rindex(".")]
             if ext in NO_CONVERT_EXTS:
                 if not util.is_file_modded(
                     util.get_canon_name(file.name, allow_no_source=True),
                     file.data,
                     count_new=True,
                 ):
-                    actor_name = file.name[
-                        file.name.rindex("/") : file.name.rindex(".")
-                    ]
                     try:
                         pack_path = util.get_game_file(
                             f"Actor/Pack/{actor_name}.sbactorpack"
@@ -520,22 +519,23 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                 if file.data[0:4] == b"AAMP":
                     continue
 
-                hkx_c = util.get_hkconvert_path()
-                temp = f"{environ['TEMP']}/hk_convert"
+                temp = f"{environ['TEMP']}/hk_convert/{actor_name}"
 
-                hk_file = Path(f"{temp}/{file.name}")
-                hk_file.parent.mkdir(parents=True, exist_ok=True)
-                hk_file.write_bytes(file.data)
+                if not Path(temp).is_dir():
+                    hkx_c = util.get_hkconvert_path()
+                    hk_file = Path(f"{temp}/{file.name}")
+                    hk_file.parent.mkdir(parents=True, exist_ok=True)
+                    hk_file.write_bytes(file.data)
 
-                subprocess.run(f'"{hkx_c}" hkx2json "{hk_file}" "{hk_file}.json"')
-                hk_file.unlink()
+                    subprocess.run(f'"{hkx_c}" hkx2json "{hk_file}" "{hk_file}.json"')
+                    hk_file.unlink()
 
-                subprocess.run(
-                    f'"{hkx_c}" json2hkx{"" if to_wiiu else " --nx"} "{hk_file}.json" "{hk_file}"'
-                )
-                new_sarc.files[file.name] = hk_file.read_bytes()
-                Path(f"{hk_file}.json").unlink()
-                hk_file.unlink()
+                    subprocess.run(
+                        f'"{hkx_c}" json2hkx{"" if to_wiiu else " --nx"} "{hk_file}.json" "{hk_file}"'
+                    )
+                    new_sarc.files[file.name] = hk_file.read_bytes()
+                    Path(f"{hk_file}.json").unlink()
+                    hk_file.unlink()
 
         elif file.data[0:2] in {b"BY", b"YB"}:
             by = oead.byml.from_binary(file.data)
