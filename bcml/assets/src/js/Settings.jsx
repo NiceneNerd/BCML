@@ -263,7 +263,7 @@ class Settings extends React.Component {
                                         The last folder should be "romfs", e.g.
                                         <br />
                                         <code>
-                                            C:\Games\BOTW\01007EF00011E000\romfs
+                                            C:\Games\BOTW\01007EF00011E800\romfs
                                         </code>
                                     </Tooltip>
                                 }
