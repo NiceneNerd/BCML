@@ -15,7 +15,6 @@ from zlib import crc32
 
 import oead
 import xxhash  # pylint: disable=wrong-import-order
-from botw_havok import Havok
 
 from bcml import util, install
 from bcml.util import BYML_EXTS, SARC_EXTS, TempSettingsContext
@@ -461,10 +460,12 @@ NO_CONVERT_EXTS = {
     ".bfres",
     ".bcamanim",
     ".sbcamanim",
+    ".hkrb",
     ".hkcl",
     ".hkrg",
     ".sesetlist",
     ".sbfarc",
+    ".shksc",
     ".shknm2",
     ".shktmrb",
     ".bfstm",
@@ -518,19 +519,6 @@ def _convert_actorpack(actor_pack: Path, to_wiiu: bool) -> Union[None, str]:
                         "This mod contains a Havok file not supported by the"
                         f" converter: {file.name}"
                     )
-            else:
-                if file.data[0:4] == b"AAMP":
-                    continue
-                try:
-                    hk = Havok.from_bytes(bytes(file.data))
-                except:  # pylint: disable=bare-except
-                    return f"Could not parse Havok file {file.name}"
-                if to_wiiu:
-                    hk.to_wiiu()
-                else:
-                    hk.to_switch()
-                hk.serialize()
-                new_sarc.files[file.name] = hk.to_bytes()
         elif file.data[0:2] in {b"BY", b"YB"}:
             by = oead.byml.from_binary(file.data)
             new_sarc.files[file.name] = oead.byml.to_binary(by, big_endian=to_wiiu)
