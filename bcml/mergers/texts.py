@@ -176,8 +176,18 @@ class TextsMerger(mergers.Merger):
     def consolidate_diffs(self, diffs: list):
         if not diffs:
             return {}
+        user_langs = (
+            {util.get_settings("lang")}
+            if not self._options["all_langs"]
+            else util.get_user_languages()
+        )
         main_diff = diffs[0]
         for diff in diffs[1:]:
+            # copy diffs from langs mod has to langs user wants
+            lang_map = map_languages(user_langs, set(diff.keys()))
+            for user_lang, mod_lang in lang_map.items():
+                if user_lang not in diff:
+                    diff[user_lang] = diff[mod_lang]
             for lang, content in diff.items():
                 if lang not in main_diff:
                     main_diff[lang] = content
@@ -206,22 +216,19 @@ class TextsMerger(mergers.Merger):
                 bootup.unlink()
             return
 
-        # find a mod lang for each user lang
-        lang_map = map_languages(user_langs, set(diffs.keys()))
-        for user_lang, mod_lang in lang_map.items():
-            print(f"Merging modded texts for {mod_lang} into {user_lang}...")
+        for lang in user_langs:
             rsext.mergers.texts.merge_language(
-                json.dumps(diffs[mod_lang]),
-                str(util.get_game_file(f"Pack/Bootup_{user_lang}.pack")),
+                json.dumps(diffs[lang]),
+                str(util.get_game_file(f"Pack/Bootup_{lang}.pack")),
                 str(
                     util.get_master_modpack_dir()
                     / util.get_content_path()
                     / "Pack"
-                    / f"Bootup_{user_lang}.pack"
+                    / f"Bootup_{lang}.pack"
                 ),
                 util.get_settings("wiiu"),
             )
-            print(f"{user_lang} texts merged successfully")
+            print(f"{lang} texts merged successfully")
 
     def get_checkbox_options(self) -> List[tuple]:
         return [
