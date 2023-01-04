@@ -181,13 +181,16 @@ class TextsMerger(mergers.Merger):
             if not self._options["all_langs"]
             else util.get_user_languages()
         )
-        main_diff = diffs[0]
-        for diff in diffs[1:]:
-            # copy diffs from langs mod has to langs user wants
+
+        # copy diffs from langs mod has to langs user wants
+        for diff in diffs:
             lang_map = map_languages(user_langs, set(diff.keys()))
             for user_lang, mod_lang in lang_map.items():
                 if user_lang not in diff:
                     diff[user_lang] = diff[mod_lang]
+
+        main_diff = diffs[0]
+        for diff in diffs[1:]:
             for lang, content in diff.items():
                 if lang not in main_diff:
                     main_diff[lang] = content
