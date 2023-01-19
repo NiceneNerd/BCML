@@ -1,6 +1,5 @@
 #![feature(let_chains)]
 #![deny(clippy::unwrap_used)]
-#![feature(scoped_threads)]
 pub mod manager;
 pub mod mergers;
 pub mod settings;
