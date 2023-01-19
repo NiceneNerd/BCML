@@ -137,8 +137,7 @@ impl MapUnit {
                     pack.get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
-                        })?
-                        .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
+                        })?,
                 )?)?)
             }
         }
@@ -156,8 +155,7 @@ impl MapUnit {
                     pack.get_data(&self.get_path())
                         .with_context(|| {
                             jstr!("Failed to read {&self.get_path()} from TitleBG.pack")
-                        })?
-                        .with_context(|| jstr!("{&self.get_path()} missing from TitleBG.pack"))?,
+                        })?,
                 )?)?)
             }
         }

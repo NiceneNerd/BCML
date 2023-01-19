@@ -42,16 +42,14 @@ pub fn diff_language(
                 .get_data(&message_path)
                 .with_context(|| {
                     jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                })?
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+                })?,
         )?)?;
         let stock_message = Sarc::new(decompress(
             stock_bootup
                 .get_data(&message_path)
                 .with_context(|| {
                     jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                })?
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+                })?,
         )?)?;
         let diffs = mod_message
             .files()
@@ -67,8 +65,6 @@ pub fn diff_language(
                         .with_context(|| jstr!("Invalid MSBT file: {&path}"))?;
                     if let Some(stock_text) = stock_message
                         .get_data(&path)
-                        .ok()
-                        .flatten()
                         .and_then(|data| Msyt::from_msbt_bytes(data).ok())
                     {
                         if mod_text == stock_text {
@@ -141,15 +137,14 @@ pub fn merge_language(
                 .get_data(&message_path)
                 .with_context(|| {
                     jstr!("Failed to read {&message_path} from Bootup_{language}.pack")
-                })?
-                .with_context(|| jstr!("{&message_path} missing from Bootup_{language}.pack"))?,
+                })?,
         )?)?;
         let mut new_message = SarcWriter::from(&stock_message);
         let merged_files = diffs
             .into_par_iter()
             .map(|(file, diff)| -> Result<(String, Vec<u8>)> {
                 let file = file.replace("msyt", "msbt");
-                if let Ok(Some(stock_file)) = stock_message.get_data(&file) {
+                if let Some(stock_file) = stock_message.get_data(&file) {
                     let mut stock_text = Msyt::from_msbt_bytes(stock_file)?;
                     stock_text.entries.extend(diff.into_iter());
                     Ok((file, stock_text.into_msbt_bytes(endian)?))
