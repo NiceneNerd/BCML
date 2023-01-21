@@ -10,12 +10,10 @@ author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"
 license = { file = "docs/LICENSE.md" }
 dependencies = [
-    "numpy==1.19.2; platform_system == 'Windows'",
-    "numpy~=1.19.3; platform_system == 'Linux'",
+    "numpy~=1.24.1",
     "aamp~=1.4.1",
     "byml~=2.4.2",
     "botw-utils~=0.2.3",
-    "botw-havok~=0.3.18",
     "oead~=1.2.4",
     "packaging~=21.3",
     "pythonnet==2.5.2; platform_system == 'Windows' and python_version < '3.9'",
