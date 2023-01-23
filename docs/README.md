@@ -36,7 +36,7 @@ There are two main ways to install BCML.
 
 ### PyPI
 
-Install Python 3.7 - 3.9 (**64 bit version**), making sure to add it to your PATH, and then
+Install Python 3.7 - 3.10 (**64 bit version**), making sure to add it to your PATH, and then
 run `pip install bcml`.
 
 **Note for Linux users**: Because of the ways different distros handle Python packaging,
@@ -81,7 +81,7 @@ to launch BCML in the future
 
 Building from source requires, in addition to the general prerequisites:
 
--   Python 3.7 - 3.9 64 bit
+-   Python 3.7 - 3.10 64 bit
 
 -   Rust 1.60+ (nightly)
 
