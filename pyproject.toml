@@ -10,20 +10,18 @@ author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"
 license = { file = "docs/LICENSE.md" }
 dependencies = [
-    "numpy~=1.24.1",
     "aamp~=1.4.1",
     "byml~=2.4.2",
     "botw-utils~=0.2.3",
     "oead~=1.2.4",
     "packaging~=21.3",
-    "pythonnet==2.5.2; platform_system == 'Windows' and python_version < '3.9'",
-    "pythonnet>=3.0.0rc1; platform_system == 'Windows' and python_version >= '3.9'",
+    "pythonnet~=3.0.1",
     "PyQt5; platform_system == 'Linux'",
     "pyqtwebengine; platform_system == 'Linux'",
     "QtPy; platform_system == 'Linux'",
     "pyqtwebengine~=5.15.2; platform_system == 'Linux'",
     "cefpython3~=66.1; platform_system == 'Windows'",
-    "pywebview~=3.6.3",
+    "pywebview~=4.0.0",
     "PyYAML~=5.4.1",
     "requests~=2.27.1",
     "rstb>=1.2.2",
