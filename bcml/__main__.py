@@ -95,7 +95,7 @@ def main(debug: bool = False):
             del cefpython3
             gui = "cef"
             configure_cef(debug)
-        except ImportError:
+        except (ImportError, Exception):
             from webview.platforms.winforms import _is_chromium
 
             if _is_chromium():
