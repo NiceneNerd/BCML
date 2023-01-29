@@ -385,11 +385,16 @@ class Mods extends React.Component {
                                 <OverlayTrigger
                                     overlay={
                                         <Tooltip>
-                                            {"Sort priority:\n" +
+                                            {"Current sort priority:\n" +
                                                 (this.state.sortReverse
                                                     ? "highest to lowest"
                                                     : "lowest to highest") +
-                                                " (Ctrl+O)"}
+                                                "\nClick to change to:" +
+                                                (this.state.sortReverse
+                                                    ? "lowest to highest"
+                                                    : "highest to lowest") +
+                                                " (Ctrl+O)"
+                                            }
                                         </Tooltip>
                                     }>
                                     <Button

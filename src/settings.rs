@@ -183,7 +183,10 @@ impl Settings {
             if self.no_cemu {
                 Some(self.export_dir.clone())
             } else {
-                Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"))
+                #[cfg(target_os = "windows")]
+                return Some(self.cemu_dir.join("graphicPacks/BreathOfTheWild_BCML"));
+                #[cfg(target_os = "linux")]
+                return Some("~/.local/share/cemu/graphicPacks/BreathOfTheWild_BCML".into());
             }
         } else {
             Some(self.export_dir_nx.clone())
