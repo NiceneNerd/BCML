@@ -77,7 +77,7 @@ class CFDefine:
                 if not other.posts[post_name][param_name] == param_val:
                     if not post_name in new_posts:
                         new_posts[post_name] = {}
-                    new_posts[post_name][param_name] == param_val
+                    new_posts[post_name][param_name] = param_val
         self.posts = new_posts
 
     def update_from(self, other) -> None:
