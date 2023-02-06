@@ -9,7 +9,7 @@ pyqtwebengine; platform_system == 'Linux'
 QtPy; platform_system == 'Linux'
 cefpython3~=66.1; platform_system == 'Windows'
 pywebview==3.7.2
-PyYAML~=5.4.1
+PyYAML~=6.0
 requests~=2.26.0
 rstb>=1.2.2
-xxhash~=1.4
+xxhash~=3.2

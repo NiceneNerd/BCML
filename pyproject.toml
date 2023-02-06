@@ -22,10 +22,10 @@ dependencies = [
     "pyqtwebengine~=5.15.2; platform_system == 'Linux'",
     "cefpython3~=66.1; platform_system == 'Windows'",
     "pywebview==3.7.2",
-    "PyYAML~=5.4.1",
+    "PyYAML~=6.0",
     "requests~=2.27.1",
     "rstb>=1.2.2",
-    "xxhash~=1.4",
+    "xxhash~=3.2",
 ]
 requires-python = ">=3.7"
 classifiers = [
