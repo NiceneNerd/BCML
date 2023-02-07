@@ -22,7 +22,6 @@ dependencies = [
     "pywebview==3.7.2",
     "requests~=2.27.1",
     "rstb>=1.2.2",
-    "xxhash~=3.2",
 ]
 requires-python = ">=3.7"
 classifiers = [
