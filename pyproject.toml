@@ -4,14 +4,12 @@ build-backend = "maturin"
 
 [project]
 name = "bcml"
-version = "3.10.6"
+version = "3.10.7"
 description = "A mod manager for The Legend of Zelda: Breath of the Wild"
 author = "NiceneNerd"
 author_email = "macadamiadaze@gmail.com"
 license = { file = "docs/LICENSE.md" }
 dependencies = [
-    "aamp~=1.4.1",
-    "byml~=2.4.2",
     "botw-utils~=0.2.3",
     "oead~=1.2.4",
     "packaging~=21.3",
@@ -22,7 +20,6 @@ dependencies = [
     "pyqtwebengine~=5.15.2; platform_system == 'Linux'",
     "cefpython3~=66.1; platform_system == 'Windows'",
     "pywebview==3.7.2",
-    "PyYAML~=6.0",
     "requests~=2.27.1",
     "rstb>=1.2.2",
     "xxhash~=3.2",
