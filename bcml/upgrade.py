@@ -1,21 +1,11 @@
 import base64
-import csv
 import json
 import shutil
 from configparser import ConfigParser
-from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Dict
-
-import oead
-import yaml
-from aamp import yaml_util as ayu
-from aamp import ParameterIO, ParameterObject, ParameterList, Writer
-from byml import yaml_util as byu
 from bcml import util, install
 
-# from bcml.mergers.texts import read_msbt
-from bcml.mergers.rstable import RstbMerger
 from bcml.util import RulesParser
 
 
@@ -43,9 +33,9 @@ def convert_old_mods(source: Path = None):
 
 
 def convert_old_mod(mod: Path, delete_old: bool = False):
-    rules_to_info(mod / "rules.txt", delete_old=delete_old)
     if (mod / "logs").exists():
-        convert_old_logs(mod)
+        info = parse_rules(mod / "rules.txt")
+        convert_old_logs(mod, info["name"])
 
 
 def convert_old_settings():
@@ -109,151 +99,34 @@ def rules_to_info(rules_path: Path, delete_old: bool = False):
         rules_path.unlink()
 
 
-def convert_old_logs(mod_dir: Path):
+def convert_old_logs(mod_dir: Path, name: str):
     print("Upgrading old logs...")
     if (mod_dir / "logs" / "packs.log").exists():
         print("Upgrading pack log...")
-        _convert_pack_log(mod_dir)
+        throw(name)
     if (mod_dir / "logs" / "rstb.log").exists():
         print("Upgrading RSTB log...")
-        _convert_rstb_log(mod_dir)
+        throw(name)
     if (mod_dir / "logs").glob("*texts*"):
         print("Upgrading text logs...")
-        _convert_text_logs(mod_dir / "logs")
+        throw(name)
     for log in {l for l in mod_dir.glob("logs/*.yml") if not "texts" in l.stem}:
         if log.name == "deepmerge.yml":
             print("Upgrading deep merge log...")
-            _convert_aamp_log(log)
+            throw(name)
         elif log.name == "gamedata.yml":
             print("Upgrading game data log...")
-            _convert_gamedata_log(log)
+            throw(name)
         elif log.name == "savedata.yml":
             print("Upgrading save data log...")
-            _convert_savedata_log(log)
+            throw(name)
         elif log.name == "map.yml":
             print("Upgrading map log...")
-            _convert_map_log(log)
+            throw(name)
         else:
             pass
 
-
-def _convert_rstb_log(mod: Path):
-    (mod / "logs" / "rstb.log").unlink()
-    with util.start_pool() as pool:
-        files = install.find_modded_files(mod, pool=pool)
-        merger = RstbMerger()
-        merger.set_pool(pool)
-        merger.log_diff(mod, files)
-
-
-def _convert_pack_log(mod: Path):
-    packs = {}
-    with (mod / "logs" / "packs.log").open("r") as rlog:
-        csv_loop = csv.reader(rlog)
-        for row in csv_loop:
-            if "logs" in str(row[1]) or str(row[0]) == "name":
-                continue
-            packs[str(row[0])] = Path(str(row[1])).as_posix().replace("\\", "/")
-    (mod / "logs" / "packs.log").unlink()
-    (mod / "logs" / "packs.json").write_text(
-        json.dumps(packs, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-
-def _convert_aamp_log(log: Path):
-    loader = yaml.CLoader
-    ayu.register_constructors(loader)
-    doc = yaml.load(log.read_text("utf-8"), Loader=loader)
-    pio = ParameterIO("log", 0)
-    root = ParameterList()
-    for file, plist in doc.items():
-        if not plist.lists:
-            continue
-        root.set_list(file, plist.list("param_root"))
-    file_table = ParameterObject()
-    for i, file in enumerate(doc):
-        if not doc[file].lists:
-            continue
-        file_table.set_param(f"File{i}", file)
-    root.set_object("FileTable", file_table)
-    pio.set_list("param_root", root)
-    log.unlink()
-    log.with_suffix(".aamp").write_bytes(Writer(pio).get_bytes())
-
-
-def _convert_text_log(log: Path) -> dict:
-    lang = log.stem[6:]
-    data = yaml.safe_load(log.read_text("utf-8"))
-    log.unlink()
-    return {lang: {file: data[file]["entries"] for file in data}}
-
-
-def _convert_text_logs(logs_path: Path):
-    diffs = {}
-    with util.start_pool() as pool:
-        for diff in pool.imap_unordered(
-            _convert_text_log, logs_path.glob("texts_*.yml")
-        ):
-            diffs.update(diff)
-    fails = set()
-    for text_pack in logs_path.glob("newtexts_*.sarc"):
-        lang = text_pack.stem[9:]
-        sarc = oead.Sarc(text_pack.read_bytes())
-        for file in sarc.get_files():
-            if lang not in diffs:
-                diffs[lang] = {}
-            try:
-                diffs[lang].update({file.name: read_msbt(bytes(file.data))["entries"]})
-            except RuntimeError:
-                print(
-                    f"Warning: {file.name} could not be processed and will not be used"
-                )
-                fails.add(file.name)
-                continue
-        util.vprint(f"{len(fails)} text files failed to process:\n{fails}")
-        text_pack.unlink()
-    (logs_path / "texts.json").write_text(
-        json.dumps(diffs, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-
-def _convert_gamedata_log(log: Path):
-    diff = oead.byml.from_text(log.read_text("utf-8"))
-    log.write_text(
-        oead.byml.to_text(
-            oead.byml.Hash(
-                {
-                    data_type: {"add": data, "del": oead.byml.Array()}
-                    for data_type, data in diff.items()
-                }
-            )
-        ),
-        encoding="utf-8",
-    )
-
-
-def _convert_savedata_log(log: Path):
-    diff = oead.byml.from_text(log.read_text("utf-8"))
-    log.write_text(
-        oead.byml.to_text(oead.byml.Hash({"add": diff, "del": oead.byml.Array()})),
-        encoding="utf-8",
-    )
-
-
-def _convert_map_log(log: Path):
-    loader = yaml.CLoader
-    byu.add_constructors(loader)
-    diff = yaml.load(log.read_text("utf-8"), Loader=loader)
-    new_diff = {}
-    for unit, changes in diff.items():
-        new_changes = {
-            "add": changes["add"],
-            "del": changes["del"],
-            "mod": {str(hashid): actor for hashid, actor in changes["mod"].items()},
-        }
-        new_diff[unit] = new_changes
-    dumper = yaml.CDumper
-    byu.add_representers(dumper)
-    log.write_text(
-        yaml.dump(new_diff, Dumper=dumper, allow_unicode=True), encoding="utf-8"
-    )
+def throw(name):
+    raise RuntimeError(f"""Looks like {name} is an old mod that uses the BCML 2.x BNP format.\n
+    Unfortunately, BCML no longer supports upgrading old BNPs. If there is a graphic pack \n
+    version of the mod, please try downloading and installing that.""")
