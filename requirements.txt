@@ -9,4 +9,4 @@ pywebview==3.7.2
 QtPy; platform_system == 'Linux'
 requests~=2.26.0
 rstb>=1.2.2
-xxhash==3.2.0
+xxhash~=3.2
