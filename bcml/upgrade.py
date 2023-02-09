@@ -33,6 +33,7 @@ def convert_old_mods(source: Path = None):
 
 
 def convert_old_mod(mod: Path, delete_old: bool = False):
+    rules_to_info(mod / "rules.txt", delete_old=delete_old)
     if (mod / "logs").exists():
         info = parse_rules(mod / "rules.txt")
         convert_old_logs(mod, info["name"])
