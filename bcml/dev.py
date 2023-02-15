@@ -46,7 +46,7 @@ def _package_code(tmp_dir: Path, meta: dict):
         patch_file = tmp_dir / "patches.txt"
     elif list(tmp_dir.glob("patch_*.asm")):
         patch_file = list(tmp_dir.glob("patch_*.asm"))[0]
-    if not patch_file and not (tmp_dir / "patches").exists():
+    if not patch_file:
         return
     (tmp_dir / "patches").mkdir(exist_ok=True)
     shutil.move(patch_file, tmp_dir / "patches" / patch_file.name)
